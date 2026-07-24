@@ -44,7 +44,7 @@ class SemanticQueryServiceTest {
 
     @BeforeEach
     void setUpTenant() {
-        TenantContext.setOrgId("org-a");
+        TenantContext.setCompanyId("org-a");
         TenantContext.setUserId("user-a");
     }
 
@@ -198,9 +198,9 @@ class SemanticQueryServiceTest {
     @Test
     void hidesUnknownOrUnpublishedOntologyVersionsBehindTheSameNotFoundContract() {
         OntologyWorkspaceEntity workspace = workspace(41L, 1);
-        when(workspaces.findByOrgIdAndKey("org-a", "project-delivery"))
+        when(workspaces.findByCompanyIdAndKey("org-a", "project-delivery"))
                 .thenReturn(Optional.of(workspace));
-        when(versions.findByWorkspaceIdAndOrgIdAndVersionNo(41L, "org-a", 2))
+        when(versions.findByWorkspaceIdAndCompanyIdAndVersionNo(41L, "org-a", 2))
                 .thenReturn(Optional.empty());
         OntologyDataSourceAdapter adapter = mock(OntologyDataSourceAdapter.class);
         SemanticQueryService service = serviceWith(adapter);
@@ -214,7 +214,7 @@ class SemanticQueryServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("ONTOLOGY_NOT_FOUND");
 
-        when(workspaces.findByOrgIdAndKey("org-a", "project-delivery"))
+        when(workspaces.findByCompanyIdAndKey("org-a", "project-delivery"))
                 .thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.explain(
                 "org-a",
@@ -659,9 +659,9 @@ class SemanticQueryServiceTest {
                 "[]",
                 "publisher");
         ReflectionTestUtils.setField(version, "id", 91L);
-        when(workspaces.findByOrgIdAndKey("org-a", "project-delivery"))
+        when(workspaces.findByCompanyIdAndKey("org-a", "project-delivery"))
                 .thenReturn(Optional.of(workspace));
-        when(versions.findByWorkspaceIdAndOrgIdAndVersionNo(
+        when(versions.findByWorkspaceIdAndCompanyIdAndVersionNo(
                 41L, "org-a", versionNo))
                 .thenReturn(Optional.of(version));
     }

@@ -173,8 +173,8 @@ public class KnowledgeBaseService {
         this.storageRoot = Path.of(storageDir).toAbsolutePath().normalize();
     }
 
-    public Map<String, Object> createKnowledgeBase(String orgId, String name, String description) {
-        KnowledgeBaseEntity entity = new KnowledgeBaseEntity(orgId, name, description);
+    public Map<String, Object> createKnowledgeBase(String companyId, String name, String description) {
+        KnowledgeBaseEntity entity = new KnowledgeBaseEntity(companyId, name, description);
         entity.updateKnowledgeSettings(
                 entity.getChunkSize(),
                 entity.getChunkOverlap(),
@@ -190,8 +190,8 @@ public class KnowledgeBaseService {
     }
 
     @Transactional
-    public Map<String, Object> updateKnowledgeBase(String orgId, Long id, String name, String description) {
-        KnowledgeBaseEntity kb = kbRepository.findByIdAndOrgId(id, orgId)
+    public Map<String, Object> updateKnowledgeBase(String companyId, Long id, String name, String description) {
+        KnowledgeBaseEntity kb = kbRepository.findByIdAndCompanyId(id, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Knowledge base not found"));
         kb.update(name, description, kb.getStatus());
         kbRepository.save(kb);
@@ -199,15 +199,15 @@ public class KnowledgeBaseService {
     }
 
     @Transactional
-    public Map<String, Object> getKnowledgeBaseSettings(String orgId, Long kbId) {
-        KnowledgeBaseEntity kb = kbRepository.findByIdAndOrgId(kbId, orgId)
+    public Map<String, Object> getKnowledgeBaseSettings(String companyId, Long kbId) {
+        KnowledgeBaseEntity kb = kbRepository.findByIdAndCompanyId(kbId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Knowledge base not found"));
         return kbSettingsPayload(kb);
     }
 
     @Transactional
-    public Map<String, Object> updateKnowledgeBaseSettings(String orgId, Long kbId, KbSettingsCommand command) {
-        KnowledgeBaseEntity kb = kbRepository.findByIdAndOrgId(kbId, orgId)
+    public Map<String, Object> updateKnowledgeBaseSettings(String companyId, Long kbId, KbSettingsCommand command) {
+        KnowledgeBaseEntity kb = kbRepository.findByIdAndCompanyId(kbId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Knowledge base not found"));
         int chunkSize = sanitizeChunkSize(command.chunkSize());
         int chunkOverlap = sanitizeChunkOverlap(chunkSize, command.chunkOverlap());
@@ -233,11 +233,11 @@ public class KnowledgeBaseService {
     }
 
     @Transactional
-    public List<Map<String, Object>> listEmbeddingModelOptions(String orgId) {
-        return modelProviderService.embeddingModelOptions(orgId);
+    public List<Map<String, Object>> listEmbeddingModelOptions(String companyId) {
+        return modelProviderService.embeddingModelOptions(companyId);
     }
 
-    public Map<String, Object> uploadPolicy(String orgId) {
+    public Map<String, Object> uploadPolicy(String companyId) {
         HashMap<String, Object> payload = new HashMap<>();
         payload.put("maxFileSizeBytes", maxUploadFileSizeBytes);
         payload.put("maxFilesPerUpload", 1);
@@ -261,34 +261,34 @@ public class KnowledgeBaseService {
         return payload;
     }
 
-    public List<Map<String, Object>> listKnowledgeBases(String orgId) {
+    public List<Map<String, Object>> listKnowledgeBases(String companyId) {
         ArrayList<Map<String, Object>> out = new ArrayList<>();
-        for (KnowledgeBaseEntity item : kbRepository.findByOrgIdAndStatusNotOrderByIdDesc(orgId, "DELETED")) {
+        for (KnowledgeBaseEntity item : kbRepository.findByCompanyIdAndStatusNotOrderByIdDesc(companyId, "DELETED")) {
             HashMap<String, Object> row = new HashMap<>(kbPayload(item));
-            row.put("documentCount", documentRepository.countByOrgIdAndKnowledgeBaseIdAndStatusNot(
-                    orgId, item.getId(), "DELETED"));
-            row.put("publishedDocumentCount", documentRepository.countByOrgIdAndKnowledgeBaseIdAndStatus(
-                    orgId, item.getId(), "PUBLISHED"));
-            row.put("chunkCount", chunkRepository.countByOrgIdAndKnowledgeBaseIdAndStatusAndEnabledTrue(
-                    orgId, String.valueOf(item.getId()), "ACTIVE"));
+            row.put("documentCount", documentRepository.countByCompanyIdAndKnowledgeBaseIdAndStatusNot(
+                    companyId, item.getId(), "DELETED"));
+            row.put("publishedDocumentCount", documentRepository.countByCompanyIdAndKnowledgeBaseIdAndStatus(
+                    companyId, item.getId(), "PUBLISHED"));
+            row.put("chunkCount", chunkRepository.countByCompanyIdAndKnowledgeBaseIdAndStatusAndEnabledTrue(
+                    companyId, String.valueOf(item.getId()), "ACTIVE"));
             out.add(row);
         }
         return out;
     }
 
     @Transactional
-    public Map<String, Object> uploadDocument(String orgId, Long kbId, MultipartFile file) {
-        KnowledgeBaseEntity kb = kbRepository.findByIdAndOrgId(kbId, orgId)
+    public Map<String, Object> uploadDocument(String companyId, Long kbId, MultipartFile file) {
+        KnowledgeBaseEntity kb = kbRepository.findByIdAndCompanyId(kbId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Knowledge base not found"));
         UploadAdmission admission = validateUploadAdmission(file);
         try {
-            Files.createDirectories(storageRoot.resolve(orgId).resolve(String.valueOf(kbId)));
+            Files.createDirectories(storageRoot.resolve(companyId).resolve(String.valueOf(kbId)));
             String safeName = UUID.randomUUID() + "-" + admission.safeFilename();
-            Path path = storageRoot.resolve(orgId).resolve(String.valueOf(kbId)).resolve(safeName);
+            Path path = storageRoot.resolve(companyId).resolve(String.valueOf(kbId)).resolve(safeName);
             Files.copy(file.getInputStream(), path, StandardCopyOption.REPLACE_EXISTING);
 
             KbDocumentEntity doc = documentRepository.save(new KbDocumentEntity(
-                    orgId,
+                    companyId,
                     kb.getId(),
                     admission.originalFilename(),
                     admission.contentType(),
@@ -302,12 +302,12 @@ public class KnowledgeBaseService {
     }
 
     @Transactional
-    public Map<String, Object> createDataSource(String orgId, Long kbId, DataSourceCommand command) {
-        requireKnowledgeBase(orgId, kbId);
+    public Map<String, Object> createDataSource(String companyId, Long kbId, DataSourceCommand command) {
+        requireKnowledgeBase(companyId, kbId);
         String sourceType = normalizeSourceType(command.sourceType());
         String name = requireText(command.name(), "Data source name is required");
         KbDataSourceEntity created = dataSourceRepository.save(new KbDataSourceEntity(
-                orgId,
+                companyId,
                 kbId,
                 sourceType,
                 name.length() > 160 ? name.substring(0, 160) : name,
@@ -315,20 +315,20 @@ public class KnowledgeBaseService {
         return dataSourcePayload(created);
     }
 
-    public List<Map<String, Object>> listDataSources(String orgId, Long kbId) {
-        requireKnowledgeBase(orgId, kbId);
-        return dataSourceRepository.findByOrgIdAndKnowledgeBaseIdOrderByIdDesc(orgId, kbId)
+    public List<Map<String, Object>> listDataSources(String companyId, Long kbId) {
+        requireKnowledgeBase(companyId, kbId);
+        return dataSourceRepository.findByCompanyIdAndKnowledgeBaseIdOrderByIdDesc(companyId, kbId)
                 .stream()
                 .map(this::dataSourcePayload)
                 .toList();
     }
 
     @Transactional
-    public Map<String, Object> syncDataSource(String orgId, Long dataSourceId, String triggerType) {
-        KbDataSourceEntity source = dataSourceRepository.findByIdAndOrgId(dataSourceId, orgId)
+    public Map<String, Object> syncDataSource(String companyId, Long dataSourceId, String triggerType) {
+        KbDataSourceEntity source = dataSourceRepository.findByIdAndCompanyId(dataSourceId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Data source not found"));
         KbSyncJobEntity job = syncJobRepository.save(new KbSyncJobEntity(
-                orgId,
+                companyId,
                 source.getKnowledgeBaseId(),
                 source.getId(),
                 triggerType,
@@ -336,7 +336,7 @@ public class KnowledgeBaseService {
         try {
             SyncedDocument synced = resolveSyncedDocument(source);
             KbDocumentEntity document = upsertSyncedDocument(source, synced);
-            Map<String, Object> published = publishDocument(orgId, document.getId());
+            Map<String, Object> published = publishDocument(companyId, document.getId());
             if (!"PUBLISHED".equals(published.get("status"))) {
                 throw new IllegalStateException("Synced document indexing failed: " + published.getOrDefault("errorMessage", ""));
             }
@@ -356,25 +356,25 @@ public class KnowledgeBaseService {
         }
     }
 
-    public List<Map<String, Object>> listSyncJobs(String orgId, Long dataSourceId) {
-        KbDataSourceEntity source = dataSourceRepository.findByIdAndOrgId(dataSourceId, orgId)
+    public List<Map<String, Object>> listSyncJobs(String companyId, Long dataSourceId) {
+        KbDataSourceEntity source = dataSourceRepository.findByIdAndCompanyId(dataSourceId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Data source not found"));
-        return syncJobRepository.findTop20ByOrgIdAndDataSourceIdOrderByIdDesc(orgId, source.getId())
+        return syncJobRepository.findTop20ByCompanyIdAndDataSourceIdOrderByIdDesc(companyId, source.getId())
                 .stream()
                 .map(this::syncJobPayload)
                 .toList();
     }
 
-    public List<Map<String, Object>> listDocuments(String orgId, Long kbId) {
-        return documentRepository.findByOrgIdAndKnowledgeBaseIdAndStatusNotOrderByIdDesc(orgId, kbId, "DELETED")
+    public List<Map<String, Object>> listDocuments(String companyId, Long kbId) {
+        return documentRepository.findByCompanyIdAndKnowledgeBaseIdAndStatusNotOrderByIdDesc(companyId, kbId, "DELETED")
                 .stream()
                 .map(this::documentPayload)
                 .toList();
     }
 
     @Transactional
-    public Map<String, Object> renameDocument(String orgId, Long documentId, String name) {
-        KbDocumentEntity doc = documentRepository.findByIdAndOrgId(documentId, orgId)
+    public Map<String, Object> renameDocument(String companyId, Long documentId, String name) {
+        KbDocumentEntity doc = documentRepository.findByIdAndCompanyId(documentId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Document not found"));
         doc.rename(name);
         documentRepository.save(doc);
@@ -382,8 +382,8 @@ public class KnowledgeBaseService {
     }
 
     @Transactional
-    public Map<String, Object> setDocumentEnabled(String orgId, Long documentId, boolean enabled) {
-        KbDocumentEntity doc = documentRepository.findByIdAndOrgId(documentId, orgId)
+    public Map<String, Object> setDocumentEnabled(String companyId, Long documentId, boolean enabled) {
+        KbDocumentEntity doc = documentRepository.findByIdAndCompanyId(documentId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Document not found"));
         doc.setEnabled(enabled);
         documentRepository.save(doc);
@@ -391,8 +391,8 @@ public class KnowledgeBaseService {
     }
 
     @Transactional
-    public Map<String, Object> setDocumentArchived(String orgId, Long documentId, boolean archived) {
-        KbDocumentEntity doc = documentRepository.findByIdAndOrgId(documentId, orgId)
+    public Map<String, Object> setDocumentArchived(String companyId, Long documentId, boolean archived) {
+        KbDocumentEntity doc = documentRepository.findByIdAndCompanyId(documentId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Document not found"));
         doc.setArchived(archived);
         documentRepository.save(doc);
@@ -400,33 +400,33 @@ public class KnowledgeBaseService {
     }
 
     @Transactional
-    public Map<String, Object> batchSetDocumentEnabled(String orgId, List<Long> documentIds, boolean enabled) {
-        return batchOperateDocuments(orgId, documentIds, enabled ? "enable" : "disable");
+    public Map<String, Object> batchSetDocumentEnabled(String companyId, List<Long> documentIds, boolean enabled) {
+        return batchOperateDocuments(companyId, documentIds, enabled ? "enable" : "disable");
     }
 
     @Transactional
-    public Map<String, Object> batchSetDocumentArchived(String orgId, List<Long> documentIds, boolean archived) {
-        return batchOperateDocuments(orgId, documentIds, archived ? "archive" : "unarchive");
+    public Map<String, Object> batchSetDocumentArchived(String companyId, List<Long> documentIds, boolean archived) {
+        return batchOperateDocuments(companyId, documentIds, archived ? "archive" : "unarchive");
     }
 
     @Transactional
-    public Map<String, Object> batchDeleteDocuments(String orgId, List<Long> documentIds) {
-        return batchOperateDocuments(orgId, documentIds, "delete");
+    public Map<String, Object> batchDeleteDocuments(String companyId, List<Long> documentIds) {
+        return batchOperateDocuments(companyId, documentIds, "delete");
     }
 
     @Transactional
-    public List<Map<String, Object>> listDocumentChunks(String orgId, Long documentId) {
-        KbDocumentEntity doc = documentRepository.findByIdAndOrgId(documentId, orgId)
+    public List<Map<String, Object>> listDocumentChunks(String companyId, Long documentId) {
+        KbDocumentEntity doc = documentRepository.findByIdAndCompanyId(documentId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Document not found"));
-        return chunkRepository.findByOrgIdAndDocumentIdAndStatusNotOrderByChunkIndexAscIdAsc(orgId, doc.getId(), "DELETED")
+        return chunkRepository.findByCompanyIdAndDocumentIdAndStatusNotOrderByChunkIndexAscIdAsc(companyId, doc.getId(), "DELETED")
                 .stream()
                 .map(this::chunkPayload)
                 .toList();
     }
 
     @Transactional
-    public Map<String, Object> updateChunk(String orgId, Long chunkId, String content) {
-        KbChunkEntity chunk = chunkRepository.findByIdAndOrgId(chunkId, orgId)
+    public Map<String, Object> updateChunk(String companyId, Long chunkId, String content) {
+        KbChunkEntity chunk = chunkRepository.findByIdAndCompanyId(chunkId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Chunk not found"));
         if ("DELETED".equals(chunk.getStatus())) {
             throw new IllegalArgumentException("Chunk already deleted");
@@ -437,12 +437,12 @@ public class KnowledgeBaseService {
         }
         String oldVectorId = chunk.getVectorId();
         if (oldVectorId != null && !oldVectorId.isBlank()) {
-            vectorStoreClient.deleteByVectorIds(orgId, List.of(oldVectorId));
+            vectorStoreClient.deleteByVectorIds(companyId, List.of(oldVectorId));
         }
         String contentHash = sha256(normalized);
-        EmbeddingConfig embeddingConfig = embeddingConfigForKnowledgeBase(orgId, chunk.getKnowledgeBaseId());
+        EmbeddingConfig embeddingConfig = embeddingConfigForKnowledgeBase(companyId, chunk.getKnowledgeBaseId());
         String vectorId = vectorStoreClient.upsert(new VectorUpsertCommand(
-                orgId,
+                companyId,
                 chunk.getKnowledgeBaseId(),
                 chunk.getDocumentId(),
                 chunk.getId(),
@@ -450,7 +450,7 @@ public class KnowledgeBaseService {
                 normalized,
                 contentHash,
                 embeddingService.embed(
-                        orgId,
+                        companyId,
                         embeddingConfig.provider(),
                         embeddingConfig.model(),
                         embeddingConfig.dimension(),
@@ -459,22 +459,22 @@ public class KnowledgeBaseService {
         chunk.setVectorId(vectorId);
         chunk.setEmbeddingMetadata(embeddingConfig.provider(), embeddingConfig.model(), embeddingConfig.dimension());
         chunkRepository.save(chunk);
-        recordKbChunkIndexingSafely(orgId, chunk.getKnowledgeBaseId(), chunk.getId(), contentHash, "chunk_update");
+        recordKbChunkIndexingSafely(companyId, chunk.getKnowledgeBaseId(), chunk.getId(), contentHash, "chunk_update");
         return chunkPayload(chunk);
     }
 
     @Transactional
-    public Map<String, Object> setChunkEnabled(String orgId, Long chunkId, boolean enabled) {
-        KbChunkEntity chunk = chunkRepository.findByIdAndOrgId(chunkId, orgId)
+    public Map<String, Object> setChunkEnabled(String companyId, Long chunkId, boolean enabled) {
+        KbChunkEntity chunk = chunkRepository.findByIdAndCompanyId(chunkId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Chunk not found"));
         if ("DELETED".equals(chunk.getStatus())) {
             throw new IllegalArgumentException("Chunk already deleted");
         }
         if (enabled) {
             if (chunk.getVectorId() == null || chunk.getVectorId().isBlank()) {
-                EmbeddingConfig embeddingConfig = embeddingConfigForKnowledgeBase(orgId, chunk.getKnowledgeBaseId());
+                EmbeddingConfig embeddingConfig = embeddingConfigForKnowledgeBase(companyId, chunk.getKnowledgeBaseId());
                 String vectorId = vectorStoreClient.upsert(new VectorUpsertCommand(
-                        orgId,
+                        companyId,
                         chunk.getKnowledgeBaseId(),
                         chunk.getDocumentId(),
                         chunk.getId(),
@@ -482,19 +482,19 @@ public class KnowledgeBaseService {
                         chunk.getContent(),
                         chunk.getContentHash(),
                         embeddingService.embed(
-                                orgId,
+                                companyId,
                                 embeddingConfig.provider(),
                                 embeddingConfig.model(),
                                 embeddingConfig.dimension(),
                                 chunk.getContent())));
                 chunk.setVectorId(vectorId);
                 chunk.setEmbeddingMetadata(embeddingConfig.provider(), embeddingConfig.model(), embeddingConfig.dimension());
-                recordKbChunkIndexingSafely(orgId, chunk.getKnowledgeBaseId(), chunk.getId(), chunk.getContentHash(), "chunk_enable");
+                recordKbChunkIndexingSafely(companyId, chunk.getKnowledgeBaseId(), chunk.getId(), chunk.getContentHash(), "chunk_enable");
             }
             chunk.enable();
         } else {
             if (chunk.getVectorId() != null && !chunk.getVectorId().isBlank()) {
-                vectorStoreClient.deleteByVectorIds(orgId, List.of(chunk.getVectorId()));
+                vectorStoreClient.deleteByVectorIds(companyId, List.of(chunk.getVectorId()));
             }
             chunk.disable();
         }
@@ -503,14 +503,14 @@ public class KnowledgeBaseService {
     }
 
     @Transactional
-    public Map<String, Object> deleteChunk(String orgId, Long chunkId) {
-        KbChunkEntity chunk = chunkRepository.findByIdAndOrgId(chunkId, orgId)
+    public Map<String, Object> deleteChunk(String companyId, Long chunkId) {
+        KbChunkEntity chunk = chunkRepository.findByIdAndCompanyId(chunkId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Chunk not found"));
         if ("DELETED".equals(chunk.getStatus())) {
             return chunkPayload(chunk);
         }
         if (chunk.getVectorId() != null && !chunk.getVectorId().isBlank()) {
-            vectorStoreClient.deleteByVectorIds(orgId, List.of(chunk.getVectorId()));
+            vectorStoreClient.deleteByVectorIds(companyId, List.of(chunk.getVectorId()));
         }
         chunk.markDeleted();
         chunkRepository.save(chunk);
@@ -518,18 +518,18 @@ public class KnowledgeBaseService {
     }
 
     @Transactional
-    public Map<String, Object> batchSetChunkEnabled(String orgId, List<Long> chunkIds, boolean enabled) {
-        return batchOperateChunks(orgId, chunkIds, enabled ? "enable" : "disable");
+    public Map<String, Object> batchSetChunkEnabled(String companyId, List<Long> chunkIds, boolean enabled) {
+        return batchOperateChunks(companyId, chunkIds, enabled ? "enable" : "disable");
     }
 
     @Transactional
-    public Map<String, Object> batchDeleteChunks(String orgId, List<Long> chunkIds) {
-        return batchOperateChunks(orgId, chunkIds, "delete");
+    public Map<String, Object> batchDeleteChunks(String companyId, List<Long> chunkIds) {
+        return batchOperateChunks(companyId, chunkIds, "delete");
     }
 
     @Transactional
-    public List<Map<String, Object>> listMetadataFields(String orgId, Long kbId) {
-        return metadataFieldRepository.findByOrgIdAndKnowledgeBaseIdOrderByIdAsc(orgId, kbId).stream()
+    public List<Map<String, Object>> listMetadataFields(String companyId, Long kbId) {
+        return metadataFieldRepository.findByCompanyIdAndKnowledgeBaseIdOrderByIdAsc(companyId, kbId).stream()
                 .map(field -> {
                     Map<String, Object> row = new HashMap<>();
                     row.put("id", field.getId());
@@ -542,17 +542,17 @@ public class KnowledgeBaseService {
     }
 
     @Transactional
-    public Map<String, Object> createMetadataField(String orgId, Long kbId, MetadataFieldCommand command) {
-        KnowledgeBaseEntity kb = kbRepository.findByIdAndOrgId(kbId, orgId)
+    public Map<String, Object> createMetadataField(String companyId, Long kbId, MetadataFieldCommand command) {
+        KnowledgeBaseEntity kb = kbRepository.findByIdAndCompanyId(kbId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Knowledge base not found"));
         String fieldKey = normalizeFieldKey(command.fieldKey());
-        if (metadataFieldRepository.findByOrgIdAndKnowledgeBaseIdAndFieldKey(orgId, kbId, fieldKey).isPresent()) {
+        if (metadataFieldRepository.findByCompanyIdAndKnowledgeBaseIdAndFieldKey(companyId, kbId, fieldKey).isPresent()) {
             throw new IllegalArgumentException("Metadata field key already exists");
         }
         String fieldName = command.fieldName() == null || command.fieldName().isBlank() ? fieldKey : command.fieldName().trim();
         String valueType = normalizeValueType(command.valueType());
         KbMetadataFieldEntity created = metadataFieldRepository.save(new KbMetadataFieldEntity(
-                orgId,
+                companyId,
                 kb.getId(),
                 fieldKey,
                 fieldName,
@@ -566,11 +566,11 @@ public class KnowledgeBaseService {
     }
 
     @Transactional
-    public List<Map<String, Object>> getDocumentMetadata(String orgId, Long documentId) {
-        KbDocumentEntity doc = documentRepository.findByIdAndOrgId(documentId, orgId)
+    public List<Map<String, Object>> getDocumentMetadata(String companyId, Long documentId) {
+        KbDocumentEntity doc = documentRepository.findByIdAndCompanyId(documentId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Document not found"));
-        return documentMetadataRepository.findByOrgIdAndKnowledgeBaseIdAndDocumentId(
-                        orgId,
+        return documentMetadataRepository.findByCompanyIdAndKnowledgeBaseIdAndDocumentId(
+                        companyId,
                         doc.getKnowledgeBaseId(),
                         documentId)
                 .stream()
@@ -584,16 +584,16 @@ public class KnowledgeBaseService {
     }
 
     @Transactional
-    public List<Map<String, Object>> updateDocumentMetadata(String orgId, Long documentId, Map<String, String> metadata) {
-        KbDocumentEntity doc = documentRepository.findByIdAndOrgId(documentId, orgId)
+    public List<Map<String, Object>> updateDocumentMetadata(String companyId, Long documentId, Map<String, String> metadata) {
+        KbDocumentEntity doc = documentRepository.findByIdAndCompanyId(documentId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Document not found"));
         Long kbId = doc.getKnowledgeBaseId();
         if (metadata == null || metadata.isEmpty()) {
-            documentMetadataRepository.deleteByOrgIdAndKnowledgeBaseIdAndDocumentId(orgId, kbId, documentId);
+            documentMetadataRepository.deleteByCompanyIdAndKnowledgeBaseIdAndDocumentId(companyId, kbId, documentId);
             return List.of();
         }
-        documentMetadataRepository.deleteByOrgIdAndKnowledgeBaseIdAndDocumentId(orgId, kbId, documentId);
-        List<KbMetadataFieldEntity> fields = metadataFieldRepository.findByOrgIdAndKnowledgeBaseIdOrderByIdAsc(orgId, kbId);
+        documentMetadataRepository.deleteByCompanyIdAndKnowledgeBaseIdAndDocumentId(companyId, kbId, documentId);
+        List<KbMetadataFieldEntity> fields = metadataFieldRepository.findByCompanyIdAndKnowledgeBaseIdOrderByIdAsc(companyId, kbId);
         Map<String, KbMetadataFieldEntity> fieldMap = new HashMap<>();
         for (KbMetadataFieldEntity field : fields) {
             fieldMap.put(field.getFieldKey(), field);
@@ -607,37 +607,37 @@ public class KnowledgeBaseService {
             if (value.isBlank()) {
                 continue;
             }
-            KbDocumentMetadataEntity item = new KbDocumentMetadataEntity(orgId, kbId, documentId, key, value);
+            KbDocumentMetadataEntity item = new KbDocumentMetadataEntity(companyId, kbId, documentId, key, value);
             documentMetadataRepository.save(item);
         }
-        return getDocumentMetadata(orgId, documentId);
+        return getDocumentMetadata(companyId, documentId);
     }
 
-    public List<Map<String, Object>> listDocumentAccessGrants(String orgId, Long documentId) {
-        return kbAccessControlService.listDocumentGrants(orgId, documentId);
+    public List<Map<String, Object>> listDocumentAccessGrants(String companyId, Long documentId) {
+        return kbAccessControlService.listDocumentGrants(companyId, documentId);
     }
 
-    public List<Map<String, Object>> replaceDocumentAccessGrants(String orgId,
+    public List<Map<String, Object>> replaceDocumentAccessGrants(String companyId,
                                                                  Long documentId,
                                                                  String actorUserId,
                                                                  List<KbAccessControlService.GrantInput> grants) {
-        return kbAccessControlService.replaceDocumentGrants(orgId, documentId, actorUserId, grants);
+        return kbAccessControlService.replaceDocumentGrants(companyId, documentId, actorUserId, grants);
     }
 
-    public List<Map<String, Object>> listChunkAccessGrants(String orgId, Long chunkId) {
-        return kbAccessControlService.listChunkGrants(orgId, chunkId);
+    public List<Map<String, Object>> listChunkAccessGrants(String companyId, Long chunkId) {
+        return kbAccessControlService.listChunkGrants(companyId, chunkId);
     }
 
-    public List<Map<String, Object>> replaceChunkAccessGrants(String orgId,
+    public List<Map<String, Object>> replaceChunkAccessGrants(String companyId,
                                                               Long chunkId,
                                                               String actorUserId,
                                                               List<KbAccessControlService.GrantInput> grants) {
-        return kbAccessControlService.replaceChunkGrants(orgId, chunkId, actorUserId, grants);
+        return kbAccessControlService.replaceChunkGrants(companyId, chunkId, actorUserId, grants);
     }
 
     @Transactional
-    public Map<String, Object> previewChunking(String orgId, Long kbId, ChunkPreviewCommand command) {
-        KnowledgeBaseEntity kb = kbRepository.findByIdAndOrgId(kbId, orgId)
+    public Map<String, Object> previewChunking(String companyId, Long kbId, ChunkPreviewCommand command) {
+        KnowledgeBaseEntity kb = kbRepository.findByIdAndCompanyId(kbId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Knowledge base not found"));
         String sourceText = command.text() == null ? "" : command.text();
         if (sourceText.isBlank()) {
@@ -666,8 +666,8 @@ public class KnowledgeBaseService {
     }
 
     @Transactional
-    public Map<String, Object> testRetrieval(String orgId, Long kbId, RetrievalTestCommand command) {
-        KnowledgeBaseEntity kb = kbRepository.findByIdAndOrgId(kbId, orgId)
+    public Map<String, Object> testRetrieval(String companyId, Long kbId, RetrievalTestCommand command) {
+        KnowledgeBaseEntity kb = kbRepository.findByIdAndCompanyId(kbId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Knowledge base not found"));
         String query = command.query() == null ? "" : command.query().trim();
         if (query.isBlank()) {
@@ -677,13 +677,13 @@ public class KnowledgeBaseService {
         double scoreThreshold = sanitizeScoreThreshold(command.scoreThreshold() == null ? kb.getScoreThreshold() : command.scoreThreshold());
         String strategy = normalizeRetrievalStrategy(command.retrievalStrategy() == null ? kb.getRetrievalStrategy() : command.retrievalStrategy());
         Map<String, String> filters = normalizeMetadataFilters(command.metadataFilters());
-        validateMetadataFilterKeys(orgId, kbId, filters);
+        validateMetadataFilterKeys(companyId, kbId, filters);
         List<VectorSearchHit> rawHits = vectorStoreClient.search(new VectorSearchQuery(
-                orgId,
+                companyId,
                 List.of(String.valueOf(kbId)),
                 query,
                 embeddingService.embed(
-                        orgId,
+                        companyId,
                         kb.getEmbeddingProvider(),
                         kb.getEmbeddingModel(),
                         kb.getEmbeddingDimension(),
@@ -694,10 +694,10 @@ public class KnowledgeBaseService {
             if (hit.score() < scoreThreshold) {
                 continue;
             }
-            if (!isChunkSearchable(orgId, kbId, hit.chunkId())) {
+            if (!isChunkSearchable(companyId, kbId, hit.chunkId())) {
                 continue;
             }
-            if (!matchesMetadataFilters(orgId, kbId, hit.documentId(), filters)) {
+            if (!matchesMetadataFilters(companyId, kbId, hit.documentId(), filters)) {
                 continue;
             }
             HashMap<String, Object> row = new HashMap<>();
@@ -715,17 +715,17 @@ public class KnowledgeBaseService {
         }
 
         if (hits.isEmpty()) {
-            for (KbChunkEntity chunk : chunkRepository.findTop50ByOrgIdAndKnowledgeBaseIdInAndStatusAndEnabledTrueOrderByIdDesc(
-                    orgId,
+            for (KbChunkEntity chunk : chunkRepository.findTop50ByCompanyIdAndKnowledgeBaseIdInAndStatusAndEnabledTrueOrderByIdDesc(
+                    companyId,
                     List.of(String.valueOf(kbId)),
                     "ACTIVE")) {
                 if (!chunk.isSearchable()) {
                     continue;
                 }
-                if (!isChunkSearchable(orgId, kbId, chunk.getId())) {
+                if (!isChunkSearchable(companyId, kbId, chunk.getId())) {
                     continue;
                 }
-                if (!matchesMetadataFilters(orgId, kbId, chunk.getDocumentId(), filters)) {
+                if (!matchesMetadataFilters(companyId, kbId, chunk.getDocumentId(), filters)) {
                     continue;
                 }
                 HashMap<String, Object> row = new HashMap<>();
@@ -743,7 +743,7 @@ public class KnowledgeBaseService {
             }
         }
 
-        saveRetrievalLog(orgId, kbId, query, strategy, topK, scoreThreshold, hits);
+        saveRetrievalLog(companyId, kbId, query, strategy, topK, scoreThreshold, hits);
 
         HashMap<String, Object> payload = new HashMap<>();
         payload.put("query", query);
@@ -757,9 +757,9 @@ public class KnowledgeBaseService {
     }
 
     @Transactional
-    public List<Map<String, Object>> listRetrievalLogs(String orgId, Long kbId, Integer limit) {
+    public List<Map<String, Object>> listRetrievalLogs(String companyId, Long kbId, Integer limit) {
         int safeLimit = Math.min(50, Math.max(1, limit == null ? 20 : limit));
-        return retrievalLogRepository.findTop50ByOrgIdAndKnowledgeBaseIdOrderByIdDesc(orgId, kbId)
+        return retrievalLogRepository.findTop50ByCompanyIdAndKnowledgeBaseIdOrderByIdDesc(companyId, kbId)
                 .stream()
                 .limit(safeLimit)
                 .map(log -> {
@@ -778,21 +778,21 @@ public class KnowledgeBaseService {
     }
 
     @Transactional
-    public Map<String, Object> createEvalSuite(String orgId, Long kbId, EvalSuiteCommand command) {
-        requireKnowledgeBase(orgId, kbId);
+    public Map<String, Object> createEvalSuite(String companyId, Long kbId, EvalSuiteCommand command) {
+        requireKnowledgeBase(companyId, kbId);
         String name = requireText(command.name(), "Suite name is required");
         KbEvalSuiteEntity created = evalSuiteRepository.save(new KbEvalSuiteEntity(
-                orgId,
+                companyId,
                 kbId,
                 name.length() > 160 ? name.substring(0, 160) : name,
                 truncateText(command.description(), 1000)));
         return evalSuitePayload(created);
     }
 
-    public List<Map<String, Object>> listEvalSuites(String orgId, Long kbId) {
-        requireKnowledgeBase(orgId, kbId);
-        return evalSuiteRepository.findByOrgIdAndKnowledgeBaseIdAndStatusOrderByIdDesc(
-                        orgId,
+    public List<Map<String, Object>> listEvalSuites(String companyId, Long kbId) {
+        requireKnowledgeBase(companyId, kbId);
+        return evalSuiteRepository.findByCompanyIdAndKnowledgeBaseIdAndStatusOrderByIdDesc(
+                        companyId,
                         kbId,
                         KbEvalSuiteEntity.STATUS_ACTIVE)
                 .stream()
@@ -801,13 +801,13 @@ public class KnowledgeBaseService {
     }
 
     @Transactional
-    public Map<String, Object> addEvalCase(String orgId, Long suiteId, EvalCaseCommand command) {
-        KbEvalSuiteEntity suite = requireEvalSuite(orgId, suiteId);
+    public Map<String, Object> addEvalCase(String companyId, Long suiteId, EvalCaseCommand command) {
+        KbEvalSuiteEntity suite = requireEvalSuite(companyId, suiteId);
         String query = requireText(command.query(), "Eval query is required");
         Map<String, String> metadataFilters = normalizeMetadataFilters(command.metadataFilters());
-        validateMetadataFilterKeys(orgId, suite.getKnowledgeBaseId(), metadataFilters);
+        validateMetadataFilterKeys(companyId, suite.getKnowledgeBaseId(), metadataFilters);
         KbEvalCaseEntity created = evalCaseRepository.save(new KbEvalCaseEntity(
-                orgId,
+                companyId,
                 suite.getId(),
                 suite.getKnowledgeBaseId(),
                 query,
@@ -820,10 +820,10 @@ public class KnowledgeBaseService {
         return evalCasePayload(created);
     }
 
-    public List<Map<String, Object>> listEvalCases(String orgId, Long suiteId) {
-        KbEvalSuiteEntity suite = requireEvalSuite(orgId, suiteId);
-        return evalCaseRepository.findByOrgIdAndSuiteIdAndStatusOrderByIdAsc(
-                        orgId,
+    public List<Map<String, Object>> listEvalCases(String companyId, Long suiteId) {
+        KbEvalSuiteEntity suite = requireEvalSuite(companyId, suiteId);
+        return evalCaseRepository.findByCompanyIdAndSuiteIdAndStatusOrderByIdAsc(
+                        companyId,
                         suite.getId(),
                         KbEvalCaseEntity.STATUS_ACTIVE)
                 .stream()
@@ -832,17 +832,17 @@ public class KnowledgeBaseService {
     }
 
     @Transactional
-    public Map<String, Object> runEvalSuite(String orgId, Long suiteId) {
-        KbEvalSuiteEntity suite = requireEvalSuite(orgId, suiteId);
-        List<KbEvalCaseEntity> cases = evalCaseRepository.findByOrgIdAndSuiteIdAndStatusOrderByIdAsc(
-                orgId,
+    public Map<String, Object> runEvalSuite(String companyId, Long suiteId) {
+        KbEvalSuiteEntity suite = requireEvalSuite(companyId, suiteId);
+        List<KbEvalCaseEntity> cases = evalCaseRepository.findByCompanyIdAndSuiteIdAndStatusOrderByIdAsc(
+                companyId,
                 suiteId,
                 KbEvalCaseEntity.STATUS_ACTIVE);
         if (cases.isEmpty()) {
             throw new IllegalArgumentException("Evaluation suite has no active cases");
         }
 
-        KbEvalRunEntity run = evalRunRepository.save(new KbEvalRunEntity(orgId, suiteId, suite.getKnowledgeBaseId(), cases.size()));
+        KbEvalRunEntity run = evalRunRepository.save(new KbEvalRunEntity(companyId, suiteId, suite.getKnowledgeBaseId(), cases.size()));
         int passed = 0;
         int failed = 0;
         int expectedHits = 0;
@@ -852,7 +852,7 @@ public class KnowledgeBaseService {
         ArrayList<Map<String, Object>> resultSummaries = new ArrayList<>();
 
         for (KbEvalCaseEntity evalCase : cases) {
-            EvalCaseOutcome outcome = evaluateCase(orgId, suite.getKnowledgeBaseId(), evalCase);
+            EvalCaseOutcome outcome = evaluateCase(companyId, suite.getKnowledgeBaseId(), evalCase);
             if (outcome.passed()) {
                 passed++;
             } else {
@@ -869,7 +869,7 @@ public class KnowledgeBaseService {
             }
             topScoreSum += outcome.topScore();
             KbEvalCaseResultEntity saved = evalCaseResultRepository.save(new KbEvalCaseResultEntity(
-                    orgId,
+                    companyId,
                     run.getId(),
                     evalCase.getId(),
                     outcome.passed() ? "PASSED" : "FAILED",
@@ -902,31 +902,31 @@ public class KnowledgeBaseService {
         return evalRunPayload(run);
     }
 
-    public List<Map<String, Object>> listEvalRuns(String orgId, Long suiteId) {
-        KbEvalSuiteEntity suite = requireEvalSuite(orgId, suiteId);
-        return evalRunRepository.findTop20ByOrgIdAndSuiteIdOrderByIdDesc(orgId, suite.getId())
+    public List<Map<String, Object>> listEvalRuns(String companyId, Long suiteId) {
+        KbEvalSuiteEntity suite = requireEvalSuite(companyId, suiteId);
+        return evalRunRepository.findTop20ByCompanyIdAndSuiteIdOrderByIdDesc(companyId, suite.getId())
                 .stream()
                 .map(this::evalRunPayload)
                 .toList();
     }
 
-    public List<Map<String, Object>> listEvalRunResults(String orgId, Long runId) {
-        KbEvalRunEntity run = evalRunRepository.findByIdAndOrgId(runId, orgId)
+    public List<Map<String, Object>> listEvalRunResults(String companyId, Long runId) {
+        KbEvalRunEntity run = evalRunRepository.findByIdAndCompanyId(runId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Evaluation run not found"));
-        return evalCaseResultRepository.findByOrgIdAndRunIdOrderByIdAsc(orgId, run.getId())
+        return evalCaseResultRepository.findByCompanyIdAndRunIdOrderByIdAsc(companyId, run.getId())
                 .stream()
                 .map(this::evalCaseResultPayload)
                 .toList();
     }
 
     @Transactional
-    public Map<String, Object> auditVectorStore(String orgId) {
-        List<String> registeredVectorIds = chunkRepository.findByOrgIdAndStatusNot(orgId, "DELETED").stream()
+    public Map<String, Object> auditVectorStore(String companyId) {
+        List<String> registeredVectorIds = chunkRepository.findByCompanyIdAndStatusNot(companyId, "DELETED").stream()
                 .map(KbChunkEntity::getVectorId)
                 .filter(id -> id != null && !id.isBlank())
                 .distinct()
                 .toList();
-        VectorStoreAuditResult audit = vectorStoreClient.auditOrgVectors(orgId, registeredVectorIds);
+        VectorStoreAuditResult audit = vectorStoreClient.auditOrgVectors(companyId, registeredVectorIds);
         HashMap<String, Object> payload = new HashMap<>();
         payload.put("success", audit.success());
         payload.put("scannedCount", audit.scannedCount());
@@ -939,15 +939,15 @@ public class KnowledgeBaseService {
     }
 
     @Transactional
-    public Map<String, Object> auditIndexDrift(String orgId, boolean repair) {
-        List<KbChunkEntity> chunks = chunkRepository.findByOrgIdAndStatusNot(orgId, "DELETED");
-        List<KbDocumentEntity> documents = documentRepository.findByOrgIdAndStatusNot(orgId, "DELETED");
+    public Map<String, Object> auditIndexDrift(String companyId, boolean repair) {
+        List<KbChunkEntity> chunks = chunkRepository.findByCompanyIdAndStatusNot(companyId, "DELETED");
+        List<KbDocumentEntity> documents = documentRepository.findByCompanyIdAndStatusNot(companyId, "DELETED");
         List<String> registeredVectorIds = chunks.stream()
                 .map(KbChunkEntity::getVectorId)
                 .filter(id -> id != null && !id.isBlank())
                 .distinct()
                 .toList();
-        VectorStoreAuditResult vectorAudit = vectorStoreClient.auditOrgVectors(orgId, registeredVectorIds);
+        VectorStoreAuditResult vectorAudit = vectorStoreClient.auditOrgVectors(companyId, registeredVectorIds);
 
         List<KbChunkEntity> missingVectorChunks = chunks.stream()
                 .filter(KbChunkEntity::isSearchable)
@@ -957,14 +957,14 @@ public class KnowledgeBaseService {
                 .map(KbChunkEntity::getKnowledgeBaseId)
                 .filter(id -> id != null && !id.isBlank())
                 .distinct()
-                .collect(Collectors.toMap(id -> id, id -> embeddingConfigForKnowledgeBase(orgId, id), (a, b) -> a));
+                .collect(Collectors.toMap(id -> id, id -> embeddingConfigForKnowledgeBase(companyId, id), (a, b) -> a));
         List<KbChunkEntity> embeddingMismatchChunks = chunks.stream()
                 .filter(KbChunkEntity::isSearchable)
                 .filter(chunk -> !embeddingMetadataMatches(chunk, embeddingConfigByKb.get(chunk.getKnowledgeBaseId())))
                 .toList();
         List<KbDocumentEntity> publishedDocumentsWithoutChunks = documents.stream()
                 .filter(doc -> doc.isEnabled() && !doc.isArchived() && "PUBLISHED".equals(doc.getStatus()))
-                .filter(doc -> chunkRepository.countByOrgIdAndDocumentIdAndStatusAndEnabledTrue(orgId, doc.getId(), "ACTIVE") == 0)
+                .filter(doc -> chunkRepository.countByCompanyIdAndDocumentIdAndStatusAndEnabledTrue(companyId, doc.getId(), "ACTIVE") == 0)
                 .toList();
         List<KbDocumentEntity> staleSyncDocuments = documents.stream()
                 .filter(doc -> "FAILED".equals(doc.getStatus()) || "CLEANUP_FAILED".equals(doc.getStatus()))
@@ -989,23 +989,23 @@ public class KnowledgeBaseService {
         if (repair) {
             int repairedManualChunks = 0;
             for (KbChunkEntity chunk : missingVectorChunks) {
-                if (chunk.getDocumentId() == null && repairChunkVector(orgId, chunk)) {
+                if (chunk.getDocumentId() == null && repairChunkVector(companyId, chunk)) {
                     repairedManualChunks++;
                 }
             }
             int repairedEmbeddingMismatchChunks = 0;
             for (KbChunkEntity chunk : embeddingMismatchChunks) {
-                if (chunk.getDocumentId() == null && repairChunkVector(orgId, chunk)) {
+                if (chunk.getDocumentId() == null && repairChunkVector(companyId, chunk)) {
                     repairedEmbeddingMismatchChunks++;
                 }
             }
             int reindexedDocuments = 0;
             for (Long documentId : documentsToReindex) {
-                publishDocument(orgId, documentId);
+                publishDocument(companyId, documentId);
                 reindexedDocuments++;
             }
             VectorDeleteResult orphanCleanup = vectorAudit.success() && !vectorAudit.orphanVectorIds().isEmpty()
-                    ? vectorStoreClient.deleteByVectorIds(orgId, vectorAudit.orphanVectorIds())
+                    ? vectorStoreClient.deleteByVectorIds(companyId, vectorAudit.orphanVectorIds())
                     : VectorDeleteResult.success(0, 0);
             repairSummary.put("reindexedDocuments", reindexedDocuments);
             repairSummary.put("repairedManualChunks", repairedManualChunks);
@@ -1054,33 +1054,33 @@ public class KnowledgeBaseService {
     }
 
     @Transactional
-    public Map<String, Object> publishDocument(String orgId, Long documentId) {
-        KbDocumentEntity doc = documentRepository.findByIdAndOrgId(documentId, orgId)
+    public Map<String, Object> publishDocument(String companyId, Long documentId) {
+        KbDocumentEntity doc = documentRepository.findByIdAndCompanyId(documentId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Document not found"));
         doc.markIndexing();
         documentRepository.save(doc);
         if ("mq".equalsIgnoreCase(indexingMode)) {
             try {
-                String taskPayload = objectMapper.writeValueAsString(new KbIndexTask(orgId, documentId));
+                String taskPayload = objectMapper.writeValueAsString(new KbIndexTask(companyId, documentId));
                 rabbitTemplate.convertAndSend(KbAsyncConfig.KB_INDEX_QUEUE, taskPayload);
             } catch (JsonProcessingException ex) {
                 throw new IllegalArgumentException("Failed to enqueue indexing task");
             }
         } else {
-            indexDocument(orgId, documentId);
+            indexDocument(companyId, documentId);
         }
-        KbDocumentEntity latest = documentRepository.findByIdAndOrgId(documentId, orgId).orElse(doc);
+        KbDocumentEntity latest = documentRepository.findByIdAndCompanyId(documentId, companyId).orElse(doc);
         return documentPayload(latest);
     }
 
     @Transactional
-    public Map<String, Object> reindexDocument(String orgId, Long documentId) {
-        return publishDocument(orgId, documentId);
+    public Map<String, Object> reindexDocument(String companyId, Long documentId) {
+        return publishDocument(companyId, documentId);
     }
 
     @Transactional
-    public Map<String, Object> unpublishDocument(String orgId, Long documentId) {
-        KbDocumentEntity doc = documentRepository.findByIdAndOrgId(documentId, orgId)
+    public Map<String, Object> unpublishDocument(String companyId, Long documentId) {
+        KbDocumentEntity doc = documentRepository.findByIdAndCompanyId(documentId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Document not found"));
         doc.setStatus("UNPUBLISHED");
         documentRepository.save(doc);
@@ -1099,8 +1099,8 @@ public class KnowledgeBaseService {
     }
 
     @Transactional
-    public Map<String, Object> deleteKnowledgeBase(String orgId, Long id) {
-        KnowledgeBaseEntity kb = kbRepository.findByIdAndOrgId(id, orgId)
+    public Map<String, Object> deleteKnowledgeBase(String companyId, Long id) {
+        KnowledgeBaseEntity kb = kbRepository.findByIdAndCompanyId(id, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Knowledge base not found"));
         kb.setStatus("DELETING");
         kbRepository.save(kb);
@@ -1110,7 +1110,7 @@ public class KnowledgeBaseService {
         int deletedChunks = 0;
         int deletedVectors = 0;
         StringBuilder errors = new StringBuilder();
-        for (KbDocumentEntity doc : documentRepository.findByOrgIdAndKnowledgeBaseIdAndStatusNot(orgId, id, "DELETED")) {
+        for (KbDocumentEntity doc : documentRepository.findByCompanyIdAndKnowledgeBaseIdAndStatusNot(companyId, id, "DELETED")) {
             CleanupResult result = cleanupDocumentForDelete(doc, true);
             deletedDocuments++;
             deletedChunks += result.deletedChunks();
@@ -1121,7 +1121,7 @@ public class KnowledgeBaseService {
             }
         }
 
-        CleanupResult kbCleanup = cleanupKnowledgeBaseChunks(orgId, id);
+        CleanupResult kbCleanup = cleanupKnowledgeBaseChunks(companyId, id);
         deletedChunks += kbCleanup.deletedChunks();
         deletedVectors += kbCleanup.deletedVectors();
         if (!kbCleanup.success()) {
@@ -1129,7 +1129,7 @@ public class KnowledgeBaseService {
             errors.append(kbCleanup.message()).append(' ');
         }
 
-        agentKnowledgeBindingRepository.deleteByOrgIdAndKnowledgeBaseId(orgId, id);
+        agentKnowledgeBindingRepository.deleteByCompanyIdAndKnowledgeBaseId(companyId, id);
 
         if (success) {
             kb.markDeleted();
@@ -1150,8 +1150,8 @@ public class KnowledgeBaseService {
     }
 
     @Transactional
-    public Map<String, Object> deleteDocument(String orgId, Long id) {
-        KbDocumentEntity doc = documentRepository.findByIdAndOrgId(id, orgId)
+    public Map<String, Object> deleteDocument(String companyId, Long id) {
+        KbDocumentEntity doc = documentRepository.findByIdAndCompanyId(id, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Document not found"));
         CleanupResult cleanup = cleanupDocumentForDelete(doc, true);
         HashMap<String, Object> payload = new HashMap<>(documentPayload(doc));
@@ -1165,7 +1165,7 @@ public class KnowledgeBaseService {
     }
 
     @Transactional
-    public Map<String, Object> addChunk(String orgId, String kbId, String content, String tags) {
+    public Map<String, Object> addChunk(String companyId, String kbId, String content, String tags) {
         if (content == null || content.isBlank()) {
             throw new IllegalArgumentException("Chunk content is required");
         }
@@ -1173,7 +1173,7 @@ public class KnowledgeBaseService {
         String normalizedContent = content.trim();
         String contentHash = sha256(normalizedContent);
         KbChunkEntity chunk = chunkRepository.save(new KbChunkEntity(
-                orgId,
+                companyId,
                 normalizedKbId,
                 null,
                 null,
@@ -1181,9 +1181,9 @@ public class KnowledgeBaseService {
                 tags,
                 null,
                 contentHash));
-        EmbeddingConfig embeddingConfig = embeddingConfigForKnowledgeBase(orgId, normalizedKbId);
+        EmbeddingConfig embeddingConfig = embeddingConfigForKnowledgeBase(companyId, normalizedKbId);
         String vectorId = vectorStoreClient.upsert(new VectorUpsertCommand(
-                orgId,
+                companyId,
                 normalizedKbId,
                 null,
                 chunk.getId(),
@@ -1191,7 +1191,7 @@ public class KnowledgeBaseService {
                 normalizedContent,
                 contentHash,
                 embeddingService.embed(
-                        orgId,
+                        companyId,
                         embeddingConfig.provider(),
                         embeddingConfig.model(),
                         embeddingConfig.dimension(),
@@ -1199,8 +1199,8 @@ public class KnowledgeBaseService {
         chunk.setVectorId(vectorId);
         chunk.setEmbeddingMetadata(embeddingConfig.provider(), embeddingConfig.model(), embeddingConfig.dimension());
         chunkRepository.save(chunk);
-        recordKbChunkIndexingSafely(orgId, normalizedKbId, chunk.getId(), contentHash, "chunk_add");
-        parseLong(normalizedKbId).flatMap(id -> kbRepository.findByIdAndOrgId(id, orgId)).ifPresent(kb -> {
+        recordKbChunkIndexingSafely(companyId, normalizedKbId, chunk.getId(), contentHash, "chunk_add");
+        parseLong(normalizedKbId).flatMap(id -> kbRepository.findByIdAndCompanyId(id, companyId)).ifPresent(kb -> {
             if (!"DELETED".equals(kb.getStatus())) {
                 kb.setStatus("ACTIVE");
                 kbRepository.save(kb);
@@ -1208,7 +1208,7 @@ public class KnowledgeBaseService {
         });
         HashMap<String, Object> payload = new HashMap<>();
         payload.put("id", chunk.getId());
-        payload.put("orgId", orgId);
+        payload.put("companyId", companyId);
         payload.put("knowledgeBaseId", normalizedKbId);
         payload.put("status", "INDEXED");
         payload.put("vectorId", vectorId);
@@ -1216,8 +1216,8 @@ public class KnowledgeBaseService {
     }
 
     @Transactional
-    public void indexDocument(String orgId, Long documentId) {
-        KbDocumentEntity doc = documentRepository.findByIdAndOrgId(documentId, orgId)
+    public void indexDocument(String companyId, Long documentId) {
+        KbDocumentEntity doc = documentRepository.findByIdAndCompanyId(documentId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Document not found"));
         if ("DELETING".equals(doc.getStatus()) || "DELETED".equals(doc.getStatus())) {
             return;
@@ -1226,7 +1226,7 @@ public class KnowledgeBaseService {
         try {
             cleanupDocumentIndex(doc);
             String text = readSupportedText(doc);
-            KnowledgeBaseEntity kbEntity = kbRepository.findByIdAndOrgId(doc.getKnowledgeBaseId(), orgId).orElse(null);
+            KnowledgeBaseEntity kbEntity = kbRepository.findByIdAndCompanyId(doc.getKnowledgeBaseId(), companyId).orElse(null);
             int chunkSize = kbEntity == null ? DEFAULT_CHUNK_SIZE : sanitizeChunkSize(kbEntity.getChunkSize());
             int chunkOverlap = kbEntity == null ? DEFAULT_CHUNK_OVERLAP : sanitizeChunkOverlap(chunkSize, kbEntity.getChunkOverlap());
             String chunkDelimiter = kbEntity == null ? "\n" : normalizeDelimiter(kbEntity.getChunkDelimiter());
@@ -1240,7 +1240,7 @@ public class KnowledgeBaseService {
                 }
                 String contentHash = sha256(chunkText);
                 KbChunkEntity chunk = chunkRepository.save(new KbChunkEntity(
-                        doc.getOrgId(),
+                        doc.getCompanyId(),
                         String.valueOf(doc.getKnowledgeBaseId()),
                         doc.getId(),
                         chunkIndex,
@@ -1250,7 +1250,7 @@ public class KnowledgeBaseService {
                         contentHash
                 ));
                 String vectorId = vectorStoreClient.upsert(new VectorUpsertCommand(
-                        doc.getOrgId(),
+                        doc.getCompanyId(),
                         String.valueOf(doc.getKnowledgeBaseId()),
                         doc.getId(),
                         chunk.getId(),
@@ -1258,7 +1258,7 @@ public class KnowledgeBaseService {
                         chunkText,
                         contentHash,
                         embeddingService.embed(
-                                doc.getOrgId(),
+                                doc.getCompanyId(),
                                 embeddingProvider,
                                 embeddingModel,
                                 embeddingDimension,
@@ -1272,12 +1272,12 @@ public class KnowledgeBaseService {
             doc.markPublished();
             documentRepository.save(doc);
             recordKbDocumentIndexingSafely(doc, indexedChunks.size(), "document_index");
-            kbRepository.findByIdAndOrgId(doc.getKnowledgeBaseId(), orgId).ifPresent(kb -> {
+            kbRepository.findByIdAndCompanyId(doc.getKnowledgeBaseId(), companyId).ifPresent(kb -> {
                 kb.setStatus("ACTIVE");
                 kbRepository.save(kb);
             });
         } catch (Exception ex) {
-            cleanupIndexedChunks(doc.getOrgId(), indexedChunks);
+            cleanupIndexedChunks(doc.getCompanyId(), indexedChunks);
             doc.markFailed(ex.getMessage());
             documentRepository.save(doc);
         }
@@ -1287,10 +1287,10 @@ public class KnowledgeBaseService {
         if (doc == null || chunkCount <= 0) {
             return;
         }
-        String sourceId = doc.getOrgId() + ":kb:" + doc.getKnowledgeBaseId()
+        String sourceId = doc.getCompanyId() + ":kb:" + doc.getKnowledgeBaseId()
                 + ":doc:" + doc.getId() + ":v" + doc.getIndexVersion() + ":" + operation;
         billingUsageMeteringService.recordKbIndexingSafely(new BillingUsageMeteringService.KbIndexingMeteringInput(
-                doc.getOrgId(),
+                doc.getCompanyId(),
                 "",
                 "",
                 String.valueOf(doc.getKnowledgeBaseId()),
@@ -1304,20 +1304,20 @@ public class KnowledgeBaseService {
                 Instant.now()));
     }
 
-    private void recordKbChunkIndexingSafely(String orgId,
+    private void recordKbChunkIndexingSafely(String companyId,
                                              String knowledgeBaseId,
                                              Long chunkId,
                                              String contentHash,
                                              String operation) {
-        if (orgId == null || orgId.isBlank() || knowledgeBaseId == null || knowledgeBaseId.isBlank() || chunkId == null) {
+        if (companyId == null || companyId.isBlank() || knowledgeBaseId == null || knowledgeBaseId.isBlank() || chunkId == null) {
             return;
         }
         String hash = contentHash == null || contentHash.isBlank()
                 ? "nohash"
                 : contentHash.substring(0, Math.min(16, contentHash.length()));
-        String sourceId = orgId + ":kb:" + knowledgeBaseId + ":chunk:" + chunkId + ":" + hash + ":" + operation;
+        String sourceId = companyId + ":kb:" + knowledgeBaseId + ":chunk:" + chunkId + ":" + hash + ":" + operation;
         billingUsageMeteringService.recordKbIndexingSafely(new BillingUsageMeteringService.KbIndexingMeteringInput(
-                orgId,
+                companyId,
                 "",
                 "",
                 knowledgeBaseId,
@@ -1352,17 +1352,17 @@ public class KnowledgeBaseService {
     }
 
     private CleanupResult cleanupDocumentIndex(KbDocumentEntity doc) {
-        List<KbChunkEntity> chunks = chunkRepository.findByOrgIdAndDocumentIdAndStatusNot(
-                doc.getOrgId(), doc.getId(), "DELETED");
+        List<KbChunkEntity> chunks = chunkRepository.findByCompanyIdAndDocumentIdAndStatusNot(
+                doc.getCompanyId(), doc.getId(), "DELETED");
         List<String> vectorIds = chunks.stream()
                 .map(KbChunkEntity::getVectorId)
                 .filter(Objects::nonNull)
                 .filter(id -> !id.isBlank())
                 .distinct()
                 .collect(Collectors.toList());
-        VectorDeleteResult byIds = vectorStoreClient.deleteByVectorIds(doc.getOrgId(), vectorIds);
+        VectorDeleteResult byIds = vectorStoreClient.deleteByVectorIds(doc.getCompanyId(), vectorIds);
         VectorDeleteResult byDocument = vectorStoreClient.deleteByDocument(
-                doc.getOrgId(),
+                doc.getCompanyId(),
                 String.valueOf(doc.getKnowledgeBaseId()),
                 doc.getId());
         for (KbChunkEntity chunk : chunks) {
@@ -1372,9 +1372,9 @@ public class KnowledgeBaseService {
         return CleanupResult.from(chunks.size(), byIds).merge(byDocument);
     }
 
-    private CleanupResult cleanupKnowledgeBaseChunks(String orgId, Long knowledgeBaseId) {
-        List<KbChunkEntity> chunks = chunkRepository.findByOrgIdAndKnowledgeBaseIdAndStatusNot(
-                orgId,
+    private CleanupResult cleanupKnowledgeBaseChunks(String companyId, Long knowledgeBaseId) {
+        List<KbChunkEntity> chunks = chunkRepository.findByCompanyIdAndKnowledgeBaseIdAndStatusNot(
+                companyId,
                 String.valueOf(knowledgeBaseId),
                 "DELETED");
         List<String> vectorIds = chunks.stream()
@@ -1383,8 +1383,8 @@ public class KnowledgeBaseService {
                 .filter(id -> !id.isBlank())
                 .distinct()
                 .collect(Collectors.toList());
-        VectorDeleteResult byIds = vectorStoreClient.deleteByVectorIds(orgId, vectorIds);
-        VectorDeleteResult byKnowledgeBase = vectorStoreClient.deleteByKnowledgeBase(orgId, String.valueOf(knowledgeBaseId));
+        VectorDeleteResult byIds = vectorStoreClient.deleteByVectorIds(companyId, vectorIds);
+        VectorDeleteResult byKnowledgeBase = vectorStoreClient.deleteByKnowledgeBase(companyId, String.valueOf(knowledgeBaseId));
         for (KbChunkEntity chunk : chunks) {
             chunk.markDeleted();
         }
@@ -1392,7 +1392,7 @@ public class KnowledgeBaseService {
         return CleanupResult.from(chunks.size(), byIds).merge(byKnowledgeBase);
     }
 
-    private void cleanupIndexedChunks(String orgId, List<KbChunkEntity> chunks) {
+    private void cleanupIndexedChunks(String companyId, List<KbChunkEntity> chunks) {
         if (chunks.isEmpty()) {
             return;
         }
@@ -1401,7 +1401,7 @@ public class KnowledgeBaseService {
                 .filter(Objects::nonNull)
                 .filter(id -> !id.isBlank())
                 .toList();
-        vectorStoreClient.deleteByVectorIds(orgId, vectorIds);
+        vectorStoreClient.deleteByVectorIds(companyId, vectorIds);
         for (KbChunkEntity chunk : chunks) {
             chunk.markDeleted();
         }
@@ -1548,20 +1548,20 @@ public class KnowledgeBaseService {
 
     private KbDocumentEntity upsertSyncedDocument(KbDataSourceEntity source, SyncedDocument synced) throws IOException {
         KbSourceDocumentMapEntity mapping = sourceDocumentMapRepository
-                .findByOrgIdAndDataSourceIdAndExternalDocumentId(source.getOrgId(), source.getId(), synced.externalDocumentId())
+                .findByCompanyIdAndDataSourceIdAndExternalDocumentId(source.getCompanyId(), source.getId(), synced.externalDocumentId())
                 .orElse(null);
         KbDocumentEntity existing = mapping == null
                 ? null
-                : documentRepository.findByIdAndOrgId(mapping.getDocumentId(), source.getOrgId()).orElse(null);
+                : documentRepository.findByIdAndCompanyId(mapping.getDocumentId(), source.getCompanyId()).orElse(null);
         String safeTitle = sanitizeOriginalFilename(synced.title().endsWith(".txt") ? synced.title() : synced.title() + ".txt");
         KbDocumentEntity document;
         if (existing == null) {
-            Files.createDirectories(storageRoot.resolve(source.getOrgId()).resolve(String.valueOf(source.getKnowledgeBaseId())));
-            Path path = storageRoot.resolve(source.getOrgId()).resolve(String.valueOf(source.getKnowledgeBaseId()))
+            Files.createDirectories(storageRoot.resolve(source.getCompanyId()).resolve(String.valueOf(source.getKnowledgeBaseId())));
+            Path path = storageRoot.resolve(source.getCompanyId()).resolve(String.valueOf(source.getKnowledgeBaseId()))
                     .resolve(UUID.randomUUID() + "-" + safeTitle);
             Files.writeString(path, synced.content(), StandardCharsets.UTF_8);
             document = documentRepository.save(new KbDocumentEntity(
-                    source.getOrgId(),
+                    source.getCompanyId(),
                     source.getKnowledgeBaseId(),
                     safeTitle,
                     "text/plain",
@@ -1575,7 +1575,7 @@ public class KnowledgeBaseService {
         }
         if (mapping == null) {
             sourceDocumentMapRepository.save(new KbSourceDocumentMapEntity(
-                    source.getOrgId(),
+                    source.getCompanyId(),
                     source.getKnowledgeBaseId(),
                     source.getId(),
                     synced.externalDocumentId(),
@@ -1678,10 +1678,10 @@ public class KnowledgeBaseService {
         throw new IllegalArgumentException("Unsupported data source type: " + value);
     }
 
-    private EvalCaseOutcome evaluateCase(String orgId, Long kbId, KbEvalCaseEntity evalCase) {
+    private EvalCaseOutcome evaluateCase(String companyId, Long kbId, KbEvalCaseEntity evalCase) {
         Map<String, String> filters = parseMetadataFiltersJson(evalCase.getMetadataFiltersJson());
         RagService.RetrievalResult result = ragService.retrieveDetailed(
-                orgId,
+                companyId,
                 List.of(String.valueOf(kbId)),
                 evalCase.getQuery(),
                 filters);
@@ -1764,13 +1764,13 @@ public class KnowledgeBaseService {
         }
     }
 
-    private KnowledgeBaseEntity requireKnowledgeBase(String orgId, Long kbId) {
-        return kbRepository.findByIdAndOrgId(kbId, orgId)
+    private KnowledgeBaseEntity requireKnowledgeBase(String companyId, Long kbId) {
+        return kbRepository.findByIdAndCompanyId(kbId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Knowledge base not found"));
     }
 
-    private KbEvalSuiteEntity requireEvalSuite(String orgId, Long suiteId) {
-        return evalSuiteRepository.findByIdAndOrgId(suiteId, orgId)
+    private KbEvalSuiteEntity requireEvalSuite(String companyId, Long suiteId) {
+        return evalSuiteRepository.findByIdAndCompanyId(suiteId, companyId)
                 .filter(item -> KbEvalSuiteEntity.STATUS_ACTIVE.equals(item.getStatus()))
                 .orElseThrow(() -> new IllegalArgumentException("Evaluation suite not found"));
     }
@@ -1886,7 +1886,7 @@ public class KnowledgeBaseService {
     private Map<String, Object> kbPayload(KnowledgeBaseEntity kb) {
         HashMap<String, Object> row = new HashMap<>();
         row.put("id", kb.getId());
-        row.put("orgId", kb.getOrgId());
+        row.put("companyId", kb.getCompanyId());
         row.put("name", kb.getName());
         row.put("description", kb.getDescription() == null ? "" : kb.getDescription());
         row.put("status", kb.getStatus());
@@ -1910,7 +1910,7 @@ public class KnowledgeBaseService {
     private Map<String, Object> documentPayload(KbDocumentEntity doc) {
         HashMap<String, Object> row = new HashMap<>();
         row.put("id", doc.getId());
-        row.put("orgId", doc.getOrgId());
+        row.put("companyId", doc.getCompanyId());
         row.put("knowledgeBaseId", doc.getKnowledgeBaseId());
         row.put("name", doc.getName());
         row.put("status", doc.getStatus());
@@ -1921,8 +1921,8 @@ public class KnowledgeBaseService {
         row.put("fileSize", doc.getFileSize() == null ? 0L : doc.getFileSize());
         row.put("enabled", doc.isEnabled());
         row.put("archived", doc.isArchived());
-        row.put("chunkCount", chunkRepository.countByOrgIdAndDocumentIdAndStatusAndEnabledTrue(
-                doc.getOrgId(), doc.getId(), "ACTIVE"));
+        row.put("chunkCount", chunkRepository.countByCompanyIdAndDocumentIdAndStatusAndEnabledTrue(
+                doc.getCompanyId(), doc.getId(), "ACTIVE"));
         row.put("errorMessage", doc.getErrorMessage() == null ? "" : doc.getErrorMessage());
         return row;
     }
@@ -2046,12 +2046,12 @@ public class KnowledgeBaseService {
         return row;
     }
 
-    private boolean repairChunkVector(String orgId, KbChunkEntity chunk) {
+    private boolean repairChunkVector(String companyId, KbChunkEntity chunk) {
         Long kbId = parseLong(chunk.getKnowledgeBaseId()).orElse(null);
         if (kbId == null || !chunk.isSearchable()) {
             return false;
         }
-        KnowledgeBaseEntity kb = kbRepository.findByIdAndOrgId(kbId, orgId).orElse(null);
+        KnowledgeBaseEntity kb = kbRepository.findByIdAndCompanyId(kbId, companyId).orElse(null);
         if (kb == null || !"ACTIVE".equals(kb.getStatus())) {
             return false;
         }
@@ -2059,7 +2059,7 @@ public class KnowledgeBaseService {
                 ? sha256(chunk.getContent())
                 : chunk.getContentHash();
         String vectorId = vectorStoreClient.upsert(new VectorUpsertCommand(
-                orgId,
+                companyId,
                 chunk.getKnowledgeBaseId(),
                 chunk.getDocumentId(),
                 chunk.getId(),
@@ -2067,7 +2067,7 @@ public class KnowledgeBaseService {
                 chunk.getContent(),
                 contentHash,
                 embeddingService.embed(
-                        orgId,
+                        companyId,
                         kb.getEmbeddingProvider(),
                         kb.getEmbeddingModel(),
                         kb.getEmbeddingDimension(),
@@ -2087,18 +2087,18 @@ public class KnowledgeBaseService {
                 && Objects.equals(sanitizeEmbeddingDimension(chunk.getEmbeddingDimension()), sanitizeEmbeddingDimension(expected.dimension()));
     }
 
-    private Map<String, Object> batchOperateDocuments(String orgId, List<Long> rawIds, String action) {
+    private Map<String, Object> batchOperateDocuments(String companyId, List<Long> rawIds, String action) {
         List<Long> ids = normalizeIds(rawIds);
         ArrayList<Map<String, Object>> failed = new ArrayList<>();
         int successCount = 0;
         for (Long id : ids) {
             try {
                 switch (action) {
-                    case "enable" -> setDocumentEnabled(orgId, id, true);
-                    case "disable" -> setDocumentEnabled(orgId, id, false);
-                    case "archive" -> setDocumentArchived(orgId, id, true);
-                    case "unarchive" -> setDocumentArchived(orgId, id, false);
-                    case "delete" -> deleteDocument(orgId, id);
+                    case "enable" -> setDocumentEnabled(companyId, id, true);
+                    case "disable" -> setDocumentEnabled(companyId, id, false);
+                    case "archive" -> setDocumentArchived(companyId, id, true);
+                    case "unarchive" -> setDocumentArchived(companyId, id, false);
+                    case "delete" -> deleteDocument(companyId, id);
                     default -> throw new IllegalArgumentException("Unsupported action: " + action);
                 }
                 successCount++;
@@ -2118,16 +2118,16 @@ public class KnowledgeBaseService {
         return payload;
     }
 
-    private Map<String, Object> batchOperateChunks(String orgId, List<Long> rawIds, String action) {
+    private Map<String, Object> batchOperateChunks(String companyId, List<Long> rawIds, String action) {
         List<Long> ids = normalizeIds(rawIds);
         ArrayList<Map<String, Object>> failed = new ArrayList<>();
         int successCount = 0;
         for (Long id : ids) {
             try {
                 switch (action) {
-                    case "enable" -> setChunkEnabled(orgId, id, true);
-                    case "disable" -> setChunkEnabled(orgId, id, false);
-                    case "delete" -> deleteChunk(orgId, id);
+                    case "enable" -> setChunkEnabled(companyId, id, true);
+                    case "disable" -> setChunkEnabled(companyId, id, false);
+                    case "delete" -> deleteChunk(companyId, id);
                     default -> throw new IllegalArgumentException("Unsupported action: " + action);
                 }
                 successCount++;
@@ -2157,11 +2157,11 @@ public class KnowledgeBaseService {
                 .toList();
     }
 
-    private boolean isChunkSearchable(String orgId, Long kbId, Long chunkId) {
+    private boolean isChunkSearchable(String companyId, Long kbId, Long chunkId) {
         if (chunkId == null) {
             return false;
         }
-        KbChunkEntity chunk = chunkRepository.findByIdAndOrgId(chunkId, orgId).orElse(null);
+        KbChunkEntity chunk = chunkRepository.findByIdAndCompanyId(chunkId, companyId).orElse(null);
         if (chunk == null || !chunk.isSearchable() || !String.valueOf(kbId).equals(chunk.getKnowledgeBaseId())) {
             return false;
         }
@@ -2169,7 +2169,7 @@ public class KnowledgeBaseService {
         if (documentId == null) {
             return true;
         }
-        KbDocumentEntity doc = documentRepository.findByIdAndOrgId(documentId, orgId).orElse(null);
+        KbDocumentEntity doc = documentRepository.findByIdAndCompanyId(documentId, companyId).orElse(null);
         return doc != null
                 && "PUBLISHED".equals(doc.getStatus())
                 && doc.isEnabled()
@@ -2177,7 +2177,7 @@ public class KnowledgeBaseService {
                 && kbId.equals(doc.getKnowledgeBaseId());
     }
 
-    private void saveRetrievalLog(String orgId,
+    private void saveRetrievalLog(String companyId,
                                   Long kbId,
                                   String query,
                                   String strategy,
@@ -2187,7 +2187,7 @@ public class KnowledgeBaseService {
         try {
             String summary = objectMapper.writeValueAsString(hits);
             retrievalLogRepository.save(new KbRetrievalLogEntity(
-                    orgId,
+                    companyId,
                     kbId,
                     query,
                     strategy,
@@ -2249,9 +2249,9 @@ public class KnowledgeBaseService {
         return Math.min(4096, Math.max(4, value));
     }
 
-    private EmbeddingConfig embeddingConfigForKnowledgeBase(String orgId, String knowledgeBaseId) {
+    private EmbeddingConfig embeddingConfigForKnowledgeBase(String companyId, String knowledgeBaseId) {
         return parseLong(knowledgeBaseId)
-                .flatMap(id -> kbRepository.findByIdAndOrgId(id, orgId))
+                .flatMap(id -> kbRepository.findByIdAndCompanyId(id, companyId))
                 .map(kb -> new EmbeddingConfig(
                         kb.getEmbeddingProvider(),
                         kb.getEmbeddingModel(),
@@ -2324,11 +2324,11 @@ public class KnowledgeBaseService {
         return out;
     }
 
-    private void validateMetadataFilterKeys(String orgId, Long kbId, Map<String, String> filters) {
+    private void validateMetadataFilterKeys(String companyId, Long kbId, Map<String, String> filters) {
         if (filters == null || filters.isEmpty()) {
             return;
         }
-        List<KbMetadataFieldEntity> fields = metadataFieldRepository.findByOrgIdAndKnowledgeBaseIdOrderByIdAsc(orgId, kbId);
+        List<KbMetadataFieldEntity> fields = metadataFieldRepository.findByCompanyIdAndKnowledgeBaseIdOrderByIdAsc(companyId, kbId);
         Map<String, KbMetadataFieldEntity> fieldMap = new HashMap<>();
         for (KbMetadataFieldEntity field : fields) {
             fieldMap.put(field.getFieldKey(), field);
@@ -2340,15 +2340,15 @@ public class KnowledgeBaseService {
         }
     }
 
-    private boolean matchesMetadataFilters(String orgId, Long kbId, Long documentId, Map<String, String> filters) {
+    private boolean matchesMetadataFilters(String companyId, Long kbId, Long documentId, Map<String, String> filters) {
         if (filters == null || filters.isEmpty()) {
             return true;
         }
         if (documentId == null) {
             return false;
         }
-        List<KbDocumentMetadataEntity> metadata = documentMetadataRepository.findByOrgIdAndKnowledgeBaseIdAndDocumentId(
-                orgId, kbId, documentId);
+        List<KbDocumentMetadataEntity> metadata = documentMetadataRepository.findByCompanyIdAndKnowledgeBaseIdAndDocumentId(
+                companyId, kbId, documentId);
         if (metadata.isEmpty()) {
             return false;
         }

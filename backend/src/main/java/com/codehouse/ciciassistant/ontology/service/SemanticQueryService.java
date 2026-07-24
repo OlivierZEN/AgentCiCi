@@ -69,24 +69,24 @@ public class SemanticQueryService {
     }
 
     @Transactional(readOnly = true)
-    public QueryPlan explain(String orgId, String userId, SemanticQuery query) {
+    public QueryPlan explain(String companyId, String userId, SemanticQuery query) {
         SemanticQuery normalized = normalizeQuery(query);
-        requireCurrentContext(orgId, userId);
-        return resolve(locateScope(orgId, normalized), normalized).publicPlan();
+        requireCurrentContext(companyId, userId);
+        return resolve(locateScope(companyId, normalized), normalized).publicPlan();
     }
 
-    public QueryResult execute(String orgId, String userId, SemanticQuery query) {
+    public QueryResult execute(String companyId, String userId, SemanticQuery query) {
         long startedAt = System.nanoTime();
         SemanticQuery normalized = normalizeQuery(query);
-        requireCurrentContext(orgId, userId);
-        QueryScope scope = locateScope(orgId, normalized);
+        requireCurrentContext(companyId, userId);
+        QueryScope scope = locateScope(companyId, normalized);
         ResolvedPlan resolved = null;
         int totalCount = 0;
         boolean moreAvailable = false;
         List<Map<String, Object>> rows;
         try {
             resolved = resolve(scope, normalized);
-            AdapterContext adapterContext = new AdapterContext(orgId, userId);
+            AdapterContext adapterContext = new AdapterContext(companyId, userId);
             PhysicalResult physicalResult = executeRead(
                     resolved.adapter(), adapterContext, resolved.source(), resolved.physicalQuery());
             totalCount = physicalResult.totalCount();
@@ -130,11 +130,11 @@ public class SemanticQueryService {
         return new QueryResult(rows, evidence, elapsedMs);
     }
 
-    private QueryScope locateScope(String orgId, SemanticQuery query) {
-        OntologyWorkspaceEntity workspace = workspaces.findByOrgIdAndKey(orgId, query.ontologyKey())
+    private QueryScope locateScope(String companyId, SemanticQuery query) {
+        OntologyWorkspaceEntity workspace = workspaces.findByCompanyIdAndKey(companyId, query.ontologyKey())
                 .orElseThrow(() -> new ResourceNotFoundException("ONTOLOGY_NOT_FOUND"));
-        OntologyVersionEntity version = versions.findByWorkspaceIdAndOrgIdAndVersionNo(
-                        workspace.getId(), orgId, query.version())
+        OntologyVersionEntity version = versions.findByWorkspaceIdAndCompanyIdAndVersionNo(
+                        workspace.getId(), companyId, query.version())
                 .orElseThrow(() -> new ResourceNotFoundException("ONTOLOGY_NOT_FOUND"));
         return new QueryScope(workspace, version);
     }
@@ -782,7 +782,7 @@ public class SemanticQueryService {
             QueryEvidence evidence,
             String errorCode) {
         OntologyQueryAuditEntity audit = new OntologyQueryAuditEntity(
-                scope.workspace().getOrgId(),
+                scope.workspace().getCompanyId(),
                 scope.workspace().getId(),
                 scope.version().getId(),
                 source == null ? null : source.id(),
@@ -822,9 +822,9 @@ public class SemanticQueryService {
         }
     }
 
-    private void requireCurrentContext(String orgId, String userId) {
+    private void requireCurrentContext(String companyId, String userId) {
         if (!hasText(userId)
-                || !Objects.equals(TenantContext.requireOrgId(), orgId)
+                || !Objects.equals(TenantContext.requireCompanyId(), companyId)
                 || TenantContext.getUserId().filter(userId::equals).isEmpty()) {
             throw new ForbiddenException("ONTOLOGY_QUERY_CONTEXT_MISMATCH");
         }

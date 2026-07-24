@@ -3,8 +3,8 @@ package com.codehouse.ciciassistant.model;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.codehouse.ciciassistant.ai.service.ModelRouterService;
-import com.codehouse.ciciassistant.model.domain.OrgModelConfigEntity;
-import com.codehouse.ciciassistant.model.domain.OrgModelConfigRepository;
+import com.codehouse.ciciassistant.model.domain.CompanyModelConfigEntity;
+import com.codehouse.ciciassistant.model.domain.CompanyModelConfigRepository;
 import com.codehouse.ciciassistant.model.service.ModelProviderService;
 import java.util.List;
 import java.util.Map;
@@ -25,13 +25,13 @@ class ModelProviderServiceIntegrationTest {
     private ModelRouterService modelRouterService;
 
     @Autowired
-    private OrgModelConfigRepository orgModelConfigRepository;
+    private CompanyModelConfigRepository orgModelConfigRepository;
 
     @Test
     void agentBaseModelsOnlyExposePlatformSelectedModels() {
-        String orgId = "model-provider-test-org-" + UUID.randomUUID();
+        String companyId = "model-provider-test-org-" + UUID.randomUUID();
 
-        List<Map<String, Object>> providers = modelProviderService.listProviders(orgId);
+        List<Map<String, Object>> providers = modelProviderService.listProviders(companyId);
         assertThat(providers).extracting(row -> row.get("providerCode"))
                 .containsExactly(
                         ModelProviderService.PROVIDER_ALIYUN,
@@ -51,7 +51,7 @@ class ModelProviderServiceIntegrationTest {
                 String.valueOf(row.get("providerCode")),
                 List.of()));
 
-        assertThat(modelProviderService.agentBaseModels(orgId))
+        assertThat(modelProviderService.agentBaseModels(companyId))
                 .as("builtin provider presets must not appear as selectable agent base models")
                 .isEmpty();
 
@@ -59,7 +59,7 @@ class ModelProviderServiceIntegrationTest {
                 ModelProviderService.PROVIDER_ALIYUN,
                 List.of("qwen3.6-plus", "glm-5.1"));
 
-        List<Map<String, Object>> baseModels = modelProviderService.agentBaseModels(orgId);
+        List<Map<String, Object>> baseModels = modelProviderService.agentBaseModels(companyId);
 
         assertThat(baseModels).extracting(row -> row.get("modelName"))
                 .containsExactly("qwen3.6-plus", "glm-5.1");
@@ -71,11 +71,11 @@ class ModelProviderServiceIntegrationTest {
 
     @Test
     void runtimeCredentialsResolveFromPlatformProviderScope() {
-        String orgId = "runtime-provider-test-org-" + UUID.randomUUID();
+        String companyId = "runtime-provider-test-org-" + UUID.randomUUID();
 
-        modelProviderService.listProviders(orgId);
+        modelProviderService.listProviders(companyId);
         modelProviderService.updateProvider(
-                orgId,
+                companyId,
                 ModelProviderService.PROVIDER_DEEPSEEK,
                 true,
                 "https://tenant.example.invalid/v1",
@@ -87,7 +87,7 @@ class ModelProviderServiceIntegrationTest {
                 "platform-secret");
 
         Map<String, String> credentials = modelProviderService.credentialsForProvider(
-                orgId,
+                companyId,
                 ModelProviderService.PROVIDER_DEEPSEEK);
 
         assertThat(credentials.get("apiBaseUrl")).isEqualTo("https://platform.example.invalid/v1");
@@ -95,9 +95,9 @@ class ModelProviderServiceIntegrationTest {
     }
 
     @Test
-    void runtimeRouteIgnoresOrganizationMockFallbackAndUsesPlatformSelectedModel() {
-        String orgId = "runtime-route-test-org-" + UUID.randomUUID();
-        modelProviderService.listProviders(orgId);
+    void runtimeRouteIgnoresCompanyMockFallbackAndUsesPlatformSelectedModel() {
+        String companyId = "runtime-route-test-org-" + UUID.randomUUID();
+        modelProviderService.listProviders(companyId);
         modelProviderService.updatePlatformProvider(
                 ModelProviderService.PROVIDER_ALIYUN,
                 true,
@@ -106,9 +106,9 @@ class ModelProviderServiceIntegrationTest {
         modelProviderService.updatePlatformSelectedModels(
                 ModelProviderService.PROVIDER_ALIYUN,
                 List.of("platform-chat-model"));
-        orgModelConfigRepository.save(new OrgModelConfigEntity(orgId, "chat", "mock", "cici-default"));
+        orgModelConfigRepository.save(new CompanyModelConfigEntity(companyId, "chat", "mock", "cici-default"));
 
-        Map<String, String> route = modelRouterService.route(orgId, "chat");
+        Map<String, String> route = modelRouterService.route(companyId, "chat");
 
         assertThat(route.get("provider")).isEqualTo(ModelProviderService.PROVIDER_ALIYUN);
         assertThat(route.get("modelName")).isEqualTo("platform-chat-model");
@@ -117,8 +117,8 @@ class ModelProviderServiceIntegrationTest {
 
     @Test
     void runtimeRouteUsesPlatformManagedSceneBeforeAgentPreference() {
-        String orgId = "runtime-scene-route-" + UUID.randomUUID();
-        modelProviderService.listProviders(orgId);
+        String companyId = "runtime-scene-route-" + UUID.randomUUID();
+        modelProviderService.listProviders(companyId);
         modelProviderService.updatePlatformProvider(
                 ModelProviderService.PROVIDER_ALIYUN,
                 true,
@@ -132,14 +132,14 @@ class ModelProviderServiceIntegrationTest {
                 ModelProviderService.PROVIDER_ALIYUN,
                 "qwen3.6-plus");
 
-        Map<String, String> sceneRoute = modelRouterService.route(orgId, "chat", "qwen3.5-omni-flash");
+        Map<String, String> sceneRoute = modelRouterService.route(companyId, "chat", "qwen3.5-omni-flash");
 
         assertThat(sceneRoute.get("provider")).isEqualTo(ModelProviderService.PROVIDER_ALIYUN);
         assertThat(sceneRoute.get("modelName")).isEqualTo("qwen3.6-plus");
         assertThat(sceneRoute.get("routeSource")).isEqualTo("platform_scene");
 
         modelProviderService.deletePlatformModelRoute("chat");
-        Map<String, String> preferredRoute = modelRouterService.route(orgId, "chat", "qwen3.5-omni-flash");
+        Map<String, String> preferredRoute = modelRouterService.route(companyId, "chat", "qwen3.5-omni-flash");
         assertThat(preferredRoute.get("modelName")).isEqualTo("qwen3.5-omni-flash");
         assertThat(preferredRoute.get("routeSource")).isEqualTo("agent_preferred");
     }

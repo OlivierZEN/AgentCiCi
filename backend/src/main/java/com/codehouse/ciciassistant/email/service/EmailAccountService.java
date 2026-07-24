@@ -37,21 +37,21 @@ public class EmailAccountService {
         this.emailToolServiceProvider = emailToolServiceProvider;
     }
 
-    public List<EmailAccountView> list(String orgId, String userId) {
-        return repository.findByOrgIdAndUserIdOrderByIdAsc(orgId, userId).stream()
+    public List<EmailAccountView> list(String companyId, String userId) {
+        return repository.findByCompanyIdAndUserIdOrderByIdAsc(companyId, userId).stream()
                 .map(EmailAccountService::toView)
                 .toList();
     }
 
-    public EmailAccountView get(String orgId, String userId, Long id) {
-        return toView(findOrThrow(orgId, userId, id));
+    public EmailAccountView get(String companyId, String userId, Long id) {
+        return toView(findOrThrow(companyId, userId, id));
     }
 
     /**
      * @return the default enabled account for a user (smallest id), or empty when none configured.
      */
-    public Optional<EmailAccountEntity> findDefaultAccount(String orgId, String userId) {
-        return repository.findFirstByOrgIdAndUserIdAndEnabledTrueOrderByIdAsc(orgId, userId);
+    public Optional<EmailAccountEntity> findDefaultAccount(String companyId, String userId) {
+        return repository.findFirstByCompanyIdAndUserIdAndEnabledTrueOrderByIdAsc(companyId, userId);
     }
 
     public String decryptSecret(EmailAccountEntity entity) {
@@ -59,18 +59,18 @@ public class EmailAccountService {
     }
 
     @Transactional
-    public EmailAccountView create(String orgId, String userId, UpsertCommand command) {
+    public EmailAccountView create(String companyId, String userId, UpsertCommand command) {
         ProviderPreset preset = requireKnownProvider(command.providerCode());
         ResolvedConfig resolved = resolveConfig(preset, command, true);
         String email = requireValidEmail(resolved.emailAddress());
 
-        if (repository.findByOrgIdAndUserIdAndEmailAddress(orgId, userId, email).isPresent()) {
+        if (repository.findByCompanyIdAndUserIdAndEmailAddress(companyId, userId, email).isPresent()) {
             throw new IllegalArgumentException("该邮箱已经绑定过了，不能重复添加: " + email);
         }
 
         SecretCipherService.EncryptedSecret secret = secretCipherService.encryptUtf8(requireSecret(command.secret()));
         EmailAccountEntity entity = new EmailAccountEntity(
-                orgId,
+                companyId,
                 userId,
                 resolved.providerCode(),
                 resolved.displayName(),
@@ -92,13 +92,13 @@ public class EmailAccountService {
     }
 
     @Transactional
-    public EmailAccountView update(String orgId, String userId, Long id, UpsertCommand command) {
-        EmailAccountEntity entity = findOrThrow(orgId, userId, id);
+    public EmailAccountView update(String companyId, String userId, Long id, UpsertCommand command) {
+        EmailAccountEntity entity = findOrThrow(companyId, userId, id);
         ProviderPreset preset = requireKnownProvider(command.providerCode());
         ResolvedConfig resolved = resolveConfig(preset, command, false);
         String email = requireValidEmail(resolved.emailAddress());
 
-        repository.findByOrgIdAndUserIdAndEmailAddress(orgId, userId, email)
+        repository.findByCompanyIdAndUserIdAndEmailAddress(companyId, userId, email)
                 .filter(other -> !other.getId().equals(entity.getId()))
                 .ifPresent(other -> {
                     throw new IllegalArgumentException("该邮箱已绑定到另一个账号: " + email);
@@ -129,14 +129,14 @@ public class EmailAccountService {
     }
 
     @Transactional
-    public void delete(String orgId, String userId, Long id) {
-        EmailAccountEntity entity = findOrThrow(orgId, userId, id);
+    public void delete(String companyId, String userId, Long id) {
+        EmailAccountEntity entity = findOrThrow(companyId, userId, id);
         repository.delete(entity);
     }
 
     @Transactional
-    public VerifyResult verify(String orgId, String userId, Long id) {
-        EmailAccountEntity entity = findOrThrow(orgId, userId, id);
+    public VerifyResult verify(String companyId, String userId, Long id) {
+        EmailAccountEntity entity = findOrThrow(companyId, userId, id);
         EmailToolService toolService = emailToolServiceProvider.getObject();
         try {
             toolService.verifyConnection(entity);
@@ -175,8 +175,8 @@ public class EmailAccountService {
         return new EmailAccountView(payload);
     }
 
-    private EmailAccountEntity findOrThrow(String orgId, String userId, Long id) {
-        return repository.findByIdAndOrgIdAndUserId(id, orgId, userId)
+    private EmailAccountEntity findOrThrow(String companyId, String userId, Long id) {
+        return repository.findByIdAndCompanyIdAndUserId(id, companyId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("邮箱账号不存在或不属于当前用户"));
     }
 

@@ -43,7 +43,7 @@ public class OntologyVersionEntity extends AbstractOntologyWorkspaceEntity {
     }
 
     public OntologyVersionEntity(
-            String orgId,
+            String companyId,
             Long workspaceId,
             Integer versionNo,
             Long sourceDraftRevision,
@@ -54,7 +54,7 @@ public class OntologyVersionEntity extends AbstractOntologyWorkspaceEntity {
             String queryContractJson,
             String validationSummaryJson,
             String publishedBy) {
-        super(orgId, workspaceId);
+        super(companyId, workspaceId);
         this.versionNo = versionNo;
         this.sourceDraftRevision = sourceDraftRevision;
         this.contentHash = contentHash;

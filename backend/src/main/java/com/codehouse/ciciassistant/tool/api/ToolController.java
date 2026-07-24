@@ -41,9 +41,9 @@ public class ToolController {
      */
     @GetMapping
     public ApiResponse<List<Map<String, Object>>> list() {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         List<Map<String, Object>> out = new ArrayList<>();
-        List<ToolCatalogItem> builtinTools = platformGovernanceService.listEffectiveBuiltinTools(orgId);
+        List<ToolCatalogItem> builtinTools = platformGovernanceService.listEffectiveBuiltinTools(companyId);
         for (ToolCatalogItem b : builtinTools) {
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("toolName", b.toolName());
@@ -54,7 +54,7 @@ public class ToolController {
             row.put("builtin", true);
             out.add(row);
         }
-        for (ToolDefinitionEntity item : repository.findByOrgIdAndEnabledTrue(orgId)) {
+        for (ToolDefinitionEntity item : repository.findByCompanyIdAndEnabledTrue(companyId)) {
             if (builtinTools.stream()
                     .anyMatch(b -> b.toolName().equalsIgnoreCase(item.getToolName()))) {
                 continue;
@@ -73,11 +73,11 @@ public class ToolController {
 
     @PostMapping
     public ApiResponse<Map<String, Object>> create(@Valid @RequestBody CreateToolRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         ToolDefinitionEntity entity = repository.save(
-                new ToolDefinitionEntity(orgId, request.toolName(), request.description(), request.riskLevel(), true));
+                new ToolDefinitionEntity(companyId, request.toolName(), request.description(), request.riskLevel(), true));
         return ApiResponse.ok(Map.of(
-                "orgId", entity.getOrgId(),
+                "companyId", entity.getCompanyId(),
                 "toolName", entity.getToolName(),
                 "description", entity.getDescription(),
                 "riskLevel", entity.getRiskLevel(),
@@ -87,12 +87,12 @@ public class ToolController {
 
     @DeleteMapping
     public ApiResponse<Map<String, Object>> disable(@RequestParam("toolName") String toolName) {
-        String orgId = TenantContext.requireOrgId();
-        ToolDefinitionEntity entity = repository.findByOrgIdAndToolName(orgId, toolName)
+        String companyId = TenantContext.requireCompanyId();
+        ToolDefinitionEntity entity = repository.findByCompanyIdAndToolName(companyId, toolName)
                 .orElseThrow(() -> new IllegalArgumentException("Tool not found"));
         entity.setEnabled(false);
         repository.save(entity);
-        return ApiResponse.ok(Map.of("orgId", orgId, "toolName", toolName, "enabled", false));
+        return ApiResponse.ok(Map.of("companyId", companyId, "toolName", toolName, "enabled", false));
     }
 
     public record CreateToolRequest(

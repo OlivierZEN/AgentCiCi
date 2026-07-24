@@ -9,15 +9,15 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 
 @Entity
-@Table(name = "org_embed_app_config")
-public class OrgEmbedAppConfigEntity {
+@Table(name = "company_embed_app_config")
+public class CompanyEmbedAppConfigEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "app_code", nullable = false, length = 64)
     private String appCode;
@@ -46,10 +46,10 @@ public class OrgEmbedAppConfigEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    protected OrgEmbedAppConfigEntity() {
+    protected CompanyEmbedAppConfigEntity() {
     }
 
-    public OrgEmbedAppConfigEntity(String orgId,
+    public CompanyEmbedAppConfigEntity(String companyId,
                                    String appCode,
                                    boolean enabled,
                                    String allowedOriginsJson,
@@ -57,7 +57,7 @@ public class OrgEmbedAppConfigEntity {
                                    String sourceBindingsJson,
                                    String scopeOverridesJson,
                                    int tokenTtlSeconds) {
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.appCode = appCode;
         this.enabled = enabled;
         this.allowedOriginsJson = allowedOriginsJson;
@@ -70,7 +70,7 @@ public class OrgEmbedAppConfigEntity {
     }
 
     public Long getId() { return id; }
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
     public String getAppCode() { return appCode; }
     public boolean isEnabled() { return enabled; }
     public String getAllowedOriginsJson() { return allowedOriginsJson; }

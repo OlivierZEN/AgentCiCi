@@ -71,7 +71,7 @@ export default function PlatformTenantsPage() {
       const created = await createTenant(token, payload);
       setProvisionModalOpen(false);
       setMessage(created.reusedExistingAccount ? "新租户已开通，已复用既有 Owner 账号。" : "新租户已开通。");
-      navigate(`/platform/tenants/${created.orgId}`, { state: { flash: "新租户已开通" } });
+      navigate(`/platform/tenants/${created.companyId}`, { state: { flash: "新租户已开通" } });
     } catch (err) {
       setError(err instanceof Error ? err.message : "开通新租户失败");
     } finally {
@@ -123,19 +123,19 @@ export default function PlatformTenantsPage() {
             <tbody>
               {tenants.map((tenant) => (
                 <tr
-                  key={tenant.orgId}
+                  key={tenant.companyId}
                   tabIndex={0}
-                  onClick={() => navigate(`/platform/tenants/${tenant.orgId}`)}
+                  onClick={() => navigate(`/platform/tenants/${tenant.companyId}`)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
-                      navigate(`/platform/tenants/${tenant.orgId}`);
+                      navigate(`/platform/tenants/${tenant.companyId}`);
                     }
                   }}
                 >
                   <td>
                     <div className="skills-data-table__skill-name">{tenant.name}</div>
-                    <div className="skills-data-table__skill-code">{tenant.orgId}</div>
+                    <div className="skills-data-table__skill-code">{tenant.companyId}</div>
                   </td>
                   <td>
                     <span className={`tenant-lifecycle__status tenant-lifecycle__status--${tenant.status.toLowerCase()}`}>
@@ -158,15 +158,15 @@ export default function PlatformTenantsPage() {
           <div className="tenant-lifecycle-mobile-list">
             {tenants.map((tenant) => (
               <button
-                key={`${tenant.orgId}-mobile`}
+                key={`${tenant.companyId}-mobile`}
                 type="button"
                 className="tenant-lifecycle-mobile-list__row"
-                onClick={() => navigate(`/platform/tenants/${tenant.orgId}`)}
+                onClick={() => navigate(`/platform/tenants/${tenant.companyId}`)}
               >
                 <div className="tenant-lifecycle-mobile-list__head">
                   <div>
                     <div className="skills-data-table__skill-name">{tenant.name}</div>
-                    <div className="skills-data-table__skill-code">{tenant.orgId}</div>
+                    <div className="skills-data-table__skill-code">{tenant.companyId}</div>
                   </div>
                   <span className={`tenant-lifecycle__status tenant-lifecycle__status--${tenant.status.toLowerCase()}`}>
                     {statusLabel(tenant.status)}

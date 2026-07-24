@@ -61,7 +61,8 @@ export default function PlatformShell() {
         { to: "/platform/billing", label: "套餐目录", end: true },
         { to: "/platform/billing/packages", label: "加购包与 Credits" },
         { to: "/platform/tenants", label: "租户目录" },
-        { to: "/platform/website-leads", label: "注册与演示线索" },
+        { to: "/platform/registered-users", label: "注册用户" },
+        { to: "/platform/demo-leads", label: "演示线索" },
       ],
     },
     {

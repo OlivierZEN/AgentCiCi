@@ -9,7 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionRepository;
-import com.codehouse.ciciassistant.auth.domain.OrgRepository;
+import com.codehouse.ciciassistant.auth.domain.CompanyRepository;
 import com.codehouse.ciciassistant.auth.domain.UserAccountEntity;
 import com.codehouse.ciciassistant.auth.domain.UserAccountRepository;
 import com.codehouse.ciciassistant.auth.domain.UserEntity;
@@ -39,7 +39,7 @@ class AuthFlowIntegrationTest {
     private ObjectMapper objectMapper;
 
     @Autowired
-    private OrgRepository orgRepository;
+    private CompanyRepository companyRepository;
 
     @Autowired
     private UserAccountRepository userAccountRepository;
@@ -56,7 +56,7 @@ class AuthFlowIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "orgId": "demo-org",
+                                  "companyId": "demo-org",
                                   "mobile": "13800138000",
                                   "password": "szyd1234"
                                 }
@@ -74,7 +74,7 @@ class AuthFlowIntegrationTest {
     }
 
     @Test
-    void shouldRegisterAccountAndOwnerOrganization() throws Exception {
+    void shouldRegisterAccountAndOwnerCompany() throws Exception {
         String mobile = "13902400101";
         MvcResult registerResult = mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -82,19 +82,19 @@ class AuthFlowIntegrationTest {
                                 {
                                   "mobile": "%s",
                                   "password": "szyd1234",
-                                  "organizationName": "首个组织"
+                                  "companyName": "首个组织"
                                 }
                                 """.formatted(mobile)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.token").isNotEmpty())
                 .andExpect(jsonPath("$.data.accountId").isNotEmpty())
                 .andExpect(jsonPath("$.data.memberId").isNotEmpty())
-                .andExpect(jsonPath("$.data.orgId").isNotEmpty())
+                .andExpect(jsonPath("$.data.companyId").isNotEmpty())
                 .andExpect(jsonPath("$.data.roles[0]").value("OWNER"))
                 .andReturn();
 
-        String orgId = objectMapper.readTree(registerResult.getResponse().getContentAsString()).path("data").path("orgId").asText();
-        assertThat(orgId).matches("^org[a-z0-9]{17}$");
+        String companyId = objectMapper.readTree(registerResult.getResponse().getContentAsString()).path("data").path("companyId").asText();
+        assertThat(companyId).matches("^org[a-z0-9]{17}$");
 
         String token = objectMapper.readTree(registerResult.getResponse().getContentAsString()).path("data").path("token").asText();
         mockMvc.perform(get("/admin/users").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
@@ -110,7 +110,7 @@ class AuthFlowIntegrationTest {
                                 {
                                   "mobile": "%s",
                                   "password": "szyd1234",
-                                  "organizationName": "重复组织 A"
+                                  "companyName": "重复组织 A"
                                 }
                                 """.formatted(mobile)))
                 .andExpect(status().isOk());
@@ -121,7 +121,7 @@ class AuthFlowIntegrationTest {
                                 {
                                   "mobile": "%s",
                                   "password": "szyd1234",
-                                  "organizationName": "重复组织 B"
+                                  "companyName": "重复组织 B"
                                 }
                                 """.formatted(mobile)))
                 .andExpect(status().isBadRequest())
@@ -129,7 +129,7 @@ class AuthFlowIntegrationTest {
     }
 
     @Test
-    void shouldLoginWithoutOrgDirectlyForSingleOrganizationAccount() throws Exception {
+    void shouldLoginWithoutOrgDirectlyForSingleCompanyAccount() throws Exception {
         String mobile = "13902400103";
         mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -137,7 +137,7 @@ class AuthFlowIntegrationTest {
                                 {
                                   "mobile": "%s",
                                   "password": "szyd1234",
-                                  "organizationName": "单组织"
+                                  "companyName": "单组织"
                                 }
                                 """.formatted(mobile)))
                 .andExpect(status().isOk());
@@ -153,11 +153,11 @@ class AuthFlowIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.token").isNotEmpty())
                 .andExpect(jsonPath("$.data.roles[0]").value("OWNER"))
-                .andExpect(jsonPath("$.data.requiresOrganizationSelection").doesNotExist());
+                .andExpect(jsonPath("$.data.requiresCompanySelection").doesNotExist());
     }
 
     @Test
-    void shouldReturnOrganizationChoicesAndSwitchOrganizationForMultiOrgAccount() throws Exception {
+    void shouldReturnCompanyChoicesAndSwitchCompanyForMultiOrgAccount() throws Exception {
         String mobile = "13902400104";
         MvcResult registerResult = mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -165,24 +165,24 @@ class AuthFlowIntegrationTest {
                                 {
                                   "mobile": "%s",
                                   "password": "szyd1234",
-                                  "organizationName": "多组织 A"
+                                  "companyName": "多组织 A"
                                 }
                                 """.formatted(mobile)))
                 .andExpect(status().isOk())
                 .andReturn();
         String firstToken = objectMapper.readTree(registerResult.getResponse().getContentAsString()).path("data").path("token").asText();
 
-        MvcResult createOrgResult = mockMvc.perform(post("/auth/organizations")
+        MvcResult createOrgResult = mockMvc.perform(post("/auth/companies")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + firstToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                { "organizationName": "多组织 B" }
+                                { "companyName": "多组织 B" }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.roles[0]").value("OWNER"))
                 .andReturn();
-        String secondOrgId = objectMapper.readTree(createOrgResult.getResponse().getContentAsString()).path("data").path("orgId").asText();
-        assertThat(secondOrgId).matches("^org[a-z0-9]{17}$");
+        String secondCompanyId = objectMapper.readTree(createOrgResult.getResponse().getContentAsString()).path("data").path("companyId").asText();
+        assertThat(secondCompanyId).matches("^org[a-z0-9]{17}$");
 
         MvcResult choicesResult = mockMvc.perform(post("/auth/password/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -193,33 +193,33 @@ class AuthFlowIntegrationTest {
                                 }
                                 """.formatted(mobile)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.requiresOrganizationSelection").value(true))
+                .andExpect(jsonPath("$.data.requiresCompanySelection").value(true))
                 .andExpect(jsonPath("$.data.token").doesNotExist())
-                .andExpect(jsonPath("$.data.organizations.length()").value(2))
+                .andExpect(jsonPath("$.data.companies.length()").value(2))
                 .andReturn();
-        assertThat(objectMapper.readTree(choicesResult.getResponse().getContentAsString()).path("data").path("organizations").toString())
-                .contains(secondOrgId);
+        assertThat(objectMapper.readTree(choicesResult.getResponse().getContentAsString()).path("data").path("companies").toString())
+                .contains(secondCompanyId);
 
-        mockMvc.perform(post("/auth/switch-organization")
+        mockMvc.perform(post("/auth/switch-company")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + firstToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                { "orgId": "%s" }
-                                """.formatted(secondOrgId)))
+                                { "companyId": "%s" }
+                                """.formatted(secondCompanyId)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.orgId").value(secondOrgId))
+                .andExpect(jsonPath("$.data.companyId").value(secondCompanyId))
                 .andExpect(jsonPath("$.data.token").isNotEmpty());
     }
 
     @Test
-    void shouldRejectSwitchingToOrganizationOwnedByAnotherAccount() throws Exception {
+    void shouldRejectSwitchingToCompanyOwnedByAnotherAccount() throws Exception {
         MvcResult accountA = mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                   "mobile": "13902400105",
                                   "password": "szyd1234",
-                                  "organizationName": "账号 A"
+                                  "companyName": "账号 A"
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -230,19 +230,19 @@ class AuthFlowIntegrationTest {
                                 {
                                   "mobile": "13902400106",
                                   "password": "szyd1234",
-                                  "organizationName": "账号 B"
+                                  "companyName": "账号 B"
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andReturn();
         String tokenA = objectMapper.readTree(accountA.getResponse().getContentAsString()).path("data").path("token").asText();
-        String orgB = objectMapper.readTree(accountB.getResponse().getContentAsString()).path("data").path("orgId").asText();
+        String orgB = objectMapper.readTree(accountB.getResponse().getContentAsString()).path("data").path("companyId").asText();
 
-        mockMvc.perform(post("/auth/switch-organization")
+        mockMvc.perform(post("/auth/switch-company")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenA)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                { "orgId": "%s" }
+                                { "companyId": "%s" }
                                 """.formatted(orgB)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("当前账号不属于该组织"));
@@ -255,7 +255,7 @@ class AuthFlowIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "orgId": "demo-org",
+                                  "companyId": "demo-org",
                                   "mobile": "%s",
                                   "password": "szyd1234"
                                 }
@@ -279,7 +279,7 @@ class AuthFlowIntegrationTest {
     }
 
     @Test
-    void shouldInviteSuspendRestoreAndTransferOwnerForOrganizationMembers() throws Exception {
+    void shouldInviteSuspendRestoreAndTransferOwnerForCompanyMembers() throws Exception {
         String ownerMobile = "13902400120";
         String memberMobile = "13902400121";
         MvcResult registerResult = mockMvc.perform(post("/auth/register")
@@ -288,7 +288,7 @@ class AuthFlowIntegrationTest {
                                 {
                                   "mobile": "%s",
                                   "password": "szyd1234",
-                                  "organizationName": "成员治理组织"
+                                  "companyName": "成员治理组织"
                                 }
                                 """.formatted(ownerMobile)))
                 .andExpect(status().isOk())
@@ -338,7 +338,7 @@ class AuthFlowIntegrationTest {
                                 }
                                 """.formatted(memberMobile)))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("No active organization membership"));
+                .andExpect(jsonPath("$.message").value("No active company membership"));
 
         mockMvc.perform(post("/admin/users/%s/restore".formatted(memberId))
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ownerToken))
@@ -373,7 +373,7 @@ class AuthFlowIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "orgId": "demo-org",
+                                  "companyId": "demo-org",
                                   "mobile": "13800138001",
                                   "password": "bad-password"
                                 }
@@ -391,7 +391,7 @@ class AuthFlowIntegrationTest {
                                 {
                                   "mobile": "%s",
                                   "password": "szyd1234",
-                                  "organizationName": "个人简档组织"
+                                  "companyName": "个人简档组织"
                                 }
                                 """.formatted(mobile)))
                 .andExpect(status().isOk())
@@ -465,7 +465,7 @@ class AuthFlowIntegrationTest {
     }
 
     @Test
-    void shouldPersistThemePreferenceAcrossOrganizationSwitchesAndRejectUnknownTheme() throws Exception {
+    void shouldPersistThemePreferenceAcrossCompanySwitchesAndRejectUnknownTheme() throws Exception {
         String mobile = "13902400141";
         MvcResult registerResult = mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -473,7 +473,7 @@ class AuthFlowIntegrationTest {
                                 {
                                   "mobile": "%s",
                                   "password": "szyd1234",
-                                  "organizationName": "主题偏好组织"
+                                  "companyName": "主题偏好组织"
                                 }
                                 """.formatted(mobile)))
                 .andExpect(status().isOk())
@@ -517,7 +517,7 @@ class AuthFlowIntegrationTest {
                                 {
                                   "mobile": "13902400132",
                                   "password": "szyd1234",
-                                  "organizationName": "邮箱组织 A"
+                                  "companyName": "邮箱组织 A"
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -541,7 +541,7 @@ class AuthFlowIntegrationTest {
                                 {
                                   "mobile": "13902400133",
                                   "password": "szyd1234",
-                                  "organizationName": "邮箱组织 B"
+                                  "companyName": "邮箱组织 B"
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -568,7 +568,7 @@ class AuthFlowIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "orgId": "demo-org",
+                                  "companyId": "demo-org",
                                   "mobile": "13800138002"
                                 }
                                 """))
@@ -579,7 +579,7 @@ class AuthFlowIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "orgId": "demo-org",
+                                  "companyId": "demo-org",
                                   "mobile": "13800138002",
                                   "code": "123456"
                                 }
@@ -598,8 +598,8 @@ class AuthFlowIntegrationTest {
 
     @Test
     void shouldPromoteExistingOrgUserToAdminWhenMobileInBootstrapList() throws Exception {
-        var org = orgRepository.findById("demo-org").orElseThrow();
-        userRepository.findByOrgIdAndMobile("demo-org", "13800138188").ifPresent(userRepository::delete);
+        var org = companyRepository.findById("demo-org").orElseThrow();
+        userRepository.findByCompanyIdAndMobile("demo-org", "13800138188").ifPresent(userRepository::delete);
         userRepository.flush();
         var account = userAccountRepository.findByPrimaryMobile("13800138188")
                 .orElseGet(() -> userAccountRepository.save(new UserAccountEntity("13800138188")));
@@ -609,7 +609,7 @@ class AuthFlowIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "orgId": "demo-org",
+                                  "companyId": "demo-org",
                                   "mobile": "13800138188",
                                   "password": "szyd1234"
                                 }
@@ -619,12 +619,12 @@ class AuthFlowIntegrationTest {
     }
 
     @Test
-    void shouldKeepPlatformRoleOutOfOrganizationLoginAndAllowDedicatedPlatformBootstrap() throws Exception {
+    void shouldKeepPlatformRoleOutOfCompanyLoginAndAllowDedicatedPlatformBootstrap() throws Exception {
         mockMvc.perform(post("/auth/password/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "orgId": "demo-org",
+                                  "companyId": "demo-org",
                                   "mobile": "13800138111",
                                   "password": "szyd1234"
                                 }
@@ -643,7 +643,7 @@ class AuthFlowIntegrationTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.roles[?(@ == 'PLATFORM_ADMIN')]").exists())
-                .andExpect(jsonPath("$.data.orgId").doesNotExist())
+                .andExpect(jsonPath("$.data.companyId").doesNotExist())
                 .andReturn();
 
         String token = objectMapper.readTree(platformLoginResult.getResponse().getContentAsString()).path("data").path("token").asText();
@@ -652,14 +652,14 @@ class AuthFlowIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.roles[?(@ == 'PLATFORM_ADMIN')]").exists())
-                .andExpect(jsonPath("$.data.orgId").doesNotExist());
+                .andExpect(jsonPath("$.data.companyId").doesNotExist());
     }
 
     @Test
     void shouldExposePublicAgentAvatarsForLoginModeCube() throws Exception {
-        agentDefinitionRepository.findByOrgIdAndAgentId("demo-org", "public-avatar-agent")
+        agentDefinitionRepository.findByCompanyIdAndAgentId("demo-org", "public-avatar-agent")
                 .ifPresent(agentDefinitionRepository::delete);
-        agentDefinitionRepository.findByOrgIdAndAgentId("demo-org", "public-avatar-disabled")
+        agentDefinitionRepository.findByCompanyIdAndAgentId("demo-org", "public-avatar-disabled")
                 .ifPresent(agentDefinitionRepository::delete);
         agentDefinitionRepository.flush();
 
@@ -700,7 +700,7 @@ class AuthFlowIntegrationTest {
         agentDefinitionRepository.flush();
 
         MvcResult result = mockMvc.perform(get("/public/agents/avatars")
-                        .queryParam("orgId", "demo-org"))
+                        .queryParam("companyId", "demo-org"))
                 .andExpect(status().isOk())
                 .andReturn();
 

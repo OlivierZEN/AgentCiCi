@@ -21,7 +21,7 @@ public class AgentTaskRunEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name = "org_id", nullable = false, length = 64) private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64) private String companyId;
     @Column(name = "session_id", length = 128) private String sessionId;
     @Column(name = "agent_id", nullable = false, length = 64) private String agentId;
     @Column(nullable = false, length = 32) private String channel;
@@ -39,9 +39,9 @@ public class AgentTaskRunEntity {
 
     protected AgentTaskRunEntity() { }
 
-    public AgentTaskRunEntity(String orgId, String sessionId, String agentId, String channel,
+    public AgentTaskRunEntity(String companyId, String sessionId, String agentId, String channel,
                               String mode, String goalSummary, int maxSteps, Instant now) {
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.sessionId = sessionId;
         this.agentId = agentId;
         this.channel = channel;
@@ -60,7 +60,7 @@ public class AgentTaskRunEntity {
     public void fail(Instant now) { this.status = STATUS_FAILED; this.finishedAt = now; releaseLease(now); }
     public boolean leaseAvailableTo(String owner, Instant now) { return leaseOwner == null || owner.equals(leaseOwner) || leaseExpiresAt == null || !leaseExpiresAt.isAfter(now); }
     public Long getId() { return id; }
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
     public String getSessionId() { return sessionId; }
     public String getAgentId() { return agentId; }
     public String getChannel() { return channel; }

@@ -17,8 +17,8 @@ public class BillingSubscriptionEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, unique = true, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, unique = true, length = 64)
+    private String companyId;
 
     @Column(name = "deployment_mode", nullable = false, length = 32)
     private String deploymentMode;
@@ -59,8 +59,8 @@ public class BillingSubscriptionEntity {
     protected BillingSubscriptionEntity() {
     }
 
-    public BillingSubscriptionEntity(String orgId, String deploymentMode, String editionCode, Instant periodStart, Instant periodEnd) {
-        this.orgId = orgId;
+    public BillingSubscriptionEntity(String companyId, String deploymentMode, String editionCode, Instant periodStart, Instant periodEnd) {
+        this.companyId = companyId;
         this.deploymentMode = deploymentMode;
         this.editionCode = editionCode;
         this.periodStart = periodStart;
@@ -69,7 +69,7 @@ public class BillingSubscriptionEntity {
 
     public Long getId() { return id; }
 
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
 
     public String getDeploymentMode() { return deploymentMode; }
 

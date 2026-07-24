@@ -45,7 +45,7 @@ public class AgentRuntimeModeRouter {
     public ModeDecision decide(RoutingInput input) {
         if (input == null) return recorded(legacy(ReasonCode.INVALID_INPUT));
         if (!properties.isEnabled()) return recorded(legacy(ReasonCode.ROUTER_DISABLED));
-        if (!properties.isEnabledFor(input.orgId(), input.agentId())) return recorded(legacy(ReasonCode.SCOPE_NOT_ALLOWLISTED));
+        if (!properties.isEnabledFor(input.companyId(), input.agentId())) return recorded(legacy(ReasonCode.SCOPE_NOT_ALLOWLISTED));
         if (input.pendingConfirmation()) return recorded(legacy(ReasonCode.PENDING_CONFIRMATION_CONTINUATION));
 
         String question = normalize(input.question());
@@ -132,7 +132,7 @@ public class AgentRuntimeModeRouter {
         MULTI_SOURCE, REACT_BUDGET_EXCEEDED, PLAN_EXEC_GATE_NOT_MET
     }
     public record Budget(int maxToolRounds, int maxSteps, int maxReplans, int maxReflectRounds) {}
-    public record RoutingInput(String orgId, String agentId, String channel, String question, List<String> allowedToolNames,
+    public record RoutingInput(String companyId, String agentId, String channel, String question, List<String> allowedToolNames,
                                boolean externalFactRequired, boolean pendingConfirmation) {}
     public record ModeDecision(Mode mode, List<ReasonCode> reasonCodes, RiskLevel riskLevel, Budget budget,
                                boolean requiresConfirmation, boolean reflectRequired) {

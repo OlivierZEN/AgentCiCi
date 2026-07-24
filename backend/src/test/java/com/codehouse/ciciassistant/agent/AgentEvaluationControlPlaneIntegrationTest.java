@@ -136,7 +136,7 @@ class AgentEvaluationControlPlaneIntegrationTest {
     }
 
     @Test
-    void shouldKeepTenantSuiteAndCaseInsideCurrentOrganization() throws Exception {
+    void shouldKeepTenantSuiteAndCaseInsideCurrentCompany() throws Exception {
         String tenantToken = tenantToken();
         String agentId = "tenant-eval-" + suffix();
         createAgent(tenantToken, agentId);
@@ -249,7 +249,7 @@ class AgentEvaluationControlPlaneIntegrationTest {
         MvcResult result = mockMvc.perform(post("/auth/password/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"orgId":"demo-org","mobile":"13800138188","password":"szyd1234"}
+                                {"companyId":"demo-org","mobile":"13800138188","password":"szyd1234"}
                                 """))
                 .andExpect(status().isOk()).andReturn();
         return data(result).path("token").asText();

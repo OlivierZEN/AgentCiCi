@@ -81,30 +81,30 @@ public class AgentCompileService {
     }
 
     @Transactional
-    public CompileResult compile(String orgId, CompileCommand command) {
-        agentDefinitionService.warmupBuiltinAgents(orgId);
+    public CompileResult compile(String companyId, CompileCommand command) {
+        agentDefinitionService.warmupBuiltinAgents(companyId);
         List<Long> knowledgeBaseIds = normalizeList(command.knowledgeBaseIds());
         List<String> toolIds = normalizeList(command.toolIds());
         List<String> channels = normalizeList(command.channels());
 
-        List<ResolvedSkillRef> resolvedSkillRefs = resolveSkillRefs(orgId, command.agentId(), command.skillRefs());
+        List<ResolvedSkillRef> resolvedSkillRefs = resolveSkillRefs(companyId, command.agentId(), command.skillRefs());
         List<String> resolvedSkillCodes = resolvedSkillRefs.stream()
                 .filter(ResolvedSkillRef::resolved)
                 .map(ResolvedSkillRef::skillCode)
                 .toList();
         AgentCapabilityResolverService.AgentCapabilityResolution capability = agentCapabilityResolverService.resolve(
-                orgId,
+                companyId,
                 command.agentId(),
                 command.skillRefs()
         );
         List<String> effectiveToolIds = capability.effectiveToolNames();
         List<Long> effectiveKnowledgeBaseIds = capability.effectiveKnowledgeBaseIds();
         List<KnowledgeBaseEntity> selectedKbs = effectiveKnowledgeBaseIds.stream()
-                .map(id -> knowledgeBaseRepository.findByIdAndOrgId(id, orgId))
+                .map(id -> knowledgeBaseRepository.findByIdAndCompanyId(id, companyId))
                 .flatMap(Optional::stream)
                 .toList();
         List<ToolProfile> selectedTools = effectiveToolIds.stream()
-                .map(toolId -> resolveTool(orgId, toolId))
+                .map(toolId -> resolveTool(companyId, toolId))
                 .toList();
         List<String> kbNames = selectedKbs.stream().map(KnowledgeBaseEntity::getName).toList();
         List<String> toolNames = selectedTools.stream().map(ToolProfile::name).toList();
@@ -189,7 +189,7 @@ public class AgentCompileService {
         manifest.put("previewFormat", preview.format());
 
         PersistResult persisted = persistDraftVersion(
-                orgId,
+                companyId,
                 command,
                 manifest,
                 preview,
@@ -213,7 +213,7 @@ public class AgentCompileService {
         );
     }
 
-    private PersistResult persistDraftVersion(String orgId,
+    private PersistResult persistDraftVersion(String companyId,
                                               CompileCommand command,
                                               Map<String, Object> manifest,
                                               WorkflowPreview preview,
@@ -225,14 +225,14 @@ public class AgentCompileService {
         if (agentId.isBlank()) {
             return new PersistResult(null, true, "编译完成。", List.of());
         }
-        Optional<AgentDefinitionEntity> agent = agentDefinitionRepository.findByOrgIdAndAgentId(orgId, agentId);
+        Optional<AgentDefinitionEntity> agent = agentDefinitionRepository.findByCompanyIdAndAgentId(companyId, agentId);
         if (agent.isEmpty()) {
             return new PersistResult(null, true, "编译完成。", List.of());
         }
         Optional<AgentWorkflowVersionEntity> previous = agentWorkflowVersionRepository
-                .findTopByOrgIdAndAgentIdOrderByVersionNoDesc(orgId, agentId);
+                .findTopByCompanyIdAndAgentIdOrderByVersionNoDesc(companyId, agentId);
         if (previous.isPresent() && compileFingerprint.equals(safeText(previous.get().getCompileFingerprint()))) {
-            agentWorkflowSkillRefService.ensureWorkflowSkillRefs(orgId, agentId, previous.get());
+            agentWorkflowSkillRefService.ensureWorkflowSkillRefs(companyId, agentId, previous.get());
             return new PersistResult(
                     previous.get().getVersionNo(),
                     false,
@@ -245,7 +245,7 @@ public class AgentCompileService {
                 .map(item -> buildChangeLog(item, command, compileFingerprint))
                 .orElse(List.of("首次编译：创建初始版本。"));
         AgentWorkflowVersionEntity created = new AgentWorkflowVersionEntity(
-                orgId,
+                companyId,
                 agentId,
                 nextVersionNo,
                 safeText(command.version()).trim().isBlank() ? null : safeText(command.version()).trim(),
@@ -261,7 +261,7 @@ public class AgentCompileService {
                 "DRAFT"
         );
         agentWorkflowVersionRepository.save(created);
-        agentWorkflowSkillRefService.ensureWorkflowSkillRefs(orgId, agentId, created);
+        agentWorkflowSkillRefService.ensureWorkflowSkillRefs(companyId, agentId, created);
         return new PersistResult(nextVersionNo, true, "编译完成并生成新版本。", changeLog);
     }
 
@@ -474,12 +474,12 @@ public class AgentCompileService {
         return String.join("\n", lines);
     }
 
-    private ToolProfile resolveTool(String orgId, String toolId) {
+    private ToolProfile resolveTool(String companyId, String toolId) {
         if (DEFAULT_TOOL_CATALOG.containsKey(toolId)) {
             ToolProfile profile = DEFAULT_TOOL_CATALOG.get(toolId);
             return new ToolProfile(toolId, profile.name(), profile.description(), profile.riskLevel());
         }
-        Optional<ToolDefinitionEntity> customTool = toolDefinitionRepository.findByOrgIdAndToolName(orgId, toolId);
+        Optional<ToolDefinitionEntity> customTool = toolDefinitionRepository.findByCompanyIdAndToolName(companyId, toolId);
         if (customTool.isPresent()) {
             ToolDefinitionEntity entity = customTool.get();
             return new ToolProfile(entity.getToolName(), entity.getToolName(), entity.getDescription(), entity.getRiskLevel());
@@ -553,7 +553,7 @@ public class AgentCompileService {
         return values == null ? List.of() : values.stream().filter(Objects::nonNull).toList();
     }
 
-    private List<ResolvedSkillRef> resolveSkillRefs(String orgId, String agentId, List<String> requestedSkillRefs) {
+    private List<ResolvedSkillRef> resolveSkillRefs(String companyId, String agentId, List<String> requestedSkillRefs) {
         List<String> requested = normalizeList(requestedSkillRefs).stream()
                 .map(value -> value == null ? "" : value.trim().toLowerCase())
                 .filter(value -> !value.isBlank())
@@ -561,14 +561,14 @@ public class AgentCompileService {
                 .toList();
         if (!requested.isEmpty()) {
             return requested.stream()
-                    .map(skillCode -> resolveSkillRefByCode(orgId, skillCode, "explicit"))
+                    .map(skillCode -> resolveSkillRefByCode(companyId, skillCode, "explicit"))
                     .toList();
         }
         if (agentId == null || agentId.isBlank()) {
             return List.of();
         }
-        List<AgentSkillBindingEntity> bindings = agentSkillBindingRepository.findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(
-                orgId,
+        List<AgentSkillBindingEntity> bindings = agentSkillBindingRepository.findByCompanyIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(
+                companyId,
                 agentId.trim()
         );
         if (bindings.isEmpty()) {
@@ -578,7 +578,7 @@ public class AgentCompileService {
                 .map(AgentSkillBindingEntity::getSkillId)
                 .distinct()
                 .toList();
-        Map<Long, SkillDefinitionEntity> byId = skillDefinitionRepository.findByOrgIdAndIdInAndEnabledTrue(orgId, skillIds)
+        Map<Long, SkillDefinitionEntity> byId = skillDefinitionRepository.findByCompanyIdAndIdInAndEnabledTrue(companyId, skillIds)
                 .stream()
                 .collect(java.util.stream.Collectors.toMap(SkillDefinitionEntity::getId, item -> item));
         List<ResolvedSkillRef> refs = new ArrayList<>();
@@ -587,7 +587,7 @@ public class AgentCompileService {
             if (skill == null) {
                 continue;
             }
-            Integer latestVersionNo = skillVersionRepository.findTopByOrgIdAndSkillIdOrderByVersionNoDesc(orgId, skill.getId())
+            Integer latestVersionNo = skillVersionRepository.findTopByCompanyIdAndSkillIdOrderByVersionNoDesc(companyId, skill.getId())
                     .map(item -> item.getVersionNo())
                     .orElse(null);
             refs.add(new ResolvedSkillRef(
@@ -601,13 +601,13 @@ public class AgentCompileService {
         return refs;
     }
 
-    private ResolvedSkillRef resolveSkillRefByCode(String orgId, String skillCode, String source) {
-        Optional<SkillDefinitionEntity> found = skillDefinitionRepository.findByOrgIdAndSkillCode(orgId, skillCode);
+    private ResolvedSkillRef resolveSkillRefByCode(String companyId, String skillCode, String source) {
+        Optional<SkillDefinitionEntity> found = skillDefinitionRepository.findByCompanyIdAndSkillCode(companyId, skillCode);
         if (found.isEmpty()) {
             return new ResolvedSkillRef(skillCode, null, null, source, false);
         }
         SkillDefinitionEntity skill = found.get();
-        Integer latestVersionNo = skillVersionRepository.findTopByOrgIdAndSkillIdOrderByVersionNoDesc(orgId, skill.getId())
+        Integer latestVersionNo = skillVersionRepository.findTopByCompanyIdAndSkillIdOrderByVersionNoDesc(companyId, skill.getId())
                 .map(item -> item.getVersionNo())
                 .orElse(null);
         return new ResolvedSkillRef(skill.getSkillCode(), skill.getId(), latestVersionNo, source, true);
@@ -621,12 +621,12 @@ public class AgentCompileService {
         return "MEDIUM";
     }
 
-    private List<SkillDefinitionEntity> loadResolvedSkills(String orgId, List<String> resolvedSkillCodes) {
+    private List<SkillDefinitionEntity> loadResolvedSkills(String companyId, List<String> resolvedSkillCodes) {
         if (resolvedSkillCodes.isEmpty()) {
             return List.of();
         }
         return resolvedSkillCodes.stream()
-                .map(code -> skillDefinitionRepository.findByOrgIdAndSkillCode(orgId, code))
+                .map(code -> skillDefinitionRepository.findByCompanyIdAndSkillCode(companyId, code))
                 .flatMap(Optional::stream)
                 .toList();
     }

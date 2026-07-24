@@ -26,7 +26,7 @@ public class OntologyMappingIntegrityService {
     }
 
     public MappingValidation validate(
-            String orgId,
+            String companyId,
             Long workspaceId,
             OntologyDocument document,
             OntologyDocument.Mapping mapping) {
@@ -34,8 +34,8 @@ public class OntologyMappingIntegrityService {
             return invalid("MAPPING_INVALID", "Mapping is required");
         }
         List<OntologyPhysicalObjectEntity> mappedObjects = objects
-                .findByDataSourceIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
-                        mapping.dataSourceId(), workspaceId, orgId).stream()
+                .findByDataSourceIdAndWorkspaceIdAndCompanyIdOrderByIdAsc(
+                        mapping.dataSourceId(), workspaceId, companyId).stream()
                 .filter(candidate -> Objects.equals(
                         candidate.getObjectKey(), mapping.physicalObjectKey()))
                 .toList();
@@ -45,7 +45,7 @@ public class OntologyMappingIntegrityService {
         OntologyPhysicalObjectEntity sourceObject = mappedObjects.getFirst();
         String targetType = normalized(mapping.targetType());
         if (!"CONCEPT".equals(targetType)
-                && !fieldExists(orgId, workspaceId, sourceObject, mapping.physicalFieldKey())) {
+                && !fieldExists(companyId, workspaceId, sourceObject, mapping.physicalFieldKey())) {
             return invalid("PHYSICAL_FIELD_NOT_FOUND", "Mapped field was not discovered");
         }
         if (!"RELATION".equals(targetType)) {
@@ -73,14 +73,14 @@ public class OntologyMappingIntegrityService {
             return invalid("RELATION_SOURCE_OBJECT_MISMATCH", "Relation source object does not match its concept");
         }
         List<OntologyPhysicalObjectEntity> targetObjects = objects
-                .findByDataSourceIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
-                        mapping.dataSourceId(), workspaceId, orgId).stream()
+                .findByDataSourceIdAndWorkspaceIdAndCompanyIdOrderByIdAsc(
+                        mapping.dataSourceId(), workspaceId, companyId).stream()
                 .filter(candidate -> Objects.equals(
                         candidate.getObjectKey(), targetConcepts.getFirst().physicalObjectKey()))
                 .toList();
         if (targetObjects.size() != 1
                 || !fieldExists(
-                orgId,
+                companyId,
                 workspaceId,
                 targetObjects.getFirst(),
                 mapping.relationTargetFieldKey())) {
@@ -90,7 +90,7 @@ public class OntologyMappingIntegrityService {
     }
 
     public boolean isFresh(
-            String orgId,
+            String companyId,
             Long workspaceId,
             OntologyDocument document,
             OntologyDocument.Mapping mapping,
@@ -99,13 +99,13 @@ public class OntologyMappingIntegrityService {
             return false;
         }
         OntologyPhysicalObjectEntity sourceObject = uniqueObject(
-                orgId, workspaceId, mapping.dataSourceId(), mapping.physicalObjectKey());
+                companyId, workspaceId, mapping.dataSourceId(), mapping.physicalObjectKey());
         if (sourceObject == null || validatedAt.isBefore(sourceObject.getDiscoveredAt())) {
             return false;
         }
         if (mapping.physicalFieldKey() != null) {
             OntologyPhysicalFieldEntity field = uniqueField(
-                    orgId, workspaceId, sourceObject, mapping.physicalFieldKey());
+                    companyId, workspaceId, sourceObject, mapping.physicalFieldKey());
             if (field == null || validatedAt.isBefore(field.getDiscoveredAt())) {
                 return false;
             }
@@ -126,14 +126,14 @@ public class OntologyMappingIntegrityService {
             return false;
         }
         OntologyPhysicalObjectEntity targetObject = uniqueObject(
-                orgId,
+                companyId,
                 workspaceId,
                 mapping.dataSourceId(),
                 targetConcepts.getFirst().physicalObjectKey());
         OntologyPhysicalFieldEntity targetField = targetObject == null
                 ? null
                 : uniqueField(
-                        orgId,
+                        companyId,
                         workspaceId,
                         targetObject,
                         mapping.relationTargetFieldKey());
@@ -155,28 +155,28 @@ public class OntologyMappingIntegrityService {
     }
 
     private boolean fieldExists(
-            String orgId,
+            String companyId,
             Long workspaceId,
             OntologyPhysicalObjectEntity object,
             String fieldKey) {
-        return uniqueField(orgId, workspaceId, object, fieldKey) != null;
+        return uniqueField(companyId, workspaceId, object, fieldKey) != null;
     }
 
     private OntologyPhysicalObjectEntity uniqueObject(
-            String orgId,
+            String companyId,
             Long workspaceId,
             Long dataSourceId,
             String objectKey) {
         List<OntologyPhysicalObjectEntity> matches = objects
-                .findByDataSourceIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
-                        dataSourceId, workspaceId, orgId).stream()
+                .findByDataSourceIdAndWorkspaceIdAndCompanyIdOrderByIdAsc(
+                        dataSourceId, workspaceId, companyId).stream()
                 .filter(candidate -> Objects.equals(candidate.getObjectKey(), objectKey))
                 .toList();
         return matches.size() == 1 ? matches.getFirst() : null;
     }
 
     private OntologyPhysicalFieldEntity uniqueField(
-            String orgId,
+            String companyId,
             Long workspaceId,
             OntologyPhysicalObjectEntity object,
             String fieldKey) {
@@ -184,8 +184,8 @@ public class OntologyMappingIntegrityService {
             return null;
         }
         List<OntologyPhysicalFieldEntity> matches = fields
-                .findByPhysicalObjectIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
-                        object.getId(), workspaceId, orgId).stream()
+                .findByPhysicalObjectIdAndWorkspaceIdAndCompanyIdOrderByIdAsc(
+                        object.getId(), workspaceId, companyId).stream()
                 .filter(candidate -> Objects.equals(candidate.getFieldKey(), fieldKey))
                 .toList();
         return matches.size() == 1 ? matches.getFirst() : null;

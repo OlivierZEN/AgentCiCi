@@ -104,11 +104,11 @@ public class CloudccOntologyAdapter implements OntologyDataSourceAdapter {
         requireSupported(source);
         List<PhysicalObject> objects = new ArrayList<>();
         parseObjects(
-                cloudcc.getStandardObjects(context.orgId(), context.userId()),
+                cloudcc.getStandardObjects(context.companyId(), context.userId()),
                 "STANDARD",
                 objects);
         parseObjects(
-                cloudcc.getCustomObjects(context.orgId(), context.userId()),
+                cloudcc.getCustomObjects(context.companyId(), context.userId()),
                 "CUSTOM",
                 objects);
         Set<String> uniqueKeys = new LinkedHashSet<>();
@@ -122,7 +122,7 @@ public class CloudccOntologyAdapter implements OntologyDataSourceAdapter {
                     readMetadata(object.metadataJson()).path("prefix").asText(""));
         }
         discoveredPrefixes.put(
-                new DiscoveryCacheKey(context.orgId(), context.userId(), source.id(), source.key()),
+                new DiscoveryCacheKey(context.companyId(), context.userId(), source.id(), source.key()),
                 Map.copyOf(prefixes));
         return List.copyOf(objects);
     }
@@ -136,7 +136,7 @@ public class CloudccOntologyAdapter implements OntologyDataSourceAdapter {
         requireIdentifier(objectKey, "PHYSICAL_OBJECT_NOT_ALLOWED");
         String prefix = configuredPrefix(source, objectKey);
         DiscoveryCacheKey cacheKey = new DiscoveryCacheKey(
-                context.orgId(), context.userId(), source.id(), source.key());
+                context.companyId(), context.userId(), source.id(), source.key());
         if (prefix == null) {
             prefix = discoveredPrefixes.getOrDefault(cacheKey, Map.of()).get(objectKey);
         }
@@ -151,7 +151,7 @@ public class CloudccOntologyAdapter implements OntologyDataSourceAdapter {
         if (prefix.isBlank()) {
             throw new IllegalStateException("CONNECTOR_DISCOVERY_PREFIX_MISSING");
         }
-        String response = cloudcc.getObjectFields(context.orgId(), context.userId(), prefix);
+        String response = cloudcc.getObjectFields(context.companyId(), context.userId(), prefix);
         return parseFields(response, objectKey);
     }
 
@@ -224,7 +224,7 @@ public class CloudccOntologyAdapter implements OntologyDataSourceAdapter {
                 .reduce((left, right) -> left + " and " + right)
                 .orElse("");
         CloudccOpenApiService.PageRecords result = cloudcc.pageQueryRecords(
-                context.orgId(),
+                context.companyId(),
                 context.userId(),
                 query.objectKey(),
                 String.join(",", fields),
@@ -470,7 +470,7 @@ public class CloudccOntologyAdapter implements OntologyDataSourceAdapter {
     }
 
     private record DiscoveryCacheKey(
-            String orgId,
+            String companyId,
             String userId,
             Long sourceId,
             String sourceKey) {

@@ -25,9 +25,9 @@ public class WecomKfCallbackController {
                                             @RequestParam("timestamp") String timestamp,
                                             @RequestParam("nonce") String nonce,
                                             @RequestParam("echostr") String echostr,
-                                            @RequestParam(value = "orgId", required = false) String orgId,
+                                            @RequestParam(value = "companyId", required = false) String companyId,
                                             @RequestParam(value = "openKfId", required = false) String openKfId) {
-        return ResponseEntity.ok(callbackService.verifyUrl(msgSignature, timestamp, nonce, echostr, orgId, openKfId));
+        return ResponseEntity.ok(callbackService.verifyUrl(msgSignature, timestamp, nonce, echostr, companyId, openKfId));
     }
 
     @PostMapping(value = "/callback", consumes = { MediaType.TEXT_XML_VALUE, MediaType.APPLICATION_XML_VALUE, MediaType.TEXT_PLAIN_VALUE },
@@ -35,10 +35,10 @@ public class WecomKfCallbackController {
     public ResponseEntity<String> acceptCallback(@RequestParam("msg_signature") String msgSignature,
                                                  @RequestParam("timestamp") String timestamp,
                                                  @RequestParam("nonce") String nonce,
-                                                 @RequestParam(value = "orgId", required = false) String orgId,
+                                                 @RequestParam(value = "companyId", required = false) String companyId,
                                                  @RequestParam(value = "openKfId", required = false) String openKfId,
                                                  @RequestBody String body) {
-        callbackService.acceptCallback(msgSignature, timestamp, nonce, body, orgId, openKfId);
+        callbackService.acceptCallback(msgSignature, timestamp, nonce, body, companyId, openKfId);
         return ResponseEntity.ok("success");
     }
 }

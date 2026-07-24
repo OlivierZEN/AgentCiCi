@@ -202,24 +202,24 @@ public class ChatOrchestratorService {
         this.tx = new TransactionTemplate(transactionManager);
     }
 
-    public Map<String, Object> chat(String orgId, String userId, String sessionId,
+    public Map<String, Object> chat(String companyId, String userId, String sessionId,
                                      String question, List<String> kbIds, String requestedAgentId,
                                      String activeSkillCode) {
-        return chat(orgId, userId, sessionId, question, kbIds, requestedAgentId, activeSkillCode, Map.of());
+        return chat(companyId, userId, sessionId, question, kbIds, requestedAgentId, activeSkillCode, Map.of());
     }
 
-    public Map<String, Object> chat(String orgId, String userId, String sessionId,
+    public Map<String, Object> chat(String companyId, String userId, String sessionId,
                                      String question, List<String> kbIds, String requestedAgentId,
                                      String activeSkillCode, Map<String, String> metadataFilters) {
-        return chat(orgId, userId, sessionId, question, kbIds, requestedAgentId, activeSkillCode, metadataFilters, "web");
+        return chat(companyId, userId, sessionId, question, kbIds, requestedAgentId, activeSkillCode, metadataFilters, "web");
     }
 
-    public Map<String, Object> chat(String orgId, String userId, String sessionId,
+    public Map<String, Object> chat(String companyId, String userId, String sessionId,
                                      String question, List<String> kbIds, String requestedAgentId,
                                      String activeSkillCode, Map<String, String> metadataFilters, String channel) {
         String runId = newRunId();
-        return agentRuntimeConcurrencyService.run(orgId, userId, requestedAgentId, sessionId,
-                () -> chatLocked(orgId, userId, sessionId, question, kbIds, requestedAgentId,
+        return agentRuntimeConcurrencyService.run(companyId, userId, requestedAgentId, sessionId,
+                () -> chatLocked(companyId, userId, sessionId, question, kbIds, requestedAgentId,
                         activeSkillCode, metadataFilters, runId, channel));
     }
 
@@ -228,7 +228,7 @@ public class ChatOrchestratorService {
      * executing tool calls. Tool schemas remain visible so the evaluator can verify tool selection and
      * arguments, but every requested call is captured as evidence only.
      */
-    public EvaluationDryRunResult evaluateNoSideEffects(String orgId,
+    public EvaluationDryRunResult evaluateNoSideEffects(String companyId,
                                                         String actorId,
                                                         String agentId,
                                                         Integer versionNo,
@@ -236,31 +236,31 @@ public class ChatOrchestratorService {
                                                         String conversationHistoryJson,
                                                         String fixtureJson) {
         AgentWorkflowVersionEntity version = agentWorkflowVersionRepository
-                .findByOrgIdAndAgentIdAndVersionNo(orgId, agentId, versionNo)
+                .findByCompanyIdAndAgentIdAndVersionNo(companyId, agentId, versionNo)
                 .orElseThrow(() -> new IllegalArgumentException("Agent workflow version not found"));
         Map<String, Object> manifest = parseObject(version.getWorkflowManifest());
         Map<String, Object> identity = objectMap(manifest.get("identity"));
-        ResolvedSkillContext resolved = skillResolverService.resolveForEvaluation(orgId, agentId, version.getId());
+        ResolvedSkillContext resolved = skillResolverService.resolveForEvaluation(companyId, agentId, version.getId());
         ResolvedSkillContext skillContext = withEvaluationIdentity(
                 resolved,
                 textOrDefault(identity.get("systemPrompt"), resolved.agentSystemPrompt()),
                 textOrDefault(identity.get("model"), resolved.agentModel()));
         BuiltinSkillDocumentService.ResolvedBuiltinSkillDocs builtinDocs =
                 builtinSkillDocumentService.resolveDocs(skillContext, question);
-        Map<String, String> routedModel = modelRouterService.route(orgId, "chat", skillContext.agentModel());
+        Map<String, String> routedModel = modelRouterService.route(companyId, "chat", skillContext.agentModel());
         String modelName = resolveModelName(
                 skillContext.agentModel(), routedModel.get("provider"), routedModel.get("modelName"));
-        ModelCallCredentials credentials = resolveModelCallCredentials(orgId, routedModel.get("provider"));
+        ModelCallCredentials credentials = resolveModelCallCredentials(companyId, routedModel.get("provider"));
 
         List<String> knowledgeBaseIds = skillResolverService.resolveKnowledgeBaseIds(skillContext, List.of());
         KnowledgeRetrievalRouter.Decision decision = KnowledgeRetrievalRouter.decide(
                 question, knowledgeBaseIds, List.of(), "evaluation-" + version.getId());
         AgentRuntimeModeRouter.ModeDecision evaluationModeDecision = agentRuntimeModeRouter.decide(
-                new AgentRuntimeModeRouter.RoutingInput(orgId, agentId, "evaluation", question,
+                new AgentRuntimeModeRouter.RoutingInput(companyId, agentId, "evaluation", question,
                         skillContext.allowedToolNames(), decision.shouldRetrieve(), false));
         RagService.RetrievalResult ragResult = decision.shouldRetrieve()
                 ? ragService.retrieveDetailed(
-                        orgId,
+                        companyId,
                         knowledgeBaseIds,
                         question,
                         Map.of(),
@@ -268,7 +268,7 @@ public class ChatOrchestratorService {
                 : emptyRagRetrievalResult();
 
         BuiltinSkillRuntimeConfigService.ResolvedBuiltinSkillRuntimeConfig runtimeConfig =
-                builtinSkillRuntimeConfigService.resolve(skillContext, builtinDocs, orgId, actorId);
+                builtinSkillRuntimeConfigService.resolve(skillContext, builtinDocs, companyId, actorId);
         String system = skillPromptAssembler.assemble(
                 AliyunBailianClient.SYSTEM_PROMPT,
                 skillContext,
@@ -292,7 +292,7 @@ public class ChatOrchestratorService {
         messages.add(Map.of("role", "user", "content", userContent.toString()));
 
         List<Map<String, Object>> toolSchemas = toolOrchestratorService.getToolDefinitions(
-                orgId, skillContext.allowedToolNames(), skillContext.skillApiTools());
+                companyId, skillContext.allowedToolNames(), skillContext.skillApiTools());
         ChatCompletionResult completion = chatCompletionWithResolvedCredentials(
                 modelName,
                 messages,
@@ -402,7 +402,7 @@ public class ChatOrchestratorService {
         }
     }
 
-    private Map<String, Object> chatLocked(String orgId, String userId, String sessionId,
+    private Map<String, Object> chatLocked(String companyId, String userId, String sessionId,
                                            String question, List<String> kbIds, String requestedAgentId,
                                            String activeSkillCode, Map<String, String> metadataFilters,
                                            String runId, String channel) {
@@ -412,15 +412,15 @@ public class ChatOrchestratorService {
         List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces = new ArrayList<>();
         Instant skillStartedAt = Instant.now();
         ResolvedSkillContext skillContext = skillResolverService.resolve(
-                orgId, requestedAgentId, sessionId, Optional.ofNullable(activeSkillCode));
-        agentAccessControlService.require(orgId, userId, TenantContext.getRoles(), skillContext.agentId(), AgentPermission.RUN);
+                companyId, requestedAgentId, sessionId, Optional.ofNullable(activeSkillCode));
+        agentAccessControlService.require(companyId, userId, TenantContext.getRoles(), skillContext.agentId(), AgentPermission.RUN);
         SafetyGatewayService.SafetyDecision inputDecision =
-                safetyGatewayService.checkInput(orgId, userId, "CHAT_INPUT", question);
+                safetyGatewayService.checkInput(companyId, userId, "CHAT_INPUT", question);
         if (inputDecision.blocked()) {
             String blockedAnswer = blockedBySecurityMessage();
-            persistUserTurnCommitted(orgId, userId, sessionId, "[BLOCKED_BY_SECURITY_GATEWAY]", skillContext.agentId());
-            persistAssistantTurnCommitted(orgId, userId, sessionId, blockedAnswer, "AI_CHAT_BLOCKED", "safety-gateway");
-            return blockedPayload(orgId, userId, sessionId, skillContext.agentId(), runId, blockedAnswer, inputDecision);
+            persistUserTurnCommitted(companyId, userId, sessionId, "[BLOCKED_BY_SECURITY_GATEWAY]", skillContext.agentId());
+            persistAssistantTurnCommitted(companyId, userId, sessionId, blockedAnswer, "AI_CHAT_BLOCKED", "safety-gateway");
+            return blockedPayload(companyId, userId, sessionId, skillContext.agentId(), runId, blockedAnswer, inputDecision);
         }
         String safeQuestion = inputDecision.safeText();
         BuiltinSkillDocumentService.ResolvedBuiltinSkillDocs builtinDocs =
@@ -429,7 +429,7 @@ public class ChatOrchestratorService {
                 "已解析当前智能体绑定技能、工具边界与会话激活技能。",
                 withRunId(skillTraceMetadata(skillContext, List.of(), builtinDocs), runId)));
         Instant userPersistStartedAt = Instant.now();
-        persistUserTurnCommitted(orgId, userId, sessionId, safeQuestion, skillContext.agentId());
+        persistUserTurnCommitted(companyId, userId, sessionId, safeQuestion, skillContext.agentId());
         stageTraces.add(stageTrace("USER_MESSAGE", "用户输入", "SUCCESS", userPersistStartedAt, Instant.now(),
                 clipForTrace(safeQuestion, 220), Map.of("sessionId", sessionId, "runId", runId)));
         List<String> effectiveKnowledgeBaseIds = skillResolverService.resolveKnowledgeBaseIds(skillContext, kbIds);
@@ -437,25 +437,25 @@ public class ChatOrchestratorService {
         KnowledgeRetrievalRouter.Decision knowledgeDecision = KnowledgeRetrievalRouter.decide(
                 safeQuestion, effectiveKnowledgeBaseIds, requestedKnowledgeBaseIds, sessionId);
         AgentRuntimeModeRouter.ModeDecision modeDecision = agentRuntimeModeRouter.decide(
-                new AgentRuntimeModeRouter.RoutingInput(orgId, skillContext.agentId(), channel, safeQuestion,
+                new AgentRuntimeModeRouter.RoutingInput(companyId, skillContext.agentId(), channel, safeQuestion,
                         skillContext.allowedToolNames(), knowledgeDecision.shouldRetrieve(),
-                        pendingEmailFromState(orgId, sessionId).isPresent()));
+                        pendingEmailFromState(companyId, sessionId).isPresent()));
         AgentPlanExecCanaryService.CanaryExecution planExec = modeDecision.usesPlanExec()
-                ? agentPlanExecCanaryService.start(orgId, sessionId, skillContext.agentId(), channel, safeQuestion, "chat-" + runId)
+                ? agentPlanExecCanaryService.start(companyId, sessionId, skillContext.agentId(), channel, safeQuestion, "chat-" + runId)
                 : AgentPlanExecCanaryService.CanaryExecution.notSelected();
         if (modeDecision.usesPlanExec() && !planExec.active()) modeDecision = agentRuntimeModeRouter.fallbackToReact(modeDecision);
         stageTraces.add(stageTrace("MODE_ROUTING", "运行模式路由", "SUCCESS", Instant.now(), Instant.now(),
                 "已按服务端规则选择 " + modeDecision.mode() + "。",
                 withRunId(agentRuntimeModeRouter.payload(modeDecision), runId)));
-        Map<String, String> routedModel = modelRouterService.route(orgId, "chat", skillContext.agentModel());
+        Map<String, String> routedModel = modelRouterService.route(companyId, "chat", skillContext.agentModel());
         String modelName = resolveModelName(skillContext.agentModel(), routedModel.get("provider"), routedModel.get("modelName"));
-        ModelCallCredentials modelCredentials = resolveModelCallCredentials(orgId, routedModel.get("provider"));
-        boolean showThinking = chatThinkingConfigService.isEnabled(orgId);
+        ModelCallCredentials modelCredentials = resolveModelCallCredentials(companyId, routedModel.get("provider"));
+        boolean showThinking = chatThinkingConfigService.isEnabled(companyId);
         boolean useKnowledgeRetrieval = knowledgeDecision.shouldRetrieve();
         Instant ragStartedAt = Instant.now();
         RagService.RetrievalResult ragResult = useKnowledgeRetrieval
                 ? ragService.retrieveDetailed(
-                orgId,
+                companyId,
                 effectiveKnowledgeBaseIds,
                 safeQuestion,
                 metadataFilters,
@@ -473,36 +473,36 @@ public class ChatOrchestratorService {
         } catch (RuntimeException ex) {
             agentPlanExecCanaryService.fail(planExec, "RETRIEVE_STATE_UPDATE_FAILED");
         }
-        List<String> ragContext = sanitizeContextList(orgId, userId, "RAG_CONTEXT", ragResult.context());
+        List<String> ragContext = sanitizeContextList(companyId, userId, "RAG_CONTEXT", ragResult.context());
         Instant toolSchemaStartedAt = Instant.now();
         List<Map<String, Object>> tools = modeDecision.suppressesTools() || planExec.active() || isWecomKfSession(sessionId)
                 ? List.of()
                 : toolOrchestratorService.getToolDefinitions(
-                orgId, skillContext.allowedToolNames(), skillContext.skillApiTools());
+                companyId, skillContext.allowedToolNames(), skillContext.skillApiTools());
         stageTraces.add(stageTrace("TOOL_SCHEMA", "工具定义加载", "SUCCESS", toolSchemaStartedAt, Instant.now(),
                 "已加载本轮可用工具定义 " + tools.size() + " 个。",
                 Map.of("toolDefinitionCount", tools.size(), "allowedToolNames", skillContext.allowedToolNames(), "runId", runId)));
         RuntimeContext runtimeContext = runtimeContextPromptService.current();
 
-        chatSessionStateService.mergeUserTurn(orgId, sessionId, skillContext.agentId(), safeQuestion);
+        chatSessionStateService.mergeUserTurn(companyId, sessionId, skillContext.agentId(), safeQuestion);
         List<Map<String, Object>> messages = buildInitialMessages(
-                sessionId, safeQuestion, ragContext, showThinking, skillContext, orgId, userId,
+                sessionId, safeQuestion, ragContext, showThinking, skillContext, companyId, userId,
                 runtimeContext, routedModel.get("provider"), modelName, builtinDocs);
         stageTraces.add(stageTrace("MEMORY_CONTEXT", "主体记忆上下文", "SUCCESS", Instant.now(), Instant.now(),
                 "已按可信运行时上下文完成记忆装配。",
                 withRunId(trustedMemoryRuntimeContextService.traceMetadata(), runId)));
         if (!modeDecision.suppressesTools() && !planExec.active()) {
             appendConfirmedPendingEmailBodyToolResult(
-                    messages, orgId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
+                    messages, companyId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
         }
         Optional<String> forcedCrmProductSalesAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty() : appendForcedCrmProductSalesToolResult(
-                messages, orgId, userId, sessionId, skillContext, toolCallTraces, runId, question);
+                messages, companyId, userId, sessionId, skillContext, toolCallTraces, runId, question);
         Optional<String> scheduleCadenceClarification = scheduleCadenceClarification(question);
         int maxToolRounds = modeDecision.mode() == AgentRuntimeModeRouter.Mode.LEGACY_REACT
                 ? resolveMaxToolRounds(skillContext.maxToolCalls())
                 : Math.min(resolveMaxToolRounds(skillContext.maxToolCalls()), modeDecision.budget().maxToolRounds());
         String answer = forcedCrmProductSalesAnswer.orElseGet(() -> scheduleCadenceClarification.orElseGet(() -> runToolLoop(
-                modelName, messages, tools, orgId, userId, sessionId,
+                modelName, messages, tools, companyId, userId, sessionId,
                 showThinking, skillContext, maxToolRounds, modelCredentials, modelCallTraces, toolCallTraces, runId)));
         try {
             agentPlanExecCanaryService.completeSynthesis(planExec, clipForTrace(answer, 1024));
@@ -510,10 +510,10 @@ public class ChatOrchestratorService {
             agentPlanExecCanaryService.fail(planExec, "SYNTHESIS_STATE_UPDATE_FAILED");
         }
         AgentTaskReflectService.ReflectResult reflectResult = reflectSafely(
-                orgId, skillContext.agentId(), planExec, modeDecision, answer);
+                companyId, skillContext.agentId(), planExec, modeDecision, answer);
         Instant wfStartedAt = Instant.now();
         AgentWorkflowRuntimeService.RuntimeExecutionResult executionResult = agentWorkflowRuntimeService.evaluateForChat(
-                orgId, skillContext.agentId(), question, skillContext.allowedToolNames());
+                companyId, skillContext.agentId(), question, skillContext.allowedToolNames());
         executionResult.contextSnapshot().put("runId", runId);
         if (planExec.active()) {
             executionResult.contextSnapshot().put("runtimeTask", runtimeTaskTracePayload(planExec, modeDecision, reflectResult));
@@ -528,7 +528,7 @@ public class ChatOrchestratorService {
                 workflowTraceMetadata(executionResult, wfMs)));
         try {
             agentWorkflowExecutionLogService.appendFromChat(
-                    orgId,
+                    companyId,
                     skillContext.agentId(),
                     executionResult.publishedVersionId(),
                     executionResult.executionStatus(),
@@ -538,12 +538,12 @@ public class ChatOrchestratorService {
             // chat path must not fail on execution audit persistence
         }
         Instant assistantPersistStartedAt = Instant.now();
-        persistAssistantTurnCommitted(orgId, userId, sessionId, answer, "AI_CHAT", modelName);
+        persistAssistantTurnCommitted(companyId, userId, sessionId, answer, "AI_CHAT", modelName);
         stageTraces.add(stageTrace("PERSISTENCE", "消息落库", "SUCCESS", assistantPersistStartedAt, Instant.now(),
                 "用户消息与助手回复已写入会话日志。", Map.of("sessionId", sessionId)));
         List<String> activatedSkillCodes = resolveActivatedSkillCodes(skillContext, toolCallTraces);
         recordRunTraceSafely(
-                orgId,
+                companyId,
                 userId,
                 sessionId,
                 question,
@@ -563,10 +563,10 @@ public class ChatOrchestratorService {
                 wfMs,
                 runStartedAt,
                 Instant.now());
-        recordBillingUsageSafely(orgId, userId, sessionId, modelName, skillContext.agentId(), ragResult,
+        recordBillingUsageSafely(companyId, userId, sessionId, modelName, skillContext.agentId(), ragResult,
                 modelCallTraces, toolCallTraces, wfMs, isBillableAssistantAnswer(answer));
         Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("orgId", orgId);
+        payload.put("companyId", companyId);
         payload.put("runId", runId);
         payload.put("sessionId", sessionId);
         payload.put("agentId", skillContext.agentId());
@@ -614,45 +614,45 @@ public class ChatOrchestratorService {
         return payload;
     }
 
-    public void chatStream(String orgId, String userId, String sessionId,
+    public void chatStream(String companyId, String userId, String sessionId,
                            String question, List<String> kbIds, String requestedAgentId,
                            String activeSkillCode, SseEmitter emitter) {
-        chatStream(orgId, userId, sessionId, question, kbIds, requestedAgentId, activeSkillCode, Map.of(), emitter);
+        chatStream(companyId, userId, sessionId, question, kbIds, requestedAgentId, activeSkillCode, Map.of(), emitter);
     }
 
-    public void chatStream(String orgId, String userId, String sessionId,
+    public void chatStream(String companyId, String userId, String sessionId,
                            String question, List<String> kbIds, String requestedAgentId,
                            String activeSkillCode, Map<String, String> metadataFilters, SseEmitter emitter) {
         CompletableFuture.runAsync(() -> {
-            chatStreamBlocking(orgId, userId, sessionId, question, kbIds, requestedAgentId, activeSkillCode, metadataFilters, emitter);
+            chatStreamBlocking(companyId, userId, sessionId, question, kbIds, requestedAgentId, activeSkillCode, metadataFilters, emitter);
         }, agentRuntimeExecutor);
     }
 
-    public void chatStreamBlocking(String orgId, String userId, String sessionId,
+    public void chatStreamBlocking(String companyId, String userId, String sessionId,
                                    String question, List<String> kbIds, String requestedAgentId,
                                    String activeSkillCode, SseEmitter emitter) {
-        chatStreamBlocking(orgId, userId, sessionId, question, kbIds, requestedAgentId, activeSkillCode, Map.of(), emitter);
+        chatStreamBlocking(companyId, userId, sessionId, question, kbIds, requestedAgentId, activeSkillCode, Map.of(), emitter);
     }
 
-    public void chatStreamBlocking(String orgId, String userId, String sessionId,
+    public void chatStreamBlocking(String companyId, String userId, String sessionId,
                                    String question, List<String> kbIds, String requestedAgentId,
                                    String activeSkillCode, Map<String, String> metadataFilters, SseEmitter emitter) {
-        chatStreamBlocking(orgId, userId, sessionId, question, kbIds, requestedAgentId, activeSkillCode,
+        chatStreamBlocking(companyId, userId, sessionId, question, kbIds, requestedAgentId, activeSkillCode,
                 metadataFilters, "web", emitter);
     }
 
-    public void chatStreamBlocking(String orgId, String userId, String sessionId,
+    public void chatStreamBlocking(String companyId, String userId, String sessionId,
                                    String question, List<String> kbIds, String requestedAgentId,
                                    String activeSkillCode, Map<String, String> metadataFilters, String channel, SseEmitter emitter) {
         String runId = newRunId();
-        agentRuntimeConcurrencyService.run(orgId, userId, requestedAgentId, sessionId, () -> {
-            chatStreamBlockingLocked(orgId, userId, sessionId, question, kbIds, requestedAgentId,
+        agentRuntimeConcurrencyService.run(companyId, userId, requestedAgentId, sessionId, () -> {
+            chatStreamBlockingLocked(companyId, userId, sessionId, question, kbIds, requestedAgentId,
                     activeSkillCode, metadataFilters, channel, emitter, runId);
             return null;
         });
     }
 
-    private void chatStreamBlockingLocked(String orgId, String userId, String sessionId,
+    private void chatStreamBlockingLocked(String companyId, String userId, String sessionId,
                                           String question, List<String> kbIds, String requestedAgentId,
                                           String activeSkillCode, Map<String, String> metadataFilters,
                                           String channel, SseEmitter emitter, String runId) {
@@ -664,14 +664,14 @@ public class ChatOrchestratorService {
                 safeSendPhase(emitter, "run", null, Map.of("runId", runId));
                 Instant skillStartedAt = Instant.now();
         ResolvedSkillContext skillContext = skillResolverService.resolve(
-                orgId, requestedAgentId, sessionId, Optional.ofNullable(activeSkillCode));
-        agentAccessControlService.require(orgId, userId, TenantContext.getRoles(), skillContext.agentId(), AgentPermission.RUN);
+                companyId, requestedAgentId, sessionId, Optional.ofNullable(activeSkillCode));
+        agentAccessControlService.require(companyId, userId, TenantContext.getRoles(), skillContext.agentId(), AgentPermission.RUN);
                 SafetyGatewayService.SafetyDecision inputDecision =
-                        safetyGatewayService.checkInput(orgId, userId, "CHAT_STREAM_INPUT", question);
+                        safetyGatewayService.checkInput(companyId, userId, "CHAT_STREAM_INPUT", question);
                 if (inputDecision.blocked()) {
                     String blockedAnswer = blockedBySecurityMessage();
-                    persistUserTurnCommitted(orgId, userId, sessionId, "[BLOCKED_BY_SECURITY_GATEWAY]", skillContext.agentId());
-                    persistAssistantTurnCommitted(orgId, userId, sessionId, blockedAnswer, "AI_CHAT_STREAM_BLOCKED", "safety-gateway");
+                    persistUserTurnCommitted(companyId, userId, sessionId, "[BLOCKED_BY_SECURITY_GATEWAY]", skillContext.agentId());
+                    persistAssistantTurnCommitted(companyId, userId, sessionId, blockedAnswer, "AI_CHAT_STREAM_BLOCKED", "safety-gateway");
                     safeSendDeltaInChunks(emitter, blockedAnswer);
                     emitter.send(SseEmitter.event().name("done").data(Map.of(
                             "ok", true,
@@ -687,7 +687,7 @@ public class ChatOrchestratorService {
                         "已解析当前智能体绑定技能、工具边界与会话激活技能。",
                         withRunId(skillTraceMetadata(skillContext, List.of(), builtinDocs), runId)));
                 Instant userPersistStartedAt = Instant.now();
-                persistUserTurnCommitted(orgId, userId, sessionId, safeQuestion, skillContext.agentId());
+                persistUserTurnCommitted(companyId, userId, sessionId, safeQuestion, skillContext.agentId());
                 stageTraces.add(stageTrace("USER_MESSAGE", "用户输入", "SUCCESS", userPersistStartedAt, Instant.now(),
                         clipForTrace(safeQuestion, 220), Map.of("sessionId", sessionId, "runId", runId)));
                 List<String> effectiveKnowledgeBaseIds = skillResolverService.resolveKnowledgeBaseIds(skillContext, kbIds);
@@ -695,11 +695,11 @@ public class ChatOrchestratorService {
                 KnowledgeRetrievalRouter.Decision knowledgeDecision = KnowledgeRetrievalRouter.decide(
                         safeQuestion, effectiveKnowledgeBaseIds, requestedKnowledgeBaseIds, sessionId);
                 AgentRuntimeModeRouter.ModeDecision modeDecision = agentRuntimeModeRouter.decide(
-                        new AgentRuntimeModeRouter.RoutingInput(orgId, skillContext.agentId(), channel, safeQuestion,
+                        new AgentRuntimeModeRouter.RoutingInput(companyId, skillContext.agentId(), channel, safeQuestion,
                                 skillContext.allowedToolNames(), knowledgeDecision.shouldRetrieve(),
-                                pendingEmailFromState(orgId, sessionId).isPresent()));
+                                pendingEmailFromState(companyId, sessionId).isPresent()));
                 AgentPlanExecCanaryService.CanaryExecution planExec = modeDecision.usesPlanExec()
-                        ? agentPlanExecCanaryService.start(orgId, sessionId, skillContext.agentId(), channel,
+                        ? agentPlanExecCanaryService.start(companyId, sessionId, skillContext.agentId(), channel,
                                 safeQuestion, "chat-stream-" + runId)
                         : AgentPlanExecCanaryService.CanaryExecution.notSelected();
                 if (modeDecision.usesPlanExec() && !planExec.active()) modeDecision = agentRuntimeModeRouter.fallbackToReact(modeDecision);
@@ -709,10 +709,10 @@ public class ChatOrchestratorService {
                 safeSendPhase(emitter, "runtime_started", null, Map.of(
                         "modeDecision", agentRuntimeModeRouter.payload(modeDecision),
                         "taskRun", agentPlanExecCanaryService.payload(planExec)));
-                Map<String, String> routedModel = modelRouterService.route(orgId, "chat", skillContext.agentModel());
+                Map<String, String> routedModel = modelRouterService.route(companyId, "chat", skillContext.agentModel());
                 String modelName = resolveModelName(skillContext.agentModel(), routedModel.get("provider"), routedModel.get("modelName"));
-                ModelCallCredentials modelCredentials = resolveModelCallCredentials(orgId, routedModel.get("provider"));
-                boolean showThinking = chatThinkingConfigService.isEnabled(orgId);
+                ModelCallCredentials modelCredentials = resolveModelCallCredentials(companyId, routedModel.get("provider"));
+                boolean showThinking = chatThinkingConfigService.isEnabled(companyId);
                 boolean useKnowledgeRetrieval = knowledgeDecision.shouldRetrieve();
                 safeSendPhase(emitter, "model", modelName);
                 if (useKnowledgeRetrieval) {
@@ -727,7 +727,7 @@ public class ChatOrchestratorService {
                 Instant ragStartedAt = Instant.now();
                 RagService.RetrievalResult ragResult = useKnowledgeRetrieval
                         ? ragService.retrieveDetailed(
-                        orgId,
+                        companyId,
                         effectiveKnowledgeBaseIds,
                         safeQuestion,
                         metadataFilters,
@@ -746,7 +746,7 @@ public class ChatOrchestratorService {
                 } catch (RuntimeException ex) {
                     agentPlanExecCanaryService.fail(planExec, "RETRIEVE_STATE_UPDATE_FAILED");
                 }
-                List<String> ragContext = sanitizeContextList(orgId, userId, "RAG_CONTEXT", ragResult.context());
+                List<String> ragContext = sanitizeContextList(companyId, userId, "RAG_CONTEXT", ragResult.context());
                 if (useKnowledgeRetrieval) {
                     safeSendPhase(emitter, "rag_done", modelName, ragPhasePayload(ragResult));
                     log.info("chatStream RAG done: session={} agent={} kbs={} contexts={} timingsMs={} fallback={}",
@@ -761,31 +761,31 @@ public class ChatOrchestratorService {
                 List<Map<String, Object>> tools = modeDecision.suppressesTools() || planExec.active() || isWecomKfSession(sessionId)
                         ? List.of()
                         : toolOrchestratorService.getToolDefinitions(
-                        orgId, skillContext.allowedToolNames(), skillContext.skillApiTools());
+                        companyId, skillContext.allowedToolNames(), skillContext.skillApiTools());
                 stageTraces.add(stageTrace("TOOL_SCHEMA", "工具定义加载", "SUCCESS", toolSchemaStartedAt, Instant.now(),
                         "已加载本轮可用工具定义 " + tools.size() + " 个。",
                         Map.of("toolDefinitionCount", tools.size(), "allowedToolNames", skillContext.allowedToolNames(), "runId", runId)));
                 RuntimeContext runtimeContext = runtimeContextPromptService.current();
-                chatSessionStateService.mergeUserTurn(orgId, sessionId, skillContext.agentId(), safeQuestion);
+                chatSessionStateService.mergeUserTurn(companyId, sessionId, skillContext.agentId(), safeQuestion);
                 List<Map<String, Object>> messages = buildInitialMessages(
-                        sessionId, safeQuestion, ragContext, showThinking, skillContext, orgId, userId,
+                        sessionId, safeQuestion, ragContext, showThinking, skillContext, companyId, userId,
                         runtimeContext, routedModel.get("provider"), modelName, builtinDocs);
                 stageTraces.add(stageTrace("MEMORY_CONTEXT", "主体记忆上下文", "SUCCESS", Instant.now(), Instant.now(),
                         "已按可信运行时上下文完成记忆装配。",
                         withRunId(trustedMemoryRuntimeContextService.traceMetadata(), runId)));
                 if (!modeDecision.suppressesTools() && !planExec.active()) {
                     appendConfirmedPendingEmailBodyToolResult(
-                            messages, orgId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
+                            messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
                 }
                 Optional<String> forcedCrmProductSalesAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty() : appendForcedCrmProductSalesToolResult(
-                        messages, orgId, userId, sessionId, skillContext, toolCallTraces, runId, question);
+                        messages, companyId, userId, sessionId, skillContext, toolCallTraces, runId, question);
                 Optional<String> scheduleCadenceClarification = scheduleCadenceClarification(question);
                 int maxToolRounds = modeDecision.mode() == AgentRuntimeModeRouter.Mode.LEGACY_REACT
                         ? resolveMaxToolRounds(skillContext.maxToolCalls())
                         : Math.min(resolveMaxToolRounds(skillContext.maxToolCalls()), modeDecision.budget().maxToolRounds());
                 boolean pendingApprovalsUsed = forcedCrmProductSalesAnswer.isEmpty() && scheduleCadenceClarification.isEmpty()
                         && resolveToolCalls(
-                        modelName, messages, tools, orgId, userId, sessionId,
+                        modelName, messages, tools, companyId, userId, sessionId,
                         showThinking, skillContext, emitter, maxToolRounds, modelCredentials, modelCallTraces,
                         toolCallTraces, runId);
                 if (pendingApprovalsUsed) {
@@ -875,7 +875,7 @@ public class ChatOrchestratorService {
                         }
                     }
                 }
-                finalText = applyOutputGateway(orgId, userId, "MODEL_STREAM_OUTPUT", finalText);
+                finalText = applyOutputGateway(companyId, userId, "MODEL_STREAM_OUTPUT", finalText);
                 try {
                     agentPlanExecCanaryService.completeSynthesis(planExec, clipForTrace(finalText, 1024));
                     if (planExec.selected()) safeSendPhase(emitter, "runtime_completed", null, agentPlanExecCanaryService.payload(planExec));
@@ -883,12 +883,12 @@ public class ChatOrchestratorService {
                     agentPlanExecCanaryService.fail(planExec, "SYNTHESIS_STATE_UPDATE_FAILED");
                 }
                 AgentTaskReflectService.ReflectResult reflectResult = reflectSafely(
-                        orgId, skillContext.agentId(), planExec, modeDecision, finalText);
+                        companyId, skillContext.agentId(), planExec, modeDecision, finalText);
                 if (reflectResult.selected()) safeSendPhase(emitter, "review_completed", null, reflectPayload(reflectResult));
                 safeSendDeltaInChunks(emitter, finalText);
                 Instant wfStartedAt = Instant.now();
                 AgentWorkflowRuntimeService.RuntimeExecutionResult executionResult = agentWorkflowRuntimeService.evaluateForChat(
-                        orgId, skillContext.agentId(), question, skillContext.allowedToolNames());
+                        companyId, skillContext.agentId(), question, skillContext.allowedToolNames());
                 executionResult.contextSnapshot().put("runId", runId);
                 if (planExec.active()) {
                     executionResult.contextSnapshot().put("runtimeTask", runtimeTaskTracePayload(planExec, modeDecision, reflectResult));
@@ -903,7 +903,7 @@ public class ChatOrchestratorService {
                         workflowTraceMetadata(executionResult, wfMs)));
                 try {
                     agentWorkflowExecutionLogService.appendFromChat(
-                            orgId,
+                            companyId,
                             skillContext.agentId(),
                             executionResult.publishedVersionId(),
                             executionResult.executionStatus(),
@@ -913,12 +913,12 @@ public class ChatOrchestratorService {
                     // stream path must not fail on execution audit persistence
                 }
                 Instant assistantPersistStartedAt = Instant.now();
-                persistAssistantTurnCommitted(orgId, userId, sessionId, finalText, "AI_CHAT_STREAM", modelName);
+                persistAssistantTurnCommitted(companyId, userId, sessionId, finalText, "AI_CHAT_STREAM", modelName);
                 stageTraces.add(stageTrace("PERSISTENCE", "消息落库", "SUCCESS", assistantPersistStartedAt, Instant.now(),
                         "用户消息与助手回复已写入会话日志。", Map.of("sessionId", sessionId)));
                 List<String> activatedSkillCodes = resolveActivatedSkillCodes(skillContext, toolCallTraces);
                 recordRunTraceSafely(
-                        orgId,
+                        companyId,
                         userId,
                         sessionId,
                         question,
@@ -938,7 +938,7 @@ public class ChatOrchestratorService {
                         wfMs,
                         runStartedAt,
                         Instant.now());
-                recordBillingUsageSafely(orgId, userId, sessionId, modelName, skillContext.agentId(), ragResult,
+                recordBillingUsageSafely(companyId, userId, sessionId, modelName, skillContext.agentId(), ragResult,
                         modelCallTraces, toolCallTraces, wfMs, isBillableAssistantAnswer(finalText));
                 emitter.send(SseEmitter.event().name("done").data(Map.of("ok", true, "runId", runId)));
                 emitter.complete();
@@ -953,7 +953,7 @@ public class ChatOrchestratorService {
 
     // ── Function calling loop ──
 
-    private AgentTaskReflectService.ReflectResult reflectSafely(String orgId, String agentId,
+    private AgentTaskReflectService.ReflectResult reflectSafely(String companyId, String agentId,
                                                                   AgentPlanExecCanaryService.CanaryExecution planExec,
                                                                   AgentRuntimeModeRouter.ModeDecision decision,
                                                                   String output) {
@@ -962,7 +962,7 @@ public class ChatOrchestratorService {
         }
         try {
             AgentTaskReflectService.ReflectResult result = agentTaskReflectService.reflect(
-                    new AgentTaskReflectService.ReflectCommand(orgId, planExec.runId(), agentId,
+                    new AgentTaskReflectService.ReflectCommand(companyId, planExec.runId(), agentId,
                             true, decision.requiresConfirmation(), output));
             return result == null ? new AgentTaskReflectService.ReflectResult(false, null, "SKIPPED", "NOT_REQUESTED", List.of()) : result;
         } catch (RuntimeException ignored) {
@@ -994,7 +994,7 @@ public class ChatOrchestratorService {
      * Returns the final text answer.
      */
     private String runToolLoop(String modelName, List<Map<String, Object>> messages,
-                               List<Map<String, Object>> tools, String orgId, String userId, String sessionId,
+                               List<Map<String, Object>> tools, String companyId, String userId, String sessionId,
                                boolean showThinking, ResolvedSkillContext skillContext, int maxToolRounds,
                                ModelCallCredentials modelCredentials,
                                List<AgentRunTraceService.ModelCallTraceInput> modelCallTraces,
@@ -1046,7 +1046,7 @@ public class ChatOrchestratorService {
                 return appendToolResultFallbackIfDeferred(answer, messages);
             }
 
-            appendToolCallsAndResults(messages, result, orgId, userId, sessionId, skillContext, null, toolCallTraces, runId);
+            appendToolCallsAndResults(messages, result, companyId, userId, sessionId, skillContext, null, toolCallTraces, runId);
         }
         return completeFromToolResultsAfterLimit(modelName, messages, showThinking, maxToolRounds, modelCredentials, modelCallTraces);
     }
@@ -1122,7 +1122,7 @@ public class ChatOrchestratorService {
      * and the next model call (streaming) will produce the final answer.
      */
     private boolean resolveToolCalls(String modelName, List<Map<String, Object>> messages,
-                                  List<Map<String, Object>> tools, String orgId, String userId, String sessionId,
+                                  List<Map<String, Object>> tools, String companyId, String userId, String sessionId,
                                   boolean showThinking,
                                   ResolvedSkillContext skillContext,
                                   SseEmitter emitter,
@@ -1176,7 +1176,7 @@ public class ChatOrchestratorService {
                 break;
             }
             pendingApprovalsUsed = appendToolCallsAndResults(
-                    messages, result, orgId, userId, sessionId, skillContext, emitter, toolCallTraces, runId)
+                    messages, result, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId)
                     || pendingApprovalsUsed;
             if (shouldSkipToolPlanningStop(questionFromMessages(messages), resultToolCalls, messages)) {
                 modelCallTraces.add(new AgentRunTraceService.ModelCallTraceInput(
@@ -1198,7 +1198,7 @@ public class ChatOrchestratorService {
     }
 
     private boolean appendToolCallsAndResults(List<Map<String, Object>> messages,
-                                            ChatCompletionResult result, String orgId, String userId,
+                                            ChatCompletionResult result, String companyId, String userId,
                                             String sessionId,
                                             ResolvedSkillContext skillContext,
                                             SseEmitter emitter,
@@ -1232,7 +1232,7 @@ public class ChatOrchestratorService {
             boolean toolSuccess = true;
             try {
                 toolResult = executeToolForCurrentAgent(
-                        orgId, userId, tc.name(), tc.arguments(), skillContext);
+                        companyId, userId, tc.name(), tc.arguments(), skillContext);
             } catch (RuntimeException ex) {
                 toolSuccess = false;
                 toolResult = ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage();
@@ -1251,8 +1251,8 @@ public class ChatOrchestratorService {
                             elapsedMs(toolStartedAt, toolEndedAt)));
                 }
             }
-            logToolInvocationAudit(orgId, userId, sessionId, skillContext, canonicalTool != null ? canonicalTool : tc.name());
-            chatSessionStateService.mergeToolResult(orgId, sessionId, skillContext.agentId(), tc.name(), toolResult);
+            logToolInvocationAudit(companyId, userId, sessionId, skillContext, canonicalTool != null ? canonicalTool : tc.name());
+            chatSessionStateService.mergeToolResult(companyId, sessionId, skillContext.agentId(), tc.name(), toolResult);
             if (emitter != null && isPendingApprovalsTool(tc.name())) {
                 safeSendToolResult(emitter, tc.name(), toolResult);
                 pendingApprovalsUsed = true;
@@ -1267,7 +1267,7 @@ public class ChatOrchestratorService {
     }
 
     private boolean appendConfirmedPendingEmailBodyToolResult(List<Map<String, Object>> messages,
-                                                              String orgId,
+                                                              String companyId,
                                                               String userId,
                                                               String sessionId,
                                                               ResolvedSkillContext skillContext,
@@ -1278,14 +1278,14 @@ public class ChatOrchestratorService {
         if (!isEmailBodyContinuationConfirmation(question)) {
             return false;
         }
-        Optional<PendingEmailState> pendingEmail = pendingEmailFromState(orgId, sessionId);
+        Optional<PendingEmailState> pendingEmail = pendingEmailFromState(companyId, sessionId);
         if (pendingEmail.isEmpty()) {
             return false;
         }
         PendingEmailState pending = pendingEmail.get();
         String toolResult = executeAndAppendSyntheticToolCall(
                 messages,
-                orgId,
+                companyId,
                 userId,
                 sessionId,
                 skillContext,
@@ -1298,7 +1298,7 @@ public class ChatOrchestratorService {
         if (isEmailMessageIdNotFoundResult(toolResult) && pending.hasRefreshHints()) {
             String searchResult = executeAndAppendSyntheticToolCall(
                     messages,
-                    orgId,
+                    companyId,
                     userId,
                     sessionId,
                     skillContext,
@@ -1312,7 +1312,7 @@ public class ChatOrchestratorService {
             if (refreshedMessageId.isPresent() && !refreshedMessageId.get().equals(pending.messageId())) {
                 executeAndAppendSyntheticToolCall(
                         messages,
-                        orgId,
+                        companyId,
                         userId,
                         sessionId,
                         skillContext,
@@ -1328,7 +1328,7 @@ public class ChatOrchestratorService {
     }
 
     private String executeAndAppendSyntheticToolCall(List<Map<String, Object>> messages,
-                                                     String orgId,
+                                                     String companyId,
                                                      String userId,
                                                      String sessionId,
                                                      ResolvedSkillContext skillContext,
@@ -1357,7 +1357,7 @@ public class ChatOrchestratorService {
         boolean toolSuccess = true;
         try {
             toolResult = executeToolForCurrentAgent(
-                    orgId, userId, toolName, arguments, skillContext);
+                    companyId, userId, toolName, arguments, skillContext);
         } catch (RuntimeException ex) {
             toolSuccess = false;
             toolResult = ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage();
@@ -1376,8 +1376,8 @@ public class ChatOrchestratorService {
                         elapsedMs(toolStartedAt, toolEndedAt)));
             }
         }
-        logToolInvocationAudit(orgId, userId, sessionId, skillContext, toolName);
-        chatSessionStateService.mergeToolResult(orgId, sessionId, skillContext.agentId(), toolName, toolResult);
+        logToolInvocationAudit(companyId, userId, sessionId, skillContext, toolName);
+        chatSessionStateService.mergeToolResult(companyId, sessionId, skillContext.agentId(), toolName, toolResult);
         messages.add(Map.of(
                 "role", "tool",
                 "tool_call_id", callId,
@@ -1387,14 +1387,14 @@ public class ChatOrchestratorService {
     }
 
     private String executeToolForCurrentAgent(
-            String orgId,
+            String companyId,
             String userId,
             String toolName,
             String arguments,
             ResolvedSkillContext skillContext) {
         if (AssistantScheduleToolService.TOOL_NAME.equals(ToolNameNormalizer.canonicalize(toolName))) {
             return toolOrchestratorService.executeTool(
-                    orgId,
+                    companyId,
                     userId,
                     toolName,
                     arguments,
@@ -1403,7 +1403,7 @@ public class ChatOrchestratorService {
                     skillContext.agentId());
         }
         return toolOrchestratorService.executeTool(
-                orgId,
+                companyId,
                 userId,
                 toolName,
                 arguments,
@@ -1428,7 +1428,7 @@ public class ChatOrchestratorService {
 
     private Optional<String> appendForcedCrmProductSalesToolResult(
             List<Map<String, Object>> messages,
-            String orgId,
+            String companyId,
             String userId,
             String sessionId,
             ResolvedSkillContext skillContext,
@@ -1444,7 +1444,7 @@ public class ChatOrchestratorService {
         }
         String toolResult = executeAndAppendSyntheticToolCall(
                 messages,
-                orgId,
+                companyId,
                 userId,
                 sessionId,
                 skillContext,
@@ -1457,8 +1457,8 @@ public class ChatOrchestratorService {
         return Optional.of(crmProductSalesAnswerFormatter.formatJson(toolResult));
     }
 
-    private Optional<PendingEmailState> pendingEmailFromState(String orgId, String sessionId) {
-        return chatSessionStateService.get(orgId, sessionId)
+    private Optional<PendingEmailState> pendingEmailFromState(String companyId, String sessionId) {
+        return chatSessionStateService.get(companyId, sessionId)
                 .flatMap(state -> pendingEmailFromStateJson(state.getStateJson()));
     }
 
@@ -1507,7 +1507,7 @@ public class ChatOrchestratorService {
         return args.toString();
     }
 
-    private void logToolInvocationAudit(String orgId, String userId, String sessionId,
+    private void logToolInvocationAudit(String companyId, String userId, String sessionId,
                                        ResolvedSkillContext skillContext, String canonicalToolName) {
         try {
             String tool = canonicalToolName == null ? "" : canonicalToolName;
@@ -1526,7 +1526,7 @@ public class ChatOrchestratorService {
                     escapeJson(tool),
                     invocationType);
             String clipped = detail.length() > 1900 ? detail.substring(0, 1900) + "…" : detail;
-            auditService.log(orgId, userId, "TOOL_INVOCATION", clipped);
+            auditService.log(companyId, userId, "TOOL_INVOCATION", clipped);
         } catch (RuntimeException ignored) {
             // chat path must not fail on audit persistence
         }
@@ -1550,7 +1550,7 @@ public class ChatOrchestratorService {
         return "skill_scoped";
     }
 
-    private void recordRunTraceSafely(String orgId,
+    private void recordRunTraceSafely(String companyId,
                                       String userId,
                                       String sessionId,
                                       String question,
@@ -1572,7 +1572,7 @@ public class ChatOrchestratorService {
                                       Instant endedAt) {
         try {
             agentRunTraceService.recordChatRun(new AgentRunTraceService.ChatRunTraceInput(
-                    orgId,
+                    companyId,
                     userId,
                     sessionId,
                     skillContext.agentId(),
@@ -1600,7 +1600,7 @@ public class ChatOrchestratorService {
         }
     }
 
-    private void recordBillingUsageSafely(String orgId,
+    private void recordBillingUsageSafely(String companyId,
                                           String userId,
                                           String sessionId,
                                           String modelName,
@@ -1611,7 +1611,7 @@ public class ChatOrchestratorService {
                                           int workflowElapsedMs,
                                           boolean billable) {
         billingUsageMeteringService.recordChatRunSafely(new BillingUsageMeteringService.ChatRunMeteringInput(
-                orgId,
+                companyId,
                 userId,
                 agentId,
                 sessionId,
@@ -1831,12 +1831,12 @@ public class ChatOrchestratorService {
         return aliyunBailianClient.chatCompletion(modelName, messages, tools, stripThinkingFromAssistantContent);
     }
 
-    private ModelCallCredentials resolveModelCallCredentials(String orgId, String providerCode) {
+    private ModelCallCredentials resolveModelCallCredentials(String companyId, String providerCode) {
         if (providerCode == null || providerCode.isBlank() || "mock".equalsIgnoreCase(providerCode.trim())) {
             return ModelCallCredentials.empty(providerCode);
         }
         try {
-            Map<String, String> credentials = modelProviderService.credentialsForProvider(orgId, providerCode.trim());
+            Map<String, String> credentials = modelProviderService.credentialsForProvider(companyId, providerCode.trim());
             if (!Boolean.parseBoolean(credentials.getOrDefault("enabled", "false"))) {
                 throw new IllegalArgumentException("当前模型厂商已停用，请联系平台运营启用模型厂商。");
             }
@@ -1846,7 +1846,7 @@ public class ChatOrchestratorService {
                     credentials.get("apiKey"),
                     Boolean.parseBoolean(credentials.getOrDefault("apiKeyRequired", "true")));
         } catch (IllegalArgumentException ex) {
-            log.warn("model provider credentials unavailable: org={} provider={} err={}", orgId, providerCode, ex.getMessage());
+            log.warn("model provider credentials unavailable: org={} provider={} err={}", companyId, providerCode, ex.getMessage());
             return ModelCallCredentials.empty(providerCode);
         }
     }
@@ -1856,7 +1856,7 @@ public class ChatOrchestratorService {
     private List<Map<String, Object>> buildInitialMessages(String sessionId, String question, List<String> ragContext,
                                                            boolean showThinking,
                                                            ResolvedSkillContext skillContext,
-                                                           String orgId, String userId,
+                                                           String companyId, String userId,
                                                            RuntimeContext runtimeContext,
                                                            String routedProvider,
                                                            String modelName,
@@ -1864,28 +1864,28 @@ public class ChatOrchestratorService {
         List<Map<String, Object>> messages = new ArrayList<>();
         String baseSystem = showThinking ? AliyunBailianClient.SYSTEM_PROMPT_WITH_THINKING : AliyunBailianClient.SYSTEM_PROMPT;
         BuiltinSkillRuntimeConfigService.ResolvedBuiltinSkillRuntimeConfig runtimeConfig =
-                builtinSkillRuntimeConfigService.resolve(skillContext, builtinDocs, orgId, userId);
+                builtinSkillRuntimeConfigService.resolve(skillContext, builtinDocs, companyId, userId);
         String system = skillPromptAssembler.assemble(baseSystem, skillContext, builtinDocs, runtimeConfig);
         system = buildModelIdentityPromptBlock(routedProvider, modelName)
                 + "\n---\n\n" + system
                 + "\n---\n\n" + buildToolUseBoundaryPromptBlock(sessionId);
         // Prepend user memories if available
-        List<UserMemoryEntity> memories = userMemoryService.listForInjection(orgId, userId, skillContext.agentId());
+        List<UserMemoryEntity> memories = userMemoryService.listForInjection(companyId, userId, skillContext.agentId());
         if (!memories.isEmpty()) {
             system = userMemoryService.buildPromptBlock(memories) + "\n---\n\n" + system;
         }
-        Optional<ChatSessionStateEntity> sessionState = chatSessionStateService.get(orgId, sessionId);
+        Optional<ChatSessionStateEntity> sessionState = chatSessionStateService.get(companyId, sessionId);
         if (sessionState.isPresent()) {
             system = chatSessionStateService.buildPromptBlock(sessionState.get()) + "\n---\n\n" + system;
         }
         system = runtimeContextPromptService.buildPromptBlock(runtimeContext) + "\n---\n\n" + system;
         String trustedMemoryPrompt = Objects.toString(
-                trustedMemoryRuntimeContextService.buildPrompt(orgId, skillContext.agentId(), question), "");
+                trustedMemoryRuntimeContextService.buildPrompt(companyId, skillContext.agentId(), question), "");
         if (!trustedMemoryPrompt.isBlank()) {
             system = trustedMemoryPrompt + "\n---\n\n" + system;
         }
         messages.add(Map.of("role", "system", "content", system));
-        messages.addAll(buildRecentHistoryMessages(orgId, sessionId, question));
+        messages.addAll(buildRecentHistoryMessages(companyId, sessionId, question));
 
         StringBuilder userContent = new StringBuilder(question);
         if (!ragContext.isEmpty()) {
@@ -1898,9 +1898,9 @@ public class ChatOrchestratorService {
         return messages;
     }
 
-    private List<Map<String, Object>> buildRecentHistoryMessages(String orgId, String sessionId, String currentQuestion) {
-        List<ChatMessageEntity> latest = chatMessageRepository.findByOrgIdAndSessionIdOrderByCreatedAtDesc(
-                orgId, sessionId, PageRequest.of(0, 20));
+    private List<Map<String, Object>> buildRecentHistoryMessages(String companyId, String sessionId, String currentQuestion) {
+        List<ChatMessageEntity> latest = chatMessageRepository.findByCompanyIdAndSessionIdOrderByCreatedAtDesc(
+                companyId, sessionId, PageRequest.of(0, 20));
         if (latest.isEmpty()) {
             return List.of();
         }
@@ -1926,39 +1926,39 @@ public class ChatOrchestratorService {
         return history;
     }
 
-    private void persistUserTurn(String orgId, String userId, String sessionId, String question, String agentId) {
+    private void persistUserTurn(String companyId, String userId, String sessionId, String question, String agentId) {
         Optional<ChatSessionEntity> existing = chatSessionRepository.findById(sessionId);
         ChatSessionEntity session = existing.orElseGet(() ->
-                new ChatSessionEntity(sessionId, orgId, userId, agentId, clip(question, 48)));
+                new ChatSessionEntity(sessionId, companyId, userId, agentId, clip(question, 48)));
         session.touch(clip(question, 48), agentId);
         chatSessionRepository.save(session);
-        chatMessageRepository.save(new ChatMessageEntity(sessionId, orgId, "user", question));
+        chatMessageRepository.save(new ChatMessageEntity(sessionId, companyId, "user", question));
     }
 
-    private void persistUserTurnCommitted(String orgId, String userId, String sessionId, String question, String agentId) {
-        tx.executeWithoutResult(s -> persistUserTurn(orgId, userId, sessionId, question, agentId));
-        publishSessionUpdated(orgId, userId, sessionId, "user_message");
+    private void persistUserTurnCommitted(String companyId, String userId, String sessionId, String question, String agentId) {
+        tx.executeWithoutResult(s -> persistUserTurn(companyId, userId, sessionId, question, agentId));
+        publishSessionUpdated(companyId, userId, sessionId, "user_message");
     }
 
-    private void persistAssistantTurnCommitted(String orgId, String userId, String sessionId,
+    private void persistAssistantTurnCommitted(String companyId, String userId, String sessionId,
                                                String answer, String auditAction, String modelName) {
         tx.executeWithoutResult(s -> {
             touchSessionForAssistantReply(sessionId);
-            chatMessageRepository.save(new ChatMessageEntity(sessionId, orgId, "assistant", answer));
-            auditService.log(orgId, userId, auditAction,
+            chatMessageRepository.save(new ChatMessageEntity(sessionId, companyId, "assistant", answer));
+            auditService.log(companyId, userId, auditAction,
                     "session=" + sessionId + ", model=" + modelName);
         });
-        publishSessionUpdated(orgId, userId, sessionId, "session_deleted");
+        publishSessionUpdated(companyId, userId, sessionId, "session_deleted");
     }
 
-    private List<String> sanitizeContextList(String orgId, String userId, String surface, List<String> context) {
+    private List<String> sanitizeContextList(String companyId, String userId, String surface, List<String> context) {
         if (context == null || context.isEmpty()) {
             return List.of();
         }
         List<String> safeContext = new ArrayList<>();
         for (String item : context) {
             SafetyGatewayService.SafetyDecision decision =
-                    safetyGatewayService.checkInput(orgId, userId, surface, item);
+                    safetyGatewayService.checkInput(companyId, userId, surface, item);
             if (!decision.blocked() && decision.safeText() != null && !decision.safeText().isBlank()) {
                 safeContext.add(decision.safeText());
             }
@@ -1966,9 +1966,9 @@ public class ChatOrchestratorService {
         return safeContext;
     }
 
-    private String applyOutputGateway(String orgId, String userId, String surface, String answer) {
+    private String applyOutputGateway(String companyId, String userId, String surface, String answer) {
         SafetyGatewayService.SafetyDecision decision =
-                safetyGatewayService.checkOutput(orgId, userId, surface, answer);
+                safetyGatewayService.checkOutput(companyId, userId, surface, answer);
         if (decision.blocked()) {
             return blockedBySecurityMessage();
         }
@@ -1979,7 +1979,7 @@ public class ChatOrchestratorService {
         return "该内容触发安全规则，已停止处理。请调整输入或联系管理员复核。";
     }
 
-    private static Map<String, Object> blockedPayload(String orgId,
+    private static Map<String, Object> blockedPayload(String companyId,
                                                       String userId,
                                                       String sessionId,
                                                       String agentId,
@@ -1987,7 +1987,7 @@ public class ChatOrchestratorService {
                                                       String answer,
                                                       SafetyGatewayService.SafetyDecision decision) {
         Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("orgId", orgId);
+        payload.put("companyId", companyId);
         payload.put("userId", userId);
         payload.put("runId", runId);
         payload.put("sessionId", sessionId);
@@ -2038,21 +2038,21 @@ public class ChatOrchestratorService {
         });
     }
 
-    public List<Map<String, Object>> sessions(String orgId, String userId) {
-        return queryVisibleSessions(orgId, userId).stream()
+    public List<Map<String, Object>> sessions(String companyId, String userId) {
+        return queryVisibleSessions(companyId, userId).stream()
                 .filter(item -> !isInternalWorkbenchSession(item.getId()))
-                .map(item -> toSessionSummary(orgId, item))
+                .map(item -> toSessionSummary(companyId, item))
                 .toList();
     }
 
-    public SseEmitter sessionStream(String orgId, String userId) {
-        return sessionRealtimeEventService.subscribe(orgId, userId);
+    public SseEmitter sessionStream(String companyId, String userId) {
+        return sessionRealtimeEventService.subscribe(companyId, userId);
     }
 
-    public List<Map<String, String>> sessionMessages(String orgId, String userId, String sessionId) {
-        queryVisibleSession(orgId, userId, sessionId)
+    public List<Map<String, String>> sessionMessages(String companyId, String userId, String sessionId) {
+        queryVisibleSession(companyId, userId, sessionId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
-        return chatMessageRepository.findByOrgIdAndSessionIdOrderByCreatedAtAsc(orgId, sessionId).stream()
+        return chatMessageRepository.findByCompanyIdAndSessionIdOrderByCreatedAtAsc(companyId, sessionId).stream()
                 .map(item -> Map.of(
                         "role", item.getRoleCode(),
                         "content", item.getContent(),
@@ -2061,10 +2061,10 @@ public class ChatOrchestratorService {
                 .toList();
     }
 
-    public Map<String, Object> sessionState(String orgId, String userId, String sessionId) {
-        queryVisibleSession(orgId, userId, sessionId)
+    public Map<String, Object> sessionState(String companyId, String userId, String sessionId) {
+        queryVisibleSession(companyId, userId, sessionId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
-        Optional<ChatSessionStateEntity> state = chatSessionStateService.get(orgId, sessionId);
+        Optional<ChatSessionStateEntity> state = chatSessionStateService.get(companyId, sessionId);
         if (state.isEmpty()) {
             return Map.of(
                     "sessionId", sessionId,
@@ -2082,24 +2082,24 @@ public class ChatOrchestratorService {
         );
     }
 
-    public Map<String, Object> deleteSession(String orgId, String userId, String sessionId) {
-        ChatSessionEntity session = queryVisibleSession(orgId, userId, sessionId)
+    public Map<String, Object> deleteSession(String companyId, String userId, String sessionId) {
+        ChatSessionEntity session = queryVisibleSession(companyId, userId, sessionId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
         tx.executeWithoutResult(s -> {
-            chatMessageRepository.deleteByOrgIdAndSessionId(orgId, sessionId);
-            chatSessionStateRepository.deleteBySessionIdAndOrgId(sessionId, orgId);
+            chatMessageRepository.deleteByCompanyIdAndSessionId(companyId, sessionId);
+            chatSessionStateRepository.deleteBySessionIdAndCompanyId(sessionId, companyId);
             chatSessionRepository.delete(session);
         });
-        publishSessionUpdated(orgId, userId, sessionId, "assistant_message");
+        publishSessionUpdated(companyId, userId, sessionId, "assistant_message");
         return Map.of(
                 "sessionId", sessionId,
                 "deleted", true
         );
     }
 
-    private Map<String, Object> toSessionSummary(String orgId, ChatSessionEntity session) {
+    private Map<String, Object> toSessionSummary(String companyId, ChatSessionEntity session) {
         ChatMessageEntity lastMessage = chatMessageRepository
-                .findFirstByOrgIdAndSessionIdOrderByCreatedAtDesc(orgId, session.getId())
+                .findFirstByCompanyIdAndSessionIdOrderByCreatedAtDesc(companyId, session.getId())
                 .orElse(null);
         SessionDescriptor descriptor = describeSession(session);
         Map<String, Object> payload = new LinkedHashMap<>();
@@ -2118,10 +2118,10 @@ public class ChatOrchestratorService {
         return payload;
     }
 
-    private List<ChatSessionEntity> queryVisibleSessions(String orgId, String userId) {
+    private List<ChatSessionEntity> queryVisibleSessions(String companyId, String userId) {
         List<ChatSessionEntity> visible = new ArrayList<>();
-        visible.addAll(chatSessionRepository.findByOrgIdAndUserIdOrderByUpdatedAtDesc(orgId, userId));
-        for (ChatSessionEntity item : chatSessionRepository.findByOrgIdOrderByUpdatedAtDesc(orgId)) {
+        visible.addAll(chatSessionRepository.findByCompanyIdAndUserIdOrderByUpdatedAtDesc(companyId, userId));
+        for (ChatSessionEntity item : chatSessionRepository.findByCompanyIdOrderByUpdatedAtDesc(companyId)) {
             if (isOrgScopedConversation(item.getId())) {
                 visible.add(item);
             }
@@ -2137,11 +2137,11 @@ public class ChatOrchestratorService {
         return deduped;
     }
 
-    private Optional<ChatSessionEntity> queryVisibleSession(String orgId, String userId, String sessionId) {
+    private Optional<ChatSessionEntity> queryVisibleSession(String companyId, String userId, String sessionId) {
         if (isOrgScopedConversation(sessionId)) {
-            return chatSessionRepository.findByIdAndOrgId(sessionId, orgId);
+            return chatSessionRepository.findByIdAndCompanyId(sessionId, companyId);
         }
-        return chatSessionRepository.findByIdAndOrgIdAndUserId(sessionId, orgId, userId);
+        return chatSessionRepository.findByIdAndCompanyIdAndUserId(sessionId, companyId, userId);
     }
 
     private SessionDescriptor describeSession(ChatSessionEntity session) {
@@ -2153,8 +2153,8 @@ public class ChatOrchestratorService {
             String[] parts = sessionId.split(":", 3);
             String chatId = parts.length >= 3 ? parts[2] : sessionId;
             FeishuBotBindingEntity binding = feishuBotBindingRepository
-                    .findFirstByOrgIdAndChatIdAndStatusOrderByUpdatedAtDesc(
-                            session.getOrgId(), chatId, FeishuBotBindingEntity.STATUS_ACTIVE)
+                    .findFirstByCompanyIdAndChatIdAndStatusOrderByUpdatedAtDesc(
+                            session.getCompanyId(), chatId, FeishuBotBindingEntity.STATUS_ACTIVE)
                     .orElse(null);
             String participantName = binding == null || binding.getDisplayName() == null || binding.getDisplayName().isBlank()
                     ? "飞书会话 " + abbreviateId(chatId)
@@ -2263,9 +2263,9 @@ public class ChatOrchestratorService {
                 || sessionId.startsWith("webchat:");
     }
 
-    private void publishSessionUpdated(String orgId, String userId, String sessionId, String trigger) {
+    private void publishSessionUpdated(String companyId, String userId, String sessionId, String trigger) {
         sessionRealtimeEventService.publishSessionUpdated(
-                orgId,
+                companyId,
                 userId,
                 sessionId,
                 isOrgScopedConversation(sessionId),

@@ -17,8 +17,8 @@ public class SecurityReviewItemEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "event_id", nullable = false)
     private Long eventId;
@@ -41,8 +41,8 @@ public class SecurityReviewItemEntity {
     protected SecurityReviewItemEntity() {
     }
 
-    public SecurityReviewItemEntity(String orgId, Long eventId, String status, String assignee, String note) {
-        this.orgId = orgId;
+    public SecurityReviewItemEntity(String companyId, Long eventId, String status, String assignee, String note) {
+        this.companyId = companyId;
         this.eventId = eventId;
         this.status = status;
         this.assignee = assignee == null ? "" : assignee;

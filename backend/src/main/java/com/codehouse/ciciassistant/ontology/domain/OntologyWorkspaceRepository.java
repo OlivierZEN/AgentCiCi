@@ -10,22 +10,22 @@ import org.springframework.data.repository.query.Param;
 
 public interface OntologyWorkspaceRepository extends Repository<OntologyWorkspaceEntity, Long> {
 
-    List<OntologyWorkspaceEntity> findByOrgIdOrderByUpdatedAtDesc(String orgId);
+    List<OntologyWorkspaceEntity> findByCompanyIdOrderByUpdatedAtDesc(String companyId);
 
-    Optional<OntologyWorkspaceEntity> findByIdAndOrgId(Long id, String orgId);
+    Optional<OntologyWorkspaceEntity> findByIdAndCompanyId(Long id, String companyId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             SELECT workspace
             FROM OntologyWorkspaceEntity workspace
             WHERE workspace.id = :id
-              AND workspace.orgId = :orgId
+              AND workspace.companyId = :companyId
             """)
-    Optional<OntologyWorkspaceEntity> findForUpdateByIdAndOrgId(
+    Optional<OntologyWorkspaceEntity> findForUpdateByIdAndCompanyId(
             @Param("id") Long id,
-            @Param("orgId") String orgId);
+            @Param("companyId") String companyId);
 
-    Optional<OntologyWorkspaceEntity> findByOrgIdAndKey(String orgId, String key);
+    Optional<OntologyWorkspaceEntity> findByCompanyIdAndKey(String companyId, String key);
 
-    long deleteByIdAndOrgId(Long id, String orgId);
+    long deleteByIdAndCompanyId(Long id, String companyId);
 }

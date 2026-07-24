@@ -30,8 +30,8 @@ public class OpsController {
             @RequestParam(name = "eventType", required = false) String eventType,
             @RequestParam(name = "q", required = false) String q,
             @RequestParam(name = "limit", defaultValue = "50") int limit) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(auditService.query(orgId, new AuditService.AuditLogQuery(
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(auditService.query(companyId, new AuditService.AuditLogQuery(
                 parseInstant(from),
                 parseInstant(to),
                 blankToNull(eventType),
@@ -42,10 +42,10 @@ public class OpsController {
 
     @GetMapping("/metrics/cost")
     public ApiResponse<Map<String, Object>> cost() {
-        String orgId = TenantContext.requireOrgId();
-        int calls = auditService.latest(orgId).size();
+        String companyId = TenantContext.requireCompanyId();
+        int calls = auditService.latest(companyId).size();
         return ApiResponse.ok(Map.of(
-                "orgId", orgId,
+                "companyId", companyId,
                 "callCount", calls,
                 "estimatedCostCny", String.format("%.2f", calls * 0.02)
         ));

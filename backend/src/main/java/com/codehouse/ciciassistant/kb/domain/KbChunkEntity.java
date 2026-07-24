@@ -16,8 +16,8 @@ public class KbChunkEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "knowledge_base_id", nullable = false, length = 64)
     private String knowledgeBaseId;
@@ -61,15 +61,15 @@ public class KbChunkEntity {
     protected KbChunkEntity() {
     }
 
-    public KbChunkEntity(String orgId, String knowledgeBaseId, String content, String tags) {
-        this(orgId, knowledgeBaseId, null, null, content, tags, null, null);
+    public KbChunkEntity(String companyId, String knowledgeBaseId, String content, String tags) {
+        this(companyId, knowledgeBaseId, null, null, content, tags, null, null);
     }
 
-    public KbChunkEntity(String orgId, String knowledgeBaseId, String content, String tags, String vectorId) {
-        this(orgId, knowledgeBaseId, null, null, content, tags, vectorId, null);
+    public KbChunkEntity(String companyId, String knowledgeBaseId, String content, String tags, String vectorId) {
+        this(companyId, knowledgeBaseId, null, null, content, tags, vectorId, null);
     }
 
-    public KbChunkEntity(String orgId,
+    public KbChunkEntity(String companyId,
                          String knowledgeBaseId,
                          Long documentId,
                          Integer chunkIndex,
@@ -77,7 +77,7 @@ public class KbChunkEntity {
                          String tags,
                          String vectorId,
                          String contentHash) {
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.knowledgeBaseId = knowledgeBaseId;
         this.documentId = documentId;
         this.chunkIndex = chunkIndex;
@@ -93,8 +93,8 @@ public class KbChunkEntity {
         return id;
     }
 
-    public String getOrgId() {
-        return orgId;
+    public String getCompanyId() {
+        return companyId;
     }
 
     public String getKnowledgeBaseId() {

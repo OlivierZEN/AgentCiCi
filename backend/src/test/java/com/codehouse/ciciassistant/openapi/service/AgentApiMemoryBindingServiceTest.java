@@ -23,7 +23,7 @@ class AgentApiMemoryBindingServiceTest {
         AgentApiMemoryBindingRepository bindings=mock(AgentApiMemoryBindingRepository.class);
         AuditService audit=mock(AuditService.class);
         AgentApiCredentialEntity credential=mock(AgentApiCredentialEntity.class);
-        when(credentials.findByIdAndOrgIdAndAgentId(5L, "org-a", "agent-a")).thenReturn(Optional.of(credential));
+        when(credentials.findByIdAndCompanyIdAndAgentId(5L, "org-a", "agent-a")).thenReturn(Optional.of(credential));
         when(bindings.findByCredentialId(5L)).thenReturn(Optional.empty());
         when(bindings.save(any(AgentApiMemoryBindingEntity.class))).thenAnswer(call -> call.getArgument(0));
         AgentApiMemoryBindingService service=new AgentApiMemoryBindingService(credentials, bindings, new ObjectMapper(), audit);
@@ -47,7 +47,7 @@ class AgentApiMemoryBindingServiceTest {
         assertThatThrownBy(() -> service.upsert("org-a", "agent-a", 5L, "actor-a",
                 new AgentApiMemoryBindingService.BindingCommand("bad/app", "EXTERNAL_USER", "VERIFIED", List.of())))
                 .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("Agent API key not found");
-        when(credentials.findByIdAndOrgIdAndAgentId(5L, "org-a", "agent-a")).thenReturn(Optional.of(mock(AgentApiCredentialEntity.class)));
+        when(credentials.findByIdAndCompanyIdAndAgentId(5L, "org-a", "agent-a")).thenReturn(Optional.of(mock(AgentApiCredentialEntity.class)));
         assertThatThrownBy(() -> service.upsert("org-a", "agent-a", 5L, "actor-a",
                 new AgentApiMemoryBindingService.BindingCommand("bad/app", "EXTERNAL_USER", "VERIFIED", List.of())))
                 .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("applicationCode is invalid");
@@ -58,7 +58,7 @@ class AgentApiMemoryBindingServiceTest {
         AgentApiMemoryBindingRepository bindings=mock(AgentApiMemoryBindingRepository.class);
         AuditService audit=mock(AuditService.class);
         AgentApiMemoryBindingEntity binding=new AgentApiMemoryBindingEntity(5L, "gateway-alpha", "EXTERNAL_USER", "VERIFIED", "[]");
-        when(credentials.findByIdAndOrgIdAndAgentId(5L, "org-a", "agent-a")).thenReturn(Optional.of(mock(AgentApiCredentialEntity.class)));
+        when(credentials.findByIdAndCompanyIdAndAgentId(5L, "org-a", "agent-a")).thenReturn(Optional.of(mock(AgentApiCredentialEntity.class)));
         when(bindings.findByCredentialId(5L)).thenReturn(Optional.of(binding));
         when(bindings.save(binding)).thenReturn(binding);
         AgentApiMemoryBindingService service=new AgentApiMemoryBindingService(credentials, bindings, new ObjectMapper(), audit);

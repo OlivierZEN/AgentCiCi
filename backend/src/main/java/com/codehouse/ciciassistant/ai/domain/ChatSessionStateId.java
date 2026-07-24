@@ -6,22 +6,22 @@ import java.util.Objects;
 public class ChatSessionStateId implements Serializable {
 
     private String sessionId;
-    private String orgId;
+    private String companyId;
 
     public ChatSessionStateId() {
     }
 
-    public ChatSessionStateId(String sessionId, String orgId) {
+    public ChatSessionStateId(String sessionId, String companyId) {
         this.sessionId = sessionId;
-        this.orgId = orgId;
+        this.companyId = companyId;
     }
 
     public String getSessionId() {
         return sessionId;
     }
 
-    public String getOrgId() {
-        return orgId;
+    public String getCompanyId() {
+        return companyId;
     }
 
     @Override
@@ -32,11 +32,11 @@ public class ChatSessionStateId implements Serializable {
         if (!(o instanceof ChatSessionStateId that)) {
             return false;
         }
-        return Objects.equals(sessionId, that.sessionId) && Objects.equals(orgId, that.orgId);
+        return Objects.equals(sessionId, that.sessionId) && Objects.equals(companyId, that.companyId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(sessionId, orgId);
+        return Objects.hash(sessionId, companyId);
     }
 }

@@ -19,8 +19,8 @@ public class WecomKfMessageEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "msg_id", nullable = false, length = 128)
     private String msgId;
@@ -55,7 +55,7 @@ public class WecomKfMessageEntity {
     protected WecomKfMessageEntity() {
     }
 
-    public WecomKfMessageEntity(String orgId,
+    public WecomKfMessageEntity(String companyId,
                                 String msgId,
                                 String corpId,
                                 String openKfId,
@@ -65,7 +65,7 @@ public class WecomKfMessageEntity {
                                 String contentSummary,
                                 String traceId,
                                 String sendStatus) {
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.msgId = msgId;
         this.corpId = corpId;
         this.openKfId = openKfId;
@@ -78,7 +78,7 @@ public class WecomKfMessageEntity {
     }
 
     public Long getId() { return id; }
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
     public String getMsgId() { return msgId; }
     public String getCorpId() { return corpId; }
     public String getOpenKfId() { return openKfId; }

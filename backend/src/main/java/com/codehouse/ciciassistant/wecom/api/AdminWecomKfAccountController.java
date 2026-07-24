@@ -32,14 +32,14 @@ public class AdminWecomKfAccountController {
 
     @GetMapping
     public ApiResponse<List<Map<String, Object>>> list() {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(configService.list(orgId).stream().map(configService::toPayload).toList());
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(configService.list(companyId).stream().map(configService::toPayload).toList());
     }
 
     @PostMapping
     public ApiResponse<Map<String, Object>> createOrUpdate(@Valid @RequestBody UpsertRequest request) {
         WecomKfAccountEntity account = configService.upsert(
-                TenantContext.requireOrgId(),
+                TenantContext.requireCompanyId(),
                 TenantContext.getUserId().orElse("system"),
                 toCommand(request));
         return ApiResponse.ok(configService.toPayload(account));
@@ -48,7 +48,7 @@ public class AdminWecomKfAccountController {
     @PutMapping("/{id}")
     public ApiResponse<Map<String, Object>> update(@PathVariable Long id, @Valid @RequestBody UpsertRequest request) {
         WecomKfAccountEntity account = configService.update(
-                TenantContext.requireOrgId(),
+                TenantContext.requireCompanyId(),
                 id,
                 TenantContext.getUserId().orElse("system"),
                 toCommand(request));
@@ -57,17 +57,17 @@ public class AdminWecomKfAccountController {
 
     @PostMapping("/{id}/enable")
     public ApiResponse<Map<String, Object>> enable(@PathVariable Long id) {
-        return ApiResponse.ok(configService.toPayload(configService.setEnabled(TenantContext.requireOrgId(), id, true)));
+        return ApiResponse.ok(configService.toPayload(configService.setEnabled(TenantContext.requireCompanyId(), id, true)));
     }
 
     @PostMapping("/{id}/disable")
     public ApiResponse<Map<String, Object>> disable(@PathVariable Long id) {
-        return ApiResponse.ok(configService.toPayload(configService.setEnabled(TenantContext.requireOrgId(), id, false)));
+        return ApiResponse.ok(configService.toPayload(configService.setEnabled(TenantContext.requireCompanyId(), id, false)));
     }
 
     @PostMapping("/{id}/connection-test")
     public ApiResponse<WecomKfClient.ConnectionTestResult> testConnection(@PathVariable Long id) {
-        return ApiResponse.ok(client.testConnection(configService.resolveAccount(TenantContext.requireOrgId(), id)));
+        return ApiResponse.ok(client.testConnection(configService.resolveAccount(TenantContext.requireCompanyId(), id)));
     }
 
     private WecomKfConfigService.UpsertCommand toCommand(UpsertRequest request) {

@@ -14,7 +14,7 @@ public class PlatformAccountProperties {
     private String mobile = "18611892001";
     private String displayName = "CloudCC Platform Admin";
     private List<String> roles = new ArrayList<>(List.of("PLATFORM_ADMIN"));
-    private String governanceOrgId = "demo-org";
+    private String governanceCompanyId = "demo-org";
 
     public boolean isEnabled() {
         return enabled;
@@ -56,11 +56,11 @@ public class PlatformAccountProperties {
         this.roles = roles == null ? new ArrayList<>() : new ArrayList<>(roles);
     }
 
-    public String getGovernanceOrgId() {
-        return governanceOrgId;
+    public String getGovernanceCompanyId() {
+        return governanceCompanyId;
     }
 
-    public void setGovernanceOrgId(String governanceOrgId) {
-        this.governanceOrgId = governanceOrgId == null ? "" : governanceOrgId.trim();
+    public void setGovernanceCompanyId(String governanceCompanyId) {
+        this.governanceCompanyId = governanceCompanyId == null ? "" : governanceCompanyId.trim();
     }
 }

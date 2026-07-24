@@ -16,8 +16,8 @@ public class KbQualityIssueEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "knowledge_base_id", nullable = false)
     private Long knowledgeBaseId;
@@ -70,9 +70,9 @@ public class KbQualityIssueEntity {
     protected KbQualityIssueEntity() {
     }
 
-    public KbQualityIssueEntity(String orgId, Long knowledgeBaseId, Long runId, String issueType, String severity,
+    public KbQualityIssueEntity(String companyId, Long knowledgeBaseId, Long runId, String issueType, String severity,
                                 Long chunkId, Long documentId, Long ruleId, String contentHash, String evidence) {
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.knowledgeBaseId = knowledgeBaseId;
         this.runId = runId;
         this.issueType = issueType;
@@ -90,7 +90,7 @@ public class KbQualityIssueEntity {
     }
 
     public Long getId() { return id; }
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
     public Long getKnowledgeBaseId() { return knowledgeBaseId; }
     public Long getRunId() { return runId; }
     public String getIssueType() { return issueType; }

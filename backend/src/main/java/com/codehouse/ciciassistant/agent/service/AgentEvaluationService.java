@@ -73,10 +73,10 @@ public class AgentEvaluationService {
     }
 
     @Transactional
-    public Map<String, Object> createSuite(String orgId, String agentId, SuiteCommand command) {
-        requireAgent(orgId, agentId);
+    public Map<String, Object> createSuite(String companyId, String agentId, SuiteCommand command) {
+        requireAgent(companyId, agentId);
         AgentEvalSuiteEntity created = suiteRepository.save(new AgentEvalSuiteEntity(
-                orgId,
+                companyId,
                 agentId,
                 requireText(command.name(), "Evaluation suite name is required"),
                 trimToNull(command.description()),
@@ -86,13 +86,13 @@ public class AgentEvaluationService {
     }
 
     @Transactional
-    public Map<String, Object> createTenantSuite(String orgId,
+    public Map<String, Object> createTenantSuite(String companyId,
                                                  String agentId,
                                                  AdvancedSuiteCommand command,
                                                  String createdBy) {
-        requireAgent(orgId, agentId);
+        requireAgent(companyId, agentId);
         AgentEvalSuiteEntity created = suiteRepository.save(new AgentEvalSuiteEntity(
-                orgId,
+                companyId,
                 agentId,
                 requireText(command.name(), "Evaluation suite name is required"),
                 trimToNull(command.description()),
@@ -112,19 +112,19 @@ public class AgentEvaluationService {
     }
 
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> listSuites(String orgId, String agentId) {
-        requireAgent(orgId, agentId);
-        return applicableSuites(orgId, agentId)
+    public List<Map<String, Object>> listSuites(String companyId, String agentId) {
+        requireAgent(companyId, agentId);
+        return applicableSuites(companyId, agentId)
                 .stream()
                 .map(this::suitePayload)
                 .toList();
     }
 
     @Transactional
-    public Map<String, Object> addCase(String orgId, String agentId, Long suiteId, CaseCommand command) {
-        AgentEvalSuiteEntity suite = requireEditableTenantSuite(orgId, agentId, suiteId);
+    public Map<String, Object> addCase(String companyId, String agentId, Long suiteId, CaseCommand command) {
+        AgentEvalSuiteEntity suite = requireEditableTenantSuite(companyId, agentId, suiteId);
         AgentEvalCaseEntity created = caseRepository.save(new AgentEvalCaseEntity(
-                orgId,
+                companyId,
                 agentId,
                 suite.getId(),
                 requireText(command.name(), "Evaluation case name is required"),
@@ -140,13 +140,13 @@ public class AgentEvaluationService {
     }
 
     @Transactional
-    public Map<String, Object> addAdvancedCase(String orgId,
+    public Map<String, Object> addAdvancedCase(String companyId,
                                                String agentId,
                                                Long suiteId,
                                                AdvancedCaseCommand command) {
-        AgentEvalSuiteEntity suite = requireEditableTenantSuite(orgId, agentId, suiteId);
+        AgentEvalSuiteEntity suite = requireEditableTenantSuite(companyId, agentId, suiteId);
         AgentEvalCaseEntity created = caseRepository.save(new AgentEvalCaseEntity(
-                orgId,
+                companyId,
                 agentId,
                 suite.getId(),
                 requireText(command.name(), "Evaluation case name is required"),
@@ -173,8 +173,8 @@ public class AgentEvaluationService {
     }
 
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> listCases(String orgId, String agentId, Long suiteId) {
-        AgentEvalSuiteEntity suite = requireSuite(orgId, agentId, suiteId);
+    public List<Map<String, Object>> listCases(String companyId, String agentId, Long suiteId) {
+        AgentEvalSuiteEntity suite = requireSuite(companyId, agentId, suiteId);
         return caseRepository.findBySuiteIdAndStatusOrderByIdAsc(suite.getId(), AgentEvalCaseEntity.STATUS_ACTIVE)
                 .stream()
                 .map(item -> casePayload(item, suite.isPlatformOwned() && item.isHiddenCase()))
@@ -182,20 +182,20 @@ public class AgentEvaluationService {
     }
 
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> listCasesForManagement(String orgId, String agentId, Long suiteId) {
-        AgentEvalSuiteEntity suite = requireSuite(orgId, agentId, suiteId);
+    public List<Map<String, Object>> listCasesForManagement(String companyId, String agentId, Long suiteId) {
+        AgentEvalSuiteEntity suite = requireSuite(companyId, agentId, suiteId);
         return caseRepository.findBySuiteIdOrderByIdAsc(suite.getId()).stream()
                 .map(item -> casePayload(item, suite.isPlatformOwned() && item.isHiddenCase()))
                 .toList();
     }
 
     @Transactional
-    public Map<String, Object> updateAdvancedCase(String orgId,
+    public Map<String, Object> updateAdvancedCase(String companyId,
                                                   String agentId,
                                                   Long suiteId,
                                                   Long caseId,
                                                   AdvancedCaseCommand command) {
-        AgentEvalSuiteEntity suite = requireEditableTenantSuite(orgId, agentId, suiteId);
+        AgentEvalSuiteEntity suite = requireEditableTenantSuite(companyId, agentId, suiteId);
         AgentEvalCaseEntity evalCase = caseRepository.findById(caseId)
                 .filter(item -> suite.getId().equals(item.getSuiteId()))
                 .orElseThrow(() -> new IllegalArgumentException("Evaluation case not found"));
@@ -222,33 +222,33 @@ public class AgentEvaluationService {
         return casePayload(caseRepository.save(evalCase));
     }
 
-    public Map<String, Object> runSuite(String orgId, String agentId, Long suiteId, Integer versionNo) {
-        return runSuite(orgId, agentId, suiteId, new RunCommand(
+    public Map<String, Object> runSuite(String companyId, String agentId, Long suiteId, Integer versionNo) {
+        return runSuite(companyId, agentId, suiteId, new RunCommand(
                 versionNo, "CANDIDATE", null, "MANUAL", null));
     }
 
-    public Map<String, Object> runSuite(String orgId, String agentId, Long suiteId, RunCommand command) {
-        AgentEvalSuiteEntity suite = requireSuite(orgId, agentId, suiteId);
-        Integer targetVersionNo = requireVersionNo(orgId, agentId, command.versionNo());
+    public Map<String, Object> runSuite(String companyId, String agentId, Long suiteId, RunCommand command) {
+        AgentEvalSuiteEntity suite = requireSuite(companyId, agentId, suiteId);
+        Integer targetVersionNo = requireVersionNo(companyId, agentId, command.versionNo());
         String targetType = normalizeRunTargetType(command.targetType());
         Integer baselineVersionNo = command.baselineVersionNo();
         if ("COMPARE".equals(targetType)) {
             if (baselineVersionNo == null) {
                 throw new IllegalArgumentException("baselineVersionNo is required for COMPARE runs");
             }
-            requireVersionNo(orgId, agentId, baselineVersionNo);
+            requireVersionNo(companyId, agentId, baselineVersionNo);
         }
         List<AgentEvalCaseEntity> cases = caseRepository.findBySuiteIdAndStatusOrderByIdAsc(
                 suite.getId(), AgentEvalCaseEntity.STATUS_ACTIVE);
         Instant started = Instant.now();
         ArrayList<EvalOutcome> outcomes = new ArrayList<>();
         for (AgentEvalCaseEntity evalCase : cases) {
-            outcomes.add(evaluateCase(orgId, agentId, targetVersionNo, evalCase));
+            outcomes.add(evaluateCase(companyId, agentId, targetVersionNo, evalCase));
         }
         ArrayList<EvalOutcome> baselineOutcomes = new ArrayList<>();
         if ("COMPARE".equals(targetType)) {
             for (AgentEvalCaseEntity evalCase : cases) {
-                baselineOutcomes.add(evaluateCase(orgId, agentId, baselineVersionNo, evalCase));
+                baselineOutcomes.add(evaluateCase(companyId, agentId, baselineVersionNo, evalCase));
             }
         }
         int caseCount = outcomes.size();
@@ -288,9 +288,9 @@ public class AgentEvaluationService {
                 .toList();
         double toolCallAccuracy = ratioPassed(toolOutcomes);
         double ragHitRate = ratioPassed(ragOutcomes);
-        String snapshotFingerprint = snapshotFingerprint(orgId, agentId, targetVersionNo, suite, cases);
+        String snapshotFingerprint = snapshotFingerprint(companyId, agentId, targetVersionNo, suite, cases);
         Map<String, Object> runtimeSnapshot = runtimeSnapshot(
-                orgId, agentId, targetVersionNo, suite, cases, outcomes, snapshotFingerprint);
+                companyId, agentId, targetVersionNo, suite, cases, outcomes, snapshotFingerprint);
         summary.put("targetType", targetType);
         summary.put("baselineVersionNo", baselineVersionNo);
         summary.put("triggerType", normalizeUpper(command.triggerType(), "MANUAL"));
@@ -303,7 +303,7 @@ public class AgentEvaluationService {
             summary.put("comparison", comparisonSummary(outcomes, baselineOutcomes, baselineVersionNo, passRate));
         }
         AgentEvalRunEntity run = runRepository.save(new AgentEvalRunEntity(
-                orgId,
+                companyId,
                 agentId,
                 suite.getId(),
                 targetVersionNo,
@@ -338,7 +338,7 @@ public class AgentEvaluationService {
                 resultSummary.put("baselineComparison", caseComparison(outcome, baselineOutcome));
             }
             AgentEvalCaseResultEntity savedResult = new AgentEvalCaseResultEntity(
-                    orgId,
+                    companyId,
                     agentId,
                     run.getId(),
                     outcome.caseId(),
@@ -401,24 +401,24 @@ public class AgentEvaluationService {
     }
 
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> listRuns(String orgId, String agentId, Long suiteId) {
-        AgentEvalSuiteEntity suite = requireSuite(orgId, agentId, suiteId);
-        return runRepository.findByOrgIdAndSuiteIdOrderByCreatedAtDesc(orgId, suite.getId())
+    public List<Map<String, Object>> listRuns(String companyId, String agentId, Long suiteId) {
+        AgentEvalSuiteEntity suite = requireSuite(companyId, agentId, suiteId);
+        return runRepository.findByCompanyIdAndSuiteIdOrderByCreatedAtDesc(companyId, suite.getId())
                 .stream()
                 .map(this::runPayload)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> listResults(String orgId, String agentId, Long runId) {
+    public List<Map<String, Object>> listResults(String companyId, String agentId, Long runId) {
         AgentEvalRunEntity run = runRepository.findById(runId)
-                .filter(item -> orgId.equals(item.getOrgId()) && agentId.equals(item.getAgentId()))
+                .filter(item -> companyId.equals(item.getCompanyId()) && agentId.equals(item.getAgentId()))
                 .orElseThrow(() -> new IllegalArgumentException("Evaluation run not found"));
         AgentEvalSuiteEntity suite = suiteRepository.findById(run.getSuiteId())
                 .orElseThrow(() -> new IllegalArgumentException("Evaluation suite not found"));
         Map<Long, AgentEvalCaseEntity> cases = caseRepository.findBySuiteIdOrderByIdAsc(suite.getId()).stream()
                 .collect(java.util.stream.Collectors.toMap(AgentEvalCaseEntity::getId, item -> item));
-        return resultRepository.findByOrgIdAndRunIdOrderByIdAsc(orgId, run.getId())
+        return resultRepository.findByCompanyIdAndRunIdOrderByIdAsc(companyId, run.getId())
                 .stream()
                 .map(result -> {
                     AgentEvalCaseEntity evalCase = cases.get(result.getCaseId());
@@ -439,11 +439,11 @@ public class AgentEvaluationService {
     }
 
     @Transactional(readOnly = true)
-    public EvaluationGateSummary latestGateSummary(String orgId, String agentId, Integer versionNo) {
+    public EvaluationGateSummary latestGateSummary(String companyId, String agentId, Integer versionNo) {
         if (versionNo == null) {
             return new EvaluationGateSummary("not_checked", false, 0, 0, 0, 0, List.of());
         }
-        List<AgentEvalSuiteEntity> suites = applicableSuites(orgId, agentId);
+        List<AgentEvalSuiteEntity> suites = applicableSuites(companyId, agentId);
         if (suites.isEmpty()) {
             return new EvaluationGateSummary("not_configured", false, 0, 0, 0, 0, List.of());
         }
@@ -456,8 +456,8 @@ public class AgentEvaluationService {
         for (AgentEvalSuiteEntity suite : suites) {
             long caseCount = caseRepository.countBySuiteIdAndStatus(suite.getId(), AgentEvalCaseEntity.STATUS_ACTIVE);
             totalCases += (int) caseCount;
-            AgentEvalRunEntity latest = runRepository.findByOrgIdAndAgentIdAndVersionNoOrderByCreatedAtDesc(
-                            orgId,
+            AgentEvalRunEntity latest = runRepository.findByCompanyIdAndAgentIdAndVersionNoOrderByCreatedAtDesc(
+                            companyId,
                             agentId,
                             versionNo)
                     .stream()
@@ -468,7 +468,7 @@ public class AgentEvaluationService {
             boolean missingRun = latest == null && caseCount > 0;
             boolean staleRun = latest != null && !Objects.equals(
                     latest.getSnapshotFingerprint(),
-                    snapshotFingerprint(orgId, agentId, versionNo, suite,
+                    snapshotFingerprint(companyId, agentId, versionNo, suite,
                             caseRepository.findBySuiteIdAndStatusOrderByIdAsc(suite.getId(), AgentEvalCaseEntity.STATUS_ACTIVE)));
             boolean failedRun = latest != null && (runFailsGate(suite, latest) || staleRun);
             if (missingRun) {
@@ -488,15 +488,15 @@ public class AgentEvaluationService {
         return new EvaluationGateSummary(status, blocked, suites.size(), totalCases, missingRunCount, failedRunCount, suiteSummaries);
     }
 
-    private EvalOutcome evaluateCase(String orgId, String agentId, Integer versionNo, AgentEvalCaseEntity evalCase) {
+    private EvalOutcome evaluateCase(String companyId, String agentId, Integer versionNo, AgentEvalCaseEntity evalCase) {
         long started = System.nanoTime();
         try {
             AgentWorkflowRuntimeService.RuntimeExecutionResult result =
                     runtimeServiceProvider.getObject()
-                            .evaluateVersionForEvaluation(orgId, agentId, versionNo, evalCase.getInputText());
+                            .evaluateVersionForEvaluation(companyId, agentId, versionNo, evalCase.getInputText());
             ChatOrchestratorService.EvaluationDryRunResult modelResult = chatOrchestratorProvider.getObject()
                     .evaluateNoSideEffects(
-                            orgId,
+                            companyId,
                             "evaluation-system",
                             agentId,
                             versionNo,
@@ -581,16 +581,16 @@ public class AgentEvaluationService {
                 || run.getPassRate() < suite.getMinPassRate();
     }
 
-    private Map<String, Object> runtimeSnapshot(String orgId,
+    private Map<String, Object> runtimeSnapshot(String companyId,
                                                 String agentId,
                                                 Integer versionNo,
                                                 AgentEvalSuiteEntity suite,
                                                 List<AgentEvalCaseEntity> cases,
                                                 List<EvalOutcome> outcomes,
                                                 String fingerprint) {
-        AgentDefinitionEntity agent = agentDefinitionRepository.findByOrgIdAndAgentId(orgId, agentId)
+        AgentDefinitionEntity agent = agentDefinitionRepository.findByCompanyIdAndAgentId(companyId, agentId)
                 .orElseThrow(() -> new IllegalArgumentException("Agent not found"));
-        AgentWorkflowVersionEntity version = versionRepository.findByOrgIdAndAgentIdAndVersionNo(orgId, agentId, versionNo)
+        AgentWorkflowVersionEntity version = versionRepository.findByCompanyIdAndAgentIdAndVersionNo(companyId, agentId, versionNo)
                 .orElseThrow(() -> new IllegalArgumentException("Agent workflow version not found"));
         Map<String, Object> runtimeEvidence = outcomes.isEmpty()
                 ? Map.of()
@@ -628,15 +628,15 @@ public class AgentEvaluationService {
         return snapshot;
     }
 
-    private String snapshotFingerprint(String orgId,
+    private String snapshotFingerprint(String companyId,
                                        String agentId,
                                        Integer versionNo,
                                        AgentEvalSuiteEntity suite,
                                        List<AgentEvalCaseEntity> cases) {
-        AgentWorkflowVersionEntity version = versionRepository.findByOrgIdAndAgentIdAndVersionNo(orgId, agentId, versionNo)
+        AgentWorkflowVersionEntity version = versionRepository.findByCompanyIdAndAgentIdAndVersionNo(companyId, agentId, versionNo)
                 .orElseThrow(() -> new IllegalArgumentException("Agent workflow version not found"));
         StringBuilder source = new StringBuilder();
-        source.append(orgId).append('|').append(agentId).append('|').append(versionNo).append('|')
+        source.append(companyId).append('|').append(agentId).append('|').append(versionNo).append('|')
                 .append(nullToEmpty(version.getCompileFingerprint())).append('|')
                 .append(suite.getId()).append('|').append(suite.getVersionNo()).append('|')
                 .append(suite.getUpdatedAt()).append('|');
@@ -660,47 +660,47 @@ public class AgentEvaluationService {
         return (double) outcomes.stream().filter(EvalOutcome::passed).count() / outcomes.size();
     }
 
-    private void requireAgent(String orgId, String agentId) {
-        agentDefinitionRepository.findByOrgIdAndAgentId(orgId, agentId)
+    private void requireAgent(String companyId, String agentId) {
+        agentDefinitionRepository.findByCompanyIdAndAgentId(companyId, agentId)
                 .orElseThrow(() -> new IllegalArgumentException("Agent not found"));
     }
 
-    private AgentEvalSuiteEntity requireSuite(String orgId, String agentId, Long suiteId) {
+    private AgentEvalSuiteEntity requireSuite(String companyId, String agentId, Long suiteId) {
         return suiteRepository.findById(suiteId)
-                .filter(item -> isApplicable(orgId, agentId, item))
+                .filter(item -> isApplicable(companyId, agentId, item))
                 .filter(item -> AgentEvalSuiteEntity.STATUS_ACTIVE.equals(item.getStatus()))
                 .orElseThrow(() -> new IllegalArgumentException("Evaluation suite not found"));
     }
 
-    private AgentEvalSuiteEntity requireEditableTenantSuite(String orgId, String agentId, Long suiteId) {
-        return suiteRepository.findByIdAndOrgId(suiteId, orgId)
+    private AgentEvalSuiteEntity requireEditableTenantSuite(String companyId, String agentId, Long suiteId) {
+        return suiteRepository.findByIdAndCompanyId(suiteId, companyId)
                 .filter(item -> agentId.equals(item.getAgentId()))
                 .filter(item -> AgentEvalSuiteEntity.SCOPE_TENANT_PRIVATE.equals(item.getScopeType()))
                 .filter(item -> AgentEvalSuiteEntity.STATUS_ACTIVE.equals(item.getStatus()))
                 .orElseThrow(() -> new IllegalArgumentException("Editable tenant evaluation suite not found"));
     }
 
-    private List<AgentEvalSuiteEntity> applicableSuites(String orgId, String agentId) {
+    private List<AgentEvalSuiteEntity> applicableSuites(String companyId, String agentId) {
         LinkedHashMap<Long, AgentEvalSuiteEntity> suites = new LinkedHashMap<>();
-        suiteRepository.findByOrgIdAndAgentIdAndStatusOrderByIdAsc(
-                        orgId, agentId, AgentEvalSuiteEntity.STATUS_ACTIVE)
+        suiteRepository.findByCompanyIdAndAgentIdAndStatusOrderByIdAsc(
+                        companyId, agentId, AgentEvalSuiteEntity.STATUS_ACTIVE)
                 .forEach(item -> suites.put(item.getId(), item));
         suiteRepository.findByScopeTypeNotAndReleaseStatusAndStatusOrderByIdAsc(
                         AgentEvalSuiteEntity.SCOPE_TENANT_PRIVATE,
                         AgentEvalSuiteEntity.RELEASE_PUBLISHED,
                         AgentEvalSuiteEntity.STATUS_ACTIVE)
                 .stream()
-                .filter(item -> isApplicable(orgId, agentId, item))
+                .filter(item -> isApplicable(companyId, agentId, item))
                 .forEach(item -> suites.put(item.getId(), item));
         return suites.values().stream()
                 .sorted(Comparator.comparing(AgentEvalSuiteEntity::getId))
                 .toList();
     }
 
-    private boolean isApplicable(String orgId, String agentId, AgentEvalSuiteEntity suite) {
+    private boolean isApplicable(String companyId, String agentId, AgentEvalSuiteEntity suite) {
         if (suite == null || !AgentEvalSuiteEntity.STATUS_ACTIVE.equals(suite.getStatus())) return false;
         if (AgentEvalSuiteEntity.SCOPE_TENANT_PRIVATE.equals(suite.getScopeType())) {
-            return orgId.equals(suite.getOrgId()) && agentId.equals(suite.getAgentId());
+            return companyId.equals(suite.getCompanyId()) && agentId.equals(suite.getAgentId());
         }
         if (!AgentEvalSuiteEntity.RELEASE_PUBLISHED.equals(suite.getReleaseStatus())) return false;
         if (AgentEvalSuiteEntity.SCOPE_PLATFORM_CORE.equals(suite.getScopeType()) && suite.isMandatory()) return true;
@@ -708,15 +708,15 @@ public class AgentEvaluationService {
                 && (agentId.equals(suite.getAppCode()) || agentId.equals(suite.getAgentId()))) return true;
         return bindingRepository.findBySuiteIdOrderByIdAsc(suite.getId()).stream()
                 .filter(AgentEvalSuiteBindingEntity::isEnabled)
-                .anyMatch(binding -> (binding.getOrgId() == null || orgId.equals(binding.getOrgId()))
+                .anyMatch(binding -> (binding.getCompanyId() == null || companyId.equals(binding.getCompanyId()))
                         && (binding.getAgentId() == null || agentId.equals(binding.getAgentId())));
     }
 
-    private Integer requireVersionNo(String orgId, String agentId, Integer versionNo) {
+    private Integer requireVersionNo(String companyId, String agentId, Integer versionNo) {
         if (versionNo == null) {
             throw new IllegalArgumentException("versionNo is required");
         }
-        versionRepository.findByOrgIdAndAgentIdAndVersionNo(orgId, agentId, versionNo)
+        versionRepository.findByCompanyIdAndAgentIdAndVersionNo(companyId, agentId, versionNo)
                 .orElseThrow(() -> new IllegalArgumentException("Agent workflow version not found"));
         return versionNo;
     }

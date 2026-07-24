@@ -6,9 +6,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AgentApiCredentialRepository extends JpaRepository<AgentApiCredentialEntity, Long> {
 
-    List<AgentApiCredentialEntity> findByOrgIdAndAgentIdOrderByCreatedAtDesc(String orgId, String agentId);
+    List<AgentApiCredentialEntity> findByCompanyIdAndAgentIdOrderByCreatedAtDesc(String companyId, String agentId);
 
-    Optional<AgentApiCredentialEntity> findByIdAndOrgIdAndAgentId(Long id, String orgId, String agentId);
+    Optional<AgentApiCredentialEntity> findByIdAndCompanyIdAndAgentId(Long id, String companyId, String agentId);
 
     Optional<AgentApiCredentialEntity> findByPublicId(String publicId);
 

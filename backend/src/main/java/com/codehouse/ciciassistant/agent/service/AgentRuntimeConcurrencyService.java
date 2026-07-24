@@ -19,22 +19,22 @@ public class AgentRuntimeConcurrencyService {
     private final ConcurrentHashMap<String, LockRef> sessionLocks = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, AtomicInteger> counters = new ConcurrentHashMap<>();
 
-    public <T> T run(String orgId, String userId, String agentId, String sessionId, Supplier<T> supplier) {
-        String safeOrgId = normalize(orgId, "unknown-org");
+    public <T> T run(String companyId, String userId, String agentId, String sessionId, Supplier<T> supplier) {
+        String safeCompanyId = normalize(companyId, "unknown-org");
         String safeUserId = normalize(userId, "unknown-user");
         String safeAgentId = normalize(agentId, "unknown-agent");
         String safeSessionId = normalize(sessionId, "unknown-session");
-        String orgKey = "org:" + safeOrgId;
-        String agentKey = "agent:" + safeOrgId + ":" + safeAgentId;
-        String userKey = "user:" + safeOrgId + ":" + safeUserId;
+        String orgKey = "org:" + safeCompanyId;
+        String agentKey = "agent:" + safeCompanyId + ":" + safeAgentId;
+        String userKey = "user:" + safeCompanyId + ":" + safeUserId;
         acquire(orgKey, MAX_ORG_CONCURRENT_RUNS);
         acquire(agentKey, MAX_AGENT_CONCURRENT_RUNS);
         acquire(userKey, MAX_USER_CONCURRENT_RUNS);
-        LockRef lockRef = acquireSessionLock(safeOrgId + ":" + safeSessionId);
+        LockRef lockRef = acquireSessionLock(safeCompanyId + ":" + safeSessionId);
         try {
             return supplier.get();
         } finally {
-            releaseSessionLock(safeOrgId + ":" + safeSessionId, lockRef);
+            releaseSessionLock(safeCompanyId + ":" + safeSessionId, lockRef);
             release(userKey);
             release(agentKey);
             release(orgKey);

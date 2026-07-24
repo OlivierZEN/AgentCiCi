@@ -16,8 +16,8 @@ public class AgentApiSessionMapEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "credential_id", nullable = false)
     private Long credentialId;
@@ -49,13 +49,13 @@ public class AgentApiSessionMapEntity {
     protected AgentApiSessionMapEntity() {
     }
 
-    public AgentApiSessionMapEntity(String orgId,
+    public AgentApiSessionMapEntity(String companyId,
                                     Long credentialId,
                                     String agentId,
                                     String externalSessionId,
                                     String internalSessionId,
                                     String externalUserId) {
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.credentialId = credentialId;
         this.agentId = agentId;
         this.externalSessionId = externalSessionId;
@@ -66,7 +66,7 @@ public class AgentApiSessionMapEntity {
     }
 
     public Long getId() { return id; }
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
     public Long getCredentialId() { return credentialId; }
     public String getAgentId() { return agentId; }
     public String getExternalSessionId() { return externalSessionId; }

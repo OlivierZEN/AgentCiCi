@@ -6,21 +6,21 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface KbDocumentRepository extends JpaRepository<KbDocumentEntity, Long> {
 
-    List<KbDocumentEntity> findByOrgIdAndKnowledgeBaseIdOrderByIdDesc(String orgId, Long knowledgeBaseId);
+    List<KbDocumentEntity> findByCompanyIdAndKnowledgeBaseIdOrderByIdDesc(String companyId, Long knowledgeBaseId);
 
-    List<KbDocumentEntity> findByOrgIdAndKnowledgeBaseIdAndStatusNotOrderByIdDesc(String orgId, Long knowledgeBaseId, String status);
+    List<KbDocumentEntity> findByCompanyIdAndKnowledgeBaseIdAndStatusNotOrderByIdDesc(String companyId, Long knowledgeBaseId, String status);
 
-    List<KbDocumentEntity> findByOrgIdAndKnowledgeBaseIdAndStatusNot(String orgId, Long knowledgeBaseId, String status);
+    List<KbDocumentEntity> findByCompanyIdAndKnowledgeBaseIdAndStatusNot(String companyId, Long knowledgeBaseId, String status);
 
-    List<KbDocumentEntity> findByOrgIdAndStatusNot(String orgId, String status);
+    List<KbDocumentEntity> findByCompanyIdAndStatusNot(String companyId, String status);
 
-    List<KbDocumentEntity> findByIdInAndOrgId(List<Long> ids, String orgId);
+    List<KbDocumentEntity> findByIdInAndCompanyId(List<Long> ids, String companyId);
 
-    Optional<KbDocumentEntity> findByIdAndOrgId(Long id, String orgId);
+    Optional<KbDocumentEntity> findByIdAndCompanyId(Long id, String companyId);
 
-    long countByOrgIdAndKnowledgeBaseIdAndStatusNot(String orgId, Long knowledgeBaseId, String status);
+    long countByCompanyIdAndKnowledgeBaseIdAndStatusNot(String companyId, Long knowledgeBaseId, String status);
 
-    long countByOrgIdAndKnowledgeBaseIdAndStatus(String orgId, Long knowledgeBaseId, String status);
+    long countByCompanyIdAndKnowledgeBaseIdAndStatus(String companyId, Long knowledgeBaseId, String status);
 
-    void deleteByIdAndOrgId(Long id, String orgId);
+    void deleteByIdAndCompanyId(Long id, String companyId);
 }

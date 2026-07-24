@@ -237,19 +237,19 @@ class OrchestratorIntegrationTest {
 
     @Test
     void shouldUnionAgentDirectToolsAndSkillDeclaredToolsIncludingMcp() throws Exception {
-        String orgId = "demo-org";
+        String companyId = "demo-org";
         String agentId = "whitelist-mcp-union-" + suffix();
         String skillCode = "whitelist-mcp-only-" + suffix();
         String token = loginToken("13800138127");
 
-        AgentDefinitionEntity agent = agentDefinitionRepository.findByOrgIdAndAgentId(orgId, agentId)
+        AgentDefinitionEntity agent = agentDefinitionRepository.findByCompanyIdAndAgentId(companyId, agentId)
                 .orElseGet(() -> agentDefinitionRepository.save(new AgentDefinitionEntity(
-                        orgId, agentId, "Whitelist MCP Agent", "test", "hello",
+                        companyId, agentId, "Whitelist MCP Agent", "test", "hello",
                         "cici-default", "", "", "MEDIUM", "MANUAL", "v1", null, false, true)));
 
-        SkillDefinitionEntity skill = skillDefinitionRepository.findByOrgIdAndSkillCode(orgId, skillCode)
+        SkillDefinitionEntity skill = skillDefinitionRepository.findByCompanyIdAndSkillCode(companyId, skillCode)
                 .orElseGet(() -> skillDefinitionRepository.save(new SkillDefinitionEntity(
-                        orgId, skillCode, "Whitelist MCP Only", "test",
+                        companyId, skillCode, "Whitelist MCP Only", "test",
                         false, true, "prompt", "spec", "get_object_list", "",
                         "", "", "LOW",
                         SkillSourceType.TENANT_CUSTOM,
@@ -260,9 +260,9 @@ class OrchestratorIntegrationTest {
                         null,
                         null)));
 
-        agentToolBindingRepository.save(new AgentToolBindingEntity(orgId, agentId, "tavily_search", 1, true));
+        agentToolBindingRepository.save(new AgentToolBindingEntity(companyId, agentId, "tavily_search", 1, true));
         agentSkillBindingRepository.save(new AgentSkillBindingEntity(
-                orgId, agentId, skill.getId(), "ALWAYS", "", 1, true));
+                companyId, agentId, skill.getId(), "ALWAYS", "", 1, true));
 
         MvcResult result = mockMvc.perform(post("/agents/{agentId}/debug", agent.getAgentId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
@@ -287,19 +287,19 @@ class OrchestratorIntegrationTest {
 
     @Test
     void shouldKeepPublishedAgentPinnedToSkillVersionAfterSkillEdits() throws Exception {
-        String orgId = "demo-org";
+        String companyId = "demo-org";
         String agentId = "skill-pin-agent-" + suffix();
         String skillCode = "skill-pin-runtime-" + suffix();
         String token = loginToken("13800138129");
 
-        AgentDefinitionEntity agent = agentDefinitionRepository.findByOrgIdAndAgentId(orgId, agentId)
+        AgentDefinitionEntity agent = agentDefinitionRepository.findByCompanyIdAndAgentId(companyId, agentId)
                 .orElseGet(() -> agentDefinitionRepository.save(new AgentDefinitionEntity(
-                        orgId, agentId, "Skill Pin Agent", "test", "hello",
+                        companyId, agentId, "Skill Pin Agent", "test", "hello",
                         "cici-default", "", "", "MEDIUM", "MANUAL", "v1", null, false, true)));
 
-        SkillDefinitionEntity skill = skillDefinitionRepository.findByOrgIdAndSkillCode(orgId, skillCode)
+        SkillDefinitionEntity skill = skillDefinitionRepository.findByCompanyIdAndSkillCode(companyId, skillCode)
                 .orElseGet(() -> skillDefinitionRepository.save(new SkillDefinitionEntity(
-                        orgId, skillCode, "Skill Pin Runtime", "test",
+                        companyId, skillCode, "Skill Pin Runtime", "test",
                         false, true, "Use tavily search only.", "Use tavily search only.", "tavily_search", "",
                         "", "", "LOW",
                         SkillSourceType.TENANT_CUSTOM,
@@ -310,7 +310,7 @@ class OrchestratorIntegrationTest {
                         null,
                         null)));
         SkillVersionEntity v1 = skillVersionRepository.save(new SkillVersionEntity(
-                orgId,
+                companyId,
                 skill.getId(),
                 1,
                 "Use tavily search only.",
@@ -331,10 +331,10 @@ class OrchestratorIntegrationTest {
         skillDefinitionRepository.save(skill);
 
         agentSkillBindingRepository.save(new AgentSkillBindingEntity(
-                orgId, agentId, skill.getId(), "always-on", "", 1, true));
+                companyId, agentId, skill.getId(), "always-on", "", 1, true));
 
         AgentCompileService.CompileResult compileResult = agentCompileService.compile(
-                orgId,
+                companyId,
                 new AgentCompileService.CompileCommand(
                         agentId,
                         "Skill Pin Agent",
@@ -355,15 +355,15 @@ class OrchestratorIntegrationTest {
         );
         int versionNo = compileResult.draftVersionNo() == null ? 0 : compileResult.draftVersionNo();
         assertThat(versionNo).isGreaterThan(0);
-        ensureWebRuntimeEntry(orgId, agentId);
-        grantOrgPermission(orgId, agentId, "RUN");
-        grantOrgPermission(orgId, agentId, "DEBUG");
-        agentDefinitionService.publishVersion(orgId, agentId, versionNo);
+        ensureWebRuntimeEntry(companyId, agentId);
+        grantOrgPermission(companyId, agentId, "RUN");
+        grantOrgPermission(companyId, agentId, "DEBUG");
+        agentDefinitionService.publishVersion(companyId, agentId, versionNo);
 
-        Long publishedVersionId = agentDefinitionRepository.findByOrgIdAndAgentId(orgId, agentId)
+        Long publishedVersionId = agentDefinitionRepository.findByCompanyIdAndAgentId(companyId, agentId)
                 .map(AgentDefinitionEntity::getPublishedVersionId)
                 .orElseThrow();
-        assertThat(agentWorkflowSkillRefRepository.findByOrgIdAndWorkflowVersionIdOrderByIdAsc(orgId, publishedVersionId))
+        assertThat(agentWorkflowSkillRefRepository.findByCompanyIdAndWorkflowVersionIdOrderByIdAsc(companyId, publishedVersionId))
                 .hasSize(1)
                 .first()
                 .extracting(item -> item.getSkillVersionId())
@@ -385,7 +385,7 @@ class OrchestratorIntegrationTest {
         );
         skillDefinitionRepository.save(skill);
         skillVersionRepository.save(new SkillVersionEntity(
-                orgId,
+                companyId,
                 skill.getId(),
                 2,
                 "Use object list only.",
@@ -709,12 +709,12 @@ class OrchestratorIntegrationTest {
     @Test
     void shouldGracefullyHandleInvalidPublishedManifest() throws Exception {
         String token = loginToken("13800138118");
-        String orgId = "demo-org";
+        String companyId = "demo-org";
 
-        agentDefinitionService.replaceBindings(orgId, "cici-system",
+        agentDefinitionService.replaceBindings(companyId, "cici-system",
                 new AgentDefinitionService.ReplaceBindingsCommand(List.of(), List.of("cloudcc_pageQuery"), List.of("web")));
         AgentCompileService.CompileResult compileResult = agentCompileService.compile(
-                orgId,
+                companyId,
                 new AgentCompileService.CompileCommand(
                         "cici-system",
                         "思思（CiCi）",
@@ -735,10 +735,10 @@ class OrchestratorIntegrationTest {
         );
         int versionNo = compileResult.draftVersionNo() == null ? 0 : compileResult.draftVersionNo();
         assertThat(versionNo).isGreaterThan(0);
-        ensureWebRuntimeEntry(orgId, "cici-system");
-        agentDefinitionService.publishVersion(orgId, "cici-system", versionNo);
+        ensureWebRuntimeEntry(companyId, "cici-system");
+        agentDefinitionService.publishVersion(companyId, "cici-system", versionNo);
 
-        AgentDefinitionEntity definition = agentDefinitionRepository.findByOrgIdAndAgentId(orgId, "cici-system")
+        AgentDefinitionEntity definition = agentDefinitionRepository.findByCompanyIdAndAgentId(companyId, "cici-system")
                 .orElseThrow();
         Long publishedVersionId = definition.getPublishedVersionId();
         AgentWorkflowVersionEntity published = agentWorkflowVersionRepository.findById(publishedVersionId)
@@ -771,10 +771,10 @@ class OrchestratorIntegrationTest {
     @Test
     void shouldExposePublishedRuntimePolicyInChatResponse() throws Exception {
         String token = loginToken("13800138119");
-        String orgId = "demo-org";
+        String companyId = "demo-org";
 
         AgentCompileService.CompileResult compileResult = agentCompileService.compile(
-                orgId,
+                companyId,
                 new AgentCompileService.CompileCommand(
                         "cici-system",
                         "思思（CiCi）",
@@ -795,8 +795,8 @@ class OrchestratorIntegrationTest {
         );
         int versionNo = compileResult.draftVersionNo() == null ? 0 : compileResult.draftVersionNo();
         assertThat(versionNo).isGreaterThan(0);
-        ensureWebRuntimeEntry(orgId, "cici-system");
-        agentDefinitionService.publishVersion(orgId, "cici-system", versionNo);
+        ensureWebRuntimeEntry(companyId, "cici-system");
+        agentDefinitionService.publishVersion(companyId, "cici-system", versionNo);
 
         MvcResult chatResult = mockMvc.perform(post("/ai/chat")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
@@ -833,10 +833,10 @@ class OrchestratorIntegrationTest {
     @Test
     void shouldUsePublishedWorkflowInDebugRuntime() throws Exception {
         String token = loginToken("13800138120");
-        String orgId = "demo-org";
+        String companyId = "demo-org";
 
         AgentCompileService.CompileResult compileResult = agentCompileService.compile(
-                orgId,
+                companyId,
                 new AgentCompileService.CompileCommand(
                         "cici-system",
                         "思思（CiCi）",
@@ -857,8 +857,8 @@ class OrchestratorIntegrationTest {
         );
         int versionNo = compileResult.draftVersionNo() == null ? 0 : compileResult.draftVersionNo();
         assertThat(versionNo).isGreaterThan(0);
-        ensureWebRuntimeEntry(orgId, "cici-system");
-        agentDefinitionService.publishVersion(orgId, "cici-system", versionNo);
+        ensureWebRuntimeEntry(companyId, "cici-system");
+        agentDefinitionService.publishVersion(companyId, "cici-system", versionNo);
 
         MvcResult result = mockMvc.perform(post("/agents/cici-system/debug")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
@@ -898,9 +898,9 @@ class OrchestratorIntegrationTest {
     @Test
     void shouldExposeFallbackReplayMetadataInDebugRuntime() throws Exception {
         String token = loginToken("13800138121");
-        String orgId = "demo-org";
+        String companyId = "demo-org";
 
-        agentDefinitionRepository.findByOrgIdAndAgentId(orgId, "cici-system").ifPresent(definition -> {
+        agentDefinitionRepository.findByCompanyIdAndAgentId(companyId, "cici-system").ifPresent(definition -> {
             definition.setPublishedVersionId(null);
             agentDefinitionRepository.save(definition);
         });
@@ -927,10 +927,10 @@ class OrchestratorIntegrationTest {
     @Test
     void shouldExposeInvalidReplayMetadataInDebugRuntime() throws Exception {
         String token = loginToken("13800138122");
-        String orgId = "demo-org";
+        String companyId = "demo-org";
 
         AgentCompileService.CompileResult compileResult = agentCompileService.compile(
-                orgId,
+                companyId,
                 new AgentCompileService.CompileCommand(
                         "cici-system",
                         "思思（CiCi）",
@@ -951,10 +951,10 @@ class OrchestratorIntegrationTest {
         );
         int versionNo = compileResult.draftVersionNo() == null ? 0 : compileResult.draftVersionNo();
         assertThat(versionNo).isGreaterThan(0);
-        ensureWebRuntimeEntry(orgId, "cici-system");
-        agentDefinitionService.publishVersion(orgId, "cici-system", versionNo);
+        ensureWebRuntimeEntry(companyId, "cici-system");
+        agentDefinitionService.publishVersion(companyId, "cici-system", versionNo);
 
-        AgentDefinitionEntity definition = agentDefinitionRepository.findByOrgIdAndAgentId(orgId, "cici-system")
+        AgentDefinitionEntity definition = agentDefinitionRepository.findByCompanyIdAndAgentId(companyId, "cici-system")
                 .orElseThrow();
         AgentWorkflowVersionEntity published = agentWorkflowVersionRepository.findById(definition.getPublishedVersionId())
                 .orElseThrow();
@@ -1019,9 +1019,9 @@ class OrchestratorIntegrationTest {
     @Test
     void shouldInferScheduleTriggersFromSpecAfterCompile() throws Exception {
         String token = loginToken("13800138006");
-        String orgId = "demo-org";
+        String companyId = "demo-org";
 
-        agentDefinitionRepository.findByOrgIdAndAgentId(orgId, "cici-system").ifPresent(definition -> {
+        agentDefinitionRepository.findByCompanyIdAndAgentId(companyId, "cici-system").ifPresent(definition -> {
             definition.setPublishedVersionId(null);
             agentDefinitionRepository.save(definition);
         });
@@ -1033,7 +1033,7 @@ class OrchestratorIntegrationTest {
                 """;
 
         AgentCompileService.CompileResult compileResult = agentCompileService.compile(
-                orgId,
+                companyId,
                 new AgentCompileService.CompileCommand(
                         "cici-system",
                         "思思（CiCi）",
@@ -1069,14 +1069,14 @@ class OrchestratorIntegrationTest {
     @Test
     void shouldPersistScheduleTriggersAfterSyncEndpoint() throws Exception {
         String token = loginToken("13800138111");
-        String orgId = "demo-org";
+        String companyId = "demo-org";
 
-        agentDefinitionRepository.findByOrgIdAndAgentId(orgId, "cici-system").ifPresent(definition -> {
+        agentDefinitionRepository.findByCompanyIdAndAgentId(companyId, "cici-system").ifPresent(definition -> {
             definition.setPublishedVersionId(null);
             agentDefinitionRepository.save(definition);
         });
         agentCompileService.compile(
-                orgId,
+                companyId,
                 new AgentCompileService.CompileCommand(
                         "cici-system",
                         "思思（CiCi）",
@@ -1146,10 +1146,10 @@ class OrchestratorIntegrationTest {
     @Test
     void shouldAutoSyncSchedulesAfterPublishWhenEnabled() throws Exception {
         String token = loginToken("13800138188");
-        String orgId = "demo-org";
+        String companyId = "demo-org";
 
         AgentCompileService.CompileResult compiled = agentCompileService.compile(
-                orgId,
+                companyId,
                 new AgentCompileService.CompileCommand(
                         "cici-system",
                         "思思（CiCi）",
@@ -1212,10 +1212,10 @@ class OrchestratorIntegrationTest {
     @Test
     void shouldPreferLatestCompiledSpecTriggersEvenWhenPublishedVersionExists() throws Exception {
         String token = loginToken("13800138000");
-        String orgId = "demo-org";
+        String companyId = "demo-org";
 
         AgentCompileService.CompileResult oldCompiled = agentCompileService.compile(
-                orgId,
+                companyId,
                 new AgentCompileService.CompileCommand(
                         "cici-system",
                         "思思（CiCi）",
@@ -1246,7 +1246,7 @@ class OrchestratorIntegrationTest {
                 .andExpect(status().isOk());
 
         agentCompileService.compile(
-                orgId,
+                companyId,
                 new AgentCompileService.CompileCommand(
                         "cici-system",
                         "思思（CiCi）",
@@ -1372,7 +1372,7 @@ class OrchestratorIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "orgId": "demo-org",
+                                  "companyId": "demo-org",
                                   "mobile": "%s",
                                   "password": "szyd1234"
                                 }
@@ -1388,18 +1388,18 @@ class OrchestratorIntegrationTest {
         return UUID.randomUUID().toString().substring(0, 8);
     }
 
-    private void ensureWebRuntimeEntry(String orgId, String agentId) {
-        if (!agentChannelBindingRepository.existsByOrgIdAndAgentIdAndChannelIdAndEnabledTrue(orgId, agentId, "web")) {
-            agentChannelBindingRepository.save(new AgentChannelBindingEntity(orgId, agentId, "web", true));
+    private void ensureWebRuntimeEntry(String companyId, String agentId) {
+        if (!agentChannelBindingRepository.existsByCompanyIdAndAgentIdAndChannelIdAndEnabledTrue(companyId, agentId, "web")) {
+            agentChannelBindingRepository.save(new AgentChannelBindingEntity(companyId, agentId, "web", true));
         }
     }
 
-    private void grantOrgPermission(String orgId, String agentId, String permission) {
+    private void grantOrgPermission(String companyId, String agentId, String permission) {
         agentAccessGrantRepository.save(new AgentAccessGrantEntity(
-                orgId,
+                companyId,
                 agentId,
-                "ORG",
-                orgId,
+                "COMPANY",
+                companyId,
                 permission,
                 "TEST",
                 "integration-test",

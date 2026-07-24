@@ -6,15 +6,15 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface FeishuBotBindingRepository extends JpaRepository<FeishuBotBindingEntity, Long> {
 
-    Optional<FeishuBotBindingEntity> findByOrgIdAndTenantKeyAndOpenIdAndStatus(
-            String orgId, String tenantKey, String openId, String status);
+    Optional<FeishuBotBindingEntity> findByCompanyIdAndTenantKeyAndOpenIdAndStatus(
+            String companyId, String tenantKey, String openId, String status);
 
-    Optional<FeishuBotBindingEntity> findByOrgIdAndTenantKeyAndOpenId(
-            String orgId, String tenantKey, String openId);
+    Optional<FeishuBotBindingEntity> findByCompanyIdAndTenantKeyAndOpenId(
+            String companyId, String tenantKey, String openId);
 
-    Optional<FeishuBotBindingEntity> findFirstByOrgIdAndChatIdAndStatusOrderByUpdatedAtDesc(
-            String orgId, String chatId, String status);
+    Optional<FeishuBotBindingEntity> findFirstByCompanyIdAndChatIdAndStatusOrderByUpdatedAtDesc(
+            String companyId, String chatId, String status);
 
-    List<FeishuBotBindingEntity> findByOrgIdAndUserIdAndStatusOrderByUpdatedAtDesc(
-            String orgId, String userId, String status);
+    List<FeishuBotBindingEntity> findByCompanyIdAndUserIdAndStatusOrderByUpdatedAtDesc(
+            String companyId, String userId, String status);
 }

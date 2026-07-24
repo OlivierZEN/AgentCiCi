@@ -25,34 +25,34 @@ public class SemanticQueryController {
 
     @PostMapping("/explain")
     public ApiResponse<QueryPlan> explain(@RequestBody SemanticQuery query) {
-        Context context = requireOrganizationMember();
+        Context context = requireCompanyMember();
         requireContract(query);
-        return ApiResponse.ok(semanticQueries.explain(context.orgId(), context.userId(), query));
+        return ApiResponse.ok(semanticQueries.explain(context.companyId(), context.userId(), query));
     }
 
     @PostMapping("/execute")
     public ApiResponse<QueryResult> execute(@RequestBody SemanticQuery query) {
-        Context context = requireOrganizationMember();
+        Context context = requireCompanyMember();
         requireContract(query);
-        return ApiResponse.ok(semanticQueries.execute(context.orgId(), context.userId(), query));
+        return ApiResponse.ok(semanticQueries.execute(context.companyId(), context.userId(), query));
     }
 
-    private Context requireOrganizationMember() {
-        boolean organizationRole = TenantContext.getRoles().stream().anyMatch(role ->
+    private Context requireCompanyMember() {
+        boolean companyRole = TenantContext.getRoles().stream().anyMatch(role ->
                 RoleCodes.OWNER.equals(role)
                         || RoleCodes.ORG_ADMIN.equals(role)
                         || RoleCodes.ORG_USER.equals(role));
-        String orgId = TenantContext.getOrgId().orElse(null);
+        String companyId = TenantContext.getCompanyId().orElse(null);
         String userId = TenantContext.getUserId().orElse(null);
-        if (!organizationRole
-                || orgId == null
-                || orgId.isBlank()
+        if (!companyRole
+                || companyId == null
+                || companyId.isBlank()
                 || userId == null
                 || userId.isBlank()
                 || TenantContext.getTokenType().filter("platform"::equals).isPresent()) {
-            throw new ForbiddenException("ORGANIZATION_MEMBER_REQUIRED");
+            throw new ForbiddenException("COMPANY_MEMBER_REQUIRED");
         }
-        return new Context(orgId, userId);
+        return new Context(companyId, userId);
     }
 
     private void requireContract(SemanticQuery query) {
@@ -64,6 +64,6 @@ public class SemanticQueryController {
         }
     }
 
-    private record Context(String orgId, String userId) {
+    private record Context(String companyId, String userId) {
     }
 }

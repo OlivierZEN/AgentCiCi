@@ -19,8 +19,8 @@ public class CustomerWorkbenchSnapshotEntity {
     @Column(name = "public_id", nullable = false, unique = true, length = 64)
     private String publicId;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "crm_account_id", nullable = false, length = 128)
     private String crmAccountId;
@@ -59,7 +59,7 @@ public class CustomerWorkbenchSnapshotEntity {
     }
 
     public CustomerWorkbenchSnapshotEntity(String publicId,
-                                           String orgId,
+                                           String companyId,
                                            String crmAccountId,
                                            String accountName,
                                            String ownerName,
@@ -70,7 +70,7 @@ public class CustomerWorkbenchSnapshotEntity {
                                            int nextActionCount,
                                            String snapshotJson) {
         this.publicId = publicId;
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.crmAccountId = crmAccountId;
         this.accountName = accountName;
         this.ownerName = ownerName;
@@ -86,7 +86,7 @@ public class CustomerWorkbenchSnapshotEntity {
 
     public Long getId() { return id; }
     public String getPublicId() { return publicId; }
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
     public String getCrmAccountId() { return crmAccountId; }
     public String getAccountName() { return accountName; }
     public String getOwnerName() { return ownerName; }

@@ -39,36 +39,36 @@ public class KnowledgeBaseController {
     @PostMapping
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> createKnowledgeBase(@Valid @RequestBody CreateKnowledgeBaseRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.createKnowledgeBase(orgId, request.name(), request.description()));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.createKnowledgeBase(companyId, request.name(), request.description()));
     }
 
     @GetMapping
     public ApiResponse<List<Map<String, Object>>> listKnowledgeBases() {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.listKnowledgeBases(orgId));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.listKnowledgeBases(companyId));
     }
 
     @PutMapping("/{id}")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> updateKnowledgeBase(@PathVariable Long id,
                                                                 @Valid @RequestBody CreateKnowledgeBaseRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.updateKnowledgeBase(orgId, id, request.name(), request.description()));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.updateKnowledgeBase(companyId, id, request.name(), request.description()));
     }
 
     @GetMapping("/{id}/settings")
     public ApiResponse<Map<String, Object>> getKnowledgeBaseSettings(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.getKnowledgeBaseSettings(orgId, id));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.getKnowledgeBaseSettings(companyId, id));
     }
 
     @PutMapping("/{id}/settings")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> updateKnowledgeBaseSettings(@PathVariable Long id,
                                                                          @Valid @RequestBody UpdateKnowledgeBaseSettingsRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.updateKnowledgeBaseSettings(orgId, id, new KnowledgeBaseService.KbSettingsCommand(
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.updateKnowledgeBaseSettings(companyId, id, new KnowledgeBaseService.KbSettingsCommand(
                 request.chunkSize(),
                 request.chunkOverlap(),
                 request.chunkDelimiter(),
@@ -84,143 +84,143 @@ public class KnowledgeBaseController {
     @GetMapping("/embedding-models")
     @RequireOrgAdmin
     public ApiResponse<List<Map<String, Object>>> listEmbeddingModelOptions() {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.listEmbeddingModelOptions(orgId));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.listEmbeddingModelOptions(companyId));
     }
 
     @GetMapping("/upload-policy")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> uploadPolicy() {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.uploadPolicy(orgId));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.uploadPolicy(companyId));
     }
 
     @GetMapping("/vector-store/audit")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> auditVectorStore() {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.auditVectorStore(orgId));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.auditVectorStore(companyId));
     }
 
     @PostMapping("/drift/audit")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> auditIndexDrift(@RequestBody(required = false) DriftAuditRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.auditIndexDrift(orgId, request != null && Boolean.TRUE.equals(request.repair())));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.auditIndexDrift(companyId, request != null && Boolean.TRUE.equals(request.repair())));
     }
 
     @DeleteMapping("/{id}")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> deleteKnowledgeBase(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.deleteKnowledgeBase(orgId, id));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.deleteKnowledgeBase(companyId, id));
     }
 
     @GetMapping("/{kbId}/documents")
     public ApiResponse<List<Map<String, Object>>> listDocuments(@PathVariable Long kbId) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.listDocuments(orgId, kbId));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.listDocuments(companyId, kbId));
     }
 
     @PutMapping("/documents/{id}/rename")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> renameDocument(@PathVariable Long id,
                                                             @Valid @RequestBody RenameDocumentRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.renameDocument(orgId, id, request.name()));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.renameDocument(companyId, id, request.name()));
     }
 
     @PostMapping("/documents/{id}/enable")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> enableDocument(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.setDocumentEnabled(orgId, id, true));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.setDocumentEnabled(companyId, id, true));
     }
 
     @PostMapping("/documents/{id}/disable")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> disableDocument(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.setDocumentEnabled(orgId, id, false));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.setDocumentEnabled(companyId, id, false));
     }
 
     @PostMapping("/documents/{id}/archive")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> archiveDocument(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.setDocumentArchived(orgId, id, true));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.setDocumentArchived(companyId, id, true));
     }
 
     @PostMapping("/documents/{id}/unarchive")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> unarchiveDocument(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.setDocumentArchived(orgId, id, false));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.setDocumentArchived(companyId, id, false));
     }
 
     @PostMapping("/documents/batch/enable")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> batchEnableDocuments(@Valid @RequestBody BatchIdsRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.batchSetDocumentEnabled(orgId, request.ids(), true));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.batchSetDocumentEnabled(companyId, request.ids(), true));
     }
 
     @PostMapping("/documents/batch/disable")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> batchDisableDocuments(@Valid @RequestBody BatchIdsRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.batchSetDocumentEnabled(orgId, request.ids(), false));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.batchSetDocumentEnabled(companyId, request.ids(), false));
     }
 
     @PostMapping("/documents/batch/archive")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> batchArchiveDocuments(@Valid @RequestBody BatchIdsRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.batchSetDocumentArchived(orgId, request.ids(), true));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.batchSetDocumentArchived(companyId, request.ids(), true));
     }
 
     @PostMapping("/documents/batch/unarchive")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> batchUnarchiveDocuments(@Valid @RequestBody BatchIdsRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.batchSetDocumentArchived(orgId, request.ids(), false));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.batchSetDocumentArchived(companyId, request.ids(), false));
     }
 
     @PostMapping("/documents/batch/delete")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> batchDeleteDocuments(@Valid @RequestBody BatchIdsRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.batchDeleteDocuments(orgId, request.ids()));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.batchDeleteDocuments(companyId, request.ids()));
     }
 
     @GetMapping("/documents/{id}/chunks")
     public ApiResponse<List<Map<String, Object>>> listDocumentChunks(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.listDocumentChunks(orgId, id));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.listDocumentChunks(companyId, id));
     }
 
     @PostMapping("/documents/upload")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> uploadDocument(@RequestParam("knowledgeBaseId") Long knowledgeBaseId,
                                                            @RequestParam("file") MultipartFile file) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.uploadDocument(orgId, knowledgeBaseId, file));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.uploadDocument(companyId, knowledgeBaseId, file));
     }
 
     @GetMapping("/{kbId}/data-sources")
     @RequireOrgAdmin
     public ApiResponse<List<Map<String, Object>>> listDataSources(@PathVariable Long kbId) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.listDataSources(orgId, kbId));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.listDataSources(companyId, kbId));
     }
 
     @PostMapping("/{kbId}/data-sources")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> createDataSource(@PathVariable Long kbId,
                                                               @Valid @RequestBody DataSourceRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         return ApiResponse.ok(knowledgeBaseService.createDataSource(
-                orgId,
+                companyId,
                 kbId,
                 new KnowledgeBaseService.DataSourceCommand(
                         request.sourceType(),
@@ -232,9 +232,9 @@ public class KnowledgeBaseController {
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> syncDataSource(@PathVariable Long sourceId,
                                                             @RequestBody(required = false) SyncDataSourceRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         return ApiResponse.ok(knowledgeBaseService.syncDataSource(
-                orgId,
+                companyId,
                 sourceId,
                 request == null ? "MANUAL" : request.triggerType()));
     }
@@ -242,16 +242,16 @@ public class KnowledgeBaseController {
     @GetMapping("/data-sources/{sourceId}/sync-jobs")
     @RequireOrgAdmin
     public ApiResponse<List<Map<String, Object>>> listSyncJobs(@PathVariable Long sourceId) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.listSyncJobs(orgId, sourceId));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.listSyncJobs(companyId, sourceId));
     }
 
     @PostMapping("/{kbId}/chunking/preview")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> previewChunking(@PathVariable Long kbId,
                                                              @Valid @RequestBody ChunkPreviewRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.previewChunking(orgId, kbId, new KnowledgeBaseService.ChunkPreviewCommand(
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.previewChunking(companyId, kbId, new KnowledgeBaseService.ChunkPreviewCommand(
                 request.text(),
                 request.chunkSize(),
                 request.chunkOverlap(),
@@ -264,8 +264,8 @@ public class KnowledgeBaseController {
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> testRetrieval(@PathVariable Long kbId,
                                                            @Valid @RequestBody RetrievalTestRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.testRetrieval(orgId, kbId, new KnowledgeBaseService.RetrievalTestCommand(
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.testRetrieval(companyId, kbId, new KnowledgeBaseService.RetrievalTestCommand(
                 request.query(),
                 request.topK(),
                 request.scoreThreshold(),
@@ -278,24 +278,24 @@ public class KnowledgeBaseController {
     @RequireOrgAdmin
     public ApiResponse<List<Map<String, Object>>> listRetrievalLogs(@PathVariable Long kbId,
                                                                      @RequestParam(name = "limit", required = false) Integer limit) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.listRetrievalLogs(orgId, kbId, limit));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.listRetrievalLogs(companyId, kbId, limit));
     }
 
     @GetMapping("/{kbId}/eval/suites")
     @RequireOrgAdmin
     public ApiResponse<List<Map<String, Object>>> listEvalSuites(@PathVariable Long kbId) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.listEvalSuites(orgId, kbId));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.listEvalSuites(companyId, kbId));
     }
 
     @PostMapping("/{kbId}/eval/suites")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> createEvalSuite(@PathVariable Long kbId,
                                                              @Valid @RequestBody EvalSuiteRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         return ApiResponse.ok(knowledgeBaseService.createEvalSuite(
-                orgId,
+                companyId,
                 kbId,
                 new KnowledgeBaseService.EvalSuiteCommand(request.name(), request.description())));
     }
@@ -303,17 +303,17 @@ public class KnowledgeBaseController {
     @GetMapping("/eval/suites/{suiteId}/cases")
     @RequireOrgAdmin
     public ApiResponse<List<Map<String, Object>>> listEvalCases(@PathVariable Long suiteId) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.listEvalCases(orgId, suiteId));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.listEvalCases(companyId, suiteId));
     }
 
     @PostMapping("/eval/suites/{suiteId}/cases")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> addEvalCase(@PathVariable Long suiteId,
                                                          @Valid @RequestBody EvalCaseRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         return ApiResponse.ok(knowledgeBaseService.addEvalCase(
-                orgId,
+                companyId,
                 suiteId,
                 new KnowledgeBaseService.EvalCaseCommand(
                         request.query(),
@@ -328,37 +328,37 @@ public class KnowledgeBaseController {
     @PostMapping("/eval/suites/{suiteId}/runs")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> runEvalSuite(@PathVariable Long suiteId) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.runEvalSuite(orgId, suiteId));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.runEvalSuite(companyId, suiteId));
     }
 
     @GetMapping("/eval/suites/{suiteId}/runs")
     @RequireOrgAdmin
     public ApiResponse<List<Map<String, Object>>> listEvalRuns(@PathVariable Long suiteId) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.listEvalRuns(orgId, suiteId));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.listEvalRuns(companyId, suiteId));
     }
 
     @GetMapping("/eval/runs/{runId}/results")
     @RequireOrgAdmin
     public ApiResponse<List<Map<String, Object>>> listEvalRunResults(@PathVariable Long runId) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.listEvalRunResults(orgId, runId));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.listEvalRunResults(companyId, runId));
     }
 
     @GetMapping("/{kbId}/metadata/fields")
     public ApiResponse<List<Map<String, Object>>> listMetadataFields(@PathVariable Long kbId) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.listMetadataFields(orgId, kbId));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.listMetadataFields(companyId, kbId));
     }
 
     @PostMapping("/{kbId}/quality/runs")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> startQualityScan(@PathVariable Long kbId,
                                                               @RequestBody(required = false) QualityScanRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         return ApiResponse.ok(kbDataQualityService.startScan(
-                orgId,
+                companyId,
                 kbId,
                 currentUserId(),
                 new KbDataQualityService.QualityScanCommand(request == null ? "MANUAL" : request.triggerType())));
@@ -367,46 +367,46 @@ public class KnowledgeBaseController {
     @GetMapping("/{kbId}/quality/runs")
     @RequireOrgAdmin
     public ApiResponse<List<Map<String, Object>>> listQualityRuns(@PathVariable Long kbId) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(kbDataQualityService.listRuns(orgId, kbId));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(kbDataQualityService.listRuns(companyId, kbId));
     }
 
     @GetMapping("/{kbId}/quality/issues")
     @RequireOrgAdmin
     public ApiResponse<List<Map<String, Object>>> listQualityIssues(@PathVariable Long kbId,
                                                                      @RequestParam(name = "status", required = false) String status) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(kbDataQualityService.listIssues(orgId, kbId, status));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(kbDataQualityService.listIssues(companyId, kbId, status));
     }
 
     @PostMapping("/quality/issues/{issueId}/ignore")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> ignoreQualityIssue(@PathVariable Long issueId) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(kbDataQualityService.markIssue(orgId, issueId, currentUserId(), "IGNORED"));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(kbDataQualityService.markIssue(companyId, issueId, currentUserId(), "IGNORED"));
     }
 
     @PostMapping("/quality/issues/{issueId}/resolve")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> resolveQualityIssue(@PathVariable Long issueId) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(kbDataQualityService.markIssue(orgId, issueId, currentUserId(), "RESOLVED"));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(kbDataQualityService.markIssue(companyId, issueId, currentUserId(), "RESOLVED"));
     }
 
     @GetMapping("/{kbId}/quality/rules")
     @RequireOrgAdmin
     public ApiResponse<List<Map<String, Object>>> listQualityRules(@PathVariable Long kbId) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(kbDataQualityService.listRules(orgId, kbId));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(kbDataQualityService.listRules(companyId, kbId));
     }
 
     @PostMapping("/{kbId}/quality/rules")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> createQualityRule(@PathVariable Long kbId,
                                                                @Valid @RequestBody QualityRuleRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         return ApiResponse.ok(kbDataQualityService.createRule(
-                orgId,
+                companyId,
                 kbId,
                 currentUserId(),
                 new KbDataQualityService.QualityRuleCommand(
@@ -421,9 +421,9 @@ public class KnowledgeBaseController {
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> updateQualityRule(@PathVariable Long ruleId,
                                                                @Valid @RequestBody QualityRuleRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         return ApiResponse.ok(kbDataQualityService.updateRule(
-                orgId,
+                companyId,
                 ruleId,
                 currentUserId(),
                 new KbDataQualityService.QualityRuleCommand(
@@ -438,17 +438,17 @@ public class KnowledgeBaseController {
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> previewQualityRule(@PathVariable Long ruleId,
                                                                 @RequestBody(required = false) QualityApplyRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(kbDataQualityService.previewRule(orgId, ruleId, toQualityApplyCommand(request)));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(kbDataQualityService.previewRule(companyId, ruleId, toQualityApplyCommand(request)));
     }
 
     @PostMapping("/quality/rules/{ruleId}/apply")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> applyQualityRule(@PathVariable Long ruleId,
                                                               @RequestBody(required = false) QualityApplyRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         return ApiResponse.ok(kbDataQualityService.applyRule(
-                orgId,
+                companyId,
                 ruleId,
                 currentUserId(),
                 toQualityApplyCommand(request)));
@@ -458,9 +458,9 @@ public class KnowledgeBaseController {
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> suggestAnnotations(@PathVariable Long kbId,
                                                                 @RequestBody(required = false) AnnotationSuggestRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         return ApiResponse.ok(kbDataQualityService.suggestAnnotations(
-                orgId,
+                companyId,
                 kbId,
                 currentUserId(),
                 new KbDataQualityService.AnnotationSuggestCommand(
@@ -473,17 +473,17 @@ public class KnowledgeBaseController {
     @RequireOrgAdmin
     public ApiResponse<List<Map<String, Object>>> listAnnotationSuggestions(@PathVariable Long kbId,
                                                                              @RequestParam(name = "status", required = false) String status) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(kbDataQualityService.listSuggestions(orgId, kbId, status));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(kbDataQualityService.listSuggestions(companyId, kbId, status));
     }
 
     @PostMapping("/quality/annotations/suggestions/{suggestionId}/accept")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> acceptAnnotationSuggestion(@PathVariable Long suggestionId,
                                                                         @RequestBody(required = false) AnnotationReviewRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         return ApiResponse.ok(kbDataQualityService.acceptSuggestion(
-                orgId,
+                companyId,
                 suggestionId,
                 currentUserId(),
                 new KbDataQualityService.AnnotationReviewCommand(request == null ? null : request.value())));
@@ -492,23 +492,23 @@ public class KnowledgeBaseController {
     @PostMapping("/quality/annotations/suggestions/{suggestionId}/reject")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> rejectAnnotationSuggestion(@PathVariable Long suggestionId) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(kbDataQualityService.rejectSuggestion(orgId, suggestionId, currentUserId()));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(kbDataQualityService.rejectSuggestion(companyId, suggestionId, currentUserId()));
     }
 
     @GetMapping("/{kbId}/quality/annotations/chunks")
     @RequireOrgAdmin
     public ApiResponse<List<Map<String, Object>>> listChunkAnnotations(@PathVariable Long kbId) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(kbDataQualityService.listChunkAnnotations(orgId, kbId));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(kbDataQualityService.listChunkAnnotations(companyId, kbId));
     }
 
     @PostMapping("/{kbId}/metadata/fields")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> createMetadataField(@PathVariable Long kbId,
                                                                  @Valid @RequestBody CreateMetadataFieldRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.createMetadataField(orgId, kbId, new KnowledgeBaseService.MetadataFieldCommand(
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.createMetadataField(companyId, kbId, new KnowledgeBaseService.MetadataFieldCommand(
                 request.fieldKey(),
                 request.fieldName(),
                 request.valueType()
@@ -517,32 +517,32 @@ public class KnowledgeBaseController {
 
     @GetMapping("/documents/{id}/metadata")
     public ApiResponse<List<Map<String, Object>>> getDocumentMetadata(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.getDocumentMetadata(orgId, id));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.getDocumentMetadata(companyId, id));
     }
 
     @PutMapping("/documents/{id}/metadata")
     @RequireOrgAdmin
     public ApiResponse<List<Map<String, Object>>> updateDocumentMetadata(@PathVariable Long id,
                                                                           @RequestBody Map<String, String> metadata) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.updateDocumentMetadata(orgId, id, metadata));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.updateDocumentMetadata(companyId, id, metadata));
     }
 
     @GetMapping("/documents/{id}/acl")
     @RequireOrgAdmin
     public ApiResponse<List<Map<String, Object>>> listDocumentAccessGrants(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.listDocumentAccessGrants(orgId, id));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.listDocumentAccessGrants(companyId, id));
     }
 
     @PutMapping("/documents/{id}/acl")
     @RequireOrgAdmin
     public ApiResponse<List<Map<String, Object>>> replaceDocumentAccessGrants(@PathVariable Long id,
                                                                                @Valid @RequestBody ReplaceAccessGrantsRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         return ApiResponse.ok(knowledgeBaseService.replaceDocumentAccessGrants(
-                orgId,
+                companyId,
                 id,
                 currentUserId(),
                 toGrantInputs(request)));
@@ -551,67 +551,67 @@ public class KnowledgeBaseController {
     @PostMapping("/documents/{id}/publish")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> publishDocument(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.publishDocument(orgId, id));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.publishDocument(companyId, id));
     }
 
     @PostMapping("/documents/{id}/reindex")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> reindexDocument(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.reindexDocument(orgId, id));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.reindexDocument(companyId, id));
     }
 
     @PostMapping("/documents/{id}/unpublish")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> unpublishDocument(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.unpublishDocument(orgId, id));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.unpublishDocument(companyId, id));
     }
 
     @DeleteMapping("/documents/{id}")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> deleteDocument(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.deleteDocument(orgId, id));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.deleteDocument(companyId, id));
     }
 
     @PostMapping("/{kbId}/chunks")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> addChunk(@PathVariable String kbId, @Valid @RequestBody AddChunkRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.addChunk(orgId, kbId, request.content(), request.tags()));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.addChunk(companyId, kbId, request.content(), request.tags()));
     }
 
     @PutMapping("/chunks/{id}")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> updateChunk(@PathVariable Long id,
                                                          @Valid @RequestBody UpdateChunkRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.updateChunk(orgId, id, request.content()));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.updateChunk(companyId, id, request.content()));
     }
 
     @PostMapping("/chunks/{id}/enable")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> enableChunk(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.setChunkEnabled(orgId, id, true));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.setChunkEnabled(companyId, id, true));
     }
 
     @GetMapping("/chunks/{id}/acl")
     @RequireOrgAdmin
     public ApiResponse<List<Map<String, Object>>> listChunkAccessGrants(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.listChunkAccessGrants(orgId, id));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.listChunkAccessGrants(companyId, id));
     }
 
     @PutMapping("/chunks/{id}/acl")
     @RequireOrgAdmin
     public ApiResponse<List<Map<String, Object>>> replaceChunkAccessGrants(@PathVariable Long id,
                                                                             @Valid @RequestBody ReplaceAccessGrantsRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         return ApiResponse.ok(knowledgeBaseService.replaceChunkAccessGrants(
-                orgId,
+                companyId,
                 id,
                 currentUserId(),
                 toGrantInputs(request)));
@@ -620,36 +620,36 @@ public class KnowledgeBaseController {
     @PostMapping("/chunks/{id}/disable")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> disableChunk(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.setChunkEnabled(orgId, id, false));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.setChunkEnabled(companyId, id, false));
     }
 
     @DeleteMapping("/chunks/{id}")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> deleteChunk(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.deleteChunk(orgId, id));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.deleteChunk(companyId, id));
     }
 
     @PostMapping("/chunks/batch/enable")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> batchEnableChunks(@Valid @RequestBody BatchIdsRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.batchSetChunkEnabled(orgId, request.ids(), true));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.batchSetChunkEnabled(companyId, request.ids(), true));
     }
 
     @PostMapping("/chunks/batch/disable")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> batchDisableChunks(@Valid @RequestBody BatchIdsRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.batchSetChunkEnabled(orgId, request.ids(), false));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.batchSetChunkEnabled(companyId, request.ids(), false));
     }
 
     @PostMapping("/chunks/batch/delete")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> batchDeleteChunks(@Valid @RequestBody BatchIdsRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(knowledgeBaseService.batchDeleteChunks(orgId, request.ids()));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(knowledgeBaseService.batchDeleteChunks(companyId, request.ids()));
     }
 
     public record CreateKnowledgeBaseRequest(

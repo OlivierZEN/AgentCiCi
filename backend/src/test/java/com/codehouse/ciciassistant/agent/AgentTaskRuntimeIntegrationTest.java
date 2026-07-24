@@ -102,7 +102,7 @@ class AgentTaskRuntimeIntegrationTest {
     @Test
     void shouldPersistFixedCanaryPlanToSuccessfulTerminalState() {
         canaryProperties.setEnabled(true);
-        canaryProperties.setAllowedOrgIds(List.of("demo-org"));
+        canaryProperties.setAllowedCompanyIds(List.of("demo-org"));
         canaryProperties.setAllowedAgentIds(List.of("canary-agent"));
         try {
             AgentPlanExecCanaryService.CanaryExecution execution = canaryService.start(
@@ -122,7 +122,7 @@ class AgentTaskRuntimeIntegrationTest {
                     .contains("RUN_CREATED", "PLAN_VALIDATED", "STEP_SUCCEEDED", "RUN_SUCCEEDED");
         } finally {
             canaryProperties.setEnabled(false);
-            canaryProperties.setAllowedOrgIds(List.of());
+            canaryProperties.setAllowedCompanyIds(List.of());
             canaryProperties.setAllowedAgentIds(List.of());
         }
     }
@@ -130,10 +130,10 @@ class AgentTaskRuntimeIntegrationTest {
     @Test
     void shouldPersistControlledReflectForSucceededPlanWithoutCrossOrgLeakage() {
         canaryProperties.setEnabled(true);
-        canaryProperties.setAllowedOrgIds(List.of("demo-org"));
+        canaryProperties.setAllowedCompanyIds(List.of("demo-org"));
         canaryProperties.setAllowedAgentIds(List.of("reflect-agent"));
         reflectProperties.setEnabled(true);
-        reflectProperties.setAllowedOrgIds(List.of("demo-org"));
+        reflectProperties.setAllowedCompanyIds(List.of("demo-org"));
         reflectProperties.setAllowedAgentIds(List.of("reflect-agent"));
         reflectProperties.setMaxRounds(1);
         try {
@@ -149,7 +149,7 @@ class AgentTaskRuntimeIntegrationTest {
             assertThat(review.selected()).isTrue();
             assertThat(review.gateStatus()).isEqualTo("PASS");
             assertThat(review.reviewerStatus()).isEqualTo("PASS");
-            assertThat(reviewRepository.findByOrgIdAndRunIdOrderByReviewRoundAsc("demo-org", execution.runId())).hasSize(1);
+            assertThat(reviewRepository.findByCompanyIdAndRunIdOrderByReviewRoundAsc("demo-org", execution.runId())).hasSize(1);
             assertThat(runtimeService.snapshot("demo-org", execution.runId()).events())
                     .extracting(AgentTaskRuntimeService.EventView::type).contains("REFLECT_GATE");
             assertThrows(IllegalArgumentException.class, () -> reflectService.reflect(
@@ -157,10 +157,10 @@ class AgentTaskRuntimeIntegrationTest {
                             true, false, "结构化报告已完成")));
         } finally {
             canaryProperties.setEnabled(false);
-            canaryProperties.setAllowedOrgIds(List.of());
+            canaryProperties.setAllowedCompanyIds(List.of());
             canaryProperties.setAllowedAgentIds(List.of());
             reflectProperties.setEnabled(false);
-            reflectProperties.setAllowedOrgIds(List.of());
+            reflectProperties.setAllowedCompanyIds(List.of());
             reflectProperties.setAllowedAgentIds(List.of());
         }
     }

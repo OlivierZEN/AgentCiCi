@@ -6,9 +6,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface KbDataSourceRepository extends JpaRepository<KbDataSourceEntity, Long> {
 
-    List<KbDataSourceEntity> findByOrgIdOrderByIdDesc(String orgId);
+    List<KbDataSourceEntity> findByCompanyIdOrderByIdDesc(String companyId);
 
-    List<KbDataSourceEntity> findByOrgIdAndKnowledgeBaseIdOrderByIdDesc(String orgId, Long knowledgeBaseId);
+    List<KbDataSourceEntity> findByCompanyIdAndKnowledgeBaseIdOrderByIdDesc(String companyId, Long knowledgeBaseId);
 
-    Optional<KbDataSourceEntity> findByIdAndOrgId(Long id, String orgId);
+    Optional<KbDataSourceEntity> findByIdAndCompanyId(Long id, String companyId);
 }

@@ -27,14 +27,14 @@ public class OntologyActionEntity extends AbstractOntologyWorkspaceEntity {
     }
 
     public OntologyActionEntity(
-            String orgId,
+            String companyId,
             Long workspaceId,
             String key,
             String name,
             Long conceptId,
             String description,
             String parametersJson) {
-        super(orgId, workspaceId);
+        super(companyId, workspaceId);
         this.key = key;
         this.name = name;
         this.conceptId = conceptId;

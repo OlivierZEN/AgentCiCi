@@ -77,7 +77,7 @@ public class PlatformIntegrationAppController {
     }
 
     private String platformScopeId() {
-        String configured = platformAccountProperties.getGovernanceOrgId();
+        String configured = platformAccountProperties.getGovernanceCompanyId();
         return configured == null || configured.isBlank() ? "demo-org" : configured.trim();
     }
 

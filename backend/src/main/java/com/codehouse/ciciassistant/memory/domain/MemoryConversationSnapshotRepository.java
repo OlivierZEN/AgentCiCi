@@ -5,8 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface MemoryConversationSnapshotRepository extends JpaRepository<MemoryConversationSnapshotEntity, Long> {
 
-    Optional<MemoryConversationSnapshotEntity> findByOrgIdAndApplicationCodeAndConversationRef(
-            String orgId, String applicationCode, String conversationRef);
+    Optional<MemoryConversationSnapshotEntity> findByCompanyIdAndApplicationCodeAndConversationRef(
+            String companyId, String applicationCode, String conversationRef);
 
-    long deleteByOrgIdAndSubjectId(String orgId, Long subjectId);
+    long deleteByCompanyIdAndSubjectId(String companyId, Long subjectId);
 }

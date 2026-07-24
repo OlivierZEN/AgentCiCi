@@ -19,8 +19,8 @@ public class KbDataSourceEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "knowledge_base_id", nullable = false)
     private Long knowledgeBaseId;
@@ -55,9 +55,9 @@ public class KbDataSourceEntity {
     protected KbDataSourceEntity() {
     }
 
-    public KbDataSourceEntity(String orgId, Long knowledgeBaseId, String sourceType, String name, String configJson) {
+    public KbDataSourceEntity(String companyId, Long knowledgeBaseId, String sourceType, String name, String configJson) {
         Instant now = Instant.now();
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.knowledgeBaseId = knowledgeBaseId;
         this.sourceType = sourceType;
         this.name = name;
@@ -83,7 +83,7 @@ public class KbDataSourceEntity {
 
     public Long getId() { return id; }
 
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
 
     public Long getKnowledgeBaseId() { return knowledgeBaseId; }
 

@@ -29,7 +29,7 @@ public class PlatformAuditService {
         this.redactionService = redactionService;
     }
 
-    public void log(String orgId,
+    public void log(String companyId,
                     String userId,
                     String roleCode,
                     String eventType,
@@ -37,14 +37,14 @@ public class PlatformAuditService {
                     String resourceKey,
                     String detail) {
         repository.save(new PlatformAuditLogEntity(
-                orgId, userId, roleCode, eventType, resourceType, resourceKey, redact(detail)));
+                companyId, userId, roleCode, eventType, resourceType, resourceKey, redact(detail)));
     }
 
-    public List<PlatformAuditLogEntity> latest(String orgId) {
-        return repository.findTop100ByOrgIdOrderByIdDesc(orgId);
+    public List<PlatformAuditLogEntity> latest(String companyId) {
+        return repository.findTop100ByCompanyIdOrderByIdDesc(companyId);
     }
 
-    public Map<String, Object> query(String orgId, PlatformAuditLogQuery query) {
+    public Map<String, Object> query(String companyId, PlatformAuditLogQuery query) {
         Instant to = query.to() == null ? Instant.now() : query.to();
         Instant from = query.from() == null ? to.minus(Duration.ofDays(7)) : query.from();
         if (from.isAfter(to)) {
@@ -59,8 +59,8 @@ public class PlatformAuditService {
         String q = normalized(query.q());
         PageRequest pageRequest = PageRequest.of(0, limit + 1);
         List<PlatformAuditLogEntity> rows = q == null
-                ? repository.filterPlatformAuditLogs(orgId, from, to, eventType, resourceType, pageRequest)
-                : repository.searchPlatformAuditLogs(orgId, from, to, eventType, resourceType, q, pageRequest);
+                ? repository.filterPlatformAuditLogs(companyId, from, to, eventType, resourceType, pageRequest)
+                : repository.searchPlatformAuditLogs(companyId, from, to, eventType, resourceType, q, pageRequest);
         boolean hasMore = rows.size() > limit;
         List<Map<String, Object>> items = rows.stream()
                 .limit(limit)
@@ -78,7 +78,7 @@ public class PlatformAuditService {
     public Map<String, Object> toPayload(PlatformAuditLogEntity item) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("id", item.getId());
-        payload.put("orgId", item.getOrgId());
+        payload.put("companyId", item.getCompanyId());
         payload.put("userId", item.getUserId());
         payload.put("roleCode", item.getRoleCode());
         payload.put("eventType", item.getEventType());

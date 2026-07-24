@@ -6,16 +6,16 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface UserMemoryRepository extends JpaRepository<UserMemoryEntity, Long> {
 
-    List<UserMemoryEntity> findByOrgIdAndUserIdAndAgentIdOrderByPinnedDescUpdatedAtDesc(
-            String orgId, String userId, String agentId);
+    List<UserMemoryEntity> findByCompanyIdAndUserIdAndAgentIdOrderByPinnedDescUpdatedAtDesc(
+            String companyId, String userId, String agentId);
 
-    List<UserMemoryEntity> findByOrgIdAndUserIdAndAgentIdAndEnabledTrueOrderByPinnedDescUpdatedAtDesc(
-            String orgId, String userId, String agentId);
+    List<UserMemoryEntity> findByCompanyIdAndUserIdAndAgentIdAndEnabledTrueOrderByPinnedDescUpdatedAtDesc(
+            String companyId, String userId, String agentId);
 
-    Optional<UserMemoryEntity> findByOrgIdAndUserIdAndAgentIdAndMemoryKey(
-            String orgId, String userId, String agentId, String memoryKey);
+    Optional<UserMemoryEntity> findByCompanyIdAndUserIdAndAgentIdAndMemoryKey(
+            String companyId, String userId, String agentId, String memoryKey);
 
-    Optional<UserMemoryEntity> findByIdAndOrgIdAndUserId(Long id, String orgId, String userId);
+    Optional<UserMemoryEntity> findByIdAndCompanyIdAndUserId(Long id, String companyId, String userId);
 
-    void deleteAllByOrgIdAndUserIdAndAgentId(String orgId, String userId, String agentId);
+    void deleteAllByCompanyIdAndUserIdAndAgentId(String companyId, String userId, String agentId);
 }

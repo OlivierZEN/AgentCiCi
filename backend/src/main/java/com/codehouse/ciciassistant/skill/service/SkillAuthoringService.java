@@ -25,9 +25,9 @@ public class SkillAuthoringService {
         this.objectMapper = objectMapper;
     }
 
-    public GenerateResult generate(String orgId, GenerateCommand command) {
+    public GenerateResult generate(String companyId, GenerateCommand command) {
         BuiltinSkillCreatorService.GeneratedSkillDraft draft = builtinSkillCreatorService.generate(
-                orgId,
+                companyId,
                 new BuiltinSkillCreatorService.GenerateCommand(
                         command.sourceText(),
                         command.preferredName(),
@@ -37,7 +37,7 @@ public class SkillAuthoringService {
                 )
         );
         SkillDefinitionService.PreviewResult preview = skillDefinitionService.previewCompile(
-                orgId,
+                companyId,
                 new SkillDefinitionService.PreviewCommand(
                         draft.skillCode(),
                         draft.name(),
@@ -51,12 +51,12 @@ public class SkillAuthoringService {
                         draft.riskLevel()
                 )
         );
-        String sessionId = skillAuthoringSessionService.createActiveSession(orgId, command.sourceText(), draft);
+        String sessionId = skillAuthoringSessionService.createActiveSession(companyId, command.sourceText(), draft);
         return new GenerateResult(command.sourceText(), sessionId, draft, preview);
     }
 
-    public GenerateResult refine(String orgId, RefineCommand command) {
-        skillAuthoringSessionService.assertSessionActive(orgId, command.sessionId());
+    public GenerateResult refine(String companyId, RefineCommand command) {
+        skillAuthoringSessionService.assertSessionActive(companyId, command.sessionId());
         BuiltinSkillCreatorService.GeneratedSkillDraft base = requireDraft(command.currentSkillSpec());
         List<ClarificationAnswer> clarificationAnswers = command.clarificationAnswers() == null
                 ? List.of()
@@ -64,7 +64,7 @@ public class SkillAuthoringService {
         String effectiveInstruction = normalizeRefineInstruction(command.sourceText(), clarificationAnswers);
         BuiltinSkillCreatorService.GeneratedSkillDraft current = mergeClarificationsIntoDraft(base, clarificationAnswers);
         BuiltinSkillCreatorService.GeneratedSkillDraft refined = builtinSkillCreatorService.generate(
-                orgId,
+                companyId,
                 new BuiltinSkillCreatorService.GenerateCommand(
                         buildRefinementContext(effectiveInstruction, current),
                         current.name(),
@@ -75,7 +75,7 @@ public class SkillAuthoringService {
         );
         BuiltinSkillCreatorService.GeneratedSkillDraft merged = mergeDraft(current, refined, effectiveInstruction);
         SkillDefinitionService.PreviewResult preview = skillDefinitionService.previewCompile(
-                orgId,
+                companyId,
                 new SkillDefinitionService.PreviewCommand(
                         merged.skillCode(),
                         merged.name(),
@@ -91,16 +91,16 @@ public class SkillAuthoringService {
         );
         String sessionId = trimToNull(command.sessionId());
         if (sessionId != null) {
-            skillAuthoringSessionService.updateActiveSession(orgId, sessionId, effectiveInstruction, merged);
+            skillAuthoringSessionService.updateActiveSession(companyId, sessionId, effectiveInstruction, merged);
         }
         return new GenerateResult(effectiveInstruction, sessionId, merged, preview);
     }
 
-    public CreateResult create(String orgId, CreateCommand command) {
+    public CreateResult create(String companyId, CreateCommand command) {
         BuiltinSkillCreatorService.GeneratedSkillDraft skillSpec = requireDraft(command.skillSpec());
         SkillSpecIr specIr = builtinSkillCreatorService.toSkillSpecIr(skillSpec);
         SkillDefinitionEntity created = skillDefinitionService.createSkill(
-                orgId,
+                companyId,
                 new SkillDefinitionService.UpsertCommand(
                         skillSpec.skillCode(),
                         skillSpec.name(),
@@ -122,7 +122,7 @@ public class SkillAuthoringService {
                 )
         );
         SkillDefinitionService.PreviewResult preview = skillDefinitionService.previewCompile(
-                orgId,
+                companyId,
                 new SkillDefinitionService.PreviewCommand(
                         skillSpec.skillCode(),
                         skillSpec.name(),
@@ -136,7 +136,7 @@ public class SkillAuthoringService {
                         skillSpec.riskLevel()
                 )
         );
-        skillAuthoringSessionService.completeSession(orgId, command.sessionId());
+        skillAuthoringSessionService.completeSession(companyId, command.sessionId());
         return new CreateResult(command.sourceText(), trimToNull(command.sessionId()), skillSpec, created, preview);
     }
 

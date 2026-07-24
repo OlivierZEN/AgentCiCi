@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ModelProviderConfigRepository extends JpaRepository<ModelProviderConfigEntity, Long> {
 
-    Optional<ModelProviderConfigEntity> findByOrgIdAndProviderCode(String orgId, String providerCode);
+    Optional<ModelProviderConfigEntity> findByCompanyIdAndProviderCode(String companyId, String providerCode);
 
-    List<ModelProviderConfigEntity> findByOrgIdOrderByIdAsc(String orgId);
+    List<ModelProviderConfigEntity> findByCompanyIdOrderByIdAsc(String companyId);
 }

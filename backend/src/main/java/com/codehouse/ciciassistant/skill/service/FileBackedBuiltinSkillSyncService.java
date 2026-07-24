@@ -48,13 +48,13 @@ public class FileBackedBuiltinSkillSyncService {
     }
 
     @Transactional
-    public void syncOrg(String orgId) {
+    public void syncOrg(String companyId) {
         for (FileBackedBuiltinSkillBundle bundle : catalog.listBundles()) {
-            syncBundle(orgId, bundle);
+            syncBundle(companyId, bundle);
         }
     }
 
-    private void syncBundle(String orgId, FileBackedBuiltinSkillBundle bundle) {
+    private void syncBundle(String companyId, FileBackedBuiltinSkillBundle bundle) {
         FileBackedBuiltinSkillManifest manifest = bundle.manifest();
         int versionNo = manifest.version() == null ? 1 : manifest.version();
         String promptFragment = catalog.readEntrypoint(bundle).trim();
@@ -70,9 +70,9 @@ public class FileBackedBuiltinSkillSyncService {
                 "优先输出可落地的 CloudCC 二次开发方案；涉及接口、参数或代码时必须依据已加载的官方模块文档。"
         );
 
-        PlatformSkillTemplateEntity template = templateRepository.findByOrgIdAndTemplateCode(orgId, manifest.skillCode())
+        PlatformSkillTemplateEntity template = templateRepository.findByCompanyIdAndTemplateCode(companyId, manifest.skillCode())
                 .orElseGet(() -> templateRepository.save(new PlatformSkillTemplateEntity(
-                        orgId,
+                        companyId,
                         manifest.skillCode(),
                         manifest.name(),
                         manifest.category(),
@@ -88,7 +88,7 @@ public class FileBackedBuiltinSkillSyncService {
         templateRepository.save(template);
 
         PlatformSkillTemplateVersionEntity templateVersion = templateVersionRepository
-                .findByOrgIdAndTemplateCodeAndVersionNo(orgId, manifest.skillCode(), versionNo)
+                .findByCompanyIdAndTemplateCodeAndVersionNo(companyId, manifest.skillCode(), versionNo)
                 .orElse(null);
         if (templateVersion != null && templateVersion.getBundleChecksum() != null
                 && !templateVersion.getBundleChecksum().equals(bundle.bundleChecksum())) {
@@ -96,7 +96,7 @@ public class FileBackedBuiltinSkillSyncService {
         }
         if (templateVersion == null) {
             templateVersion = new PlatformSkillTemplateVersionEntity(
-                    orgId,
+                    companyId,
                     manifest.skillCode(),
                     versionNo,
                     manifest.name(),
@@ -121,9 +121,9 @@ public class FileBackedBuiltinSkillSyncService {
             templateVersionRepository.save(templateVersion);
         }
 
-        SkillDefinitionEntity skill = skillDefinitionRepository.findByOrgIdAndSkillCode(orgId, manifest.skillCode())
+        SkillDefinitionEntity skill = skillDefinitionRepository.findByCompanyIdAndSkillCode(companyId, manifest.skillCode())
                 .orElseGet(() -> skillDefinitionRepository.save(new SkillDefinitionEntity(
-                        orgId,
+                        companyId,
                         manifest.skillCode(),
                         manifest.name(),
                         manifest.description(),
@@ -161,10 +161,10 @@ public class FileBackedBuiltinSkillSyncService {
 
         Long skillId = skill.getId();
         SkillVersionEntity skillVersion = skillVersionRepository
-                .findByOrgIdAndSkillIdAndVersionNo(orgId, skillId, versionNo)
+                .findByCompanyIdAndSkillIdAndVersionNo(companyId, skillId, versionNo)
                 .orElseGet(() -> {
                     SkillVersionEntity created = new SkillVersionEntity(
-                            orgId,
+                            companyId,
                             skillId,
                             versionNo,
                             buildDraftSummary(manifest, bundle),

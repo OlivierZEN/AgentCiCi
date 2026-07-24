@@ -28,18 +28,18 @@ public class UserMemoryController {
 
     @GetMapping
     public ApiResponse<List<Map<String, Object>>> list(@PathVariable String agentId) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = currentUser();
-        List<UserMemoryEntity> memories = memoryService.listAll(orgId, userId, agentId);
+        List<UserMemoryEntity> memories = memoryService.listAll(companyId, userId, agentId);
         return ApiResponse.ok(memories.stream().map(this::toPayload).toList());
     }
 
     @PostMapping
     public ApiResponse<Map<String, Object>> create(@PathVariable String agentId,
                                                     @RequestBody MemoryRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = currentUser();
-        UserMemoryEntity entity = memoryService.create(orgId, userId, agentId,
+        UserMemoryEntity entity = memoryService.create(companyId, userId, agentId,
                 request.category(), request.content(), request.memoryKey());
         return ApiResponse.ok(toPayload(entity));
     }
@@ -48,28 +48,28 @@ public class UserMemoryController {
     public ApiResponse<Map<String, Object>> update(@PathVariable String agentId,
                                                     @PathVariable Long id,
                                                     @RequestBody MemoryRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = currentUser();
         boolean enabled = request.enabled() != null ? request.enabled() : true;
         boolean pinned = request.pinned() != null ? request.pinned() : false;
-        UserMemoryEntity entity = memoryService.update(orgId, userId, id,
+        UserMemoryEntity entity = memoryService.update(companyId, userId, id,
                 request.category(), request.content(), enabled, pinned);
         return ApiResponse.ok(toPayload(entity));
     }
 
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable String agentId, @PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = currentUser();
-        memoryService.delete(orgId, userId, id);
+        memoryService.delete(companyId, userId, id);
         return ApiResponse.ok(null);
     }
 
     @DeleteMapping
     public ApiResponse<Void> deleteAll(@PathVariable String agentId) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = currentUser();
-        memoryService.deleteAll(orgId, userId, agentId);
+        memoryService.deleteAll(companyId, userId, agentId);
         return ApiResponse.ok(null);
     }
 

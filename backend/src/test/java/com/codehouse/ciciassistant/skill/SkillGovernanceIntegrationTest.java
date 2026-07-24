@@ -381,7 +381,7 @@ class SkillGovernanceIntegrationTest {
 
         jdbcTemplate.update("""
                 INSERT INTO agent_definition (
-                    org_id, agent_id, name, summary, greeting, model, system_prompt, handoff_rule,
+                    company_id, agent_id, name, summary, greeting, model, system_prompt, handoff_rule,
                     safety_level, execution_mode, version_label, builtin, enabled, published_version_id,
                     created_at, updated_at
                 )
@@ -391,24 +391,24 @@ class SkillGovernanceIntegrationTest {
                 "", "MEDIUM", "MANUAL", "v1");
         jdbcTemplate.update("""
                 INSERT INTO agent_workflow_version (
-                    org_id, agent_id, version_no, version_label, spec_text, workflow_code, workflow_manifest,
+                    company_id, agent_id, version_no, version_label, spec_text, workflow_code, workflow_manifest,
                     workflow_preview, compile_summary, warnings, dependencies, publish_status, created_at
                 )
                 VALUES (?, ?, 1, 'v1', '', '', '', '', '', '', '', 'PUBLISHED', CURRENT_TIMESTAMP)
                 """, "demo-org", agentId);
         Long v1 = jdbcTemplate.queryForObject("""
-                SELECT id FROM agent_workflow_version WHERE org_id = ? AND agent_id = ? AND version_no = 1
+                SELECT id FROM agent_workflow_version WHERE company_id = ? AND agent_id = ? AND version_no = 1
                 """, Long.class, "demo-org", agentId);
         jdbcTemplate.update("""
                 INSERT INTO agent_workflow_skill_ref (
-                    org_id, workflow_version_id, skill_id, skill_version_id, template_code, template_version_no,
+                    company_id, workflow_version_id, skill_id, skill_version_id, template_code, template_version_no,
                     reference_mode, created_at
                 )
                 VALUES (?, ?, ?, NULL, NULL, NULL, 'always-on', CURRENT_TIMESTAMP)
                 """, "demo-org", v1, skillId);
         jdbcTemplate.update("""
                 UPDATE agent_definition SET published_version_id = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE org_id = ? AND agent_id = ?
+                WHERE company_id = ? AND agent_id = ?
                 """, v1, "demo-org", agentId);
 
         mockMvc.perform(get("/skills/{id}/delete-impact", skillId)
@@ -420,21 +420,21 @@ class SkillGovernanceIntegrationTest {
 
         jdbcTemplate.update("""
                 INSERT INTO agent_workflow_version (
-                    org_id, agent_id, version_no, version_label, spec_text, workflow_code, workflow_manifest,
+                    company_id, agent_id, version_no, version_label, spec_text, workflow_code, workflow_manifest,
                     workflow_preview, compile_summary, warnings, dependencies, publish_status, created_at
                 )
                 VALUES (?, ?, 2, 'v2', '', '', '', '', '', '', '', 'PUBLISHED', CURRENT_TIMESTAMP)
                 """, "demo-org", agentId);
         Long v2 = jdbcTemplate.queryForObject("""
-                SELECT id FROM agent_workflow_version WHERE org_id = ? AND agent_id = ? AND version_no = 2
+                SELECT id FROM agent_workflow_version WHERE company_id = ? AND agent_id = ? AND version_no = 2
                 """, Long.class, "demo-org", agentId);
         jdbcTemplate.update("""
                 UPDATE agent_workflow_version SET publish_status = 'ARCHIVED'
-                WHERE org_id = ? AND agent_id = ? AND version_no = 1
+                WHERE company_id = ? AND agent_id = ? AND version_no = 1
                 """, "demo-org", agentId);
         jdbcTemplate.update("""
                 UPDATE agent_definition SET published_version_id = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE org_id = ? AND agent_id = ?
+                WHERE company_id = ? AND agent_id = ?
                 """, v2, "demo-org", agentId);
 
         mockMvc.perform(get("/skills/{id}/delete-impact", skillId)
@@ -469,12 +469,12 @@ class SkillGovernanceIntegrationTest {
                 .andReturn();
         JsonNode created = objectMapper.readTree(createdResult.getResponse().getContentAsString(StandardCharsets.UTF_8)).path("data");
         long skillId = created.path("id").asLong();
-        long v1Id = skillVersionRepository.findByOrgIdAndSkillIdAndVersionNo("demo-org", skillId, 1)
+        long v1Id = skillVersionRepository.findByCompanyIdAndSkillIdAndVersionNo("demo-org", skillId, 1)
                 .orElseThrow(() -> new IllegalStateException("missing v1"))
                 .getId();
 
         jdbcTemplate.update(
-                "insert into agent_workflow_skill_ref(org_id, workflow_version_id, skill_id, skill_version_id, template_code, template_version_no, reference_mode, created_at) values (?,?,?,?,?,?,?, now())",
+                "insert into agent_workflow_skill_ref(company_id, workflow_version_id, skill_id, skill_version_id, template_code, template_version_no, reference_mode, created_at) values (?,?,?,?,?,?,?, now())",
                 "demo-org", 99001L, skillId, v1Id, null, null, "PINNED"
         );
 
@@ -636,11 +636,11 @@ class SkillGovernanceIntegrationTest {
         long publishedVersionId = objectMapper.readTree(publishResult.getResponse().getContentAsString(StandardCharsets.UTF_8))
                 .path("data").path("currentPublishedVersionId").asLong();
         String toolName = "skillapi__" + skillCode.replace("-", "_") + "__query_leads";
-        assertThat(skillApiToolRepository.findByOrgIdAndToolNameAndEnabledTrue("demo-org", toolName)).isPresent();
+        assertThat(skillApiToolRepository.findByCompanyIdAndToolNameAndEnabledTrue("demo-org", toolName)).isPresent();
 
         jdbcTemplate.update("""
                 INSERT INTO agent_definition (
-                    org_id, agent_id, name, summary, greeting, model, system_prompt, handoff_rule,
+                    company_id, agent_id, name, summary, greeting, model, system_prompt, handoff_rule,
                     safety_level, execution_mode, version_label, builtin, enabled, published_version_id,
                     created_at, updated_at
                 )
@@ -649,7 +649,7 @@ class SkillGovernanceIntegrationTest {
                 "", "MEDIUM", "MANUAL", "v1");
         jdbcTemplate.update("""
                 INSERT INTO agent_skill_binding (
-                    org_id, agent_id, skill_id, activation_mode, activation_condition, priority, enabled, created_at
+                    company_id, agent_id, skill_id, activation_mode, activation_condition, priority, enabled, created_at
                 )
                 VALUES (?, ?, ?, 'manual', NULL, 10, TRUE, CURRENT_TIMESTAMP)
                 """, "demo-org", agentId, skillId);
@@ -737,7 +737,7 @@ class SkillGovernanceIntegrationTest {
                     .andExpect(status().isOk());
             jdbcTemplate.update("""
                     INSERT INTO agent_skill_binding (
-                        org_id, agent_id, skill_id, activation_mode, activation_condition, priority, enabled, created_at
+                        company_id, agent_id, skill_id, activation_mode, activation_condition, priority, enabled, created_at
                     )
                     VALUES (?, ?, ?, 'manual', NULL, 20, TRUE, CURRENT_TIMESTAMP)
                     """, "demo-org", agentId, authSkillId);
@@ -756,15 +756,15 @@ class SkillGovernanceIntegrationTest {
         String cloudccUserId = jdbcTemplate.queryForObject(
                 """
                         SELECT m.id
-                        FROM organization_member m
+                        FROM company_member m
                         JOIN user_account a ON a.id = m.account_id
-                        WHERE m.org_id = ? AND a.primary_mobile = ?
+                        WHERE m.company_id = ? AND a.primary_mobile = ?
                         """,
                 String.class,
                 "demo-org",
                 "13800138111");
         jdbcTemplate.update("""
-                UPDATE organization_member
+                UPDATE company_member
                 SET cc_username = ?, cc_safetymark = ?
                 WHERE id = ?
                 """, "cloudcc-user", "cloudcc-safety", cloudccUserId);
@@ -806,7 +806,7 @@ class SkillGovernanceIntegrationTest {
         try {
             integrationAppService.update("demo-org", IntegrationAppService.APP_CODE_CLOUDCC_CRM,
                     true, "cloudcc", Map.of(
-                            "orgId", "cloudcc-org",
+                            "companyId", "cloudcc-org",
                             "orgapi_switch_address", "http://localhost:%d/domain".formatted(cloudccServer.getAddress().getPort()),
                             "clientId", "cloudcc-client",
                             "secretKey", "cloudcc-secret"
@@ -857,7 +857,7 @@ class SkillGovernanceIntegrationTest {
                     .andExpect(status().isOk());
             jdbcTemplate.update("""
                     INSERT INTO agent_skill_binding (
-                        org_id, agent_id, skill_id, activation_mode, activation_condition, priority, enabled, created_at
+                        company_id, agent_id, skill_id, activation_mode, activation_condition, priority, enabled, created_at
                     )
                     VALUES (?, ?, ?, 'manual', NULL, 30, TRUE, CURRENT_TIMESTAMP)
                     """, "demo-org", agentId, cloudccSkillId);
@@ -926,7 +926,7 @@ class SkillGovernanceIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "orgId": "demo-org",
+                                  "companyId": "demo-org",
                                   "mobile": "%s",
                                   "password": "szyd1234"
                                 }

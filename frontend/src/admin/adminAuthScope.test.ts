@@ -7,7 +7,7 @@ import {
 } from "./adminAuthScope";
 
 describe("admin auth async scope", () => {
-  it("invalidates a response when either organization, token or request changes", () => {
+  it("invalidates a response when either company, token or request changes", () => {
     const scope = createAdminAuthScopeKey("org-a", "token-a");
 
     expect(scope).not.toBe(createAdminAuthScopeKey("org-b", "token-a"));
@@ -22,7 +22,7 @@ describe("admin auth async scope", () => {
     const ontologySource = readFileSync(new URL("./pages/AdminOntologyPage.tsx", import.meta.url), "utf8");
 
     expect(shellSource).toContain("profileRequestIdRef");
-    expect(shellSource).toContain("organizationRequestIdRef");
+    expect(shellSource).toContain("companyRequestIdRef");
     expect(shellSource).toContain("isAdminAsyncRequestCurrent");
     expect(shellSource).toContain("invalidateAdminAuthRequests");
     expect(ontologySource).toMatch(/useEffect\(\(\) => \{\s*void loadWorkspaces\(\);\s*void loadReferencePackages\(\);\s*\}, \[authScopeKey,/);

@@ -85,14 +85,14 @@ class CustomerWorkbenchServiceTest {
                 mock(CustomerDynamicScoringService.class),
                 new ObjectMapper());
 
-        String orgId = "org-demo";
+        String companyId = "org-demo";
         String userId = "user-demo";
         String accountId = "001-demo";
         String expectedSessionId = "customer-workbench:" + UUID.nameUUIDFromBytes(
                 (userId + ":" + accountId).getBytes(StandardCharsets.UTF_8));
         CustomerWorkbenchSnapshotEntity snapshot = new CustomerWorkbenchSnapshotEntity(
                 "cw-1",
-                orgId,
+                companyId,
                 accountId,
                 "北京智造科技有限公司",
                 "张伟",
@@ -106,7 +106,7 @@ class CustomerWorkbenchServiceTest {
                         """);
         CustomerInteractionEventEntity event = new CustomerInteractionEventEntity(
                 "evt-1",
-                orgId,
+                companyId,
                 accountId,
                 "contact-1",
                 "WECHAT",
@@ -119,7 +119,7 @@ class CustomerWorkbenchServiceTest {
                 "NEW_CUSTOMER");
         CustomerWorkbenchRecommendationEntity recommendation = new CustomerWorkbenchRecommendationEntity(
                 "rec-1",
-                orgId,
+                companyId,
                 accountId,
                 "CREATE_TASK",
                 "创建下一次跟进任务",
@@ -127,14 +127,14 @@ class CustomerWorkbenchServiceTest {
                 BigDecimal.valueOf(0.91),
                 "{}");
 
-        when(snapshotRepository.countByOrgId(orgId)).thenReturn(1L);
-        when(snapshotRepository.findByOrgIdAndCrmAccountId(orgId, accountId)).thenReturn(Optional.of(snapshot));
-        when(eventRepository.findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc(orgId, accountId)).thenReturn(List.of(event));
-        when(recommendationRepository.findByOrgIdAndCrmAccountIdOrderByUpdatedAtDesc(orgId, accountId)).thenReturn(List.of(recommendation));
-        when(recommendationRepository.countByOrgIdAndCrmAccountIdAndStatus(orgId, accountId, CustomerWorkbenchRecommendationEntity.STATUS_PENDING))
+        when(snapshotRepository.countByCompanyId(companyId)).thenReturn(1L);
+        when(snapshotRepository.findByCompanyIdAndCrmAccountId(companyId, accountId)).thenReturn(Optional.of(snapshot));
+        when(eventRepository.findByCompanyIdAndCrmAccountIdOrderByOccurredAtDesc(companyId, accountId)).thenReturn(List.of(event));
+        when(recommendationRepository.findByCompanyIdAndCrmAccountIdOrderByUpdatedAtDesc(companyId, accountId)).thenReturn(List.of(recommendation));
+        when(recommendationRepository.countByCompanyIdAndCrmAccountIdAndStatus(companyId, accountId, CustomerWorkbenchRecommendationEntity.STATUS_PENDING))
                 .thenReturn(1L);
-        when(cloudccAccessTokenService.getSessionContext(orgId, userId)).thenReturn(Optional.empty());
-        when(customerMemoryService.buildAssistantContext(eq(orgId), eq(accountId), anyString(), anyMap()))
+        when(cloudccAccessTokenService.getSessionContext(companyId, userId)).thenReturn(Optional.empty());
+        when(customerMemoryService.buildAssistantContext(eq(companyId), eq(accountId), anyString(), anyMap()))
                 .thenReturn(new CustomerMemoryService.AssistantContext(
                         Map.of("accountId", accountId, "name", "北京智造科技有限公司"),
                         List.of(Map.of("eventId", "evt-1", "summary", "客户关注实施周期和 MES 集成能力")),
@@ -142,7 +142,7 @@ class CustomerWorkbenchServiceTest {
                         List.of(Map.of("evidenceId", "E1", "eventId", "evt-1", "label", "微信沟通")),
                         Map.of("recentWindowDays", 90)));
         when(chatOrchestratorService.chat(
-                eq(orgId),
+                eq(companyId),
                 eq(userId),
                 any(),
                 any(),
@@ -160,7 +160,7 @@ class CustomerWorkbenchServiceTest {
                         "activeSkillCode", CustomerWorkbenchService.SKILL_CODE));
 
         Map<String, Object> result = service.assistant(
-                orgId,
+                companyId,
                 userId,
                 new CustomerWorkbenchService.AssistantCommand(accountId, "查看风险"));
 
@@ -168,12 +168,12 @@ class CustomerWorkbenchServiceTest {
                 .containsEntry("reply", "真实智能体回复")
                 .containsEntry("agentId", CustomerWorkbenchService.ASSISTANT_AGENT_ID)
                 .containsEntry("activeSkillCode", CustomerWorkbenchService.SKILL_CODE);
-        verify(agentDefinitionService).warmupBuiltinAgents(orgId);
-        verify(skillDefinitionService, times(2)).ensurePhaseOneDefaults(orgId);
+        verify(agentDefinitionService).warmupBuiltinAgents(companyId);
+        verify(skillDefinitionService, times(2)).ensurePhaseOneDefaults(companyId);
 
         ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
         verify(chatOrchestratorService).chat(
-                eq(orgId),
+                eq(companyId),
                 eq(userId),
                 eq(expectedSessionId),
                 promptCaptor.capture(),
@@ -190,12 +190,12 @@ class CustomerWorkbenchServiceTest {
         assertThat(expectedSessionId).hasSizeLessThanOrEqualTo(64);
 
         SseEmitter emitter = service.assistantStream(
-                orgId,
+                companyId,
                 userId,
                 new CustomerWorkbenchService.AssistantCommand(accountId, "查看风险"));
         assertThat(emitter).isNotNull();
         verify(chatOrchestratorService).chatStream(
-                eq(orgId),
+                eq(companyId),
                 eq(userId),
                 eq(expectedSessionId),
                 anyString(),
@@ -256,11 +256,11 @@ class CustomerWorkbenchServiceTest {
         recommendation.accept();
         recommendation.confirm("user-demo");
 
-        when(recommendationRepository.findByOrgIdAndPublicId("org-demo", "rec-write")).thenReturn(Optional.of(recommendation));
+        when(recommendationRepository.findByCompanyIdAndPublicId("org-demo", "rec-write")).thenReturn(Optional.of(recommendation));
         when(recommendationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(cloudccAccessTokenService.getSessionContext("org-demo", "user-demo")).thenReturn(Optional.of(
                 new CloudccAccessTokenService.CloudccSessionContext("token", "https://ap6.lightning.cloudcc.cn", "")));
-        when(writeAuditRepository.findByOrgIdAndUserIdAndIdempotencyKey(eq("org-demo"), eq("user-demo"), any()))
+        when(writeAuditRepository.findByCompanyIdAndUserIdAndIdempotencyKey(eq("org-demo"), eq("user-demo"), any()))
                 .thenReturn(Optional.empty());
         when(cloudccOpenApiService.writeRecords(eq("org-demo"), eq("user-demo"), eq("INSERT"), eq("Task"), anyList()))
                 .thenReturn(new CloudccOpenApiService.WriteResult("insertWithRoleRight", "Task", List.of("task-001"), "0", "success"));
@@ -308,11 +308,11 @@ class CustomerWorkbenchServiceTest {
                 "Task", "INSERT", "FAILED", "hash", "task-existing", "OptimisticLock", "stale",
                 "{}", "{}");
 
-        when(recommendationRepository.findByOrgIdAndPublicId("org-demo", "rec-recover")).thenReturn(Optional.of(recommendation));
+        when(recommendationRepository.findByCompanyIdAndPublicId("org-demo", "rec-recover")).thenReturn(Optional.of(recommendation));
         when(recommendationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(cloudccAccessTokenService.getSessionContext("org-demo", "user-demo")).thenReturn(Optional.of(
                 new CloudccAccessTokenService.CloudccSessionContext("token", "https://ap6.lightning.cloudcc.cn", "")));
-        when(writeAuditRepository.findByOrgIdAndUserIdAndIdempotencyKey(eq("org-demo"), eq("user-demo"), any()))
+        when(writeAuditRepository.findByCompanyIdAndUserIdAndIdempotencyKey(eq("org-demo"), eq("user-demo"), any()))
                 .thenReturn(Optional.of(audit));
         when(writeAuditRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(cloudccOpenApiService.queryRecordById(eq("org-demo"), eq("user-demo"), eq("Task"), any(), eq("task-existing")))
@@ -352,16 +352,16 @@ class CustomerWorkbenchServiceTest {
                 "cw-history", "org-demo", "001-demo", "客户甲", "王销售", "NEW",
                 80, 70, 1, 1, "{\"stage\":\"需求确认\",\"risks\":[\"预算待确认\"]}");
         when(cloudccAccessTokenService.getSessionContext("org-demo", "user-demo")).thenReturn(Optional.empty());
-        when(snapshotRepository.findByOrgIdAndCrmAccountId("org-demo", "001-demo")).thenReturn(Optional.of(snapshot));
+        when(snapshotRepository.findByCompanyIdAndCrmAccountId("org-demo", "001-demo")).thenReturn(Optional.of(snapshot));
         when(chatOrchestratorService.sessionMessages(eq("org-demo"), eq("user-demo"), anyString())).thenReturn(List.of(
                 Map.of("role", "user", "content", "[客户互动工作台上下文]\n内部客户 JSON\n[用户问题]\n请查看风险", "createdAt", "2026-07-10T10:00:00Z"),
                 Map.of("role", "assistant", "content", "存在预算风险。", "createdAt", "2026-07-10T10:00:01Z")));
-        when(eventRepository.findByOrgIdAndPublicId(eq("org-demo"), anyString())).thenReturn(Optional.empty());
+        when(eventRepository.findByCompanyIdAndPublicId(eq("org-demo"), anyString())).thenReturn(Optional.empty());
         when(eventRepository.save(any(CustomerInteractionEventEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
         CustomerWorkbenchRecommendationEntity feedbackRecommendation = new CustomerWorkbenchRecommendationEntity(
                 "rec-feedback", "org-demo", "001-demo", "CREATE_TASK", "跟进客户", "预算需要确认",
                 BigDecimal.valueOf(.8), "{}");
-        when(recommendationRepository.findByOrgIdAndPublicId("org-demo", "rec-feedback"))
+        when(recommendationRepository.findByCompanyIdAndPublicId("org-demo", "rec-feedback"))
                 .thenReturn(Optional.of(feedbackRecommendation));
         when(recommendationFeedbackRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 

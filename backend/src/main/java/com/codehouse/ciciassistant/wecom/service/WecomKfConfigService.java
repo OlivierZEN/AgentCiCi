@@ -37,20 +37,20 @@ public class WecomKfConfigService {
         return accountRepository.findByEnabledTrue().stream().map(this::resolve).toList();
     }
 
-    public List<WecomKfAccountEntity> list(String orgId) {
-        return accountRepository.findByOrgIdOrderByUpdatedAtDescIdDesc(requireText(orgId, "orgId"));
+    public List<WecomKfAccountEntity> list(String companyId) {
+        return accountRepository.findByCompanyIdOrderByUpdatedAtDescIdDesc(requireText(companyId, "companyId"));
     }
 
-    public Optional<ResolvedAccount> findEnabled(String orgId, String openKfId) {
-        if (orgId == null || orgId.isBlank() || openKfId == null || openKfId.isBlank()) {
+    public Optional<ResolvedAccount> findEnabled(String companyId, String openKfId) {
+        if (companyId == null || companyId.isBlank() || openKfId == null || openKfId.isBlank()) {
             return Optional.empty();
         }
-        return accountRepository.findByOrgIdAndOpenKfIdAndEnabledTrue(orgId.trim(), openKfId.trim()).map(this::resolve);
+        return accountRepository.findByCompanyIdAndOpenKfIdAndEnabledTrue(companyId.trim(), openKfId.trim()).map(this::resolve);
     }
 
     @Transactional
-    public WecomKfAccountEntity upsert(String orgId, String actorUserId, UpsertCommand command) {
-        String normalizedOrgId = requireText(orgId, "orgId");
+    public WecomKfAccountEntity upsert(String companyId, String actorUserId, UpsertCommand command) {
+        String normalizedCompanyId = requireText(companyId, "companyId");
         String corpId = requireText(command.corpId(), "corpId");
         String openKfId = requireText(command.openKfId(), "openKfId");
         String name = fallback(command.name(), "微信客服 " + openKfId);
@@ -58,9 +58,9 @@ public class WecomKfConfigService {
         String agentId = normalizeAgentId(fallback(command.agentId(), DEFAULT_AFTER_SALES_AGENT_ID));
         String runAsUserId = fallback(command.runAsUserId(), actorUserId);
         boolean enabled = command.enabled() == null || command.enabled();
-        requireAgent(normalizedOrgId, agentId);
+        requireAgent(normalizedCompanyId, agentId);
 
-        Optional<WecomKfAccountEntity> existing = accountRepository.findByOrgIdAndOpenKfId(normalizedOrgId, openKfId);
+        Optional<WecomKfAccountEntity> existing = accountRepository.findByCompanyIdAndOpenKfId(normalizedCompanyId, openKfId);
         if (existing.isPresent()) {
             WecomKfAccountEntity account = existing.get();
             account.updateProfile(corpId, openKfId, name, token, agentId, requireText(runAsUserId, "runAsUserId"), enabled);
@@ -82,7 +82,7 @@ public class WecomKfConfigService {
         SecretCipherService.EncryptedSecret encryptedSecret = secretCipherService.encryptUtf8(secret);
         SecretCipherService.EncryptedSecret encryptedAesKey = secretCipherService.encryptUtf8(encodingAesKey);
         return accountRepository.save(new WecomKfAccountEntity(
-                normalizedOrgId,
+                normalizedCompanyId,
                 corpId,
                 openKfId,
                 name,
@@ -96,13 +96,13 @@ public class WecomKfConfigService {
     }
 
     @Transactional
-    public WecomKfAccountEntity update(String orgId, Long id, String actorUserId, UpsertCommand command) {
-        WecomKfAccountEntity existing = requireAccount(orgId, id);
+    public WecomKfAccountEntity update(String companyId, Long id, String actorUserId, UpsertCommand command) {
+        WecomKfAccountEntity existing = requireAccount(companyId, id);
         String openKfId = fallback(command.openKfId(), existing.getOpenKfId());
         if (!existing.getOpenKfId().equals(openKfId)) {
             throw new IllegalArgumentException("openKfId cannot be changed after creation");
         }
-        return upsert(existing.getOrgId(), actorUserId, new UpsertCommand(
+        return upsert(existing.getCompanyId(), actorUserId, new UpsertCommand(
                 fallback(command.corpId(), existing.getCorpId()),
                 openKfId,
                 fallback(command.name(), existing.getName()),
@@ -115,22 +115,22 @@ public class WecomKfConfigService {
     }
 
     @Transactional
-    public WecomKfAccountEntity setEnabled(String orgId, Long id, boolean enabled) {
-        WecomKfAccountEntity account = requireAccount(orgId, id);
+    public WecomKfAccountEntity setEnabled(String companyId, Long id, boolean enabled) {
+        WecomKfAccountEntity account = requireAccount(companyId, id);
         account.updateEnabled(enabled);
         return accountRepository.save(account);
     }
 
-    public WecomKfAccountEntity requireAccount(String orgId, Long id) {
+    public WecomKfAccountEntity requireAccount(String companyId, Long id) {
         if (id == null) {
             throw new IllegalArgumentException("id is required");
         }
-        return accountRepository.findByIdAndOrgId(id, requireText(orgId, "orgId"))
+        return accountRepository.findByIdAndCompanyId(id, requireText(companyId, "companyId"))
                 .orElseThrow(() -> new IllegalArgumentException("WeCom customer service account not found: " + id));
     }
 
-    public ResolvedAccount resolveAccount(String orgId, Long id) {
-        return resolve(requireAccount(orgId, id));
+    public ResolvedAccount resolveAccount(String companyId, Long id) {
+        return resolve(requireAccount(companyId, id));
     }
 
     public Map<String, Object> toPayload(WecomKfAccountEntity account) {
@@ -144,7 +144,7 @@ public class WecomKfConfigService {
         payload.put("enabled", account.isEnabled());
         payload.put("syncCursorPresent", account.getSyncCursor() != null && !account.getSyncCursor().isBlank());
         payload.put("accessTokenExpiresAt", account.getAccessTokenExpiresAt() == null ? "" : account.getAccessTokenExpiresAt().toString());
-        payload.put("callbackPath", "/wecom/kf/callback?orgId=" + account.getOrgId() + "&openKfId=" + account.getOpenKfId());
+        payload.put("callbackPath", "/wecom/kf/callback?companyId=" + account.getCompanyId() + "&openKfId=" + account.getOpenKfId());
         return payload;
     }
 
@@ -159,9 +159,9 @@ public class WecomKfConfigService {
                 secretCipherService.decryptUtf8(account.getEncodingAesKeyCipher(), account.getEncodingAesKeyIv()));
     }
 
-    private void requireAgent(String orgId, String agentId) {
-        agentDefinitionService.warmupBuiltinAgents(orgId);
-        if (agentDefinitionRepository.findByOrgIdAndAgentId(orgId, agentId).isEmpty()) {
+    private void requireAgent(String companyId, String agentId) {
+        agentDefinitionService.warmupBuiltinAgents(companyId);
+        if (agentDefinitionRepository.findByCompanyIdAndAgentId(companyId, agentId).isEmpty()) {
             throw new IllegalArgumentException("Agent not found: " + agentId);
         }
     }

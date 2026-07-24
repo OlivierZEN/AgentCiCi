@@ -29,10 +29,10 @@ public class ChatController {
 
     @PostMapping("/chat")
     public ApiResponse<Map<String, Object>> chat(@Valid @RequestBody ChatRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
         return ApiResponse.ok(chatOrchestratorService.chat(
-                orgId,
+                companyId,
                 userId,
                 request.sessionId(),
                 request.question(),
@@ -45,11 +45,11 @@ public class ChatController {
 
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter chatStream(@Valid @RequestBody ChatRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
         SseEmitter emitter = new SseEmitter(600_000L);
         chatOrchestratorService.chatStream(
-                orgId,
+                companyId,
                 userId,
                 request.sessionId(),
                 request.question(),
@@ -63,37 +63,37 @@ public class ChatController {
 
     @GetMapping("/sessions")
     public ApiResponse<List<Map<String, Object>>> sessions() {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
-        return ApiResponse.ok(chatOrchestratorService.sessions(orgId, userId));
+        return ApiResponse.ok(chatOrchestratorService.sessions(companyId, userId));
     }
 
     @GetMapping(value = "/sessions/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter sessionStream() {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
-        return chatOrchestratorService.sessionStream(orgId, userId);
+        return chatOrchestratorService.sessionStream(companyId, userId);
     }
 
     @GetMapping("/sessions/{sessionId}/messages")
     public ApiResponse<List<Map<String, String>>> sessionMessages(@NotBlank @PathVariable String sessionId) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
-        return ApiResponse.ok(chatOrchestratorService.sessionMessages(orgId, userId, sessionId));
+        return ApiResponse.ok(chatOrchestratorService.sessionMessages(companyId, userId, sessionId));
     }
 
     @GetMapping("/sessions/{sessionId}/state")
     public ApiResponse<Map<String, Object>> sessionState(@NotBlank @PathVariable String sessionId) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
-        return ApiResponse.ok(chatOrchestratorService.sessionState(orgId, userId, sessionId));
+        return ApiResponse.ok(chatOrchestratorService.sessionState(companyId, userId, sessionId));
     }
 
     @DeleteMapping("/sessions/{sessionId}")
     public ApiResponse<Map<String, Object>> deleteSession(@NotBlank @PathVariable String sessionId) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
-        return ApiResponse.ok(chatOrchestratorService.deleteSession(orgId, userId, sessionId));
+        return ApiResponse.ok(chatOrchestratorService.deleteSession(companyId, userId, sessionId));
     }
 
     public record ChatRequest(

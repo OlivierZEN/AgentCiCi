@@ -53,7 +53,7 @@ class SecurityRulesServiceTest {
     void testsDraftRuleWithoutPersistingIt() {
         SecurityRulesService.RuleCommand command = new SecurityRulesService.RuleCommand(
                 "黑名单词", "SENSITIVE_WORD", "BUSINESS_COMPLIANCE", "KEYWORD", "违规词", "MEDIUM", "REVIEW", true, "");
-        when(ruleRepository.findByOrgIdAndEnabledTrueOrderByUpdatedAtDescIdDesc("org-a")).thenReturn(List.of());
+        when(ruleRepository.findByCompanyIdAndEnabledTrueOrderByUpdatedAtDescIdDesc("org-a")).thenReturn(List.of());
 
         SecurityRulesService.TestResult result = service.testRule("org-a", "文本有违规词", command);
 
@@ -65,7 +65,7 @@ class SecurityRulesServiceTest {
 
     @Test
     void updatingMissingRuleFails() {
-        when(ruleRepository.findByIdAndOrgId(404L, "org-a")).thenReturn(Optional.empty());
+        when(ruleRepository.findByIdAndCompanyId(404L, "org-a")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.updateRule("org-a", 404L, new SecurityRulesService.RuleCommand(
                 "规则", "SENSITIVE_WORD", "SECRET", "KEYWORD", "词", "LOW", "WARN", true, "")))

@@ -33,9 +33,9 @@ public class TrustedMemoryRuntimeContextService {
         return () -> { if (previous == null) current.remove(); else current.set(previous); };
     }
 
-    public String buildPrompt(String orgId, String resolvedAgentId, String question) {
+    public String buildPrompt(String companyId, String resolvedAgentId, String question) {
         TrustedMemoryRequest request = current.get();
-        if (request == null || !request.context().orgId().equals(orgId)
+        if (request == null || !request.context().companyId().equals(companyId)
                 || !request.agentId().equals(resolvedAgentId)) {
             lastResolution.set(Resolution.none());
             return "";

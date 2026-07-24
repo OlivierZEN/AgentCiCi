@@ -114,7 +114,7 @@ class PlatformIntegrationGovernanceIntegrationTest {
                 .andExpect(jsonPath("$.message").value(IntegrationAppService.PLATFORM_MANAGED_MESSAGE));
 
         assertThat(tavilyToolService.resolveApiKey("other-org")).isEqualTo("tvly-platform-key");
-        String platformConfigJson = integrationAppRepository.findByOrgIdAndAppCode("demo-org", "tavily")
+        String platformConfigJson = integrationAppRepository.findByCompanyIdAndAppCode("demo-org", "tavily")
                 .orElseThrow()
                 .getConfigJson();
         assertThat(platformConfigJson).doesNotContain("tvly-platform-key");
@@ -139,7 +139,7 @@ class PlatformIntegrationGovernanceIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "orgId": "demo-org",
+                                  "companyId": "demo-org",
                                   "mobile": "13800138111",
                                   "password": "szyd1234"
                                 }

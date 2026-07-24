@@ -113,17 +113,17 @@ class OntologyAiProposalApplyIntegrationTest {
             executor.shutdownNow();
         }
 
-        TenantContext.setOrgId(fixture.orgId());
+        TenantContext.setCompanyId(fixture.companyId());
         TenantContext.setUserId("user-a");
         OntologyWorkspaceEntity workspace = workspaces
-                .findByIdAndOrgId(fixture.workspaceId(), fixture.orgId()).orElseThrow();
+                .findByIdAndCompanyId(fixture.workspaceId(), fixture.companyId()).orElseThrow();
         OntologyAiProposalEntity proposal = proposals
-                .findByIdAndWorkspaceIdAndOrgId(
-                        fixture.proposalId(), fixture.workspaceId(), fixture.orgId())
+                .findByIdAndWorkspaceIdAndCompanyId(
+                        fixture.proposalId(), fixture.workspaceId(), fixture.companyId())
                 .orElseThrow();
         List<OntologyVersionEntity> storedVersions = versions
-                .findByWorkspaceIdAndOrgIdOrderByVersionNoDesc(
-                        fixture.workspaceId(), fixture.orgId());
+                .findByWorkspaceIdAndCompanyIdOrderByVersionNoDesc(
+                        fixture.workspaceId(), fixture.companyId());
 
         assertThat(workspace.getDraftRevision()).isEqualTo(2L);
         assertThat(workspace.getStatus()).isEqualTo("DRAFT");
@@ -133,7 +133,7 @@ class OntologyAiProposalApplyIntegrationTest {
         assertThat(storedVersions.getFirst().getContentHash()).isEqualTo(fixture.versionHash());
         assertThat(storedVersions.getFirst().getSnapshotJson()).isEqualTo(fixture.versionSnapshot());
         OntologyDocument appliedDraft = drafts.loadDraft(
-                fixture.orgId(), fixture.workspaceId(), workspace);
+                fixture.companyId(), fixture.workspaceId(), workspace);
         assertThat(appliedDraft.dataSources())
                 .containsExactlyInAnyOrderElementsOf(fixture.original().dataSources());
         assertThat(appliedDraft.mappings())
@@ -164,18 +164,18 @@ class OntologyAiProposalApplyIntegrationTest {
                 """);
 
         assertThatThrownBy(() -> proposalService.apply(
-                fixture.orgId(), "user-a", fixture.proposalId(), 1L))
+                fixture.companyId(), "user-a", fixture.proposalId(), 1L))
                 .isInstanceOf(DataAccessException.class);
 
         OntologyWorkspaceEntity workspace = workspaces
-                .findByIdAndOrgId(fixture.workspaceId(), fixture.orgId()).orElseThrow();
+                .findByIdAndCompanyId(fixture.workspaceId(), fixture.companyId()).orElseThrow();
         OntologyAiProposalEntity proposal = proposals
-                .findByIdAndWorkspaceIdAndOrgId(
-                        fixture.proposalId(), fixture.workspaceId(), fixture.orgId())
+                .findByIdAndWorkspaceIdAndCompanyId(
+                        fixture.proposalId(), fixture.workspaceId(), fixture.companyId())
                 .orElseThrow();
         List<OntologyVersionEntity> storedVersions = versions
-                .findByWorkspaceIdAndOrgIdOrderByVersionNoDesc(
-                        fixture.workspaceId(), fixture.orgId());
+                .findByWorkspaceIdAndCompanyIdOrderByVersionNoDesc(
+                        fixture.workspaceId(), fixture.companyId());
 
         assertThat(workspace.getDraftRevision()).isEqualTo(1L);
         assertThat(workspace.getStatus()).isEqualTo("PUBLISHED");
@@ -183,7 +183,7 @@ class OntologyAiProposalApplyIntegrationTest {
         assertThat(storedVersions).hasSize(1);
         assertThat(storedVersions.getFirst().getContentHash()).isEqualTo(fixture.versionHash());
         OntologyDocument unchangedDraft = drafts.loadDraft(
-                fixture.orgId(), fixture.workspaceId(), workspace);
+                fixture.companyId(), fixture.workspaceId(), workspace);
         assertThat(unchangedDraft).isEqualTo(fixture.original());
     }
 
@@ -191,23 +191,23 @@ class OntologyAiProposalApplyIntegrationTest {
     void archivedWorkspaceRejectsApplyWithoutChangingDraftProposalOrVersion() throws Exception {
         Fixture fixture = createReadyPublishedFixture();
         jdbcTemplate.update(
-                "UPDATE ontology_workspace SET status = 'ARCHIVED' WHERE id = ? AND org_id = ?",
-                fixture.workspaceId(), fixture.orgId());
+                "UPDATE ontology_workspace SET status = 'ARCHIVED' WHERE id = ? AND company_id = ?",
+                fixture.workspaceId(), fixture.companyId());
 
         assertThatThrownBy(() -> proposalService.apply(
-                fixture.orgId(), "user-a", fixture.proposalId(), 1L))
+                fixture.companyId(), "user-a", fixture.proposalId(), 1L))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("AI_PROPOSAL_INVALID");
 
         OntologyWorkspaceEntity workspace = workspaces
-                .findByIdAndOrgId(fixture.workspaceId(), fixture.orgId()).orElseThrow();
+                .findByIdAndCompanyId(fixture.workspaceId(), fixture.companyId()).orElseThrow();
         OntologyAiProposalEntity proposal = proposals
-                .findByIdAndWorkspaceIdAndOrgId(
-                        fixture.proposalId(), fixture.workspaceId(), fixture.orgId())
+                .findByIdAndWorkspaceIdAndCompanyId(
+                        fixture.proposalId(), fixture.workspaceId(), fixture.companyId())
                 .orElseThrow();
         List<OntologyVersionEntity> storedVersions = versions
-                .findByWorkspaceIdAndOrgIdOrderByVersionNoDesc(
-                        fixture.workspaceId(), fixture.orgId());
+                .findByWorkspaceIdAndCompanyIdOrderByVersionNoDesc(
+                        fixture.workspaceId(), fixture.companyId());
 
         assertThat(workspace.getStatus()).isEqualTo("ARCHIVED");
         assertThat(workspace.getDraftRevision()).isEqualTo(1L);
@@ -215,7 +215,7 @@ class OntologyAiProposalApplyIntegrationTest {
         assertThat(storedVersions).hasSize(1);
         assertThat(storedVersions.getFirst().getContentHash()).isEqualTo(fixture.versionHash());
         assertThat(storedVersions.getFirst().getSnapshotJson()).isEqualTo(fixture.versionSnapshot());
-        assertThat(drafts.loadDraft(fixture.orgId(), fixture.workspaceId(), workspace))
+        assertThat(drafts.loadDraft(fixture.companyId(), fixture.workspaceId(), workspace))
                 .isEqualTo(fixture.original());
     }
 
@@ -225,11 +225,11 @@ class OntologyAiProposalApplyIntegrationTest {
         long proposalCount = proposalCount(fixture);
         clearInvocations(modelClient);
         jdbcTemplate.update(
-                "UPDATE ontology_workspace SET status = 'ARCHIVED' WHERE id = ? AND org_id = ?",
-                fixture.workspaceId(), fixture.orgId());
+                "UPDATE ontology_workspace SET status = 'ARCHIVED' WHERE id = ? AND company_id = ?",
+                fixture.workspaceId(), fixture.companyId());
 
         assertThatThrownBy(() -> proposalService.propose(
-                fixture.orgId(),
+                fixture.companyId(),
                 "user-a",
                 fixture.workspaceId(),
                 new OntologyAiProposalService.ProposalCommand(
@@ -240,10 +240,10 @@ class OntologyAiProposalApplyIntegrationTest {
                 .hasMessage("AI_PROPOSAL_INVALID");
 
         OntologyWorkspaceEntity workspace = workspaces
-                .findByIdAndOrgId(fixture.workspaceId(), fixture.orgId()).orElseThrow();
+                .findByIdAndCompanyId(fixture.workspaceId(), fixture.companyId()).orElseThrow();
         List<OntologyVersionEntity> storedVersions = versions
-                .findByWorkspaceIdAndOrgIdOrderByVersionNoDesc(
-                        fixture.workspaceId(), fixture.orgId());
+                .findByWorkspaceIdAndCompanyIdOrderByVersionNoDesc(
+                        fixture.workspaceId(), fixture.companyId());
         assertThat(proposalCount(fixture)).isEqualTo(proposalCount);
         assertThat(workspace.getStatus()).isEqualTo("ARCHIVED");
         assertThat(workspace.getDraftRevision()).isEqualTo(1L);
@@ -251,7 +251,7 @@ class OntologyAiProposalApplyIntegrationTest {
         assertThat(storedVersions.getFirst().getContentHash()).isEqualTo(fixture.versionHash());
         assertThat(storedVersions.getFirst().getSnapshotJson())
                 .isEqualTo(fixture.versionSnapshot());
-        assertThat(drafts.loadDraft(fixture.orgId(), fixture.workspaceId(), workspace))
+        assertThat(drafts.loadDraft(fixture.companyId(), fixture.workspaceId(), workspace))
                 .isEqualTo(fixture.original());
         verifyNoInteractions(modelClient);
     }
@@ -260,7 +260,7 @@ class OntologyAiProposalApplyIntegrationTest {
     void archiveAfterPendingBeforeModelCompletionFailsProposalWithoutChangingDraftOrVersion()
             throws Exception {
         PublishedFixture fixture = createPublishedFixture();
-        stubModelRoute(fixture.orgId());
+        stubModelRoute(fixture.companyId());
         CountDownLatch modelEntered = new CountDownLatch(1);
         CountDownLatch releaseModel = new CountDownLatch(1);
         when(modelClient.chatCompletionWithCredentials(
@@ -292,11 +292,11 @@ class OntologyAiProposalApplyIntegrationTest {
         try {
             CompletableFuture<OntologyAiProposalService.ProposalView> future =
                     CompletableFuture.supplyAsync(() -> {
-                        TenantContext.setOrgId(fixture.orgId());
+                        TenantContext.setCompanyId(fixture.companyId());
                         TenantContext.setUserId("user-a");
                         try {
                             return proposalService.propose(
-                                    fixture.orgId(),
+                                    fixture.companyId(),
                                     "user-a",
                                     fixture.workspaceId(),
                                     new OntologyAiProposalService.ProposalCommand(
@@ -311,13 +311,13 @@ class OntologyAiProposalApplyIntegrationTest {
             assertThat(modelEntered.await(10, TimeUnit.SECONDS)).isTrue();
             Map<String, Object> pending = jdbcTemplate.queryForMap(
                     "SELECT id, status FROM ontology_ai_proposal "
-                            + "WHERE workspace_id = ? AND org_id = ?",
-                    fixture.workspaceId(), fixture.orgId());
+                            + "WHERE workspace_id = ? AND company_id = ?",
+                    fixture.workspaceId(), fixture.companyId());
             assertThat(pending.get("status")).isEqualTo("PENDING");
             CompletableFuture.runAsync(() -> jdbcTemplate.update(
                             "UPDATE ontology_workspace SET status = 'ARCHIVED' "
-                                    + "WHERE id = ? AND org_id = ?",
-                            fixture.workspaceId(), fixture.orgId()))
+                                    + "WHERE id = ? AND company_id = ?",
+                            fixture.workspaceId(), fixture.companyId()))
                     .get(5, TimeUnit.SECONDS);
             releaseModel.countDown();
             result = future.get(10, TimeUnit.SECONDS);
@@ -331,30 +331,30 @@ class OntologyAiProposalApplyIntegrationTest {
         assertThat(result.diagnosticMessage()).isEqualTo("WORKSPACE_ARCHIVED");
         Map<String, Object> storedProposal = jdbcTemplate.queryForMap(
                 "SELECT status, payload_json, validation_json FROM ontology_ai_proposal "
-                        + "WHERE workspace_id = ? AND org_id = ?",
-                fixture.workspaceId(), fixture.orgId());
+                        + "WHERE workspace_id = ? AND company_id = ?",
+                fixture.workspaceId(), fixture.companyId());
         assertThat(storedProposal.get("status")).isEqualTo("FAILED");
         assertThat(storedProposal.get("payload_json")).isEqualTo("{}");
         assertThat(String.valueOf(storedProposal.get("validation_json")))
                 .contains("AI_PROPOSAL_INVALID", "WORKSPACE_ARCHIVED");
         OntologyWorkspaceEntity workspace = workspaces
-                .findByIdAndOrgId(fixture.workspaceId(), fixture.orgId()).orElseThrow();
+                .findByIdAndCompanyId(fixture.workspaceId(), fixture.companyId()).orElseThrow();
         List<OntologyVersionEntity> storedVersions = versions
-                .findByWorkspaceIdAndOrgIdOrderByVersionNoDesc(
-                        fixture.workspaceId(), fixture.orgId());
+                .findByWorkspaceIdAndCompanyIdOrderByVersionNoDesc(
+                        fixture.workspaceId(), fixture.companyId());
         assertThat(workspace.getStatus()).isEqualTo("ARCHIVED");
         assertThat(workspace.getDraftRevision()).isEqualTo(1L);
         assertThat(storedVersions).hasSize(1);
         assertThat(storedVersions.getFirst().getContentHash()).isEqualTo(fixture.versionHash());
         assertThat(storedVersions.getFirst().getSnapshotJson())
                 .isEqualTo(fixture.versionSnapshot());
-        assertThat(drafts.loadDraft(fixture.orgId(), fixture.workspaceId(), workspace))
+        assertThat(drafts.loadDraft(fixture.companyId(), fixture.workspaceId(), workspace))
                 .isEqualTo(fixture.original());
     }
 
     private Fixture createReadyPublishedFixture() throws Exception {
         PublishedFixture fixture = createPublishedFixture();
-        stubModelRoute(fixture.orgId());
+        stubModelRoute(fixture.companyId());
         when(modelClient.chatCompletionWithCredentials(
                 eq("model-a"), anyList(), isNull(), eq(true),
                 eq("https://models.invalid/v1"), eq("test-key"),
@@ -369,7 +369,7 @@ class OntologyAiProposalApplyIntegrationTest {
                         20));
 
         OntologyAiProposalService.ProposalView proposal = proposalService.propose(
-                fixture.orgId(),
+                fixture.companyId(),
                 "user-a",
                 fixture.workspaceId(),
                 new OntologyAiProposalService.ProposalCommand(
@@ -391,13 +391,13 @@ class OntologyAiProposalApplyIntegrationTest {
         assertThat(String.valueOf(storedProposal.get("payload_json"))
                 .getBytes(java.nio.charset.StandardCharsets.UTF_8).length)
                 .isLessThanOrEqualTo(OntologyAiProposalService.MAX_RESPONSE_BYTES);
-        assertThat(workspaces.findByIdAndOrgId(
-                fixture.workspaceId(), fixture.orgId()).orElseThrow()
+        assertThat(workspaces.findByIdAndCompanyId(
+                fixture.workspaceId(), fixture.companyId()).orElseThrow()
                 .getDraftRevision()).isEqualTo(1L);
-        assertThat(versions.findByWorkspaceIdAndOrgIdOrderByVersionNoDesc(
-                fixture.workspaceId(), fixture.orgId())).hasSize(1);
+        assertThat(versions.findByWorkspaceIdAndCompanyIdOrderByVersionNoDesc(
+                fixture.workspaceId(), fixture.companyId())).hasSize(1);
         return new Fixture(
-                fixture.orgId(),
+                fixture.companyId(),
                 fixture.workspaceId(),
                 proposal.id(),
                 fixture.original(),
@@ -406,54 +406,54 @@ class OntologyAiProposalApplyIntegrationTest {
     }
 
     private PublishedFixture createPublishedFixture() {
-        String orgId = "org-ai-proposal-" + UUID.randomUUID();
-        TenantContext.setOrgId(orgId);
+        String companyId = "org-ai-proposal-" + UUID.randomUUID();
+        TenantContext.setCompanyId(companyId);
         TenantContext.setUserId("user-a");
         OntologyDocument input = withLargePrivateSample(
                 OntologyCompilerServiceTest.projectDeliveryDocument());
         OntologyWorkspaceEntity workspace = persistence.saveForCurrentOrg(
                 new OntologyWorkspaceEntity(
-                        orgId, input.key(), "初始领域", "AI 提案原子测试", "user-a"));
+                        companyId, input.key(), "初始领域", "AI 提案原子测试", "user-a"));
         OntologyWorkspaceEntity savedWorkspace = drafts.saveDraft(
-                orgId, "user-a", workspace.getId(), 0L, input);
+                companyId, "user-a", workspace.getId(), 0L, input);
         OntologyDocument pendingDraft = drafts.loadDraft(
-                orgId, workspace.getId(), savedWorkspace);
-        seedProjectTaskCatalog(orgId, workspace.getId(), pendingDraft);
-        mappings.findByWorkspaceIdAndOrgIdOrderByIdAsc(workspace.getId(), orgId)
+                companyId, workspace.getId(), savedWorkspace);
+        seedProjectTaskCatalog(companyId, workspace.getId(), pendingDraft);
+        mappings.findByWorkspaceIdAndCompanyIdOrderByIdAsc(workspace.getId(), companyId)
                 .forEach(mapping -> {
                     mapping.applyValidation(true);
                     persistence.saveForCurrentOrg(mapping);
                 });
         OntologyDocument original = drafts.loadDraft(
-                orgId, workspace.getId(), savedWorkspace);
+                companyId, workspace.getId(), savedWorkspace);
         OntologyVersionEntity version = publisher.publish(
-                orgId, "user-a", workspace.getId(), 1L);
+                companyId, "user-a", workspace.getId(), 1L);
         return new PublishedFixture(
-                orgId,
+                companyId,
                 workspace.getId(),
                 original,
                 version.getContentHash(),
                 version.getSnapshotJson());
     }
 
-    private void stubModelRoute(String orgId) {
-        when(modelRouter.route(orgId, "ontology-modeling")).thenReturn(Map.of(
+    private void stubModelRoute(String companyId) {
+        when(modelRouter.route(companyId, "ontology-modeling")).thenReturn(Map.of(
                 "provider", "provider-a",
                 "modelName", "model-a"));
-        when(modelProviders.credentialsForProvider(orgId, "provider-a")).thenReturn(Map.of(
+        when(modelProviders.credentialsForProvider(companyId, "provider-a")).thenReturn(Map.of(
                 "enabled", "true",
                 "apiBaseUrl", "https://models.invalid/v1",
                 "apiKey", "test-key"));
     }
 
     private void seedProjectTaskCatalog(
-            String orgId,
+            String companyId,
             Long workspaceId,
             OntologyDocument original) {
         Long dataSourceId = original.dataSources().getFirst().id();
         OntologyPhysicalObjectEntity projects = persistence.saveForCurrentOrg(
                 new OntologyPhysicalObjectEntity(
-                        orgId,
+                        companyId,
                         workspaceId,
                         dataSourceId,
                         "projects",
@@ -462,7 +462,7 @@ class OntologyAiProposalApplyIntegrationTest {
                         "{}"));
         OntologyPhysicalObjectEntity tasks = persistence.saveForCurrentOrg(
                 new OntologyPhysicalObjectEntity(
-                        orgId,
+                        companyId,
                         workspaceId,
                         dataSourceId,
                         "tasks",
@@ -470,7 +470,7 @@ class OntologyAiProposalApplyIntegrationTest {
                         "TABLE",
                         "{}"));
         persistence.saveForCurrentOrg(new OntologyPhysicalFieldEntity(
-                orgId,
+                companyId,
                 workspaceId,
                 projects.getId(),
                 "task_id",
@@ -480,13 +480,13 @@ class OntologyAiProposalApplyIntegrationTest {
                 false,
                 "{}"));
         persistence.saveForCurrentOrg(new OntologyPhysicalFieldEntity(
-                orgId, workspaceId, projects.getId(), "name", "项目名称",
+                companyId, workspaceId, projects.getId(), "name", "项目名称",
                 "TEXT", false, false, "{}"));
         persistence.saveForCurrentOrg(new OntologyPhysicalFieldEntity(
-                orgId, workspaceId, projects.getId(), "budget", "项目预算",
+                companyId, workspaceId, projects.getId(), "budget", "项目预算",
                 "DECIMAL", false, false, "{}"));
         persistence.saveForCurrentOrg(new OntologyPhysicalFieldEntity(
-                orgId,
+                companyId,
                 workspaceId,
                 tasks.getId(),
                 "project_id",
@@ -496,17 +496,17 @@ class OntologyAiProposalApplyIntegrationTest {
                 false,
                 "{}"));
         persistence.saveForCurrentOrg(new OntologyPhysicalFieldEntity(
-                orgId, workspaceId, tasks.getId(), "status", "任务状态",
+                companyId, workspaceId, tasks.getId(), "status", "任务状态",
                 "TEXT", false, false, "{}"));
     }
 
     private long proposalCount(PublishedFixture fixture) {
         Long count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM ontology_ai_proposal "
-                        + "WHERE workspace_id = ? AND org_id = ?",
+                        + "WHERE workspace_id = ? AND company_id = ?",
                 Long.class,
                 fixture.workspaceId(),
-                fixture.orgId());
+                fixture.companyId());
         return count == null ? 0L : count;
     }
 
@@ -517,13 +517,13 @@ class OntologyAiProposalApplyIntegrationTest {
             Fixture fixture,
             String userId) {
         return CompletableFuture.supplyAsync(() -> {
-            TenantContext.setOrgId(fixture.orgId());
+            TenantContext.setCompanyId(fixture.companyId());
             TenantContext.setUserId(userId);
             ready.countDown();
             try {
                 start.await();
                 proposalService.apply(
-                        fixture.orgId(), userId, fixture.proposalId(), 1L);
+                        fixture.companyId(), userId, fixture.proposalId(), 1L);
                 return "APPLIED";
             } catch (IllegalArgumentException exception) {
                 assertThat(exception).hasMessage("AI_PROPOSAL_INVALID");
@@ -574,7 +574,7 @@ class OntologyAiProposalApplyIntegrationTest {
     }
 
     private record Fixture(
-            String orgId,
+            String companyId,
             Long workspaceId,
             Long proposalId,
             OntologyDocument original,
@@ -583,7 +583,7 @@ class OntologyAiProposalApplyIntegrationTest {
     }
 
     private record PublishedFixture(
-            String orgId,
+            String companyId,
             Long workspaceId,
             OntologyDocument original,
             String versionHash,

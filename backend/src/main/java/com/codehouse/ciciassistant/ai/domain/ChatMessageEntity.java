@@ -19,8 +19,8 @@ public class ChatMessageEntity {
     @Column(name = "session_id", nullable = false, length = 64)
     private String sessionId;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "role_code", nullable = false, length = 16)
     private String roleCode;
@@ -34,9 +34,9 @@ public class ChatMessageEntity {
     protected ChatMessageEntity() {
     }
 
-    public ChatMessageEntity(String sessionId, String orgId, String roleCode, String content) {
+    public ChatMessageEntity(String sessionId, String companyId, String roleCode, String content) {
         this.sessionId = sessionId;
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.roleCode = roleCode;
         this.content = content;
         this.createdAt = Instant.now();
@@ -50,8 +50,8 @@ public class ChatMessageEntity {
         return sessionId;
     }
 
-    public String getOrgId() {
-        return orgId;
+    public String getCompanyId() {
+        return companyId;
     }
 
     public String getRoleCode() {

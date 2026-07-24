@@ -6,8 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface KbAnnotationSuggestionRepository extends JpaRepository<KbAnnotationSuggestionEntity, Long> {
 
-    List<KbAnnotationSuggestionEntity> findTop100ByOrgIdAndKnowledgeBaseIdAndStatusOrderByCreatedAtDesc(
-            String orgId, Long knowledgeBaseId, String status);
+    List<KbAnnotationSuggestionEntity> findTop100ByCompanyIdAndKnowledgeBaseIdAndStatusOrderByCreatedAtDesc(
+            String companyId, Long knowledgeBaseId, String status);
 
-    Optional<KbAnnotationSuggestionEntity> findByIdAndOrgId(Long id, String orgId);
+    Optional<KbAnnotationSuggestionEntity> findByIdAndCompanyId(Long id, String companyId);
 }

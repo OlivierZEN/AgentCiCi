@@ -34,9 +34,9 @@ public class AgentRuntimeScheduleSyncService {
         this.executionLogService = executionLogService;
     }
 
-    public List<Map<String, Object>> listActiveRows(String orgId, String agentId) {
+    public List<Map<String, Object>> listActiveRows(String companyId, String agentId) {
         List<AgentRuntimeScheduleTriggerEntity> rows =
-                scheduleRepository.findByOrgIdAndAgentIdAndActiveTrueOrderByIdAsc(orgId, agentId);
+                scheduleRepository.findByCompanyIdAndAgentIdAndActiveTrueOrderByIdAsc(companyId, agentId);
         List<Map<String, Object>> out = new ArrayList<>();
         for (AgentRuntimeScheduleTriggerEntity row : rows) {
             out.add(toPayload(row));
@@ -87,13 +87,13 @@ public class AgentRuntimeScheduleSyncService {
      * when {@link AgentDefinitionService#publishVersion} catches exceptions best-effort.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public Map<String, Object> syncFromCompiledVersion(String orgId, String agentId, Long publishedVersionId) {
+    public Map<String, Object> syncFromCompiledVersion(String companyId, String agentId, Long publishedVersionId) {
         // Replace inferred-from-spec rows wholesale; deactivating would accumulate inactive duplicates and violate
-        // uq_agent_runtime_sched_org_agent_key_active (org_id, agent_id, trigger_key, active).
-        scheduleRepository.deleteByOrgIdAndAgentIdAndSource(orgId, agentId, "SPEC_SYNC");
+        // uq_agent_runtime_sched_org_agent_key_active (company_id, agent_id, trigger_key, active).
+        scheduleRepository.deleteByCompanyIdAndAgentIdAndSource(companyId, agentId, "SPEC_SYNC");
         scheduleRepository.flush();
 
-        Optional<AgentWorkflowVersionEntity> source = resolveSourceVersion(orgId, agentId, publishedVersionId);
+        Optional<AgentWorkflowVersionEntity> source = resolveSourceVersion(companyId, agentId, publishedVersionId);
 
         if (source.isEmpty()) {
             return Map.of(
@@ -112,7 +112,7 @@ public class AgentRuntimeScheduleSyncService {
         for (int i = 0; i < inferred.size(); i++) {
             Map<String, Object> item = inferred.get(i);
             toSave.add(new AgentRuntimeScheduleTriggerEntity(
-                    orgId,
+                    companyId,
                     agentId,
                     version.getId(),
                     version.getVersionNo(),
@@ -140,14 +140,14 @@ public class AgentRuntimeScheduleSyncService {
         );
     }
 
-    private Optional<AgentWorkflowVersionEntity> resolveSourceVersion(String orgId, String agentId, Long publishedVersionId) {
+    private Optional<AgentWorkflowVersionEntity> resolveSourceVersion(String companyId, String agentId, Long publishedVersionId) {
         if (publishedVersionId != null && publishedVersionId > 0) {
             Optional<AgentWorkflowVersionEntity> published = workflowVersionRepository.findById(publishedVersionId);
             if (published.isPresent()) {
                 return published;
             }
         }
-        return workflowVersionRepository.findTopByOrgIdAndAgentIdOrderByVersionNoDesc(orgId, agentId);
+        return workflowVersionRepository.findTopByCompanyIdAndAgentIdOrderByVersionNoDesc(companyId, agentId);
     }
 
     private Map<String, Object> toPayload(AgentRuntimeScheduleTriggerEntity row) {
@@ -165,9 +165,9 @@ public class AgentRuntimeScheduleSyncService {
     }
 
     @Transactional
-    public Map<String, Object> updateEnabled(String orgId, String agentId, String triggerKey, boolean enabled) {
+    public Map<String, Object> updateEnabled(String companyId, String agentId, String triggerKey, boolean enabled) {
         AgentRuntimeScheduleTriggerEntity row = scheduleRepository
-                .findByOrgIdAndAgentIdAndTriggerKeyAndActiveTrue(orgId, agentId, triggerKey)
+                .findByCompanyIdAndAgentIdAndTriggerKeyAndActiveTrue(companyId, agentId, triggerKey)
                 .orElseThrow(() -> new IllegalArgumentException("Schedule trigger not found: " + triggerKey));
         row.updateEnabled(enabled);
         scheduleRepository.save(row);
@@ -175,14 +175,14 @@ public class AgentRuntimeScheduleSyncService {
     }
 
     @Transactional
-    public Map<String, Object> runNow(String orgId, String agentId, String triggerKey) {
+    public Map<String, Object> runNow(String companyId, String agentId, String triggerKey) {
         AgentRuntimeScheduleTriggerEntity row = scheduleRepository
-                .findByOrgIdAndAgentIdAndTriggerKeyAndActiveTrue(orgId, agentId, triggerKey)
+                .findByCompanyIdAndAgentIdAndTriggerKeyAndActiveTrue(companyId, agentId, triggerKey)
                 .orElseThrow(() -> new IllegalArgumentException("Schedule trigger not found: " + triggerKey));
         String summary = "RUN_NOW schedule trigger: " + row.getTitle();
         try {
             executionLogService.append(
-                    orgId,
+                    companyId,
                     agentId,
                     row.getWorkflowVersionId(),
                     row.getVersionNo(),

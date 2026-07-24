@@ -5,5 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface KbEvalCaseResultRepository extends JpaRepository<KbEvalCaseResultEntity, Long> {
 
-    List<KbEvalCaseResultEntity> findByOrgIdAndRunIdOrderByIdAsc(String orgId, Long runId);
+    List<KbEvalCaseResultEntity> findByCompanyIdAndRunIdOrderByIdAsc(String companyId, Long runId);
 }

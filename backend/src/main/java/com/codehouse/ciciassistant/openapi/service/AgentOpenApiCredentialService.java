@@ -50,24 +50,24 @@ public class AgentOpenApiCredentialService {
         this.accessControlService = accessControlService;
     }
 
-    public List<CredentialView> list(String orgId, String agentId) {
-        requireAgent(orgId, agentId);
-        return credentialRepository.findByOrgIdAndAgentIdOrderByCreatedAtDesc(orgId, agentId)
+    public List<CredentialView> list(String companyId, String agentId) {
+        requireAgent(companyId, agentId);
+        return credentialRepository.findByCompanyIdAndAgentIdOrderByCreatedAtDesc(companyId, agentId)
                 .stream()
                 .map(this::toView)
                 .toList();
     }
 
     @Transactional
-    public CredentialCreation create(String orgId, String agentId, String actorUserId, CreateCredentialCommand command) {
-        requireAgent(orgId, agentId);
-        String runAsUserId = requireRunAsUser(orgId, command.runAsUserId());
-        requireRunAsPermission(orgId, agentId, runAsUserId);
+    public CredentialCreation create(String companyId, String agentId, String actorUserId, CreateCredentialCommand command) {
+        requireAgent(companyId, agentId);
+        String runAsUserId = requireRunAsUser(companyId, command.runAsUserId());
+        requireRunAsPermission(companyId, agentId, runAsUserId);
         String keyType = normalizeKeyType(command.keyType());
         AgentApiKeyGenerator.GeneratedKey generated = generateUniqueKey();
         AgentApiCredentialEntity entity = credentialRepository.save(new AgentApiCredentialEntity(
                 generated.publicId(),
-                orgId,
+                companyId,
                 agentId,
                 requireText(command.name(), "name"),
                 generated.keyPrefix(),
@@ -89,12 +89,12 @@ public class AgentOpenApiCredentialService {
     }
 
     @Transactional
-    public CredentialView update(String orgId, String agentId, Long credentialId, UpdateCredentialCommand command) {
-        AgentApiCredentialEntity entity = requireCredential(orgId, agentId, credentialId);
+    public CredentialView update(String companyId, String agentId, Long credentialId, UpdateCredentialCommand command) {
+        AgentApiCredentialEntity entity = requireCredential(companyId, agentId, credentialId);
         String runAsUserId = command.runAsUserId() == null || command.runAsUserId().isBlank()
                 ? entity.getRunAsUserId()
-                : requireRunAsUser(orgId, command.runAsUserId());
-        requireRunAsPermission(orgId, agentId, runAsUserId);
+                : requireRunAsUser(companyId, command.runAsUserId());
+        requireRunAsPermission(companyId, agentId, runAsUserId);
         String status = normalizeStatus(command.status(), entity.getStatus());
         if (AgentApiCredentialEntity.STATUS_REVOKED.equals(entity.getStatus())
                 && !AgentApiCredentialEntity.STATUS_REVOKED.equals(status)) {
@@ -117,16 +117,16 @@ public class AgentOpenApiCredentialService {
     }
 
     @Transactional
-    public CredentialCreation rotate(String orgId, String agentId, Long credentialId) {
-        AgentApiCredentialEntity entity = requireCredential(orgId, agentId, credentialId);
+    public CredentialCreation rotate(String companyId, String agentId, Long credentialId) {
+        AgentApiCredentialEntity entity = requireCredential(companyId, agentId, credentialId);
         AgentApiKeyGenerator.GeneratedKey generated = generateUniqueKey();
         entity.rotate(generated.publicId(), generated.keyPrefix(), generated.keyHash());
         return new CredentialCreation(toView(entity), generated.plainKey());
     }
 
     @Transactional
-    public CredentialView revoke(String orgId, String agentId, Long credentialId, String actorUserId) {
-        AgentApiCredentialEntity entity = requireCredential(orgId, agentId, credentialId);
+    public CredentialView revoke(String companyId, String agentId, Long credentialId, String actorUserId) {
+        AgentApiCredentialEntity entity = requireCredential(companyId, agentId, credentialId);
         entity.revoke(actorUserId);
         return toView(entity);
     }
@@ -156,32 +156,32 @@ public class AgentOpenApiCredentialService {
         );
     }
 
-    private AgentApiCredentialEntity requireCredential(String orgId, String agentId, Long credentialId) {
+    private AgentApiCredentialEntity requireCredential(String companyId, String agentId, Long credentialId) {
         if (credentialId == null || credentialId <= 0) {
             throw new IllegalArgumentException("credentialId is required");
         }
-        requireAgent(orgId, agentId);
-        return credentialRepository.findByIdAndOrgIdAndAgentId(credentialId, orgId, agentId)
+        requireAgent(companyId, agentId);
+        return credentialRepository.findByIdAndCompanyIdAndAgentId(credentialId, companyId, agentId)
                 .orElseThrow(() -> new IllegalArgumentException("Agent API key not found"));
     }
 
-    private AgentDefinitionEntity requireAgent(String orgId, String agentId) {
+    private AgentDefinitionEntity requireAgent(String companyId, String agentId) {
         String normalized = normalizeAgentId(agentId);
-        return agentDefinitionRepository.findByOrgIdAndAgentId(orgId, normalized)
+        return agentDefinitionRepository.findByCompanyIdAndAgentId(companyId, normalized)
                 .orElseThrow(() -> new IllegalArgumentException("Agent not found: " + normalized));
     }
 
-    private String requireRunAsUser(String orgId, String runAsUserId) {
+    private String requireRunAsUser(String companyId, String runAsUserId) {
         String normalized = requireText(runAsUserId, "runAsUserId");
-        userRepository.findByIdAndOrg_Id(normalized, orgId)
+        userRepository.findByIdAndCompany_Id(normalized, companyId)
                 .filter(member -> UserEntity.STATUS_ACTIVE.equals(member.getMemberStatus()))
                 .orElseThrow(() -> new IllegalArgumentException("runAsUserId must belong to the current org"));
         return normalized;
     }
 
-    private void requireRunAsPermission(String orgId, String agentId, String runAsUserId) {
-        if (!accessControlService.can(orgId, runAsUserId, List.of(), agentId, AgentPermission.RUN)) {
-            accessControlService.recordOpenApiRunAsDenied(orgId, agentId, runAsUserId,
+    private void requireRunAsPermission(String companyId, String agentId, String runAsUserId) {
+        if (!accessControlService.can(companyId, runAsUserId, List.of(), agentId, AgentPermission.RUN)) {
+            accessControlService.recordOpenApiRunAsDenied(companyId, agentId, runAsUserId,
                     "run-as user lacks target Agent RUN permission", null);
             throw new IllegalArgumentException("runAsUserId must have target Agent RUN permission");
         }

@@ -22,8 +22,8 @@ public class FeishuBotConfigService {
         this.objectMapper = objectMapper;
     }
 
-    public Optional<FeishuBotConfig> getEnabledConfig(String orgId) {
-        return integrationAppRepository.findByOrgIdAndAppCode(orgId, IntegrationAppService.APP_CODE_FEISHU_BOT)
+    public Optional<FeishuBotConfig> getEnabledConfig(String companyId) {
+        return integrationAppRepository.findByCompanyIdAndAppCode(companyId, IntegrationAppService.APP_CODE_FEISHU_BOT)
                 .map(this::toConfig)
                 .filter(FeishuBotConfig::ready);
     }
@@ -43,7 +43,7 @@ public class FeishuBotConfigService {
         String defaultAgentCode = asText(raw.get("defaultAgentCode"));
         String pairingCommandHint = asText(raw.get("pairingCommandHint"));
         return new FeishuBotConfig(
-                entity.getOrgId(),
+                entity.getCompanyId(),
                 entity.isEnabled(),
                 appId,
                 appSecret,
@@ -68,7 +68,7 @@ public class FeishuBotConfigService {
     }
 
     public record FeishuBotConfig(
-            String orgId,
+            String companyId,
             boolean enabled,
             String appId,
             String appSecret,

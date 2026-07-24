@@ -6,8 +6,8 @@ import com.codehouse.ciciassistant.ai.service.ChatOrchestratorService;
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionRepository;
 import com.codehouse.ciciassistant.agent.domain.AgentKnowledgeBindingRepository;
 import com.codehouse.ciciassistant.billing.service.BillingUsageMeteringService;
-import com.codehouse.ciciassistant.model.domain.OrgModelConfigEntity;
-import com.codehouse.ciciassistant.model.domain.OrgModelConfigRepository;
+import com.codehouse.ciciassistant.model.domain.CompanyModelConfigEntity;
+import com.codehouse.ciciassistant.model.domain.CompanyModelConfigRepository;
 import com.codehouse.ciciassistant.model.service.ModelProviderService;
 import com.codehouse.ciciassistant.openapi.config.AgentOpenApiProperties;
 import com.codehouse.ciciassistant.openapi.domain.AgentApiCredentialEntity;
@@ -56,7 +56,7 @@ public class AgentOpenApiRunService {
     private final SkillDefinitionRepository skillDefinitionRepository;
     private final AgentSkillBindingRepository agentSkillBindingRepository;
     private final AgentDefinitionRepository agentDefinitionRepository;
-    private final OrgModelConfigRepository orgModelConfigRepository;
+    private final CompanyModelConfigRepository orgModelConfigRepository;
     private final ModelProviderService modelProviderService;
     private final CloudccAccessTokenService cloudccAccessTokenService;
     private final AgentOpenApiProperties properties;
@@ -75,7 +75,7 @@ public class AgentOpenApiRunService {
                                   SkillDefinitionRepository skillDefinitionRepository,
                                   AgentSkillBindingRepository agentSkillBindingRepository,
                                   AgentDefinitionRepository agentDefinitionRepository,
-                                  OrgModelConfigRepository orgModelConfigRepository,
+                                  CompanyModelConfigRepository orgModelConfigRepository,
                                   ModelProviderService modelProviderService,
                                   CloudccAccessTokenService cloudccAccessTokenService,
                                   AgentOpenApiProperties properties,
@@ -187,7 +187,7 @@ public class AgentOpenApiRunService {
                     return;
                 }
                 cloudccAccessTokenService.withSessionContextOverride(
-                        execution.auth().credential().getOrgId(),
+                        execution.auth().credential().getCompanyId(),
                         execution.auth().credential().getRunAsUserId(),
                         execution.cloudccOverride(),
                         () -> {
@@ -256,7 +256,7 @@ public class AgentOpenApiRunService {
         memoryContextService.withTrustedContext(execution.auth(), externalUserId(command.externalUser()),
                 execution.session().internalSessionId(), () -> {
             chatOrchestratorService.chatStreamBlocking(
-                    execution.auth().credential().getOrgId(), execution.auth().credential().getRunAsUserId(),
+                    execution.auth().credential().getCompanyId(), execution.auth().credential().getRunAsUserId(),
                     execution.session().internalSessionId(), command.message().trim(), command.knowledgeBaseIds(),
                     execution.auth().credential().getAgentId(), command.activeSkillCode(), Map.of(), "openapi", emitter);
             return null;
@@ -272,7 +272,7 @@ public class AgentOpenApiRunService {
                                             boolean stream,
                                             int elapsedMs) {
         billingUsageMeteringService.recordOpenApiChatRunSafely(new BillingUsageMeteringService.OpenApiChatMeteringInput(
-                auth.credential().getOrgId(),
+                auth.credential().getCompanyId(),
                 auth.credential().getRunAsUserId(),
                 auth.credential().getAgentId(),
                 auth.credential().getId() == null ? 0L : auth.credential().getId(),
@@ -295,7 +295,7 @@ public class AgentOpenApiRunService {
                 return invokeChat(auth, session, command);
             }
             return cloudccAccessTokenService.withSessionContextOverride(
-                    auth.credential().getOrgId(),
+                    auth.credential().getCompanyId(),
                     auth.credential().getRunAsUserId(),
                     cloudccOverride,
                     () -> invokeChat(auth, session, command));
@@ -325,7 +325,7 @@ public class AgentOpenApiRunService {
                                            ChatCommand command) {
         return memoryContextService.withTrustedContext(auth, externalUserId(command.externalUser()), session.internalSessionId(), () ->
                 chatOrchestratorService.chat(
-                        auth.credential().getOrgId(), auth.credential().getRunAsUserId(), session.internalSessionId(),
+                        auth.credential().getCompanyId(), auth.credential().getRunAsUserId(), session.internalSessionId(),
                         command.message().trim(), command.knowledgeBaseIds(), auth.credential().getAgentId(), command.activeSkillCode(),
                         Map.of(), "openapi"));
     }
@@ -348,8 +348,8 @@ public class AgentOpenApiRunService {
                                                       String requestId,
                                                       String externalUserId) {
         return traceRepository
-                .findFirstByOrgIdAndSessionIdAndAgentIdOrderByStartedAtDesc(
-                        auth.credential().getOrgId(),
+                .findFirstByCompanyIdAndSessionIdAndAgentIdOrderByStartedAtDesc(
+                        auth.credential().getCompanyId(),
                         session.internalSessionId(),
                         auth.credential().getAgentId())
                 .map(trace -> {
@@ -441,7 +441,7 @@ public class AgentOpenApiRunService {
             throw new AgentOpenApiException(HttpStatus.BAD_REQUEST, "cloudcc_token_required", "cloudccContext.accessToken is required");
         }
         validateCloudccToken(accessToken);
-        String baseUrl = resolveCloudccBaseUrl(auth.credential().getOrgId(), context);
+        String baseUrl = resolveCloudccBaseUrl(auth.credential().getCompanyId(), context);
         String setupSvc = resolveCloudccSetupSvc(baseUrl, context);
         return new CloudccAccessTokenService.CloudccSessionContext(accessToken, baseUrl, setupSvc);
     }
@@ -463,8 +463,8 @@ public class AgentOpenApiRunService {
         }
     }
 
-    private String resolveCloudccBaseUrl(String orgId, CloudccContext context) {
-        String configured = cloudccAccessTokenService.getConfiguredGateway(orgId)
+    private String resolveCloudccBaseUrl(String companyId, CloudccContext context) {
+        String configured = cloudccAccessTokenService.getConfiguredGateway(companyId)
                 .map(CloudccAccessTokenService.CloudccGatewayContext::baseUrl)
                 .orElse("");
         String rawBaseUrl = trimToNull(context == null ? null : context.baseUrl());
@@ -580,30 +580,30 @@ public class AgentOpenApiRunService {
     }
 
     private void ensureChatRouteHasUsableModel(AgentOpenApiAuthService.AuthenticatedCredential auth) {
-        String orgId = auth.credential().getOrgId();
+        String companyId = auth.credential().getCompanyId();
         String agentId = auth.credential().getAgentId();
-        OrgModelConfigEntity current = orgModelConfigRepository.findByOrgIdAndSceneCode(orgId, "chat").orElse(null);
+        CompanyModelConfigEntity current = orgModelConfigRepository.findByCompanyIdAndSceneCode(companyId, "chat").orElse(null);
         if (current != null && !isPlaceholderModelRoute(current)) {
             return;
         }
 
-        ModelChoice choice = resolveOpenApiModelChoice(orgId, agentId);
+        ModelChoice choice = resolveOpenApiModelChoice(companyId, agentId);
         if (choice == null) {
             return;
         }
 
-        OrgModelConfigEntity target = current == null
-                ? new OrgModelConfigEntity(orgId, "chat", choice.providerCode(), choice.modelName())
+        CompanyModelConfigEntity target = current == null
+                ? new CompanyModelConfigEntity(companyId, "chat", choice.providerCode(), choice.modelName())
                 : current;
         target.update(choice.providerCode(), choice.modelName());
         orgModelConfigRepository.save(target);
     }
 
-    private ModelChoice resolveOpenApiModelChoice(String orgId, String agentId) {
-        String agentModel = agentDefinitionRepository.findByOrgIdAndAgentId(orgId, agentId)
+    private ModelChoice resolveOpenApiModelChoice(String companyId, String agentId) {
+        String agentModel = agentDefinitionRepository.findByCompanyIdAndAgentId(companyId, agentId)
                 .map(agent -> trimToNull(agent.getModel()))
                 .orElse(null);
-        List<ModelChoice> choices = modelProviderService.agentBaseModels(orgId).stream()
+        List<ModelChoice> choices = modelProviderService.agentBaseModels(companyId).stream()
                 .map(this::toModelChoice)
                 .filter(choice -> choice != null)
                 .toList();
@@ -629,7 +629,7 @@ public class AgentOpenApiRunService {
         return providerCode == null || modelName == null ? null : new ModelChoice(providerCode, modelName);
     }
 
-    private boolean isPlaceholderModelRoute(OrgModelConfigEntity route) {
+    private boolean isPlaceholderModelRoute(CompanyModelConfigEntity route) {
         return "mock".equalsIgnoreCase(nullToEmpty(route.getProvider()).trim())
                 || "cici-default".equalsIgnoreCase(nullToEmpty(route.getModelName()).trim());
     }
@@ -647,8 +647,8 @@ public class AgentOpenApiRunService {
             return;
         }
         Set<String> allowedIds = knowledgeBindingRepository
-                .findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(
-                        auth.credential().getOrgId(),
+                .findByCompanyIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(
+                        auth.credential().getCompanyId(),
                         auth.credential().getAgentId())
                 .stream()
                 .map(item -> String.valueOf(item.getKnowledgeBaseId()))
@@ -667,10 +667,10 @@ public class AgentOpenApiRunService {
             return;
         }
         SkillDefinitionEntity skill = skillDefinitionRepository
-                .findByOrgIdAndSkillCode(auth.credential().getOrgId(), code)
+                .findByCompanyIdAndSkillCode(auth.credential().getCompanyId(), code)
                 .orElseThrow(() -> new AgentOpenApiException(HttpStatus.FORBIDDEN, "skill_not_allowed", "activeSkillCode must be bound to this Agent"));
-        if (!skill.isEnabled() || !agentSkillBindingRepository.existsByOrgIdAndAgentIdAndSkillIdAndEnabledTrue(
-                auth.credential().getOrgId(),
+        if (!skill.isEnabled() || !agentSkillBindingRepository.existsByCompanyIdAndAgentIdAndSkillIdAndEnabledTrue(
+                auth.credential().getCompanyId(),
                 auth.credential().getAgentId(),
                 skill.getId())) {
             throw new AgentOpenApiException(HttpStatus.FORBIDDEN, "skill_not_allowed", "activeSkillCode must be bound to this Agent");

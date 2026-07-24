@@ -6,15 +6,15 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AgentDefinitionRepository extends JpaRepository<AgentDefinitionEntity, Long> {
 
-    List<AgentDefinitionEntity> findByOrgIdAndEnabledTrueOrderByBuiltinDescUpdatedAtDesc(String orgId);
+    List<AgentDefinitionEntity> findByCompanyIdAndEnabledTrueOrderByBuiltinDescUpdatedAtDesc(String companyId);
 
-    List<AgentDefinitionEntity> findTop24ByOrgIdAndEnabledTrueOrderByBuiltinDescUpdatedAtDesc(String orgId);
+    List<AgentDefinitionEntity> findTop24ByCompanyIdAndEnabledTrueOrderByBuiltinDescUpdatedAtDesc(String companyId);
 
-    Optional<AgentDefinitionEntity> findByOrgIdAndAgentId(String orgId, String agentId);
+    Optional<AgentDefinitionEntity> findByCompanyIdAndAgentId(String companyId, String agentId);
 
-    List<AgentDefinitionEntity> findByOrgIdAndAgentIdIn(String orgId, List<String> agentIds);
+    List<AgentDefinitionEntity> findByCompanyIdAndAgentIdIn(String companyId, List<String> agentIds);
 
-    Optional<AgentDefinitionEntity> findByOrgIdAndAgentIdAndEnabledTrue(String orgId, String agentId);
+    Optional<AgentDefinitionEntity> findByCompanyIdAndAgentIdAndEnabledTrue(String companyId, String agentId);
 
-    boolean existsByOrgIdAndAgentId(String orgId, String agentId);
+    boolean existsByCompanyIdAndAgentId(String companyId, String agentId);
 }

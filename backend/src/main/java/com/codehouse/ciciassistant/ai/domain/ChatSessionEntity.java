@@ -14,8 +14,8 @@ public class ChatSessionEntity {
     @Column(name = "id", nullable = false, length = 64)
     private String id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "user_id", nullable = false, length = 64)
     private String userId;
@@ -32,9 +32,9 @@ public class ChatSessionEntity {
     protected ChatSessionEntity() {
     }
 
-    public ChatSessionEntity(String id, String orgId, String userId, String agentId, String title) {
+    public ChatSessionEntity(String id, String companyId, String userId, String agentId, String title) {
         this.id = id;
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.userId = userId;
         this.agentId = agentId;
         this.title = title;
@@ -45,8 +45,8 @@ public class ChatSessionEntity {
         return id;
     }
 
-    public String getOrgId() {
-        return orgId;
+    public String getCompanyId() {
+        return companyId;
     }
 
     public String getUserId() {

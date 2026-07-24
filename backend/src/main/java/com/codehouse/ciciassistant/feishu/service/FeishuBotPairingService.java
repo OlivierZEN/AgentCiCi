@@ -29,8 +29,8 @@ public class FeishuBotPairingService {
         this.userRepository = userRepository;
     }
 
-    public Map<String, Object> getBindingStatus(String orgId, String userId) {
-        Optional<FeishuBotBindingEntity> active = getActiveBindingForUser(orgId, userId);
+    public Map<String, Object> getBindingStatus(String companyId, String userId) {
+        Optional<FeishuBotBindingEntity> active = getActiveBindingForUser(companyId, userId);
         return active.<Map<String, Object>>map(binding -> Map.of(
                         "paired", true,
                         "agentCode", binding.getAgentCode(),
@@ -42,21 +42,21 @@ public class FeishuBotPairingService {
                 .orElseGet(() -> Map.of("paired", false));
     }
 
-    public FeishuPairingCodeStore.PairingCode createPairingCode(String orgId, String userId, String agentCode) {
-        if (feishuBotConfigService.getEnabledConfig(orgId).isEmpty()) {
+    public FeishuPairingCodeStore.PairingCode createPairingCode(String companyId, String userId, String agentCode) {
+        if (feishuBotConfigService.getEnabledConfig(companyId).isEmpty()) {
             throw new IllegalArgumentException("飞书机器人尚未启用或配置不完整");
         }
-        String normalizedAgentCode = normalizeAgentCode(agentCode, orgId);
-        return pairingCodeStore.createCode(orgId, userId, normalizedAgentCode);
+        String normalizedAgentCode = normalizeAgentCode(agentCode, companyId);
+        return pairingCodeStore.createCode(companyId, userId, normalizedAgentCode);
     }
 
     @Transactional
-    public FeishuBotBindingEntity consumePairingCode(String orgId, String code, String tenantKey,
+    public FeishuBotBindingEntity consumePairingCode(String companyId, String code, String tenantKey,
                                                      String openId, String unionId, String chatId) {
-        FeishuPairingCodeStore.PairCodePayload payload = pairingCodeStore.consumeCode(orgId, code);
+        FeishuPairingCodeStore.PairCodePayload payload = pairingCodeStore.consumeCode(companyId, code);
 
         List<FeishuBotBindingEntity> activeForUser = bindingRepository
-                .findByOrgIdAndUserIdAndStatusOrderByUpdatedAtDesc(orgId, payload.userId(), FeishuBotBindingEntity.STATUS_ACTIVE);
+                .findByCompanyIdAndUserIdAndStatusOrderByUpdatedAtDesc(companyId, payload.userId(), FeishuBotBindingEntity.STATUS_ACTIVE);
         for (FeishuBotBindingEntity item : activeForUser) {
             if (!tenantKey.equals(item.getTenantKey()) || !openId.equals(item.getOpenId())) {
                 item.unbind();
@@ -65,9 +65,9 @@ public class FeishuBotPairingService {
         }
 
         FeishuBotBindingEntity binding = bindingRepository
-                .findByOrgIdAndTenantKeyAndOpenId(orgId, tenantKey, openId)
+                .findByCompanyIdAndTenantKeyAndOpenId(companyId, tenantKey, openId)
                 .orElseGet(() -> new FeishuBotBindingEntity(
-                        orgId,
+                        companyId,
                         payload.userId(),
                         tenantKey,
                         openId,
@@ -79,26 +79,26 @@ public class FeishuBotPairingService {
         return bindingRepository.save(binding);
     }
 
-    public Optional<FeishuBotBindingEntity> findActiveBinding(String orgId, String tenantKey, String openId) {
-        return bindingRepository.findByOrgIdAndTenantKeyAndOpenIdAndStatus(
-                orgId, tenantKey, openId, FeishuBotBindingEntity.STATUS_ACTIVE);
+    public Optional<FeishuBotBindingEntity> findActiveBinding(String companyId, String tenantKey, String openId) {
+        return bindingRepository.findByCompanyIdAndTenantKeyAndOpenIdAndStatus(
+                companyId, tenantKey, openId, FeishuBotBindingEntity.STATUS_ACTIVE);
     }
 
     @Transactional
-    public FeishuBotBindingEntity ensureAutoBinding(String orgId, String tenantKey, String openId,
+    public FeishuBotBindingEntity ensureAutoBinding(String companyId, String tenantKey, String openId,
                                                     String unionId, String chatId) {
-        Optional<FeishuBotBindingEntity> existing = findActiveBinding(orgId, tenantKey, openId);
+        Optional<FeishuBotBindingEntity> existing = findActiveBinding(companyId, tenantKey, openId);
         if (existing.isPresent()) {
             return existing.get();
         }
-        String agentCode = feishuBotConfigService.getEnabledConfig(orgId)
+        String agentCode = feishuBotConfigService.getEnabledConfig(companyId)
                 .map(FeishuBotConfigService.FeishuBotConfig::defaultAgentCode)
                 .orElse("cici");
-        String userId = resolveFallbackUserId(orgId);
+        String userId = resolveFallbackUserId(companyId);
         FeishuBotBindingEntity binding = bindingRepository
-                .findByOrgIdAndTenantKeyAndOpenId(orgId, tenantKey, openId)
+                .findByCompanyIdAndTenantKeyAndOpenId(companyId, tenantKey, openId)
                 .orElseGet(() -> new FeishuBotBindingEntity(
-                        orgId,
+                        companyId,
                         userId,
                         tenantKey,
                         openId,
@@ -123,9 +123,9 @@ public class FeishuBotPairingService {
     }
 
     @Transactional
-    public void unbindCurrentUser(String orgId, String userId) {
+    public void unbindCurrentUser(String companyId, String userId) {
         List<FeishuBotBindingEntity> activeBindings = bindingRepository
-                .findByOrgIdAndUserIdAndStatusOrderByUpdatedAtDesc(orgId, userId, FeishuBotBindingEntity.STATUS_ACTIVE);
+                .findByCompanyIdAndUserIdAndStatusOrderByUpdatedAtDesc(companyId, userId, FeishuBotBindingEntity.STATUS_ACTIVE);
         if (activeBindings.isEmpty()) {
             throw new IllegalArgumentException("当前用户还没有飞书绑定");
         }
@@ -135,19 +135,19 @@ public class FeishuBotPairingService {
         }
     }
 
-    public Optional<FeishuBotBindingEntity> findActiveBindingForUser(String orgId, String userId) {
-        return getActiveBindingForUser(orgId, userId);
+    public Optional<FeishuBotBindingEntity> findActiveBindingForUser(String companyId, String userId) {
+        return getActiveBindingForUser(companyId, userId);
     }
 
-    private Optional<FeishuBotBindingEntity> getActiveBindingForUser(String orgId, String userId) {
+    private Optional<FeishuBotBindingEntity> getActiveBindingForUser(String companyId, String userId) {
         List<FeishuBotBindingEntity> activeBindings = bindingRepository
-                .findByOrgIdAndUserIdAndStatusOrderByUpdatedAtDesc(orgId, userId, FeishuBotBindingEntity.STATUS_ACTIVE);
+                .findByCompanyIdAndUserIdAndStatusOrderByUpdatedAtDesc(companyId, userId, FeishuBotBindingEntity.STATUS_ACTIVE);
         return activeBindings.stream().findFirst();
     }
 
-    private String normalizeAgentCode(String agentCode, String orgId) {
+    private String normalizeAgentCode(String agentCode, String companyId) {
         String normalized = agentCode == null || agentCode.isBlank()
-                ? feishuBotConfigService.getEnabledConfig(orgId).map(FeishuBotConfigService.FeishuBotConfig::defaultAgentCode).orElse("cici")
+                ? feishuBotConfigService.getEnabledConfig(companyId).map(FeishuBotConfigService.FeishuBotConfig::defaultAgentCode).orElse("cici")
                 : agentCode.trim();
         if (!"cici".equalsIgnoreCase(normalized)) {
             throw new IllegalArgumentException("当前版本仅支持绑定系统内置 CiCi");
@@ -155,8 +155,8 @@ public class FeishuBotPairingService {
         return normalized.toLowerCase();
     }
 
-    private String resolveFallbackUserId(String orgId) {
-        List<UserEntity> users = userRepository.findByOrg_IdOrderByCreatedAtDesc(orgId);
+    private String resolveFallbackUserId(String companyId) {
+        List<UserEntity> users = userRepository.findByCompany_IdOrderByCreatedAtDesc(companyId);
         if (users.isEmpty()) {
             throw new IllegalStateException("当前组织没有可用系统用户，无法自动创建飞书绑定");
         }

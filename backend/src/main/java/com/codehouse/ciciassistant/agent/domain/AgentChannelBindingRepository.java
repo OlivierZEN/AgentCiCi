@@ -5,11 +5,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AgentChannelBindingRepository extends JpaRepository<AgentChannelBindingEntity, Long> {
 
-    List<AgentChannelBindingEntity> findByOrgIdAndAgentIdAndEnabledTrueOrderByIdAsc(String orgId, String agentId);
+    List<AgentChannelBindingEntity> findByCompanyIdAndAgentIdAndEnabledTrueOrderByIdAsc(String companyId, String agentId);
 
-    List<AgentChannelBindingEntity> findByOrgIdAndAgentIdInAndEnabledTrueOrderByIdAsc(String orgId, List<String> agentIds);
+    List<AgentChannelBindingEntity> findByCompanyIdAndAgentIdInAndEnabledTrueOrderByIdAsc(String companyId, List<String> agentIds);
 
-    boolean existsByOrgIdAndAgentIdAndChannelIdAndEnabledTrue(String orgId, String agentId, String channelId);
+    boolean existsByCompanyIdAndAgentIdAndChannelIdAndEnabledTrue(String companyId, String agentId, String channelId);
 
-    void deleteByOrgIdAndAgentId(String orgId, String agentId);
+    void deleteByCompanyIdAndAgentId(String companyId, String agentId);
 }

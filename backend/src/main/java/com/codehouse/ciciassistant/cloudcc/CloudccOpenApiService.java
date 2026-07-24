@@ -44,7 +44,7 @@ public class CloudccOpenApiService {
                 .build();
     }
 
-    public PageRecords pageQueryRecords(String orgId,
+    public PageRecords pageQueryRecords(String companyId,
                                         String userId,
                                         String objectApiName,
                                         String fields,
@@ -60,7 +60,7 @@ public class CloudccOpenApiService {
         }
         body.put("pageNUM", Math.max(1, pageNum));
         body.put("pageSize", Math.max(1, Math.min(200, pageSize)));
-        JsonNode root = callCommon(orgId, userId, body);
+        JsonNode root = callCommon(companyId, userId, body);
         JsonNode data = root.path("data");
         if (data.isTextual() && !data.asText().isBlank()) {
             try {
@@ -82,7 +82,7 @@ public class CloudccOpenApiService {
                 root.path("totalCount").asInt(records.size()));
     }
 
-    public List<Map<String, Object>> queryAllRecords(String orgId,
+    public List<Map<String, Object>> queryAllRecords(String companyId,
                                                      String userId,
                                                      String objectApiName,
                                                      String fields,
@@ -90,7 +90,7 @@ public class CloudccOpenApiService {
         List<Map<String, Object>> records = new ArrayList<>();
         int page = 1;
         while (page <= 50) {
-            PageRecords result = pageQueryRecords(orgId, userId, objectApiName, fields, expressions, page, 200);
+            PageRecords result = pageQueryRecords(companyId, userId, objectApiName, fields, expressions, page, 200);
             records.addAll(result.records());
             if (result.pageCount() <= page || result.records().isEmpty()) {
                 break;
@@ -100,7 +100,7 @@ public class CloudccOpenApiService {
         return List.copyOf(records);
     }
 
-    public Optional<Map<String, Object>> queryRecordById(String orgId,
+    public Optional<Map<String, Object>> queryRecordById(String companyId,
                                                          String userId,
                                                          String objectApiName,
                                                          String fields,
@@ -111,12 +111,12 @@ public class CloudccOpenApiService {
         // Some CloudCC tenants currently ignore or inconsistently evaluate the OpenAPI
         // expression parameter. A write readback must be definitive, so page through the
         // current user's permission-scoped records and match the returned id locally.
-        return queryAllRecords(orgId, userId, objectApiName, fields, "").stream()
+        return queryAllRecords(companyId, userId, objectApiName, fields, "").stream()
                 .filter(item -> recordId.equals(String.valueOf(item.get("id"))))
                 .findFirst();
     }
 
-    public WriteResult writeRecords(String orgId,
+    public WriteResult writeRecords(String companyId,
                                     String userId,
                                     String operation,
                                     String objectApiName,
@@ -139,18 +139,18 @@ public class CloudccOpenApiService {
         } catch (Exception ex) {
             throw new IllegalArgumentException("CloudCC 写入数据序列化失败", ex);
         }
-        JsonNode root = callCommon(orgId, userId, body);
+        JsonNode root = callCommon(companyId, userId, body);
         return new WriteResult(serviceName, objectApiName, extractIds(root.path("data")),
                 root.path("returnCode").asText(""), root.path("returnInfo").asText(""));
     }
 
-    private JsonNode callCommon(String orgId, String userId, ObjectNode body) {
-        CloudccAccessTokenService.CloudccSessionContext context = tokenService.getSessionContext(orgId, userId)
+    private JsonNode callCommon(String companyId, String userId, ObjectNode body) {
+        CloudccAccessTokenService.CloudccSessionContext context = tokenService.getSessionContext(companyId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("无法获取 CloudCC 访问令牌，请确认已绑定当前用户账号。"));
         JsonNode root = sendCommon(context.baseUrl(), context.accessToken(), body);
         if (isAuthenticationFailure(root)) {
-            tokenService.invalidateSessionContext(orgId, userId, context.accessToken());
-            context = tokenService.getSessionContext(orgId, userId)
+            tokenService.invalidateSessionContext(companyId, userId, context.accessToken());
+            context = tokenService.getSessionContext(companyId, userId)
                     .orElseThrow(() -> new IllegalArgumentException("CloudCC 令牌刷新失败，请重新绑定账号。"));
             root = sendCommon(context.baseUrl(), context.accessToken(), body);
         }
@@ -261,7 +261,7 @@ public class CloudccOpenApiService {
     /**
      * 分页查询 CloudCC 对象数据。
      *
-     * @param orgId         组织 ID
+     * @param companyId         组织 ID
      * @param userId        用户 ID
      * @param objectApiName 对象 API 名，如 Customer__c
      * @param fields        查询字段，逗号分隔，如 "id,name,phone"
@@ -270,7 +270,7 @@ public class CloudccOpenApiService {
      * @param pageSize      每页条数
      */
     public String pageQuery(
-            String orgId,
+            String companyId,
             String userId,
             String objectApiName,
             String fields,
@@ -279,7 +279,7 @@ public class CloudccOpenApiService {
             Integer pageSize) {
 
         // 获取 CloudCC 访问令牌
-        var ctx = tokenService.getSessionContext(orgId, userId);
+        var ctx = tokenService.getSessionContext(companyId, userId);
         if (ctx.isEmpty()) {
             return error("无法获取 CloudCC 访问令牌，请确认已在「集成应用」中绑定 CloudCC 账号。");
         }
@@ -321,8 +321,8 @@ public class CloudccOpenApiService {
             // 401 自动刷新令牌重试一次
             if (response.statusCode() == 401) {
                 log.warn("CloudCC 401，尝试刷新令牌后重试");
-                tokenService.invalidateSessionContext(orgId, userId);
-                var fresh = tokenService.getSessionContext(orgId, userId);
+                tokenService.invalidateSessionContext(companyId, userId);
+                var fresh = tokenService.getSessionContext(companyId, userId);
                 if (fresh.isEmpty()) {
                     return error("CloudCC 令牌刷新失败，请重新绑定账号。");
                 }
@@ -575,34 +575,34 @@ public class CloudccOpenApiService {
     /**
      * 获取标准对象列表（客户、联系人、商机、产品等系统内置对象）。
      */
-    public String getStandardObjects(String orgId, String userId) {
-        return callSetupApi(orgId, userId, "/api/customObject/standardObjList", Map.of(),
+    public String getStandardObjects(String companyId, String userId) {
+        return callSetupApi(companyId, userId, "/api/customObject/standardObjList", Map.of(),
                 resp -> formatStandardObjectList(resp));
     }
 
     /**
      * 获取自定义对象列表（组织自行创建的业务对象）。
      */
-    public String getCustomObjects(String orgId, String userId) {
-        return callSetupApi(orgId, userId, "/api/customObject/list", Map.of(),
+    public String getCustomObjects(String companyId, String userId) {
+        return callSetupApi(companyId, userId, "/api/customObject/list", Map.of(),
                 resp -> formatCustomObjectList(resp));
     }
 
     /**
      * 获取对象的字段列表（标准字段 + 自定义字段）。
      */
-    public String getObjectFields(String orgId, String userId, String objprefix) {
-        return callSetupApi(orgId, userId, "/api/fieldSetup/queryField",
+    public String getObjectFields(String companyId, String userId, String objprefix) {
+        return callSetupApi(companyId, userId, "/api/fieldSetup/queryField",
                 Map.of("prefix", objprefix), resp -> formatObjectFields(resp));
     }
 
     /**
      * 通用 Setup API 调用封装。
      */
-    private String callSetupApi(String orgId, String userId, String apiPath,
+    private String callSetupApi(String companyId, String userId, String apiPath,
                                 Map<String, String> bodyParams,
                                 java.util.function.Function<JsonNode, String> formatter) {
-        var ctx = tokenService.getSessionContext(orgId, userId);
+        var ctx = tokenService.getSessionContext(companyId, userId);
         if (ctx.isEmpty()) {
             return error("无法获取 CloudCC 访问令牌，请确认已在「集成应用」中绑定 CloudCC 账号。");
         }
@@ -631,8 +631,8 @@ public class CloudccOpenApiService {
             // 401 自动重试
             if (response.statusCode() == 401) {
                 log.warn("CloudCC Setup 401，刷新令牌后重试");
-                tokenService.invalidateSessionContext(orgId, userId);
-                var fresh = tokenService.getSessionContext(orgId, userId);
+                tokenService.invalidateSessionContext(companyId, userId);
+                var fresh = tokenService.getSessionContext(companyId, userId);
                 if (fresh.isEmpty()) {
                     return error("CloudCC 令牌刷新失败。");
                 }

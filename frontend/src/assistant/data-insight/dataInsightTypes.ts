@@ -5,7 +5,7 @@ export type DataInsightDashboard = {
   updatedAt: string;
   context: {
     userName: string;
-    orgName: string;
+    companyName: string;
     currency: string;
     dashboardName: string;
   };

@@ -43,24 +43,24 @@ public class AgentCapabilityResolverService {
         this.agentDefinitionService = agentDefinitionService;
     }
 
-    public AgentCapabilityResolution resolve(String orgId, String agentId, List<String> explicitSkillRefs) {
-        if (orgId != null && !orgId.isBlank()) {
-            agentDefinitionService.warmupBuiltinAgents(orgId);
+    public AgentCapabilityResolution resolve(String companyId, String agentId, List<String> explicitSkillRefs) {
+        if (companyId != null && !companyId.isBlank()) {
+            agentDefinitionService.warmupBuiltinAgents(companyId);
         }
         String normalizedAgentId = normalizeAgentId(agentId);
-        Optional<AgentDefinitionEntity> agentDefinition = agentDefinitionRepository.findByOrgIdAndAgentId(orgId, normalizedAgentId);
+        Optional<AgentDefinitionEntity> agentDefinition = agentDefinitionRepository.findByCompanyIdAndAgentId(companyId, normalizedAgentId);
         List<String> agentToolBoundary = agentToolBindingRepository
-                .findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(orgId, normalizedAgentId)
+                .findByCompanyIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(companyId, normalizedAgentId)
                 .stream()
                 .map(AgentToolBindingEntity::getToolId)
                 .toList();
         List<Long> agentKbBoundary = agentKnowledgeBindingRepository
-                .findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(orgId, normalizedAgentId)
+                .findByCompanyIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(companyId, normalizedAgentId)
                 .stream()
                 .map(AgentKnowledgeBindingEntity::getKnowledgeBaseId)
                 .toList();
 
-        List<SkillDefinitionEntity> selectedSkills = loadSelectedSkills(orgId, normalizedAgentId, explicitSkillRefs);
+        List<SkillDefinitionEntity> selectedSkills = loadSelectedSkills(companyId, normalizedAgentId, explicitSkillRefs);
         List<SkillDefinitionEntity> runtimeSkills = selectedSkills.stream()
                 .filter(skill -> !skill.isPlatformCorePolicyCandidate())
                 .toList();
@@ -133,7 +133,7 @@ public class AgentCapabilityResolverService {
         );
     }
 
-    private List<SkillDefinitionEntity> loadSelectedSkills(String orgId, String agentId, List<String> explicitSkillRefs) {
+    private List<SkillDefinitionEntity> loadSelectedSkills(String companyId, String agentId, List<String> explicitSkillRefs) {
         List<String> explicit = explicitSkillRefs == null ? List.of() : explicitSkillRefs.stream()
                 .map(item -> item == null ? "" : item.trim().toLowerCase())
                 .filter(item -> !item.isBlank())
@@ -142,7 +142,7 @@ public class AgentCapabilityResolverService {
         if (!explicit.isEmpty()) {
             List<SkillDefinitionEntity> result = new ArrayList<>();
             for (String skillCode : explicit) {
-                skillDefinitionRepository.findByOrgIdAndSkillCode(orgId, skillCode)
+                skillDefinitionRepository.findByCompanyIdAndSkillCode(companyId, skillCode)
                         .filter(SkillDefinitionEntity::isEnabled)
                         .ifPresent(result::add);
             }
@@ -150,13 +150,13 @@ public class AgentCapabilityResolverService {
         }
 
         List<AgentSkillBindingEntity> bindings = agentSkillBindingRepository
-                .findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(orgId, agentId);
+                .findByCompanyIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(companyId, agentId);
         if (bindings.isEmpty()) {
             return List.of();
         }
         List<Long> skillIds = bindings.stream().map(AgentSkillBindingEntity::getSkillId).distinct().toList();
         Map<Long, SkillDefinitionEntity> byId = new LinkedHashMap<>();
-        for (SkillDefinitionEntity skill : skillDefinitionRepository.findByOrgIdAndIdInAndEnabledTrue(orgId, skillIds)) {
+        for (SkillDefinitionEntity skill : skillDefinitionRepository.findByCompanyIdAndIdInAndEnabledTrue(companyId, skillIds)) {
             byId.put(skill.getId(), skill);
         }
         List<SkillDefinitionEntity> result = new ArrayList<>();

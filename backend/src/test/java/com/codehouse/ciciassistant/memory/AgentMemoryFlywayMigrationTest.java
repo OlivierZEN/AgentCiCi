@@ -30,6 +30,27 @@ class AgentMemoryFlywayMigrationTest {
                 .configuration(Map.of("flyway.postgresql.transactional.lock", "false"))
                 .dataSource(jdbcUrl, username, password)
                 .locations("classpath:db/migration")
+                .target("93")
+                .load()
+                .migrate();
+
+        try (Connection connection = DriverManager.getConnection(jdbcUrl, username, password)) {
+            connection.createStatement().executeUpdate("""
+                    INSERT INTO agent_access_grant (
+                        id, org_id, agent_id, principal_type, principal_id, permission,
+                        source, status, created_at, updated_at
+                    ) VALUES (
+                        'company-identity-migration-grant', 'org-company-identity-test',
+                        'agent-company-identity-test', 'ORG', 'org-company-identity-test',
+                        'VIEW', 'DEFAULT_POLICY', 'ACTIVE', NOW(), NOW()
+                    )
+                    """);
+        }
+
+        Flyway.configure()
+                .configuration(Map.of("flyway.postgresql.transactional.lock", "false"))
+                .dataSource(jdbcUrl, username, password)
+                .locations("classpath:db/migration")
                 .load()
                 .migrate();
 
@@ -59,6 +80,71 @@ class AgentMemoryFlywayMigrationTest {
             java.util.List<String> found = new java.util.ArrayList<>();
             while (columns.next()) found.add(columns.getString(1));
             assertThat(found).containsExactly("memory_candidate:agent_id", "memory_record:agent_id");
+        }
+        try (Connection connection = DriverManager.getConnection(jdbcUrl, username, password);
+             ResultSet identityColumns = connection.createStatement().executeQuery("""
+                     SELECT column_name
+                     FROM information_schema.columns
+                     WHERE table_schema = 'public'
+                       AND table_name = 'company_member'
+                       AND column_name IN ('org_id', 'company_id')
+                     ORDER BY column_name
+                     """)) {
+            java.util.List<String> found = new java.util.ArrayList<>();
+            while (identityColumns.next()) found.add(identityColumns.getString(1));
+            assertThat(found).containsExactly("company_id");
+        }
+        try (Connection connection = DriverManager.getConnection(jdbcUrl, username, password);
+             ResultSet legacyColumns = connection.createStatement().executeQuery("""
+                     SELECT count(*)
+                     FROM information_schema.columns
+                     WHERE table_schema = 'public' AND column_name = 'org_id'
+                     """)) {
+            assertThat(legacyColumns.next()).isTrue();
+            assertThat(legacyColumns.getInt(1)).isZero();
+        }
+        try (Connection connection = DriverManager.getConnection(jdbcUrl, username, password);
+             ResultSet companyColumns = connection.createStatement().executeQuery("""
+                     SELECT count(*)
+                     FROM information_schema.columns
+                     WHERE table_schema = 'public' AND column_name = 'company_id'
+                     """)) {
+            assertThat(companyColumns.next()).isTrue();
+            assertThat(companyColumns.getInt(1)).isGreaterThan(100);
+        }
+        try (Connection connection = DriverManager.getConnection(jdbcUrl, username, password);
+             ResultSet companies = connection.createStatement().executeQuery("""
+                     SELECT table_name
+                     FROM information_schema.tables
+                     WHERE table_schema = 'public'
+                       AND table_name IN ('org', 'company', 'organization_member', 'company_member')
+                     ORDER BY table_name
+                     """)) {
+            java.util.List<String> found = new java.util.ArrayList<>();
+            while (companies.next()) found.add(companies.getString(1));
+            assertThat(found).containsExactly("company", "company_member");
+        }
+        try (Connection connection = DriverManager.getConnection(jdbcUrl, username, password);
+             ResultSet principal = connection.createStatement().executeQuery("""
+                     SELECT principal_type, principal_id
+                     FROM agent_access_grant
+                     WHERE id = 'company-identity-migration-grant'
+                     """)) {
+            assertThat(principal.next()).isTrue();
+            assertThat(principal.getString("principal_type")).isEqualTo("COMPANY");
+            assertThat(principal.getString("principal_id")).isEqualTo("org-company-identity-test");
+        }
+        try (Connection connection = DriverManager.getConnection(jdbcUrl, username, password);
+             ResultSet profileColumn = connection.createStatement().executeQuery("""
+                     SELECT column_name
+                     FROM information_schema.columns
+                     WHERE table_schema = 'public'
+                       AND table_name = 'company_profile'
+                       AND column_name IN ('organization_size', 'company_size')
+                     """)) {
+            assertThat(profileColumn.next()).isTrue();
+            assertThat(profileColumn.getString("column_name")).isEqualTo("company_size");
+            assertThat(profileColumn.next()).isFalse();
         }
     }
 }

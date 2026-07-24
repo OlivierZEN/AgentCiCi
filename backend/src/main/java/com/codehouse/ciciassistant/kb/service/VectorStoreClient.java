@@ -8,11 +8,11 @@ public interface VectorStoreClient {
 
     List<VectorSearchHit> search(VectorSearchQuery query);
 
-    VectorDeleteResult deleteByVectorIds(String orgId, List<String> vectorIds);
+    VectorDeleteResult deleteByVectorIds(String companyId, List<String> vectorIds);
 
-    VectorDeleteResult deleteByDocument(String orgId, String knowledgeBaseId, Long documentId);
+    VectorDeleteResult deleteByDocument(String companyId, String knowledgeBaseId, Long documentId);
 
-    VectorDeleteResult deleteByKnowledgeBase(String orgId, String knowledgeBaseId);
+    VectorDeleteResult deleteByKnowledgeBase(String companyId, String knowledgeBaseId);
 
-    VectorStoreAuditResult auditOrgVectors(String orgId, List<String> registeredVectorIds);
+    VectorStoreAuditResult auditOrgVectors(String companyId, List<String> registeredVectorIds);
 }

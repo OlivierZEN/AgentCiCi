@@ -6,9 +6,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CustomerWorkbenchSnapshotRepository extends JpaRepository<CustomerWorkbenchSnapshotEntity, Long> {
 
-    List<CustomerWorkbenchSnapshotEntity> findByOrgIdOrderByUpdatedAtDesc(String orgId);
+    List<CustomerWorkbenchSnapshotEntity> findByCompanyIdOrderByUpdatedAtDesc(String companyId);
 
-    Optional<CustomerWorkbenchSnapshotEntity> findByOrgIdAndCrmAccountId(String orgId, String crmAccountId);
+    Optional<CustomerWorkbenchSnapshotEntity> findByCompanyIdAndCrmAccountId(String companyId, String crmAccountId);
 
-    long countByOrgId(String orgId);
+    long countByCompanyId(String companyId);
 }

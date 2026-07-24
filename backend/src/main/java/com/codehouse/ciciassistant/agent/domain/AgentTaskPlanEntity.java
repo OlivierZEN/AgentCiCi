@@ -12,7 +12,7 @@ import java.time.Instant;
 @Table(name = "agent_task_plan")
 public class AgentTaskPlanEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
-    @Column(name = "org_id", nullable = false, length = 64) private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64) private String companyId;
     @Column(name = "run_id", nullable = false) private Long runId;
     @Column(name = "revision_no", nullable = false) private int revisionNo;
     @Column(nullable = false, length = 32) private String status;
@@ -21,12 +21,12 @@ public class AgentTaskPlanEntity {
     @Column(name = "plan_hash", nullable = false, length = 64) private String planHash;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
     protected AgentTaskPlanEntity() { }
-    public AgentTaskPlanEntity(String orgId, long runId, int revisionNo, String goalSummary, String planJson, String planHash, Instant now) {
-        this.orgId = orgId; this.runId = runId; this.revisionNo = revisionNo; this.status = "READY";
+    public AgentTaskPlanEntity(String companyId, long runId, int revisionNo, String goalSummary, String planJson, String planHash, Instant now) {
+        this.companyId = companyId; this.runId = runId; this.revisionNo = revisionNo; this.status = "READY";
         this.goalSummary = goalSummary; this.planJson = planJson; this.planHash = planHash; this.createdAt = now;
     }
     public Long getId() { return id; }
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
     public Long getRunId() { return runId; }
     public int getRevisionNo() { return revisionNo; }
     public String getStatus() { return status; }

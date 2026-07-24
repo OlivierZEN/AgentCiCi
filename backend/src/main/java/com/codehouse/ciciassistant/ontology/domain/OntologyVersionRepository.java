@@ -6,22 +6,22 @@ import org.springframework.data.repository.Repository;
 
 public interface OntologyVersionRepository extends Repository<OntologyVersionEntity, Long> {
 
-    List<OntologyVersionEntity> findByWorkspaceIdAndOrgIdOrderByVersionNoDesc(
+    List<OntologyVersionEntity> findByWorkspaceIdAndCompanyIdOrderByVersionNoDesc(
             Long workspaceId,
-            String orgId);
+            String companyId);
 
-    Optional<OntologyVersionEntity> findByIdAndWorkspaceIdAndOrgId(
+    Optional<OntologyVersionEntity> findByIdAndWorkspaceIdAndCompanyId(
             Long id,
             Long workspaceId,
-            String orgId);
+            String companyId);
 
-    Optional<OntologyVersionEntity> findByWorkspaceIdAndOrgIdAndVersionNo(
+    Optional<OntologyVersionEntity> findByWorkspaceIdAndCompanyIdAndVersionNo(
             Long workspaceId,
-            String orgId,
+            String companyId,
             Integer versionNo);
 
-    Optional<OntologyVersionEntity> findByWorkspaceIdAndOrgIdAndSourceDraftRevision(
+    Optional<OntologyVersionEntity> findByWorkspaceIdAndCompanyIdAndSourceDraftRevision(
             Long workspaceId,
-            String orgId,
+            String companyId,
             Long sourceDraftRevision);
 }

@@ -7,11 +7,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ChatMessageRepository extends JpaRepository<ChatMessageEntity, Long> {
 
-    Optional<ChatMessageEntity> findFirstByOrgIdAndSessionIdOrderByCreatedAtDesc(String orgId, String sessionId);
+    Optional<ChatMessageEntity> findFirstByCompanyIdAndSessionIdOrderByCreatedAtDesc(String companyId, String sessionId);
 
-    List<ChatMessageEntity> findByOrgIdAndSessionIdOrderByCreatedAtAsc(String orgId, String sessionId);
+    List<ChatMessageEntity> findByCompanyIdAndSessionIdOrderByCreatedAtAsc(String companyId, String sessionId);
 
-    List<ChatMessageEntity> findByOrgIdAndSessionIdOrderByCreatedAtDesc(String orgId, String sessionId, Pageable pageable);
+    List<ChatMessageEntity> findByCompanyIdAndSessionIdOrderByCreatedAtDesc(String companyId, String sessionId, Pageable pageable);
 
-    void deleteByOrgIdAndSessionId(String orgId, String sessionId);
+    void deleteByCompanyIdAndSessionId(String companyId, String sessionId);
 }

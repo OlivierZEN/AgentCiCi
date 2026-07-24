@@ -30,29 +30,29 @@ public class SecurityRulesController {
 
     @GetMapping("/overview")
     public ApiResponse<Map<String, Object>> overview() {
-        return ApiResponse.ok(service.overview(TenantContext.requireOrgId()));
+        return ApiResponse.ok(service.overview(TenantContext.requireCompanyId()));
     }
 
     @GetMapping("/rules")
     public ApiResponse<List<SecurityRulesService.RuleView>> listRules() {
-        return ApiResponse.ok(service.listRules(TenantContext.requireOrgId()));
+        return ApiResponse.ok(service.listRules(TenantContext.requireCompanyId()));
     }
 
     @PostMapping("/rules")
     public ApiResponse<SecurityRulesService.RuleView> createRule(@Valid @RequestBody RuleRequest request) {
-        return ApiResponse.ok(service.createRule(TenantContext.requireOrgId(), request.toCommand()));
+        return ApiResponse.ok(service.createRule(TenantContext.requireCompanyId(), request.toCommand()));
     }
 
     @PutMapping("/rules/{id}")
     public ApiResponse<SecurityRulesService.RuleView> updateRule(@PathVariable Long id,
                                                                  @Valid @RequestBody RuleRequest request) {
-        return ApiResponse.ok(service.updateRule(TenantContext.requireOrgId(), id, request.toCommand()));
+        return ApiResponse.ok(service.updateRule(TenantContext.requireCompanyId(), id, request.toCommand()));
     }
 
     @PostMapping("/test")
     public ApiResponse<SecurityRulesService.TestResult> testRule(@Valid @RequestBody TestRequest request) {
         return ApiResponse.ok(service.testRule(
-                TenantContext.requireOrgId(),
+                TenantContext.requireCompanyId(),
                 request.text(),
                 request.rule().toCommand()
         ));
@@ -61,14 +61,14 @@ public class SecurityRulesController {
     @GetMapping("/events")
     public ApiResponse<List<SecurityRulesService.EventView>> listEvents(@RequestParam(required = false) Boolean reviewed,
                                                                         @RequestParam(defaultValue = "50") int limit) {
-        return ApiResponse.ok(service.listEvents(TenantContext.requireOrgId(), reviewed, limit));
+        return ApiResponse.ok(service.listEvents(TenantContext.requireCompanyId(), reviewed, limit));
     }
 
     @PostMapping("/events/{id}/review")
     public ApiResponse<SecurityRulesService.EventView> reviewEvent(@PathVariable Long id,
                                                                    @RequestBody ReviewRequest request) {
         return ApiResponse.ok(service.reviewEvent(
-                TenantContext.requireOrgId(),
+                TenantContext.requireCompanyId(),
                 id,
                 new SecurityRulesService.ReviewCommand(request.result(), request.note()),
                 TenantContext.getUserId().orElse("system")

@@ -1855,7 +1855,7 @@
 :root[data-theme] .admin-main .cici-modal-overlay,
 :root[data-theme] .admin-main .ontology-modal-backdrop,
 :root[data-theme] .admin-main .user-invite-modal-backdrop,
-:root[data-theme] .admin-main .admin-organization-modal-backdrop {
+:root[data-theme] .admin-main .admin-company-modal-backdrop {
   background: var(--theme-overlay);
 }
 
@@ -1864,7 +1864,7 @@
 :root[data-theme] .admin-main .cici-modal,
 :root[data-theme] .admin-main .ontology-modal,
 :root[data-theme] .admin-main .user-invite-modal,
-:root[data-theme] .admin-main .admin-organization-modal,
+:root[data-theme] .admin-main .admin-company-modal,
 :root[data-theme] .admin-main .skills-publish-modal,
 :root[data-theme] .admin-main .skills-library-modal,
 :root[data-theme] .admin-main .skills-row-menu__panel {
@@ -1883,8 +1883,8 @@
 :root[data-theme] .admin-main .ontology-modal__body,
 :root[data-theme] .admin-main .user-invite-modal__head,
 :root[data-theme] .admin-main .user-invite-modal__foot,
-:root[data-theme] .admin-main .admin-organization-modal__head,
-:root[data-theme] .admin-main .admin-organization-modal__foot,
+:root[data-theme] .admin-main .admin-company-modal__head,
+:root[data-theme] .admin-main .admin-company-modal__foot,
 :root[data-theme] .admin-main .skills-modal-head,
 :root[data-theme] .admin-main .skills-publish-modal__actions {
   color: var(--theme-text);
@@ -1900,8 +1900,8 @@
 :root[data-theme] .admin-main .ontology-modal textarea,
 :root[data-theme] .admin-main .user-invite-field input,
 :root[data-theme] .admin-main .user-invite-field select,
-:root[data-theme] .admin-main .admin-organization-modal input,
-:root[data-theme] .admin-main .admin-organization-modal select,
+:root[data-theme] .admin-main .admin-company-modal input,
+:root[data-theme] .admin-main .admin-company-modal select,
 :root[data-theme] .admin-main .skills-publish-modal textarea {
   color: var(--theme-text);
   caret-color: var(--theme-accent);
@@ -1917,8 +1917,8 @@
 :root[data-theme] .admin-main .ontology-modal textarea:focus,
 :root[data-theme] .admin-main .user-invite-field input:focus,
 :root[data-theme] .admin-main .user-invite-field select:focus,
-:root[data-theme] .admin-main .admin-organization-modal input:focus,
-:root[data-theme] .admin-main .admin-organization-modal select:focus,
+:root[data-theme] .admin-main .admin-company-modal input:focus,
+:root[data-theme] .admin-main .admin-company-modal select:focus,
 :root[data-theme] .admin-main .skills-publish-modal textarea:focus {
   border-color: var(--theme-focus);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-focus) 24%, transparent);
@@ -2103,7 +2103,7 @@
 }
 
 :root[data-theme] .admin-main .embed-apps-secondary,
-:root[data-theme] .admin-main .admin-organization-modal__secondary,
+:root[data-theme] .admin-main .admin-company-modal__secondary,
 :root[data-theme] .admin-main .user-invite-modal__secondary {
   color: var(--theme-text);
   background: var(--theme-surface);
@@ -2111,7 +2111,7 @@
 }
 
 :root[data-theme] .admin-main .embed-apps-primary,
-:root[data-theme] .admin-main .admin-organization-modal__primary,
+:root[data-theme] .admin-main .admin-company-modal__primary,
 :root[data-theme] .admin-main .user-invite-modal__primary {
   color: #ffffff;
   background: var(--theme-accent);
@@ -2119,7 +2119,7 @@
 }
 
 :root[data-theme="galaxy"] .admin-main .embed-apps-primary,
-:root[data-theme="galaxy"] .admin-main .admin-organization-modal__primary,
+:root[data-theme="galaxy"] .admin-main .admin-company-modal__primary,
 :root[data-theme="galaxy"] .admin-main .user-invite-modal__primary {
   color: #101521;
 }

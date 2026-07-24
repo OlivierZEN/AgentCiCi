@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CustomerInsightProjectRepository extends JpaRepository<CustomerInsightProjectEntity, Long> {
 
-    List<CustomerInsightProjectEntity> findByOrgIdOrderByUpdatedAtDesc(String orgId);
+    List<CustomerInsightProjectEntity> findByCompanyIdOrderByUpdatedAtDesc(String companyId);
 
-    Optional<CustomerInsightProjectEntity> findByOrgIdAndPublicId(String orgId, String publicId);
+    Optional<CustomerInsightProjectEntity> findByCompanyIdAndPublicId(String companyId, String publicId);
 }

@@ -38,7 +38,7 @@ class PlatformAuthIntegrationTest {
     private JwtService jwtService;
 
     @Test
-    void shouldLoginPlatformAccountByEmailAndMobileWithoutOrganization() throws Exception {
+    void shouldLoginPlatformAccountByEmailAndMobileWithoutCompany() throws Exception {
         MvcResult emailLogin = platformLogin("admin@cloudcc.com")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.token").isNotEmpty())
@@ -48,8 +48,8 @@ class PlatformAuthIntegrationTest {
                 .andExpect(jsonPath("$.data.displayName").value("CloudCC Platform Admin"))
                 .andExpect(jsonPath("$.data.tokenType").value("platform"))
                 .andExpect(jsonPath("$.data.roles[?(@ == 'PLATFORM_ADMIN')]").exists())
-                .andExpect(jsonPath("$.data.orgId").doesNotExist())
-                .andExpect(jsonPath("$.data.orgName").doesNotExist())
+                .andExpect(jsonPath("$.data.companyId").doesNotExist())
+                .andExpect(jsonPath("$.data.companyName").doesNotExist())
                 .andExpect(jsonPath("$.data.userId").doesNotExist())
                 .andExpect(jsonPath("$.data.memberId").doesNotExist())
                 .andExpect(jsonPath("$.data.accountId").doesNotExist())
@@ -59,7 +59,7 @@ class PlatformAuthIntegrationTest {
         Claims claims = jwtService.parse(emailData.path("token").asText());
         assertThat(claims.get("typ", String.class)).isEqualTo("platform");
         assertThat(claims.get("platform_account_id", String.class)).isEqualTo(emailData.path("platformAccountId").asText());
-        assertThat(claims.get("org_id", String.class)).isNull();
+        assertThat(claims.get("company_id", String.class)).isNull();
         assertThat(claims.get("member_id", String.class)).isNull();
         assertThat(claims.get("account_id", String.class)).isNull();
 
@@ -76,7 +76,7 @@ class PlatformAuthIntegrationTest {
         assertThat(userAccounts).isZero();
 
         Long members = jdbcTemplate.queryForObject("""
-                SELECT COUNT(*) FROM organization_member m
+                SELECT COUNT(*) FROM company_member m
                 JOIN user_account a ON a.id = m.account_id
                 WHERE a.primary_mobile = '18611892001' OR LOWER(COALESCE(a.email, '')) = 'admin@cloudcc.com'
                 """, Long.class);
@@ -92,13 +92,13 @@ class PlatformAuthIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.tokenType").value("platform"))
                 .andExpect(jsonPath("$.data.roles[?(@ == 'PLATFORM_ADMIN')]").exists())
-                .andExpect(jsonPath("$.data.orgId").doesNotExist());
+                .andExpect(jsonPath("$.data.companyId").doesNotExist());
 
         mockMvc.perform(get("/platform/bootstrap")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.roles[?(@ == 'PLATFORM_ADMIN')]").exists())
-                .andExpect(jsonPath("$.data.orgId").doesNotExist());
+                .andExpect(jsonPath("$.data.companyId").doesNotExist());
 
         mockMvc.perform(get("/auth/me")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken))
@@ -138,12 +138,12 @@ class PlatformAuthIntegrationTest {
     }
 
     @Test
-    void shouldRejectOrganizationTokensFromPlatformSurfaces() throws Exception {
+    void shouldRejectCompanyTokensFromPlatformSurfaces() throws Exception {
         MvcResult orgLogin = mockMvc.perform(post("/auth/password/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "orgId": "demo-org",
+                                  "companyId": "demo-org",
                                   "mobile": "13800138111",
                                   "password": "szyd1234"
                                 }

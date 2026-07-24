@@ -17,8 +17,8 @@ public class BillingCreditLedgerEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "entry_type", nullable = false, length = 64)
     private String entryType;
@@ -44,7 +44,7 @@ public class BillingCreditLedgerEntity {
     protected BillingCreditLedgerEntity() {
     }
 
-    public BillingCreditLedgerEntity(String orgId,
+    public BillingCreditLedgerEntity(String companyId,
                                      String entryType,
                                      BigDecimal creditsDelta,
                                      BigDecimal balanceAfter,
@@ -52,7 +52,7 @@ public class BillingCreditLedgerEntity {
                                      String description,
                                      Instant occurredAt,
                                      String metadataJson) {
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.entryType = entryType;
         this.creditsDelta = creditsDelta;
         this.balanceAfter = balanceAfter;
@@ -64,7 +64,7 @@ public class BillingCreditLedgerEntity {
 
     public Long getId() { return id; }
 
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
 
     public String getEntryType() { return entryType; }
 

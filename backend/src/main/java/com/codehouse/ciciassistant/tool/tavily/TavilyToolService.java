@@ -169,11 +169,11 @@ public class TavilyToolService {
     // Dispatch
     // =============================================================================================
 
-    public String dispatch(String orgId, String userId, String toolName, String argumentsJson) {
+    public String dispatch(String companyId, String userId, String toolName, String argumentsJson) {
         try {
             return switch (toolName) {
-                case TOOL_SEARCH -> invokeSearch(orgId, userId, argumentsJson);
-                case TOOL_EXTRACT -> invokeExtract(orgId, userId, argumentsJson);
+                case TOOL_SEARCH -> invokeSearch(companyId, userId, argumentsJson);
+                case TOOL_EXTRACT -> invokeExtract(companyId, userId, argumentsJson);
                 default -> toJson(errorResult("TAVILY_UNKNOWN_TOOL", "Unsupported Tavily tool: " + toolName));
             };
         } catch (Exception ex) {
@@ -182,7 +182,7 @@ public class TavilyToolService {
         }
     }
 
-    private String invokeSearch(String orgId, String userId, String argumentsJson) throws Exception {
+    private String invokeSearch(String companyId, String userId, String argumentsJson) throws Exception {
         JsonNode args = argumentsJson == null || argumentsJson.isBlank()
                 ? objectMapper.createObjectNode()
                 : objectMapper.readTree(argumentsJson);
@@ -191,7 +191,7 @@ public class TavilyToolService {
             return toJson(errorResult("TAVILY_BAD_REQUEST", "query 不能为空"));
         }
 
-        String apiKey = resolveApiKey(orgId);
+        String apiKey = resolveApiKey(companyId);
         if (apiKey == null) {
             return toJson(errorResult("TAVILY_NOT_CONFIGURED",
                     "管理员尚未在「集成应用 → Tavily」配置 API Key；请配置后再试。"));
@@ -216,18 +216,18 @@ public class TavilyToolService {
         TavilyClient.TavilyCallResult<Map<String, Object>> result = client.search(apiKey, req);
         if (!result.ok()) {
             log.warn("tavily_search failed org={} user={} code={} latencyMs={}",
-                    orgId, userId, result.errorCode(), result.latencyMs());
+                    companyId, userId, result.errorCode(), result.latencyMs());
             return toJson(errorResult(result.errorCode(), result.errorMessage()));
         }
 
         Map<String, Object> shaped = shapeSearchResponse(result.data());
         log.info("tavily_search ok org={} user={} queryLen={} results={} latencyMs={}",
-                orgId, userId, query.length(),
+                companyId, userId, query.length(),
                 shaped.get("resultCount"), result.latencyMs());
         return toJson(shaped);
     }
 
-    private String invokeExtract(String orgId, String userId, String argumentsJson) throws Exception {
+    private String invokeExtract(String companyId, String userId, String argumentsJson) throws Exception {
         JsonNode args = argumentsJson == null || argumentsJson.isBlank()
                 ? objectMapper.createObjectNode()
                 : objectMapper.readTree(argumentsJson);
@@ -239,7 +239,7 @@ public class TavilyToolService {
             urls = urls.subList(0, 20);
         }
 
-        String apiKey = resolveApiKey(orgId);
+        String apiKey = resolveApiKey(companyId);
         if (apiKey == null) {
             return toJson(errorResult("TAVILY_NOT_CONFIGURED",
                     "管理员尚未在「集成应用 → Tavily」配置 API Key；请配置后再试。"));
@@ -256,13 +256,13 @@ public class TavilyToolService {
         TavilyClient.TavilyCallResult<Map<String, Object>> result = client.extract(apiKey, req);
         if (!result.ok()) {
             log.warn("tavily_extract failed org={} user={} code={} latencyMs={}",
-                    orgId, userId, result.errorCode(), result.latencyMs());
+                    companyId, userId, result.errorCode(), result.latencyMs());
             return toJson(errorResult(result.errorCode(), result.errorMessage()));
         }
 
         Map<String, Object> shaped = shapeExtractResponse(result.data());
         log.info("tavily_extract ok org={} user={} urls={} latencyMs={}",
-                orgId, userId, urls.size(), result.latencyMs());
+                companyId, userId, urls.size(), result.latencyMs());
         return toJson(shaped);
     }
 
@@ -275,8 +275,8 @@ public class TavilyToolService {
      * Returns {@code null} when the integration is missing, disabled, or has no apiKey.
      * Never falls back to env / yaml.
      */
-    public String resolveApiKey(String orgId) {
-        return integrationAppService.findRawConfig(orgId, IntegrationAppService.APP_CODE_TAVILY)
+    public String resolveApiKey(String companyId) {
+        return integrationAppService.findRawConfig(companyId, IntegrationAppService.APP_CODE_TAVILY)
                 .flatMap(integrationAppService::decryptTavilyApiKey)
                 .orElse(null);
     }
@@ -286,9 +286,9 @@ public class TavilyToolService {
     // =============================================================================================
 
     /** Runs a minimal {@code tavily_search query=ping max_results=1} request and returns a result envelope. */
-    public Map<String, Object> testConnection(String orgId, String overrideApiKey) {
+    public Map<String, Object> testConnection(String companyId, String overrideApiKey) {
         String apiKey = (overrideApiKey == null || overrideApiKey.isBlank())
-                ? resolveApiKey(orgId)
+                ? resolveApiKey(companyId)
                 : overrideApiKey.trim();
         if (apiKey == null) {
             return errorResult("TAVILY_NOT_CONFIGURED",
@@ -471,7 +471,7 @@ public class TavilyToolService {
 
     // Unused optional import hook for tests that want to inject a specific apiKey.
     @SuppressWarnings("unused")
-    Optional<String> _resolveApiKeyOptional(String orgId) {
-        return Optional.ofNullable(resolveApiKey(orgId));
+    Optional<String> _resolveApiKeyOptional(String companyId) {
+        return Optional.ofNullable(resolveApiKey(companyId));
     }
 }

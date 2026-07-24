@@ -45,7 +45,7 @@ public class CloudccMeetingWritebackConnector {
             throw new IllegalArgumentException("At least one writeback item must be selected");
         }
         CloudccAccessTokenService.CloudccSessionContext ctx = tokenService
-                .getSessionContext(session.getOrgId(), session.getUserId())
+                .getSessionContext(session.getCompanyId(), session.getUserId())
                 .orElseThrow(() -> new IllegalArgumentException("无法获取 CloudCC 访问令牌，请确认集成应用和 run-as 用户绑定已配置。"));
 
         List<Map<String, Object>> completed = new ArrayList<>();
@@ -100,9 +100,9 @@ public class CloudccMeetingWritebackConnector {
         try {
             JsonNode first = sendCommon(ctx.baseUrl(), ctx.accessToken(), serviceName, objectApiName, data);
             if (first.path("_httpStatus").asInt(200) == 401) {
-                tokenService.invalidateSessionContext(session.getOrgId(), session.getUserId());
+                tokenService.invalidateSessionContext(session.getCompanyId(), session.getUserId());
                 CloudccAccessTokenService.CloudccSessionContext fresh = tokenService
-                        .getSessionContext(session.getOrgId(), session.getUserId())
+                        .getSessionContext(session.getCompanyId(), session.getUserId())
                         .orElseThrow(() -> new IllegalArgumentException("CloudCC 令牌刷新失败，请重新绑定账号。"));
                 return checked(sendCommon(fresh.baseUrl(), fresh.accessToken(), serviceName, objectApiName, data), serviceName, objectApiName);
             }

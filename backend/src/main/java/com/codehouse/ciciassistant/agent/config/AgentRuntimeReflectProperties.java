@@ -10,24 +10,24 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "app.agent-runtime.reflect")
 public class AgentRuntimeReflectProperties {
     private boolean enabled;
-    private List<String> allowedOrgIds = new ArrayList<>();
+    private List<String> allowedCompanyIds = new ArrayList<>();
     private List<String> allowedAgentIds = new ArrayList<>();
     private int maxRounds = 1;
 
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
-    public List<String> getAllowedOrgIds() { return List.copyOf(allowedOrgIds); }
-    public void setAllowedOrgIds(List<String> allowedOrgIds) {
-        this.allowedOrgIds = allowedOrgIds == null ? new ArrayList<>() : new ArrayList<>(allowedOrgIds);
+    public List<String> getAllowedCompanyIds() { return List.copyOf(allowedCompanyIds); }
+    public void setAllowedCompanyIds(List<String> allowedCompanyIds) {
+        this.allowedCompanyIds = allowedCompanyIds == null ? new ArrayList<>() : new ArrayList<>(allowedCompanyIds);
     }
     public List<String> getAllowedAgentIds() { return List.copyOf(allowedAgentIds); }
     public void setAllowedAgentIds(List<String> allowedAgentIds) {
         this.allowedAgentIds = allowedAgentIds == null ? new ArrayList<>() : new ArrayList<>(allowedAgentIds);
     }
-    public boolean isEnabledFor(String orgId, String agentId) {
-        return enabled && isOrgAllowlisted(orgId) && isAgentAllowlisted(agentId);
+    public boolean isEnabledFor(String companyId, String agentId) {
+        return enabled && isCompanyAllowlisted(companyId) && isAgentAllowlisted(agentId);
     }
-    public boolean isOrgAllowlisted(String orgId) { return isAllowlisted(allowedOrgIds, orgId); }
+    public boolean isCompanyAllowlisted(String companyId) { return isAllowlisted(allowedCompanyIds, companyId); }
     public boolean isAgentAllowlisted(String agentId) { return isAllowlisted(allowedAgentIds, agentId); }
     private static boolean isAllowlisted(List<String> allowedValues, String candidate) {
         if (candidate == null || candidate.isBlank()) return false;

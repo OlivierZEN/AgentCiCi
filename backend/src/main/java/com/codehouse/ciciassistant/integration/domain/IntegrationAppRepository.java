@@ -6,9 +6,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface IntegrationAppRepository extends JpaRepository<IntegrationAppEntity, Long> {
 
-    List<IntegrationAppEntity> findByOrgIdOrderByIdAsc(String orgId);
+    List<IntegrationAppEntity> findByCompanyIdOrderByIdAsc(String companyId);
 
-    Optional<IntegrationAppEntity> findByOrgIdAndAppCode(String orgId, String appCode);
+    Optional<IntegrationAppEntity> findByCompanyIdAndAppCode(String companyId, String appCode);
 
     List<IntegrationAppEntity> findByAppCodeAndEnabledTrueOrderByIdAsc(String appCode);
 }

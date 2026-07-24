@@ -16,8 +16,8 @@ public class AgentWorkflowVersionEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "agent_id", nullable = false, length = 64)
     private String agentId;
@@ -64,7 +64,7 @@ public class AgentWorkflowVersionEntity {
     protected AgentWorkflowVersionEntity() {
     }
 
-    public AgentWorkflowVersionEntity(String orgId,
+    public AgentWorkflowVersionEntity(String companyId,
                                       String agentId,
                                       Integer versionNo,
                                       String versionLabel,
@@ -78,7 +78,7 @@ public class AgentWorkflowVersionEntity {
                                       String compileFingerprint,
                                       String changeLog,
                                       String publishStatus) {
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.agentId = agentId;
         this.versionNo = versionNo;
         this.versionLabel = versionLabel;
@@ -99,8 +99,8 @@ public class AgentWorkflowVersionEntity {
         return id;
     }
 
-    public String getOrgId() {
-        return orgId;
+    public String getCompanyId() {
+        return companyId;
     }
 
     public String getAgentId() {

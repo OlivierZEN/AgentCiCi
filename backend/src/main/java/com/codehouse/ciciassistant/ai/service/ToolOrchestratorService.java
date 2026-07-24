@@ -81,15 +81,15 @@ public class ToolOrchestratorService {
      * Get all available tools for the org in OpenAI function-calling format.
      * Includes both MCP-discovered tools and built-in native tools.
      */
-    public List<Map<String, Object>> getToolDefinitions(String orgId) {
-        return getToolDefinitions(orgId, null);
+    public List<Map<String, Object>> getToolDefinitions(String companyId) {
+        return getToolDefinitions(companyId, null);
     }
 
-    public List<Map<String, Object>> getToolDefinitions(String orgId, List<String> allowedToolNames) {
-        return getToolDefinitions(orgId, allowedToolNames, List.of());
+    public List<Map<String, Object>> getToolDefinitions(String companyId, List<String> allowedToolNames) {
+        return getToolDefinitions(companyId, allowedToolNames, List.of());
     }
 
-    public List<Map<String, Object>> getToolDefinitions(String orgId,
+    public List<Map<String, Object>> getToolDefinitions(String companyId,
                                                         List<String> allowedToolNames,
                                                         List<SkillApiToolService.ResolvedSkillApiTool> skillApiTools) {
         List<String> normalizedAllowedToolNames = normalizeAllowedToolNames(allowedToolNames);
@@ -99,23 +99,23 @@ public class ToolOrchestratorService {
         addBuiltInTool(result, normalizedAllowedToolNames, CloudccOpenApiService.toolName(),
                 CloudccOpenApiService.toolDescription(),
                 CloudccOpenApiService.toolSchema(objectMapper),
-                orgId);
+                companyId);
         addBuiltInTool(result, normalizedAllowedToolNames, CloudccOpenApiService.toolNameGetStandardObjects(),
                 CloudccOpenApiService.toolDescriptionGetStandardObjects(),
                 CloudccOpenApiService.toolSchemaGetStandardObjects(objectMapper),
-                orgId);
+                companyId);
         addBuiltInTool(result, normalizedAllowedToolNames, CloudccOpenApiService.toolNameGetCustomObjects(),
                 CloudccOpenApiService.toolDescriptionGetCustomObjects(),
                 CloudccOpenApiService.toolSchemaGetCustomObjects(objectMapper),
-                orgId);
+                companyId);
         addBuiltInTool(result, normalizedAllowedToolNames, CloudccOpenApiService.toolNameGetObjectFields(),
                 CloudccOpenApiService.toolDescriptionGetObjectFields(),
                 CloudccOpenApiService.toolSchemaGetObjectFields(objectMapper),
-                orgId);
+                companyId);
         addBuiltInTool(result, normalizedAllowedToolNames, CrmProductSalesAnalysisToolService.TOOL_NAME,
                 CrmProductSalesAnalysisToolService.toolDescription(),
                 CrmProductSalesAnalysisToolService.toolSchema(objectMapper),
-                orgId);
+                companyId);
 
         // Memory built-in tools (always available, no skill restriction)
         result.add(buildMemoryRememberTool());
@@ -129,7 +129,7 @@ public class ToolOrchestratorService {
             if (!isAllowed(normalizedAllowedToolNames, toolName, false)) {
                 continue;
             }
-            if (!platformGovernanceService.isRuntimeToolEnabled(orgId, toolName)) {
+            if (!platformGovernanceService.isRuntimeToolEnabled(companyId, toolName)) {
                 continue;
             }
             result.add(emailToolService.toolDefinition(toolName));
@@ -140,7 +140,7 @@ public class ToolOrchestratorService {
             if (!isAllowed(normalizedAllowedToolNames, toolName, false)) {
                 continue;
             }
-            if (!platformGovernanceService.isRuntimeToolEnabled(orgId, toolName)) {
+            if (!platformGovernanceService.isRuntimeToolEnabled(companyId, toolName)) {
                 continue;
             }
             result.add(tavilyToolService.toolDefinition(toolName));
@@ -159,7 +159,7 @@ public class ToolOrchestratorService {
                 .toList());
 
         // 2. MCP-discovered tools
-        List<ResolvedTool> mcpTools = mcpServerService.getAllToolsForOrg(orgId);
+        List<ResolvedTool> mcpTools = mcpServerService.getAllToolsForOrg(companyId);
         for (ResolvedTool tool : mcpTools) {
             if (!isAllowed(normalizedAllowedToolNames, tool.name(), true)) {
                 continue;
@@ -184,11 +184,11 @@ public class ToolOrchestratorService {
     }
 
     private void addBuiltInTool(List<Map<String, Object>> result, List<String> allowedToolNames,
-                                String name, String description, JsonNode schema, String orgId) {
+                                String name, String description, JsonNode schema, String companyId) {
         if (!isAllowed(allowedToolNames, name, false)) {
             return;
         }
-        if (!platformGovernanceService.isRuntimeToolEnabled(orgId, name)) {
+        if (!platformGovernanceService.isRuntimeToolEnabled(companyId, name)) {
             return;
         }
         result.add(builtInTool(name, description, schema));
@@ -214,38 +214,38 @@ public class ToolOrchestratorService {
     /**
      * Execute a tool call. Routes to native tools first, then falls back to MCP servers.
      */
-    public String executeTool(String orgId, String userId, String toolName, String argumentsJson) {
-        return executeTool(orgId, userId, toolName, argumentsJson, null, null, null);
+    public String executeTool(String companyId, String userId, String toolName, String argumentsJson) {
+        return executeTool(companyId, userId, toolName, argumentsJson, null, null, null);
     }
 
-    public String executeTool(String orgId, String userId, String toolName, String argumentsJson, List<String> allowedToolNames) {
-        return executeTool(orgId, userId, toolName, argumentsJson, allowedToolNames, null, null);
+    public String executeTool(String companyId, String userId, String toolName, String argumentsJson, List<String> allowedToolNames) {
+        return executeTool(companyId, userId, toolName, argumentsJson, allowedToolNames, null, null);
     }
 
     /**
      * @param agentDirectToolNames when non-null, used only for audit logging (agent_direct vs skill_scoped).
      */
-    public String executeTool(String orgId, String userId, String toolName, String argumentsJson,
+    public String executeTool(String companyId, String userId, String toolName, String argumentsJson,
                               List<String> allowedToolNames, List<String> agentDirectToolNames) {
-        return executeTool(orgId, userId, toolName, argumentsJson, allowedToolNames, agentDirectToolNames, null);
+        return executeTool(companyId, userId, toolName, argumentsJson, allowedToolNames, agentDirectToolNames, null);
     }
 
-    public String executeTool(String orgId, String userId, String toolName, String argumentsJson,
+    public String executeTool(String companyId, String userId, String toolName, String argumentsJson,
                               List<String> allowedToolNames, List<String> agentDirectToolNames, String currentAgentId) {
         List<String> normalizedAllowedToolNames = normalizeAllowedToolNames(allowedToolNames);
         String canonicalToolName = ToolNameNormalizer.canonicalize(toolName);
         String invocationType = resolveInvocationType(canonicalToolName, normalizeAllowedToolNames(agentDirectToolNames));
-        log.info("Executing tool: org={}, user={}, tool={}, invocationType={}", orgId, userId, canonicalToolName, invocationType);
+        log.info("Executing tool: org={}, user={}, tool={}, invocationType={}", companyId, userId, canonicalToolName, invocationType);
         if (!isAllowed(normalizedAllowedToolNames, canonicalToolName, false)
                 && !isAllowed(normalizedAllowedToolNames, canonicalToolName, true)) {
             return "Tool is not allowed for the current skill policy: " + toolName;
         }
         if (!AssistantScheduleToolService.TOOL_NAME.equals(canonicalToolName)
-                && !platformGovernanceService.isRuntimeToolEnabled(orgId, canonicalToolName)) {
+                && !platformGovernanceService.isRuntimeToolEnabled(companyId, canonicalToolName)) {
             return "Tool is disabled by platform runtime control: " + canonicalToolName;
         }
         SafetyGatewayService.SafetyDecision inputDecision =
-                safetyGatewayService.checkToolCall(orgId, userId, canonicalToolName, argumentsJson);
+                safetyGatewayService.checkToolCall(companyId, userId, canonicalToolName, argumentsJson);
         if (inputDecision.blocked()) {
             return "Tool call blocked by security gateway: " + canonicalToolName;
         }
@@ -255,74 +255,74 @@ public class ToolOrchestratorService {
             if (normalizedAllowedToolNames.isEmpty() || !normalizedAllowedToolNames.contains(canonicalToolName)) {
                 return "Skill API tool is not active for the current skill context: " + canonicalToolName;
             }
-            return safeToolResult(orgId, userId, canonicalToolName,
-                    skillApiToolService.dispatch(orgId, userId, canonicalToolName, safeArgumentsJson));
+            return safeToolResult(companyId, userId, canonicalToolName,
+                    skillApiToolService.dispatch(companyId, userId, canonicalToolName, safeArgumentsJson));
         }
 
         if (AssistantScheduleToolService.TOOL_NAME.equals(canonicalToolName)) {
             return assistantScheduleToolService == null
                     ? "创建定时任务失败：服务未就绪。"
-                    : assistantScheduleToolService.dispatch(orgId, userId, currentAgentId, argumentsJson);
+                    : assistantScheduleToolService.dispatch(companyId, userId, currentAgentId, argumentsJson);
         }
 
         // Native built-in tools
         if (CrmProductSalesAnalysisToolService.TOOL_NAME.equals(canonicalToolName)) {
-            return crmProductSalesAnalysisToolService.dispatch(orgId, userId, argumentsJson);
+            return crmProductSalesAnalysisToolService.dispatch(companyId, userId, argumentsJson);
         }
         if (CloudccOpenApiService.toolName().equals(canonicalToolName)) {
-            return safeToolResult(orgId, userId, canonicalToolName,
-                    executeCloudccPageQuery(orgId, userId, safeArgumentsJson));
+            return safeToolResult(companyId, userId, canonicalToolName,
+                    executeCloudccPageQuery(companyId, userId, safeArgumentsJson));
         }
         if (CloudccOpenApiService.toolNameGetStandardObjects().equals(canonicalToolName)) {
-            return safeToolResult(orgId, userId, canonicalToolName,
-                    cloudccOpenApiService.getStandardObjects(orgId, userId));
+            return safeToolResult(companyId, userId, canonicalToolName,
+                    cloudccOpenApiService.getStandardObjects(companyId, userId));
         }
         if (CloudccOpenApiService.toolNameGetCustomObjects().equals(canonicalToolName)) {
-            return safeToolResult(orgId, userId, canonicalToolName,
-                    cloudccOpenApiService.getCustomObjects(orgId, userId));
+            return safeToolResult(companyId, userId, canonicalToolName,
+                    cloudccOpenApiService.getCustomObjects(companyId, userId));
         }
         if (CloudccOpenApiService.toolNameGetObjectFields().equals(canonicalToolName)) {
-            return safeToolResult(orgId, userId, canonicalToolName,
-                    executeGetObjectFields(orgId, userId, safeArgumentsJson));
+            return safeToolResult(companyId, userId, canonicalToolName,
+                    executeGetObjectFields(companyId, userId, safeArgumentsJson));
         }
 
         // Memory built-in tools
         if (TOOL_MEMORY_REMEMBER.equals(canonicalToolName)) {
-            return safeToolResult(orgId, userId, canonicalToolName,
-                    executeMemoryRemember(orgId, userId, safeArgumentsJson));
+            return safeToolResult(companyId, userId, canonicalToolName,
+                    executeMemoryRemember(companyId, userId, safeArgumentsJson));
         }
         if (TOOL_MEMORY_FORGET.equals(canonicalToolName)) {
-            return safeToolResult(orgId, userId, canonicalToolName,
-                    executeMemoryForget(orgId, userId, safeArgumentsJson));
+            return safeToolResult(companyId, userId, canonicalToolName,
+                    executeMemoryForget(companyId, userId, safeArgumentsJson));
         }
 
         // Email built-in tools
         if (canonicalToolName != null && canonicalToolName.startsWith("email_") && EmailToolService.ALL_TOOL_NAMES.contains(canonicalToolName)) {
-            return safeToolResult(orgId, userId, canonicalToolName,
-                    emailToolService.dispatch(orgId, userId, canonicalToolName, safeArgumentsJson));
+            return safeToolResult(companyId, userId, canonicalToolName,
+                    emailToolService.dispatch(companyId, userId, canonicalToolName, safeArgumentsJson));
         }
 
         // Tavily web-search / web-extract built-in tools
         if (canonicalToolName != null && canonicalToolName.startsWith("tavily_") && TavilyToolService.ALL_TOOL_NAMES.contains(canonicalToolName)) {
-            return safeToolResult(orgId, userId, canonicalToolName,
-                    tavilyToolService.dispatch(orgId, userId, canonicalToolName, safeArgumentsJson));
+            return safeToolResult(companyId, userId, canonicalToolName,
+                    tavilyToolService.dispatch(companyId, userId, canonicalToolName, safeArgumentsJson));
         }
 
         // MCP-discovered tools
-        return safeToolResult(orgId, userId, canonicalToolName,
-                mcpServerService.executeTool(orgId, userId, canonicalToolName, safeArgumentsJson));
+        return safeToolResult(companyId, userId, canonicalToolName,
+                mcpServerService.executeTool(companyId, userId, canonicalToolName, safeArgumentsJson));
     }
 
-    private String safeToolResult(String orgId, String userId, String toolName, String rawResult) {
+    private String safeToolResult(String companyId, String userId, String toolName, String rawResult) {
         SafetyGatewayService.SafetyDecision decision =
-                safetyGatewayService.checkOutput(orgId, userId, "TOOL_RESULT:" + toolName, rawResult);
+                safetyGatewayService.checkOutput(companyId, userId, "TOOL_RESULT:" + toolName, rawResult);
         if (decision.blocked()) {
             return "Tool result blocked by security gateway: " + toolName;
         }
         return decision.safeText();
     }
 
-    private String executeCloudccPageQuery(String orgId, String userId, String argumentsJson) {
+    private String executeCloudccPageQuery(String companyId, String userId, String argumentsJson) {
         try {
             JsonNode args = objectMapper.readTree(argumentsJson);
             String objectApiName = args.path("objectApiName").asText(null);
@@ -335,21 +335,21 @@ public class ToolOrchestratorService {
             if (expressions.isEmpty()) expressions = null;
             Integer pageNum = args.path("pageNum").isInt() ? args.path("pageNum").asInt() : null;
             Integer pageSize = args.path("pageSize").isInt() ? args.path("pageSize").asInt() : null;
-            return cloudccOpenApiService.pageQuery(orgId, userId, objectApiName, fields, expressions, pageNum, pageSize);
+            return cloudccOpenApiService.pageQuery(companyId, userId, objectApiName, fields, expressions, pageNum, pageSize);
         } catch (Exception e) {
             log.error("cloudcc_pageQuery execution failed: {}", e.getMessage(), e);
             return "❌ 执行失败: " + e.getMessage();
         }
     }
 
-    private String executeGetObjectFields(String orgId, String userId, String argumentsJson) {
+    private String executeGetObjectFields(String companyId, String userId, String argumentsJson) {
         try {
             JsonNode args = objectMapper.readTree(argumentsJson);
             String objprefix = args.path("objprefix").asText(null);
             if (objprefix == null || objprefix.isBlank()) {
                 return "❌ 缺少必需参数: objprefix（对象前缀，可从对象列表中获取）";
             }
-            return cloudccOpenApiService.getObjectFields(orgId, userId, objprefix);
+            return cloudccOpenApiService.getObjectFields(companyId, userId, objprefix);
         } catch (Exception e) {
             log.error("cloudcc_getObjectFields execution failed: {}", e.getMessage(), e);
             return "❌ 执行失败: " + e.getMessage();
@@ -359,13 +359,13 @@ public class ToolOrchestratorService {
     /**
      * Legacy method kept for backward compatibility.
      */
-    public Map<String, Object> maybeCallTools(String orgId, String question) {
+    public Map<String, Object> maybeCallTools(String companyId, String question) {
         Map<String, Object> result = new HashMap<>();
         result.put("toolCalls", List.of());
         return result;
     }
 
-    private String executeMemoryRemember(String orgId, String userId, String argumentsJson) {
+    private String executeMemoryRemember(String companyId, String userId, String argumentsJson) {
         try {
             JsonNode args = objectMapper.readTree(argumentsJson);
             String category = args.path("category").asText("FACT");
@@ -378,7 +378,7 @@ public class ToolOrchestratorService {
             BigDecimal confidence = args.path("confidence").isMissingNode()
                     ? BigDecimal.ONE
                     : new BigDecimal(args.path("confidence").asText("1.0"));
-            userMemoryService.upsertExtracted(orgId, userId, "cici-system", category, content, memoryKey, confidence);
+            userMemoryService.upsertExtracted(companyId, userId, "cici-system", category, content, memoryKey, confidence);
             return "✅ 已记住：" + content;
         } catch (Exception e) {
             log.error("memory_remember execution failed: {}", e.getMessage(), e);
@@ -386,14 +386,14 @@ public class ToolOrchestratorService {
         }
     }
 
-    private String executeMemoryForget(String orgId, String userId, String argumentsJson) {
+    private String executeMemoryForget(String companyId, String userId, String argumentsJson) {
         try {
             JsonNode args = objectMapper.readTree(argumentsJson);
             Long id = args.path("id").isLong() ? args.path("id").asLong() : null;
             if (id == null) {
                 return "❌ 缺少必需参数: id（记忆 ID）";
             }
-            userMemoryService.delete(orgId, userId, id);
+            userMemoryService.delete(companyId, userId, id);
             return "✅ 已删除记忆 #" + id;
         } catch (Exception e) {
             log.error("memory_forget execution failed: {}", e.getMessage(), e);

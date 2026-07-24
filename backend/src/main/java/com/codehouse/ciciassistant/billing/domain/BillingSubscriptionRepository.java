@@ -5,5 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface BillingSubscriptionRepository extends JpaRepository<BillingSubscriptionEntity, Long> {
 
-    Optional<BillingSubscriptionEntity> findByOrgId(String orgId);
+    Optional<BillingSubscriptionEntity> findByCompanyId(String companyId);
 }

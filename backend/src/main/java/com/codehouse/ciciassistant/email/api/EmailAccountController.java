@@ -65,55 +65,55 @@ public class EmailAccountController {
 
     @GetMapping
     public ApiResponse<List<Map<String, Object>>> list() {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = currentUser();
-        return ApiResponse.ok(emailAccountService.list(orgId, userId).stream()
+        return ApiResponse.ok(emailAccountService.list(companyId, userId).stream()
                 .map(EmailAccountView::payload)
                 .toList());
     }
 
     @GetMapping("/{id}")
     public ApiResponse<Map<String, Object>> get(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = currentUser();
-        return ApiResponse.ok(emailAccountService.get(orgId, userId, id).payload());
+        return ApiResponse.ok(emailAccountService.get(companyId, userId, id).payload());
     }
 
     @PostMapping
     public ApiResponse<Map<String, Object>> create(@Valid @RequestBody EmailAccountRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = currentUser();
-        EmailAccountView view = emailAccountService.create(orgId, userId, request.toCommand());
-        auditService.log(orgId, userId, "email.account.create",
+        EmailAccountView view = emailAccountService.create(companyId, userId, request.toCommand());
+        auditService.log(companyId, userId, "email.account.create",
                 "email=" + view.payload().get("emailAddress") + ",provider=" + view.payload().get("providerCode"));
         return ApiResponse.ok(view.payload());
     }
 
     @PutMapping("/{id}")
     public ApiResponse<Map<String, Object>> update(@PathVariable Long id, @Valid @RequestBody EmailAccountRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = currentUser();
-        EmailAccountView view = emailAccountService.update(orgId, userId, id, request.toCommand());
-        auditService.log(orgId, userId, "email.account.update",
+        EmailAccountView view = emailAccountService.update(companyId, userId, id, request.toCommand());
+        auditService.log(companyId, userId, "email.account.update",
                 "id=" + id + ",email=" + view.payload().get("emailAddress"));
         return ApiResponse.ok(view.payload());
     }
 
     @DeleteMapping("/{id}")
     public ApiResponse<Map<String, Object>> delete(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = currentUser();
-        emailAccountService.delete(orgId, userId, id);
-        auditService.log(orgId, userId, "email.account.delete", "id=" + id);
+        emailAccountService.delete(companyId, userId, id);
+        auditService.log(companyId, userId, "email.account.delete", "id=" + id);
         return ApiResponse.ok(Map.of("id", id, "deleted", true));
     }
 
     @PostMapping("/{id}/verify")
     public ApiResponse<Map<String, Object>> verify(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = currentUser();
-        VerifyResult result = emailAccountService.verify(orgId, userId, id);
-        auditService.log(orgId, userId, "email.account.verify",
+        VerifyResult result = emailAccountService.verify(companyId, userId, id);
+        auditService.log(companyId, userId, "email.account.verify",
                 "id=" + id + ",success=" + result.success() + ",message=" + result.message());
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("id", id);

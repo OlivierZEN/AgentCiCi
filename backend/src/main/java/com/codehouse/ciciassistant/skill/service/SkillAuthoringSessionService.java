@@ -23,17 +23,17 @@ public class SkillAuthoringSessionService {
     }
 
     @Transactional
-    public String createActiveSession(String orgId, String generateSourceText, BuiltinSkillCreatorService.GeneratedSkillDraft draft) {
+    public String createActiveSession(String companyId, String generateSourceText, BuiltinSkillCreatorService.GeneratedSkillDraft draft) {
         String id = UUID.randomUUID().toString();
         Instant now = Instant.now();
         String json = writeState(generateSourceText, null, draft);
-        repository.save(new SkillAuthoringSessionEntity(id, orgId, SkillAuthoringSessionEntity.STATUS_ACTIVE, json, now, now));
+        repository.save(new SkillAuthoringSessionEntity(id, companyId, SkillAuthoringSessionEntity.STATUS_ACTIVE, json, now, now));
         return id;
     }
 
     @Transactional
-    public void updateActiveSession(String orgId, String sessionId, String refineSourceText, BuiltinSkillCreatorService.GeneratedSkillDraft draft) {
-        SkillAuthoringSessionEntity entity = requireActive(orgId, sessionId);
+    public void updateActiveSession(String companyId, String sessionId, String refineSourceText, BuiltinSkillCreatorService.GeneratedSkillDraft draft) {
+        SkillAuthoringSessionEntity entity = requireActive(companyId, sessionId);
         String priorGenerate = readGenerateSource(entity.getStateJson());
         String json = writeState(priorGenerate, refineSourceText, draft);
         entity.setStateJson(json);
@@ -42,11 +42,11 @@ public class SkillAuthoringSessionService {
     }
 
     @Transactional
-    public void completeSession(String orgId, String sessionId) {
+    public void completeSession(String companyId, String sessionId) {
         if (sessionId == null || sessionId.isBlank()) {
             return;
         }
-        SkillAuthoringSessionEntity entity = repository.findByIdAndOrgId(sessionId.trim(), orgId).orElse(null);
+        SkillAuthoringSessionEntity entity = repository.findByIdAndCompanyId(sessionId.trim(), companyId).orElse(null);
         if (entity == null) {
             return;
         }
@@ -58,15 +58,15 @@ public class SkillAuthoringSessionService {
         repository.save(entity);
     }
 
-    public void assertSessionActive(String orgId, String sessionId) {
+    public void assertSessionActive(String companyId, String sessionId) {
         if (sessionId == null || sessionId.isBlank()) {
             return;
         }
-        requireActive(orgId, sessionId);
+        requireActive(companyId, sessionId);
     }
 
-    private SkillAuthoringSessionEntity requireActive(String orgId, String sessionId) {
-        SkillAuthoringSessionEntity entity = repository.findByIdAndOrgId(sessionId.trim(), orgId)
+    private SkillAuthoringSessionEntity requireActive(String companyId, String sessionId) {
+        SkillAuthoringSessionEntity entity = repository.findByIdAndCompanyId(sessionId.trim(), companyId)
                 .orElseThrow(() -> new IllegalArgumentException("authoring session not found"));
         if (!SkillAuthoringSessionEntity.STATUS_ACTIVE.equals(entity.getStatus())) {
             throw new IllegalArgumentException("authoring session is not active");

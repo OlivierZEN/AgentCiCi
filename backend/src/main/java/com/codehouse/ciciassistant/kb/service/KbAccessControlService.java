@@ -21,7 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class KbAccessControlService {
 
-    private static final Set<String> PRINCIPAL_TYPES = Set.of("ORG", "USER", "SYSTEM_ROLE");
+    private static final Set<String> PRINCIPAL_TYPES = Set.of("COMPANY", "USER", "SYSTEM_ROLE");
 
     private final KbAccessGrantRepository grantRepository;
     private final KbDocumentRepository documentRepository;
@@ -35,7 +35,7 @@ public class KbAccessControlService {
         this.chunkRepository = chunkRepository;
     }
 
-    public boolean canReadChunk(String orgId, Long knowledgeBaseId, Long documentId, Long chunkId, AccessPrincipal principal) {
+    public boolean canReadChunk(String companyId, Long knowledgeBaseId, Long documentId, Long chunkId, AccessPrincipal principal) {
         if (principal == null || principal.unrestricted()) {
             return true;
         }
@@ -45,33 +45,33 @@ public class KbAccessControlService {
         Instant now = Instant.now();
         List<KbAccessGrantEntity> chunkGrants = chunkId == null
                 ? List.of()
-                : activeGrants(grantRepository.findByOrgIdAndKnowledgeBaseIdAndChunkIdAndTargetTypeAndStatusOrderByPrincipalTypeAscPrincipalIdAsc(
-                        orgId,
+                : activeGrants(grantRepository.findByCompanyIdAndKnowledgeBaseIdAndChunkIdAndTargetTypeAndStatusOrderByPrincipalTypeAscPrincipalIdAsc(
+                        companyId,
                         knowledgeBaseId,
                         chunkId,
                         KbAccessGrantEntity.TARGET_CHUNK,
                         KbAccessGrantEntity.STATUS_ACTIVE), now);
         if (!chunkGrants.isEmpty()) {
-            return grantsAllow(orgId, chunkGrants, principal);
+            return grantsAllow(companyId, chunkGrants, principal);
         }
         List<KbAccessGrantEntity> documentGrants = documentId == null
                 ? List.of()
-                : activeGrants(grantRepository.findByOrgIdAndKnowledgeBaseIdAndDocumentIdAndTargetTypeAndStatusOrderByPrincipalTypeAscPrincipalIdAsc(
-                        orgId,
+                : activeGrants(grantRepository.findByCompanyIdAndKnowledgeBaseIdAndDocumentIdAndTargetTypeAndStatusOrderByPrincipalTypeAscPrincipalIdAsc(
+                        companyId,
                         knowledgeBaseId,
                         documentId,
                         KbAccessGrantEntity.TARGET_DOCUMENT,
                         KbAccessGrantEntity.STATUS_ACTIVE), now);
         if (!documentGrants.isEmpty()) {
-            return grantsAllow(orgId, documentGrants, principal);
+            return grantsAllow(companyId, documentGrants, principal);
         }
         return true;
     }
 
-    public List<Map<String, Object>> listDocumentGrants(String orgId, Long documentId) {
-        KbDocumentEntity document = requireDocument(orgId, documentId);
-        return activeGrants(grantRepository.findByOrgIdAndKnowledgeBaseIdAndDocumentIdAndTargetTypeAndStatusOrderByPrincipalTypeAscPrincipalIdAsc(
-                        orgId,
+    public List<Map<String, Object>> listDocumentGrants(String companyId, Long documentId) {
+        KbDocumentEntity document = requireDocument(companyId, documentId);
+        return activeGrants(grantRepository.findByCompanyIdAndKnowledgeBaseIdAndDocumentIdAndTargetTypeAndStatusOrderByPrincipalTypeAscPrincipalIdAsc(
+                        companyId,
                         document.getKnowledgeBaseId(),
                         documentId,
                         KbAccessGrantEntity.TARGET_DOCUMENT,
@@ -82,24 +82,24 @@ public class KbAccessControlService {
     }
 
     @Transactional
-    public List<Map<String, Object>> replaceDocumentGrants(String orgId, Long documentId, String actorUserId, List<GrantInput> grants) {
-        KbDocumentEntity document = requireDocument(orgId, documentId);
-        List<KbAccessGrantEntity> existing = grantRepository.findByOrgIdAndKnowledgeBaseIdAndDocumentIdAndTargetTypeAndStatusOrderByPrincipalTypeAscPrincipalIdAsc(
-                orgId,
+    public List<Map<String, Object>> replaceDocumentGrants(String companyId, Long documentId, String actorUserId, List<GrantInput> grants) {
+        KbDocumentEntity document = requireDocument(companyId, documentId);
+        List<KbAccessGrantEntity> existing = grantRepository.findByCompanyIdAndKnowledgeBaseIdAndDocumentIdAndTargetTypeAndStatusOrderByPrincipalTypeAscPrincipalIdAsc(
+                companyId,
                 document.getKnowledgeBaseId(),
                 documentId,
                 KbAccessGrantEntity.TARGET_DOCUMENT,
                 KbAccessGrantEntity.STATUS_ACTIVE);
         existing.forEach(KbAccessGrantEntity::revoke);
-        saveUniqueGrants(orgId, document.getKnowledgeBaseId(), KbAccessGrantEntity.TARGET_DOCUMENT, documentId, null, actorUserId, grants);
-        return listDocumentGrants(orgId, documentId);
+        saveUniqueGrants(companyId, document.getKnowledgeBaseId(), KbAccessGrantEntity.TARGET_DOCUMENT, documentId, null, actorUserId, grants);
+        return listDocumentGrants(companyId, documentId);
     }
 
-    public List<Map<String, Object>> listChunkGrants(String orgId, Long chunkId) {
-        KbChunkEntity chunk = requireChunk(orgId, chunkId);
+    public List<Map<String, Object>> listChunkGrants(String companyId, Long chunkId) {
+        KbChunkEntity chunk = requireChunk(companyId, chunkId);
         Long knowledgeBaseId = Long.parseLong(chunk.getKnowledgeBaseId());
-        return activeGrants(grantRepository.findByOrgIdAndKnowledgeBaseIdAndChunkIdAndTargetTypeAndStatusOrderByPrincipalTypeAscPrincipalIdAsc(
-                        orgId,
+        return activeGrants(grantRepository.findByCompanyIdAndKnowledgeBaseIdAndChunkIdAndTargetTypeAndStatusOrderByPrincipalTypeAscPrincipalIdAsc(
+                        companyId,
                         knowledgeBaseId,
                         chunkId,
                         KbAccessGrantEntity.TARGET_CHUNK,
@@ -110,21 +110,21 @@ public class KbAccessControlService {
     }
 
     @Transactional
-    public List<Map<String, Object>> replaceChunkGrants(String orgId, Long chunkId, String actorUserId, List<GrantInput> grants) {
-        KbChunkEntity chunk = requireChunk(orgId, chunkId);
+    public List<Map<String, Object>> replaceChunkGrants(String companyId, Long chunkId, String actorUserId, List<GrantInput> grants) {
+        KbChunkEntity chunk = requireChunk(companyId, chunkId);
         Long knowledgeBaseId = Long.parseLong(chunk.getKnowledgeBaseId());
-        List<KbAccessGrantEntity> existing = grantRepository.findByOrgIdAndKnowledgeBaseIdAndChunkIdAndTargetTypeAndStatusOrderByPrincipalTypeAscPrincipalIdAsc(
-                orgId,
+        List<KbAccessGrantEntity> existing = grantRepository.findByCompanyIdAndKnowledgeBaseIdAndChunkIdAndTargetTypeAndStatusOrderByPrincipalTypeAscPrincipalIdAsc(
+                companyId,
                 knowledgeBaseId,
                 chunkId,
                 KbAccessGrantEntity.TARGET_CHUNK,
                 KbAccessGrantEntity.STATUS_ACTIVE);
         existing.forEach(KbAccessGrantEntity::revoke);
-        saveUniqueGrants(orgId, knowledgeBaseId, KbAccessGrantEntity.TARGET_CHUNK, chunk.getDocumentId(), chunkId, actorUserId, grants);
-        return listChunkGrants(orgId, chunkId);
+        saveUniqueGrants(companyId, knowledgeBaseId, KbAccessGrantEntity.TARGET_CHUNK, chunk.getDocumentId(), chunkId, actorUserId, grants);
+        return listChunkGrants(companyId, chunkId);
     }
 
-    private void saveUniqueGrants(String orgId,
+    private void saveUniqueGrants(String companyId,
                                   Long knowledgeBaseId,
                                   String targetType,
                                   Long documentId,
@@ -137,13 +137,13 @@ public class KbAccessControlService {
         Set<String> seen = new LinkedHashSet<>();
         ArrayList<KbAccessGrantEntity> grants = new ArrayList<>();
         for (GrantInput input : inputs) {
-            NormalizedPrincipal principal = normalizePrincipal(orgId, input.principalType(), input.principalId());
+            NormalizedPrincipal principal = normalizePrincipal(companyId, input.principalType(), input.principalId());
             String key = principal.type() + "|" + (principal.id() == null ? "" : principal.id());
             if (!seen.add(key)) {
                 continue;
             }
             grants.add(new KbAccessGrantEntity(
-                    orgId,
+                    companyId,
                     knowledgeBaseId,
                     targetType,
                     documentId,
@@ -158,21 +158,21 @@ public class KbAccessControlService {
         grantRepository.saveAll(grants);
     }
 
-    private boolean grantsAllow(String orgId, List<KbAccessGrantEntity> grants, AccessPrincipal principal) {
+    private boolean grantsAllow(String companyId, List<KbAccessGrantEntity> grants, AccessPrincipal principal) {
         for (KbAccessGrantEntity grant : grants) {
             if (!KbAccessGrantEntity.PERMISSION_READ.equals(grant.getPermission())) {
                 continue;
             }
-            if (principalMatches(orgId, grant, principal)) {
+            if (principalMatches(companyId, grant, principal)) {
                 return true;
             }
         }
         return false;
     }
 
-    private boolean principalMatches(String orgId, KbAccessGrantEntity grant, AccessPrincipal principal) {
+    private boolean principalMatches(String companyId, KbAccessGrantEntity grant, AccessPrincipal principal) {
         return switch (grant.getPrincipalType()) {
-            case "ORG" -> grant.getPrincipalId() == null || grant.getPrincipalId().isBlank() || orgId.equals(grant.getPrincipalId());
+            case "COMPANY" -> grant.getPrincipalId() == null || grant.getPrincipalId().isBlank() || companyId.equals(grant.getPrincipalId());
             case "USER" -> principal.userId() != null && principal.userId().equals(grant.getPrincipalId());
             case "SYSTEM_ROLE" -> principal.roles() != null && principal.roles().contains(grant.getPrincipalId());
             default -> false;
@@ -183,24 +183,24 @@ public class KbAccessControlService {
         return grants.stream().filter(item -> item.isCurrentlyActive(now)).toList();
     }
 
-    private KbDocumentEntity requireDocument(String orgId, Long documentId) {
-        return documentRepository.findByIdAndOrgId(documentId, orgId)
+    private KbDocumentEntity requireDocument(String companyId, Long documentId) {
+        return documentRepository.findByIdAndCompanyId(documentId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Knowledge document not found"));
     }
 
-    private KbChunkEntity requireChunk(String orgId, Long chunkId) {
-        return chunkRepository.findByIdAndOrgId(chunkId, orgId)
+    private KbChunkEntity requireChunk(String companyId, Long chunkId) {
+        return chunkRepository.findByIdAndCompanyId(chunkId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Knowledge chunk not found"));
     }
 
-    private NormalizedPrincipal normalizePrincipal(String orgId, String principalType, String principalId) {
+    private NormalizedPrincipal normalizePrincipal(String companyId, String principalType, String principalId) {
         String type = normalizeUpper(principalType, "principalType");
         if (!PRINCIPAL_TYPES.contains(type)) {
             throw new IllegalArgumentException("Unsupported principalType: " + principalType);
         }
         String id = principalId == null || principalId.isBlank() ? null : principalId.trim();
-        if ("ORG".equals(type)) {
-            return new NormalizedPrincipal(type, id == null ? null : orgId);
+        if ("COMPANY".equals(type)) {
+            return new NormalizedPrincipal(type, id == null ? null : companyId);
         }
         if ("SYSTEM_ROLE".equals(type)) {
             String role = normalizeUpper(id, "principalId");

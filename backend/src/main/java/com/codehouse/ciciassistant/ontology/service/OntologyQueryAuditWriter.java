@@ -19,6 +19,6 @@ public class OntologyQueryAuditWriter {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void write(OntologyQueryAuditEntity audit) {
         persistence.saveForCurrentOrg(audit);
-        persistence.flushForCurrentOrg(audit.getOrgId());
+        persistence.flushForCurrentOrg(audit.getCompanyId());
     }
 }

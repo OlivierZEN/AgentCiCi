@@ -61,8 +61,8 @@ class OntologyPersistenceIntegrationTest {
     }
 
     @Test
-    void scopesWorkspaceLookupToOrganization() {
-        TenantContext.setOrgId("org-a");
+    void scopesWorkspaceLookupToCompany() {
+        TenantContext.setCompanyId("org-a");
         OntologyWorkspaceEntity saved = persistence.saveForCurrentOrg(
                 new OntologyWorkspaceEntity(
                         "org-a",
@@ -71,13 +71,13 @@ class OntologyPersistenceIntegrationTest {
                         "通用性样例",
                         "user-a"));
 
-        assertThat(workspaces.findByIdAndOrgId(saved.getId(), "org-a")).isPresent();
-        assertThat(workspaces.findByIdAndOrgId(saved.getId(), "org-b")).isEmpty();
+        assertThat(workspaces.findByIdAndCompanyId(saved.getId(), "org-a")).isPresent();
+        assertThat(workspaces.findByIdAndCompanyId(saved.getId(), "org-b")).isEmpty();
     }
 
     @Test
     void persistsManualAndReferencePackageWorkspaceProvenance() {
-        TenantContext.setOrgId("org-provenance");
+        TenantContext.setCompanyId("org-provenance");
         OntologyWorkspaceEntity manual = persistence.saveForCurrentOrg(
                 new OntologyWorkspaceEntity(
                         "org-provenance",
@@ -127,7 +127,7 @@ class OntologyPersistenceIntegrationTest {
 
         assertThatThrownBy(() -> jdbcTemplate.update("""
                         INSERT INTO ontology_workspace
-                            (org_id, key, name, creation_source,
+                            (company_id, key, name, creation_source,
                              reference_package_id, reference_package_fingerprint,
                              created_by, updated_by)
                         VALUES (?, ?, ?, 'MANUAL', ?, NULL, ?, ?)
@@ -145,7 +145,7 @@ class OntologyPersistenceIntegrationTest {
     void provenanceMigrationRejectsReferencePackageWithEmptyPackageId() {
         assertThatThrownBy(() -> jdbcTemplate.update("""
                         INSERT INTO ontology_workspace
-                            (org_id, key, name, creation_source,
+                            (company_id, key, name, creation_source,
                              reference_package_id, reference_package_fingerprint,
                              created_by, updated_by)
                         VALUES (?, ?, ?, 'REFERENCE_PACKAGE', '', ?, ?, ?)
@@ -163,7 +163,7 @@ class OntologyPersistenceIntegrationTest {
     void provenanceMigrationRejectsReferencePackageWithShortFingerprint() {
         assertThatThrownBy(() -> jdbcTemplate.update("""
                         INSERT INTO ontology_workspace
-                            (org_id, key, name, creation_source,
+                            (company_id, key, name, creation_source,
                              reference_package_id, reference_package_fingerprint,
                              created_by, updated_by)
                         VALUES (?, ?, ?, 'REFERENCE_PACKAGE', ?, ?, ?, ?)
@@ -182,7 +182,7 @@ class OntologyPersistenceIntegrationTest {
     void provenanceMigrationRejectsReferencePackageWithUppercaseFingerprint() {
         assertThatThrownBy(() -> jdbcTemplate.update("""
                         INSERT INTO ontology_workspace
-                            (org_id, key, name, creation_source,
+                            (company_id, key, name, creation_source,
                              reference_package_id, reference_package_fingerprint,
                              created_by, updated_by)
                         VALUES (?, ?, ?, 'REFERENCE_PACKAGE', ?, ?, ?, ?)
@@ -198,8 +198,8 @@ class OntologyPersistenceIntegrationTest {
     }
 
     @Test
-    void ordersVersionsWithinWorkspaceAndScopesToOrganization() {
-        TenantContext.setOrgId("org-version-a");
+    void ordersVersionsWithinWorkspaceAndScopesToCompany() {
+        TenantContext.setCompanyId("org-version-a");
         OntologyWorkspaceEntity workspace = persistence.saveForCurrentOrg(
                 new OntologyWorkspaceEntity(
                         "org-version-a",
@@ -214,11 +214,11 @@ class OntologyPersistenceIntegrationTest {
                 "org-version-a", workspace.getId(), 2, 2L, "hash-2", "{}",
                 "{}", "type Query { pong: String }", "{}", "{}", "user-a"));
 
-        assertThat(versions.findByWorkspaceIdAndOrgIdOrderByVersionNoDesc(
+        assertThat(versions.findByWorkspaceIdAndCompanyIdOrderByVersionNoDesc(
                 workspace.getId(), "org-version-a"))
                 .extracting(OntologyVersionEntity::getVersionNo)
                 .containsExactly(2, 1);
-        assertThat(versions.findByWorkspaceIdAndOrgIdOrderByVersionNoDesc(
+        assertThat(versions.findByWorkspaceIdAndCompanyIdOrderByVersionNoDesc(
                 workspace.getId(), "org-version-b"))
                 .isEmpty();
     }
@@ -311,14 +311,14 @@ class OntologyPersistenceIntegrationTest {
     }
 
     @Test
-    void rejectsWorkspaceChildWhoseOrganizationDoesNotMatchItsParent() {
-        TenantContext.setOrgId("org-parent-a");
+    void rejectsWorkspaceChildWhoseCompanyDoesNotMatchItsParent() {
+        TenantContext.setCompanyId("org-parent-a");
         OntologyWorkspaceEntity workspace = persistence.saveForCurrentOrg(new OntologyWorkspaceEntity(
                 "org-parent-a", "delivery-a", "交付 A", "组织边界", "user-a"));
 
         assertThatThrownBy(() -> jdbcTemplate.update("""
                         INSERT INTO ontology_concept
-                            (org_id, workspace_id, key, name, concept_type)
+                            (company_id, workspace_id, key, name, concept_type)
                         VALUES (?, ?, ?, ?, ?)
                         """, "org-child-b", workspace.getId(), "task", "任务", "EVENT"))
                 .isInstanceOf(DataAccessException.class);
@@ -326,14 +326,14 @@ class OntologyPersistenceIntegrationTest {
 
     @Test
     void rejectsNestedPropertyWhoseWorkspaceDoesNotMatchItsConcept() {
-        TenantContext.setOrgId("org-nested");
+        TenantContext.setCompanyId("org-nested");
         OntologyWorkspaceEntity workspaceA = persistence.saveForCurrentOrg(new OntologyWorkspaceEntity(
                 "org-nested", "delivery-a", "交付 A", "父工作区", "user-a"));
         OntologyWorkspaceEntity workspaceB = persistence.saveForCurrentOrg(new OntologyWorkspaceEntity(
                 "org-nested", "delivery-b", "交付 B", "伪造子工作区", "user-a"));
         Long conceptId = jdbcTemplate.queryForObject("""
                         INSERT INTO ontology_concept
-                            (org_id, workspace_id, key, name, concept_type)
+                            (company_id, workspace_id, key, name, concept_type)
                         VALUES (?, ?, ?, ?, ?)
                         RETURNING id
                         """, Long.class,
@@ -341,7 +341,7 @@ class OntologyPersistenceIntegrationTest {
 
         assertThatThrownBy(() -> jdbcTemplate.update("""
                         INSERT INTO ontology_property
-                            (org_id, workspace_id, concept_id, key, name, data_type)
+                            (company_id, workspace_id, concept_id, key, name, data_type)
                         VALUES (?, ?, ?, ?, ?, ?)
                         """, "org-nested", workspaceB.getId(), conceptId,
                 "status", "状态", "ENUM"))
@@ -350,7 +350,7 @@ class OntologyPersistenceIntegrationTest {
 
     @Test
     void publishedVersionPreventsWorkspaceDeletion() {
-        TenantContext.setOrgId("org-version-retention");
+        TenantContext.setCompanyId("org-version-retention");
         OntologyWorkspaceEntity workspace = persistence.saveForCurrentOrg(new OntologyWorkspaceEntity(
                 "org-version-retention", "delivery", "交付", "保留发布版本", "user-a"));
         persistence.saveForCurrentOrg(new OntologyVersionEntity(
@@ -363,40 +363,40 @@ class OntologyPersistenceIntegrationTest {
     }
 
     @Test
-    void rejectsEntityFromAnotherOrganizationWithoutWritingIt() {
-        TenantContext.setOrgId("org-write-a");
+    void rejectsEntityFromAnotherCompanyWithoutWritingIt() {
+        TenantContext.setCompanyId("org-write-a");
         OntologyWorkspaceEntity foreignWorkspace = new OntologyWorkspaceEntity(
                 "org-write-b", "forbidden-write", "越界写入", "不应持久化", "user-a");
 
         assertThatThrownBy(() -> persistence.saveForCurrentOrg(foreignWorkspace))
                 .isInstanceOf(ForbiddenException.class)
-                .hasMessageContaining("organization");
-        assertThat(workspaces.findByOrgIdAndKey("org-write-b", "forbidden-write")).isEmpty();
+                .hasMessageContaining("company");
+        assertThat(workspaces.findByCompanyIdAndKey("org-write-b", "forbidden-write")).isEmpty();
     }
 
     @Test
-    void rejectsCrossOrganizationScopedDeleteBeforeInvokingTheDelete() {
-        TenantContext.setOrgId("org-delete-a");
+    void rejectsCrossCompanyScopedDeleteBeforeInvokingTheDelete() {
+        TenantContext.setCompanyId("org-delete-a");
         AtomicBoolean invoked = new AtomicBoolean();
 
         assertThatThrownBy(() -> persistence.deleteForCurrentOrg(
                 "org-delete-b", () -> invoked.set(true)))
                 .isInstanceOf(ForbiddenException.class)
-                .hasMessageContaining("organization");
+                .hasMessageContaining("company");
 
         assertThat(invoked).isFalse();
     }
 
     @Test
-    void persistsEntityOnlyForTheCurrentOrganization() {
-        TenantContext.setOrgId("org-write-a");
+    void persistsEntityOnlyForTheCurrentCompany() {
+        TenantContext.setCompanyId("org-write-a");
         OntologyWorkspaceEntity workspace = new OntologyWorkspaceEntity(
                 "org-write-a", "allowed-write", "同租户写入", "允许持久化", "user-a");
 
         OntologyWorkspaceEntity saved = persistence.saveForCurrentOrg(workspace);
 
         assertThat(saved.getId()).isNotNull();
-        assertThat(workspaces.findByIdAndOrgId(saved.getId(), "org-write-a")).contains(saved);
+        assertThat(workspaces.findByIdAndCompanyId(saved.getId(), "org-write-a")).contains(saved);
     }
 
     @Test
@@ -416,44 +416,44 @@ class OntologyPersistenceIntegrationTest {
                 "ontology_query_audit");
         for (String table : workspaceChildren) {
             assertForeignKey(table,
-                    "FOREIGN KEY (workspace_id, org_id) REFERENCES ontology_workspace(id, org_id)");
+                    "FOREIGN KEY (workspace_id, company_id) REFERENCES ontology_workspace(id, company_id)");
         }
 
         assertForeignKey("ontology_property",
-                "FOREIGN KEY (concept_id, workspace_id, org_id) "
-                        + "REFERENCES ontology_concept(id, workspace_id, org_id)");
+                "FOREIGN KEY (concept_id, workspace_id, company_id) "
+                        + "REFERENCES ontology_concept(id, workspace_id, company_id)");
         assertForeignKey("ontology_relation",
-                "FOREIGN KEY (source_concept_id, workspace_id, org_id) "
-                        + "REFERENCES ontology_concept(id, workspace_id, org_id)");
+                "FOREIGN KEY (source_concept_id, workspace_id, company_id) "
+                        + "REFERENCES ontology_concept(id, workspace_id, company_id)");
         assertForeignKey("ontology_relation",
-                "FOREIGN KEY (target_concept_id, workspace_id, org_id) "
-                        + "REFERENCES ontology_concept(id, workspace_id, org_id)");
+                "FOREIGN KEY (target_concept_id, workspace_id, company_id) "
+                        + "REFERENCES ontology_concept(id, workspace_id, company_id)");
         assertForeignKey("ontology_metric",
-                "FOREIGN KEY (concept_id, workspace_id, org_id) "
-                        + "REFERENCES ontology_concept(id, workspace_id, org_id)");
+                "FOREIGN KEY (concept_id, workspace_id, company_id) "
+                        + "REFERENCES ontology_concept(id, workspace_id, company_id)");
         assertForeignKey("ontology_action",
-                "FOREIGN KEY (concept_id, workspace_id, org_id) "
-                        + "REFERENCES ontology_concept(id, workspace_id, org_id)");
+                "FOREIGN KEY (concept_id, workspace_id, company_id) "
+                        + "REFERENCES ontology_concept(id, workspace_id, company_id)");
         assertForeignKey("ontology_physical_object",
-                "FOREIGN KEY (data_source_id, workspace_id, org_id) "
-                        + "REFERENCES ontology_data_source(id, workspace_id, org_id)");
+                "FOREIGN KEY (data_source_id, workspace_id, company_id) "
+                        + "REFERENCES ontology_data_source(id, workspace_id, company_id)");
         assertForeignKey("ontology_physical_field",
-                "FOREIGN KEY (physical_object_id, workspace_id, org_id) "
-                        + "REFERENCES ontology_physical_object(id, workspace_id, org_id)");
+                "FOREIGN KEY (physical_object_id, workspace_id, company_id) "
+                        + "REFERENCES ontology_physical_object(id, workspace_id, company_id)");
         assertForeignKey("ontology_mapping",
-                "FOREIGN KEY (data_source_id, workspace_id, org_id) "
-                        + "REFERENCES ontology_data_source(id, workspace_id, org_id)");
+                "FOREIGN KEY (data_source_id, workspace_id, company_id) "
+                        + "REFERENCES ontology_data_source(id, workspace_id, company_id)");
         assertForeignKey("ontology_query_audit",
-                "FOREIGN KEY (version_id, workspace_id, org_id) "
-                        + "REFERENCES ontology_version(id, workspace_id, org_id)");
+                "FOREIGN KEY (version_id, workspace_id, company_id) "
+                        + "REFERENCES ontology_version(id, workspace_id, company_id)");
         assertForeignKey("ontology_query_audit",
-                "FOREIGN KEY (data_source_id, workspace_id, org_id) "
-                        + "REFERENCES ontology_data_source(id, workspace_id, org_id)");
+                "FOREIGN KEY (data_source_id, workspace_id, company_id) "
+                        + "REFERENCES ontology_data_source(id, workspace_id, company_id)");
 
         assertThat(foreignKeys("ontology_version"))
                 .anySatisfy(definition -> assertThat(definition)
-                        .contains("FOREIGN KEY (workspace_id, org_id) "
-                                + "REFERENCES ontology_workspace(id, org_id) ON DELETE RESTRICT"));
+                        .contains("FOREIGN KEY (workspace_id, company_id) "
+                                + "REFERENCES ontology_workspace(id, company_id) ON DELETE RESTRICT"));
     }
 
     private void assertForeignKey(String table, String expectedDefinition) {

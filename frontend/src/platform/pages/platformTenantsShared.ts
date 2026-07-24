@@ -3,7 +3,7 @@ import { LS_PLATFORM_TOKEN, PLATFORM_API_BASE } from "../../constants";
 import { safeFetchJson } from "../../utils/http";
 
 export type RetentionPolicy = {
-  orgId: string;
+  companyId: string;
   graceUntil?: string | null;
   suspendUntil?: string | null;
   exportDeadline?: string | null;
@@ -30,7 +30,7 @@ export type ManifestDomain = {
 };
 
 export type PurgeManifest = {
-  orgId: string;
+  companyId: string;
   dryRun: boolean;
   generatedAt: string;
   totals: {
@@ -44,7 +44,7 @@ export type PurgeManifest = {
 
 export type PurgeJob = {
   id: number;
-  orgId: string;
+  companyId: string;
   dryRun: boolean;
   status: string;
   phase: string;
@@ -68,7 +68,7 @@ export type PurgeJob = {
 
 export type ExportJob = {
   id: number;
-  orgId: string;
+  companyId: string;
   status: string;
   requestedBy: string;
   reason?: string | null;
@@ -80,7 +80,7 @@ export type ExportJob = {
 };
 
 export type Tenant = {
-  orgId: string;
+  companyId: string;
   name: string;
   status: string;
   memberCount: number;
@@ -105,8 +105,8 @@ export type TenantProvisionPayload = {
 };
 
 export type TenantProvisionResult = {
-  orgId: string;
-  orgName: string;
+  companyId: string;
+  companyName: string;
   status: string;
   ownerMemberId: string;
   ownerAccountId: string;
@@ -183,8 +183,8 @@ export async function fetchTenantList(token: string): Promise<Tenant[]> {
   return body.data ?? [];
 }
 
-export async function fetchTenantDetail(token: string, orgId: string): Promise<TenantDetail> {
-  const response = await authFetch(LS_PLATFORM_TOKEN, `${PLATFORM_API_BASE}/tenants/${encodeURIComponent(orgId)}/retention`);
+export async function fetchTenantDetail(token: string, companyId: string): Promise<TenantDetail> {
+  const response = await authFetch(LS_PLATFORM_TOKEN, `${PLATFORM_API_BASE}/tenants/${encodeURIComponent(companyId)}/retention`);
   const { body } = await safeFetchJson<TenantDetail>(response);
   if (!response.ok || !body?.success || !body.data) {
     throw new Error(body?.message ?? `HTTP ${response.status}`);

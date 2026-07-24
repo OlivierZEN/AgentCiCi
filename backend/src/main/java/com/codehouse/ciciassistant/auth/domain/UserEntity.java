@@ -10,7 +10,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "organization_member")
+@Table(name = "company_member")
 public class UserEntity {
 
     public static final String STATUS_ACTIVE = "ACTIVE";
@@ -21,8 +21,8 @@ public class UserEntity {
     private String id;
 
     @ManyToOne(optional = false)
-    @JoinColumn(name = "org_id", nullable = false)
-    private OrgEntity org;
+    @JoinColumn(name = "company_id", nullable = false)
+    private CompanyEntity company;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "account_id", nullable = false)
@@ -52,9 +52,9 @@ public class UserEntity {
     protected UserEntity() {
     }
 
-    public UserEntity(OrgEntity org, UserAccountEntity account, String roleCode) {
+    public UserEntity(CompanyEntity company, UserAccountEntity account, String roleCode) {
         this.id = UUID.randomUUID().toString();
-        this.org = org;
+        this.company = company;
         this.account = account;
         this.roleCode = roleCode;
         this.memberStatus = STATUS_ACTIVE;
@@ -65,8 +65,8 @@ public class UserEntity {
         return id;
     }
 
-    public OrgEntity getOrg() {
-        return org;
+    public CompanyEntity getCompany() {
+        return company;
     }
 
     public UserAccountEntity getAccount() {

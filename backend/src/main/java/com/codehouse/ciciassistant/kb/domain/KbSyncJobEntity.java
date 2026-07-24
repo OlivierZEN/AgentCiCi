@@ -16,8 +16,8 @@ public class KbSyncJobEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "knowledge_base_id", nullable = false)
     private Long knowledgeBaseId;
@@ -58,9 +58,9 @@ public class KbSyncJobEntity {
     protected KbSyncJobEntity() {
     }
 
-    public KbSyncJobEntity(String orgId, Long knowledgeBaseId, Long dataSourceId, String triggerType, String syncCursorBefore) {
+    public KbSyncJobEntity(String companyId, Long knowledgeBaseId, Long dataSourceId, String triggerType, String syncCursorBefore) {
         Instant now = Instant.now();
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.knowledgeBaseId = knowledgeBaseId;
         this.dataSourceId = dataSourceId;
         this.triggerType = triggerType == null || triggerType.isBlank() ? "MANUAL" : triggerType;
@@ -87,7 +87,7 @@ public class KbSyncJobEntity {
 
     public Long getId() { return id; }
 
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
 
     public Long getKnowledgeBaseId() { return knowledgeBaseId; }
 

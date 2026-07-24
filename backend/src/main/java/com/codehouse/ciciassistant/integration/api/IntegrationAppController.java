@@ -32,17 +32,17 @@ public class IntegrationAppController {
 
     @GetMapping
     public ApiResponse<List<Map<String, Object>>> list() {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(integrationAppService.list(orgId));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(integrationAppService.list(companyId));
     }
 
     @PutMapping("/{appCode}")
     public ApiResponse<Map<String, Object>> update(
             @PathVariable String appCode,
             @Valid @RequestBody UpdateIntegrationAppRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         return ApiResponse.ok(integrationAppService.update(
-                orgId,
+                companyId,
                 appCode,
                 request.enabled(),
                 request.description(),
@@ -59,9 +59,9 @@ public class IntegrationAppController {
         if (integrationAppService.isPlatformManagedApp(IntegrationAppService.APP_CODE_TAVILY)) {
             throw new com.codehouse.ciciassistant.common.error.ForbiddenException(IntegrationAppService.PLATFORM_MANAGED_MESSAGE);
         }
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String override = request == null ? null : request.apiKey();
-        return ApiResponse.ok(tavilyToolService.testConnection(orgId, override));
+        return ApiResponse.ok(tavilyToolService.testConnection(companyId, override));
     }
 
     public record UpdateIntegrationAppRequest(

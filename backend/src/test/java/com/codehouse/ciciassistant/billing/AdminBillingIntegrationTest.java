@@ -36,13 +36,13 @@ class AdminBillingIntegrationTest {
     private BillingUsageMeteringService billingUsageMeteringService;
 
     @Test
-    void organizationAdminCanReadOwnBillingChainAndRealtimeUsageDebitsCredits() throws Exception {
+    void companyAdminCanReadOwnBillingChainAndRealtimeUsageDebitsCredits() throws Exception {
         String token = registerAdminToken();
 
         MvcResult overviewResult = mockMvc.perform(get("/admin/billing/overview")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.subscription.orgId").isNotEmpty())
+                .andExpect(jsonPath("$.data.subscription.companyId").isNotEmpty())
                 .andExpect(jsonPath("$.data.subscription.editionName").isNotEmpty())
                 .andExpect(jsonPath("$.data.subscription.editionCode").value("saas_business"))
                 .andExpect(jsonPath("$.data.subscription.editionName").value("专业版"))
@@ -56,13 +56,13 @@ class AdminBillingIntegrationTest {
                 .andReturn();
 
         JsonNode overview = readJson(overviewResult).path("data");
-        String orgId = overview.path("subscription").path("orgId").asText();
+        String companyId = overview.path("subscription").path("companyId").asText();
         assertThat(overview.path("subscription").path("localModelTokenPolicy").asText()).isNotBlank();
         assertThat(overview.path("creditSummary").path("remainingCredits").decimalValue())
                 .isEqualByComparingTo(overview.path("creditSummary").path("includedCredits").decimalValue());
 
         billingUsageMeteringService.recordChatRun(new BillingUsageMeteringService.ChatRunMeteringInput(
-                orgId,
+                companyId,
                 "integration-user",
                 "integration-agent",
                 "billing-realtime-session-1",
@@ -85,7 +85,7 @@ class AdminBillingIntegrationTest {
                 true,
                 Instant.now()));
         billingUsageMeteringService.recordChatRun(new BillingUsageMeteringService.ChatRunMeteringInput(
-                orgId,
+                companyId,
                 "integration-user",
                 "integration-agent",
                 "billing-realtime-session-1",
@@ -133,7 +133,7 @@ class AdminBillingIntegrationTest {
         mockMvc.perform(get("/admin/billing/subscription")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.orgId").value(orgId));
+                .andExpect(jsonPath("$.data.companyId").value(companyId));
 
         mockMvc.perform(get("/admin/billing/usage-events")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
@@ -159,7 +159,7 @@ class AdminBillingIntegrationTest {
                                 {
                                   "mobile": "%s",
                                   "password": "szyd1234",
-                                  "organizationName": "TASK-143 计费验证组织"
+                                  "companyName": "TASK-143 计费验证组织"
                                 }
                                 """.formatted(mobile)))
                 .andExpect(status().isOk())

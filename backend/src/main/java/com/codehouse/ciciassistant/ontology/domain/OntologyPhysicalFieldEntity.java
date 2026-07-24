@@ -37,7 +37,7 @@ public class OntologyPhysicalFieldEntity extends AbstractOntologyWorkspaceEntity
     }
 
     public OntologyPhysicalFieldEntity(
-            String orgId,
+            String companyId,
             Long workspaceId,
             Long physicalObjectId,
             String fieldKey,
@@ -46,7 +46,7 @@ public class OntologyPhysicalFieldEntity extends AbstractOntologyWorkspaceEntity
             boolean nullable,
             boolean multiple,
             String metadataJson) {
-        super(orgId, workspaceId);
+        super(companyId, workspaceId);
         this.physicalObjectId = physicalObjectId;
         this.fieldKey = fieldKey;
         this.name = name;

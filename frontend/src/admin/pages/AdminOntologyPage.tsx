@@ -183,8 +183,8 @@ function applyRevision(draft: OntologyDraftView, revision: number): OntologyDraf
 }
 
 export default function AdminOntologyPage() {
-  const { token, orgId, userId } = useAdminAuthScope();
-  const authScopeKey = useMemo(() => createOntologyAuthScopeKey(orgId, token), [orgId, token]);
+  const { token, companyId, userId } = useAdminAuthScope();
+  const authScopeKey = useMemo(() => createOntologyAuthScopeKey(companyId, token), [companyId, token]);
   const api = useMemo(() => createOntologyApi(token), [token]);
   const listRequestId = useRef(0);
   const packageRequestId = useRef(0);

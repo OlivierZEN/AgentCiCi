@@ -9,17 +9,17 @@ import org.springframework.data.repository.query.Param;
 
 public interface AuditLogRepository extends JpaRepository<AuditLogEntity, Long> {
 
-    List<AuditLogEntity> findTop50ByOrgIdOrderByIdDesc(String orgId);
+    List<AuditLogEntity> findTop50ByCompanyIdOrderByIdDesc(String companyId);
 
-    List<AuditLogEntity> findByOrgIdAndCreatedAtBetweenOrderByCreatedAtDesc(
-            String orgId,
+    List<AuditLogEntity> findByCompanyIdAndCreatedAtBetweenOrderByCreatedAtDesc(
+            String companyId,
             Instant from,
             Instant to,
             Pageable pageable);
 
     @Query("""
             select item from AuditLogEntity item
-            where item.orgId = :orgId
+            where item.companyId = :companyId
               and item.createdAt between :from and :to
               and (:eventType is null or lower(item.eventType) = :eventType)
               and (:q is null
@@ -29,7 +29,7 @@ public interface AuditLogRepository extends JpaRepository<AuditLogEntity, Long> 
             order by item.createdAt desc
             """)
     List<AuditLogEntity> searchOrgAuditLogs(
-            @Param("orgId") String orgId,
+            @Param("companyId") String companyId,
             @Param("from") Instant from,
             @Param("to") Instant to,
             @Param("eventType") String eventType,

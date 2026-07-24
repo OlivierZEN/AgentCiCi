@@ -151,7 +151,7 @@ class TavilyToolServiceTest {
         integrationAppService.updatePlatformManaged(IntegrationAppService.APP_CODE_TAVILY,
                 true, "tavily", Map.of("apiKey", "tvly-real-key"));
         // Ciphertext envelope persisted in the row, not plaintext
-        IntegrationAppEntity row = fakeRepo.findByOrgIdAndAppCode("demo-org",
+        IntegrationAppEntity row = fakeRepo.findByCompanyIdAndAppCode("demo-org",
                 IntegrationAppService.APP_CODE_TAVILY).orElseThrow();
         assertThat(row.getConfigJson()).doesNotContain("tvly-real-key");
         assertThat(row.getConfigJson()).contains("cipher").contains("iv");
@@ -171,12 +171,12 @@ class TavilyToolServiceTest {
     void updatingWithMaskPreservesStoredCiphertext() {
         integrationAppService.updatePlatformManaged(IntegrationAppService.APP_CODE_TAVILY,
                 true, "tavily", Map.of("apiKey", "tvly-real-key"));
-        String firstConfig = fakeRepo.findByOrgIdAndAppCode("demo-org",
+        String firstConfig = fakeRepo.findByCompanyIdAndAppCode("demo-org",
                 IntegrationAppService.APP_CODE_TAVILY).orElseThrow().getConfigJson();
         // Subsequent save that passes the mask back should NOT overwrite the ciphertext.
         integrationAppService.updatePlatformManaged(IntegrationAppService.APP_CODE_TAVILY,
                 true, "tavily", Map.of("apiKey", IntegrationAppService.API_KEY_MASK));
-        String secondConfig = fakeRepo.findByOrgIdAndAppCode("demo-org",
+        String secondConfig = fakeRepo.findByCompanyIdAndAppCode("demo-org",
                 IntegrationAppService.APP_CODE_TAVILY).orElseThrow().getConfigJson();
         assertThat(secondConfig).contains("cipher").contains("iv");
         assertThat(secondConfig).doesNotContain("tvly-****");
@@ -193,7 +193,7 @@ class TavilyToolServiceTest {
                         "accessKeySecret", "iflytek-secret"
                 ));
 
-        IntegrationAppEntity row = fakeRepo.findByOrgIdAndAppCode("demo-org",
+        IntegrationAppEntity row = fakeRepo.findByCompanyIdAndAppCode("demo-org",
                 IntegrationAppService.APP_CODE_IFLYTEK_ASR).orElseThrow();
         assertThat(row.getConfigJson()).doesNotContain("iflytek-secret");
         assertThat(row.getConfigJson()).contains("cipher").contains("iv");
@@ -221,7 +221,7 @@ class TavilyToolServiceTest {
                         "accessKeyId", "iflytek-access-key",
                         "accessKeySecret", "iflytek-secret"
                 ));
-        String firstConfig = fakeRepo.findByOrgIdAndAppCode("demo-org",
+        String firstConfig = fakeRepo.findByCompanyIdAndAppCode("demo-org",
                 IntegrationAppService.APP_CODE_IFLYTEK_ASR).orElseThrow().getConfigJson();
 
         integrationAppService.updatePlatformManaged(IntegrationAppService.APP_CODE_IFLYTEK_ASR,
@@ -230,7 +230,7 @@ class TavilyToolServiceTest {
                         "accessKeyId", "iflytek-access-key",
                         "accessKeySecret", IntegrationAppService.IFLYTEK_SECRET_MASK
                 ));
-        String secondConfig = fakeRepo.findByOrgIdAndAppCode("demo-org",
+        String secondConfig = fakeRepo.findByCompanyIdAndAppCode("demo-org",
                 IntegrationAppService.APP_CODE_IFLYTEK_ASR).orElseThrow().getConfigJson();
 
         assertThat(secondConfig).isEqualTo(firstConfig);
@@ -261,15 +261,15 @@ class TavilyToolServiceTest {
         private long nextId = 1L;
 
         @Override
-        public Optional<IntegrationAppEntity> findByOrgIdAndAppCode(String orgId, String appCode) {
-            return Optional.ofNullable(byKey.get(orgId + "|" + appCode));
+        public Optional<IntegrationAppEntity> findByCompanyIdAndAppCode(String companyId, String appCode) {
+            return Optional.ofNullable(byKey.get(companyId + "|" + appCode));
         }
 
         @Override
-        public List<IntegrationAppEntity> findByOrgIdOrderByIdAsc(String orgId) {
+        public List<IntegrationAppEntity> findByCompanyIdOrderByIdAsc(String companyId) {
             List<IntegrationAppEntity> out = new ArrayList<>();
             for (IntegrationAppEntity e : byKey.values()) {
-                if (orgId.equals(e.getOrgId())) out.add(e);
+                if (companyId.equals(e.getCompanyId())) out.add(e);
             }
             return out;
         }
@@ -300,7 +300,7 @@ class TavilyToolServiceTest {
                     throw new RuntimeException(ex);
                 }
             }
-            byKey.put(entity.getOrgId() + "|" + entity.getAppCode(), entity);
+            byKey.put(entity.getCompanyId() + "|" + entity.getAppCode(), entity);
             return entity;
         }
 

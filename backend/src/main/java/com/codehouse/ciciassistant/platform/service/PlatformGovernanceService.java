@@ -100,19 +100,19 @@ public class PlatformGovernanceService {
     }
 
     @Transactional
-    public void ensurePlatformAssets(String orgId) {
-        skillDefinitionService.ensurePhaseOneDefaults(orgId);
-        List<SkillDefinitionEntity> platformSkills = skillDefinitionRepository.findByOrgIdOrderByBuiltinDescNameAsc(orgId)
+    public void ensurePlatformAssets(String companyId) {
+        skillDefinitionService.ensurePhaseOneDefaults(companyId);
+        List<SkillDefinitionEntity> platformSkills = skillDefinitionRepository.findByCompanyIdOrderByBuiltinDescNameAsc(companyId)
                 .stream()
                 .filter(item -> item.getSourceType() == SkillSourceType.PLATFORM_STANDARD)
                 .toList();
         for (SkillDefinitionEntity skill : platformSkills) {
-            ensureTemplateForSkill(orgId, skill);
+            ensureTemplateForSkill(companyId, skill);
         }
         for (ToolCatalogItem item : BuiltinToolCatalog.list()) {
-            platformToolDefinitionRepository.findByOrgIdAndToolName(orgId, item.toolName())
+            platformToolDefinitionRepository.findByCompanyIdAndToolName(companyId, item.toolName())
                     .orElseGet(() -> platformToolDefinitionRepository.save(new PlatformToolDefinitionEntity(
-                            orgId,
+                            companyId,
                             item.toolName(),
                             item.displayName(),
                             item.description(),
@@ -121,12 +121,12 @@ public class PlatformGovernanceService {
                             true
                     )));
         }
-        ensureCorePolicyBundle(orgId);
+        ensureCorePolicyBundle(companyId);
     }
 
-    public List<PlatformSkillView> listPlatformSkills(String orgId) {
-        ensurePlatformAssets(orgId);
-        List<SkillDefinitionEntity> allSkills = skillDefinitionRepository.findByOrgIdOrderByBuiltinDescNameAsc(orgId);
+    public List<PlatformSkillView> listPlatformSkills(String companyId) {
+        ensurePlatformAssets(companyId);
+        List<SkillDefinitionEntity> allSkills = skillDefinitionRepository.findByCompanyIdOrderByBuiltinDescNameAsc(companyId);
         List<SkillDefinitionEntity> platformSkills = allSkills.stream()
                 .filter(item -> item.getSourceType() == SkillSourceType.PLATFORM_STANDARD)
                 .toList();
@@ -138,7 +138,7 @@ public class PlatformGovernanceService {
                         Collectors.counting()
                 ));
         List<Long> skillIds = platformSkills.stream().map(SkillDefinitionEntity::getId).toList();
-        Map<Long, Long> bindingCountBySkillId = agentSkillBindingRepository.findByOrgIdAndSkillIdInAndEnabledTrue(orgId, skillIds)
+        Map<Long, Long> bindingCountBySkillId = agentSkillBindingRepository.findByCompanyIdAndSkillIdInAndEnabledTrue(companyId, skillIds)
                 .stream()
                 .collect(Collectors.groupingBy(
                         AgentSkillBindingEntity::getSkillId,
@@ -146,24 +146,24 @@ public class PlatformGovernanceService {
                         Collectors.counting()
                 ));
         return platformSkills.stream()
-                .map(skill -> toSkillView(orgId, skill,
+                .map(skill -> toSkillView(companyId, skill,
                         derivedCountByTemplateCode.getOrDefault(safeTemplateCode(skill), 0L).intValue(),
                         bindingCountBySkillId.getOrDefault(skill.getId(), 0L).intValue()))
                 .toList();
     }
 
-    public List<PlatformSkillVersionView> listPlatformSkillVersions(String orgId, Long skillId) {
-        ensurePlatformAssets(orgId);
-        SkillDefinitionEntity skill = requirePlatformSkill(orgId, skillId);
+    public List<PlatformSkillVersionView> listPlatformSkillVersions(String companyId, Long skillId) {
+        ensurePlatformAssets(companyId);
+        SkillDefinitionEntity skill = requirePlatformSkill(companyId, skillId);
         String templateCode = safeTemplateCode(skill);
-        PlatformSkillTemplateEntity template = requireTemplate(orgId, templateCode);
+        PlatformSkillTemplateEntity template = requireTemplate(companyId, templateCode);
         List<PlatformSkillTemplateVersionEntity> versions =
-                platformSkillTemplateVersionRepository.findByOrgIdAndTemplateCodeOrderByVersionNoDesc(orgId, templateCode);
+                platformSkillTemplateVersionRepository.findByCompanyIdAndTemplateCodeOrderByVersionNoDesc(companyId, templateCode);
         PlatformSkillTemplateVersionEntity currentVersion = versions.stream()
                 .filter(item -> Objects.equals(item.getVersionNo(), template.getCurrentVersionNo()))
                 .findFirst()
                 .orElse(versions.isEmpty() ? null : versions.get(0));
-        TemplateUsage templateUsage = summarizeTemplateUsage(orgId, templateCode, template.getCurrentVersionNo());
+        TemplateUsage templateUsage = summarizeTemplateUsage(companyId, templateCode, template.getCurrentVersionNo());
         return versions
                 .stream()
                 .map(version -> new PlatformSkillVersionView(
@@ -187,14 +187,14 @@ public class PlatformGovernanceService {
                 .toList();
     }
 
-    public PlatformPolicyBundleView getCorePolicyBundleSummary(String orgId) {
-        ensurePlatformAssets(orgId);
+    public PlatformPolicyBundleView getCorePolicyBundleSummary(String companyId) {
+        ensurePlatformAssets(companyId);
         PlatformPolicyBundleEntity entity = platformPolicyBundleRepository
-                .findTopByOrgIdAndBundleCodeAndPublishStatusOrderByVersionNoDesc(orgId, CORE_POLICY_BUNDLE_CODE, "PUBLISHED")
+                .findTopByCompanyIdAndBundleCodeAndPublishStatusOrderByVersionNoDesc(companyId, CORE_POLICY_BUNDLE_CODE, "PUBLISHED")
                 .orElseThrow(() -> new IllegalArgumentException("Platform policy bundle not found"));
         List<PlatformPolicyBundleEntity> versions =
-                platformPolicyBundleRepository.findByOrgIdAndBundleCodeOrderByVersionNoDesc(orgId, CORE_POLICY_BUNDLE_CODE);
-        PublishedAgentUsage usage = summarizePublishedAgentUsage(orgId);
+                platformPolicyBundleRepository.findByCompanyIdAndBundleCodeOrderByVersionNoDesc(companyId, CORE_POLICY_BUNDLE_CODE);
+        PublishedAgentUsage usage = summarizePublishedAgentUsage(companyId);
         Integer latestDraftVersionNo = versions.stream()
                 .filter(item -> "DRAFT".equalsIgnoreCase(item.getPublishStatus()))
                 .map(PlatformPolicyBundleEntity::getVersionNo)
@@ -219,15 +219,15 @@ public class PlatformGovernanceService {
         );
     }
 
-    public List<PlatformPolicyBundleVersionView> listCorePolicyBundleVersions(String orgId) {
-        ensurePlatformAssets(orgId);
+    public List<PlatformPolicyBundleVersionView> listCorePolicyBundleVersions(String companyId) {
+        ensurePlatformAssets(companyId);
         List<PlatformPolicyBundleEntity> versions =
-                platformPolicyBundleRepository.findByOrgIdAndBundleCodeOrderByVersionNoDesc(orgId, CORE_POLICY_BUNDLE_CODE);
+                platformPolicyBundleRepository.findByCompanyIdAndBundleCodeOrderByVersionNoDesc(companyId, CORE_POLICY_BUNDLE_CODE);
         PlatformPolicyBundleEntity currentVersion = versions.stream()
                 .filter(item -> "PUBLISHED".equalsIgnoreCase(item.getPublishStatus()))
                 .findFirst()
                 .orElse(versions.isEmpty() ? null : versions.get(0));
-        PublishedAgentUsage usage = summarizePublishedAgentUsage(orgId);
+        PublishedAgentUsage usage = summarizePublishedAgentUsage(companyId);
         return versions.stream()
                 .map(version -> new PlatformPolicyBundleVersionView(
                         version.getId(),
@@ -247,10 +247,10 @@ public class PlatformGovernanceService {
     }
 
     @Transactional
-    public PlatformPolicyBundleView saveCorePolicyBundleDraft(String orgId, PolicyBundleDraftCommand command) {
-        ensurePlatformAssets(orgId);
+    public PlatformPolicyBundleView saveCorePolicyBundleDraft(String companyId, PolicyBundleDraftCommand command) {
+        ensurePlatformAssets(companyId);
         List<PlatformPolicyBundleEntity> versions =
-                platformPolicyBundleRepository.findByOrgIdAndBundleCodeOrderByVersionNoDesc(orgId, CORE_POLICY_BUNDLE_CODE);
+                platformPolicyBundleRepository.findByCompanyIdAndBundleCodeOrderByVersionNoDesc(companyId, CORE_POLICY_BUNDLE_CODE);
         PlatformPolicyBundleEntity baseline = versions.stream()
                 .filter(item -> "PUBLISHED".equalsIgnoreCase(item.getPublishStatus()))
                 .findFirst()
@@ -266,7 +266,7 @@ public class PlatformGovernanceService {
                 baseline == null ? List.of() : parseSourceSkillCodes(baseline.getPolicyJson())
         );
         PlatformPolicyBundleEntity created = platformPolicyBundleRepository.save(new PlatformPolicyBundleEntity(
-                orgId,
+                companyId,
                 CORE_POLICY_BUNDLE_CODE,
                 requireText(command.name(), "name"),
                 trimToNull(command.description()),
@@ -280,65 +280,65 @@ public class PlatformGovernanceService {
                 currentActorId(),
                 null
         ));
-        logAudit(orgId,
+        logAudit(companyId,
                 "platform.policy.version.create",
                 "PLATFORM_POLICY_BUNDLE_VERSION",
                 created.getBundleCode() + "@v" + created.getVersionNo(),
                 "draft policy bundle version created");
-        return getCorePolicyBundleSummary(orgId);
+        return getCorePolicyBundleSummary(companyId);
     }
 
     @Transactional
-    public PlatformPolicyBundleView publishCorePolicyBundleVersion(String orgId, Integer versionNo) {
-        ensurePlatformAssets(orgId);
-        PlatformPolicyBundleEntity version = requireCorePolicyBundleVersion(orgId, versionNo);
+    public PlatformPolicyBundleView publishCorePolicyBundleVersion(String companyId, Integer versionNo) {
+        ensurePlatformAssets(companyId);
+        PlatformPolicyBundleEntity version = requireCorePolicyBundleVersion(companyId, versionNo);
         for (PlatformPolicyBundleEntity item : platformPolicyBundleRepository
-                .findByOrgIdAndBundleCodeOrderByVersionNoDesc(orgId, CORE_POLICY_BUNDLE_CODE)) {
+                .findByCompanyIdAndBundleCodeOrderByVersionNoDesc(companyId, CORE_POLICY_BUNDLE_CODE)) {
             if (Objects.equals(item.getId(), version.getId())) {
                 item.markPublished();
             } else if ("PUBLISHED".equalsIgnoreCase(item.getPublishStatus())) {
                 item.markSuperseded();
             }
         }
-        logAudit(orgId,
+        logAudit(companyId,
                 "platform.policy.publish",
                 "PLATFORM_POLICY_BUNDLE",
                 version.getBundleCode() + "@v" + version.getVersionNo(),
                 "published platform policy bundle version");
-        return getCorePolicyBundleSummary(orgId);
+        return getCorePolicyBundleSummary(companyId);
     }
 
     @Transactional
-    public PlatformPolicyBundleView rollbackCorePolicyBundleVersion(String orgId, Integer versionNo) {
-        ensurePlatformAssets(orgId);
-        PlatformPolicyBundleEntity version = requireCorePolicyBundleVersion(orgId, versionNo);
+    public PlatformPolicyBundleView rollbackCorePolicyBundleVersion(String companyId, Integer versionNo) {
+        ensurePlatformAssets(companyId);
+        PlatformPolicyBundleEntity version = requireCorePolicyBundleVersion(companyId, versionNo);
         for (PlatformPolicyBundleEntity item : platformPolicyBundleRepository
-                .findByOrgIdAndBundleCodeOrderByVersionNoDesc(orgId, CORE_POLICY_BUNDLE_CODE)) {
+                .findByCompanyIdAndBundleCodeOrderByVersionNoDesc(companyId, CORE_POLICY_BUNDLE_CODE)) {
             if (Objects.equals(item.getId(), version.getId())) {
                 item.markPublished();
             } else if ("PUBLISHED".equalsIgnoreCase(item.getPublishStatus())) {
                 item.markSuperseded();
             }
         }
-        logAudit(orgId,
+        logAudit(companyId,
                 "platform.policy.rollback",
                 "PLATFORM_POLICY_BUNDLE",
                 version.getBundleCode() + "@v" + version.getVersionNo(),
                 "rolled back platform policy bundle version");
-        return getCorePolicyBundleSummary(orgId);
+        return getCorePolicyBundleSummary(companyId);
     }
 
     @Transactional
-    public PlatformSkillView savePlatformSkillDraft(String orgId, Long skillId, SkillTemplateDraftCommand command) {
-        ensurePlatformAssets(orgId);
-        SkillDefinitionEntity skill = requirePlatformSkill(orgId, skillId);
-        PlatformSkillTemplateEntity template = requireTemplate(orgId, safeTemplateCode(skill));
+    public PlatformSkillView savePlatformSkillDraft(String companyId, Long skillId, SkillTemplateDraftCommand command) {
+        ensurePlatformAssets(companyId);
+        SkillDefinitionEntity skill = requirePlatformSkill(companyId, skillId);
+        PlatformSkillTemplateEntity template = requireTemplate(companyId, safeTemplateCode(skill));
         int nextVersionNo = platformSkillTemplateVersionRepository
-                .findTopByOrgIdAndTemplateCodeOrderByVersionNoDesc(orgId, template.getTemplateCode())
+                .findTopByCompanyIdAndTemplateCodeOrderByVersionNoDesc(companyId, template.getTemplateCode())
                 .map(item -> item.getVersionNo() + 1)
                 .orElse(1);
         PlatformSkillTemplateVersionEntity created = platformSkillTemplateVersionRepository.save(new PlatformSkillTemplateVersionEntity(
-                orgId,
+                companyId,
                 template.getTemplateCode(),
                 nextVersionNo,
                 requireText(command.name(), "name"),
@@ -356,22 +356,22 @@ public class PlatformGovernanceService {
         ));
         template.updateMetadata(created.getName(), inferSkillCategory(skill, created.getToolWhitelist()), created.getDescription(), "ACTIVE");
         platformSkillTemplateRepository.save(template);
-        logAudit(orgId,
+        logAudit(companyId,
                 "platform.skill.version.create",
                 "PLATFORM_SKILL_TEMPLATE_VERSION",
                 template.getTemplateCode() + "@v" + created.getVersionNo(),
                 "draft version created");
-        return getPlatformSkillView(orgId, skill.getId());
+        return getPlatformSkillView(companyId, skill.getId());
     }
 
     @Transactional
-    public PlatformSkillView publishPlatformSkillVersion(String orgId, Long skillId, Integer versionNo, SkillGovernanceCommand command) {
-        ensurePlatformAssets(orgId);
-        SkillDefinitionEntity skill = requirePlatformSkill(orgId, skillId);
-        PlatformSkillTemplateEntity template = requireTemplate(orgId, safeTemplateCode(skill));
-        PlatformSkillTemplateVersionEntity version = requireTemplateVersion(orgId, template.getTemplateCode(), versionNo);
+    public PlatformSkillView publishPlatformSkillVersion(String companyId, Long skillId, Integer versionNo, SkillGovernanceCommand command) {
+        ensurePlatformAssets(companyId);
+        SkillDefinitionEntity skill = requirePlatformSkill(companyId, skillId);
+        PlatformSkillTemplateEntity template = requireTemplate(companyId, safeTemplateCode(skill));
+        PlatformSkillTemplateVersionEntity version = requireTemplateVersion(companyId, template.getTemplateCode(), versionNo);
         for (PlatformSkillTemplateVersionEntity item : platformSkillTemplateVersionRepository
-                .findByOrgIdAndTemplateCodeOrderByVersionNoDesc(orgId, template.getTemplateCode())) {
+                .findByCompanyIdAndTemplateCodeOrderByVersionNoDesc(companyId, template.getTemplateCode())) {
             if (Objects.equals(item.getId(), version.getId())) {
                 item.markPublished();
             } else if ("PUBLISHED".equalsIgnoreCase(item.getPublishStatus())) {
@@ -382,22 +382,22 @@ public class PlatformGovernanceService {
         template.updateMetadata(version.getName(), inferSkillCategory(skill, version.getToolWhitelist()), version.getDescription(), "ACTIVE");
         template.setCurrentVersionNo(version.getVersionNo());
         platformSkillTemplateRepository.save(template);
-        logAudit(orgId,
+        logAudit(companyId,
                 "platform.skill.publish",
                 "PLATFORM_SKILL_TEMPLATE",
                 template.getTemplateCode() + "@v" + version.getVersionNo(),
                 "published platform skill template version");
-        return getPlatformSkillView(orgId, skill.getId());
+        return getPlatformSkillView(companyId, skill.getId());
     }
 
     @Transactional
-    public PlatformSkillView rollbackPlatformSkillVersion(String orgId, Long skillId, Integer versionNo, SkillGovernanceCommand command) {
-        ensurePlatformAssets(orgId);
-        SkillDefinitionEntity skill = requirePlatformSkill(orgId, skillId);
-        PlatformSkillTemplateEntity template = requireTemplate(orgId, safeTemplateCode(skill));
-        PlatformSkillTemplateVersionEntity version = requireTemplateVersion(orgId, template.getTemplateCode(), versionNo);
+    public PlatformSkillView rollbackPlatformSkillVersion(String companyId, Long skillId, Integer versionNo, SkillGovernanceCommand command) {
+        ensurePlatformAssets(companyId);
+        SkillDefinitionEntity skill = requirePlatformSkill(companyId, skillId);
+        PlatformSkillTemplateEntity template = requireTemplate(companyId, safeTemplateCode(skill));
+        PlatformSkillTemplateVersionEntity version = requireTemplateVersion(companyId, template.getTemplateCode(), versionNo);
         for (PlatformSkillTemplateVersionEntity item : platformSkillTemplateVersionRepository
-                .findByOrgIdAndTemplateCodeOrderByVersionNoDesc(orgId, template.getTemplateCode())) {
+                .findByCompanyIdAndTemplateCodeOrderByVersionNoDesc(companyId, template.getTemplateCode())) {
             if (Objects.equals(item.getId(), version.getId())) {
                 item.markPublished();
             } else if ("PUBLISHED".equalsIgnoreCase(item.getPublishStatus())) {
@@ -407,27 +407,27 @@ public class PlatformGovernanceService {
         applyPublishedTemplate(skill, version, command);
         template.setCurrentVersionNo(version.getVersionNo());
         platformSkillTemplateRepository.save(template);
-        logAudit(orgId,
+        logAudit(companyId,
                 "platform.skill.rollback",
                 "PLATFORM_SKILL_TEMPLATE",
                 template.getTemplateCode() + "@v" + version.getVersionNo(),
                 "rolled back platform skill template version");
-        return getPlatformSkillView(orgId, skill.getId());
+        return getPlatformSkillView(companyId, skill.getId());
     }
 
-    public List<PlatformToolView> listPlatformTools(String orgId) {
-        ensurePlatformAssets(orgId);
-        List<PlatformToolDefinitionEntity> tools = platformToolDefinitionRepository.findByOrgIdOrderByCategoryAscDisplayNameAsc(orgId);
-        List<SkillDefinitionEntity> allSkills = skillDefinitionRepository.findByOrgIdOrderByBuiltinDescNameAsc(orgId);
+    public List<PlatformToolView> listPlatformTools(String companyId) {
+        ensurePlatformAssets(companyId);
+        List<PlatformToolDefinitionEntity> tools = platformToolDefinitionRepository.findByCompanyIdOrderByCategoryAscDisplayNameAsc(companyId);
+        List<SkillDefinitionEntity> allSkills = skillDefinitionRepository.findByCompanyIdOrderByBuiltinDescNameAsc(companyId);
         return tools.stream()
-                .map(tool -> toToolView(orgId, tool, allSkills))
+                .map(tool -> toToolView(companyId, tool, allSkills))
                 .toList();
     }
 
     @Transactional
-    public PlatformToolView updatePlatformTool(String orgId, String toolName, ToolGovernanceCommand command) {
-        ensurePlatformAssets(orgId);
-        PlatformToolDefinitionEntity tool = platformToolDefinitionRepository.findByOrgIdAndToolName(orgId, toolName)
+    public PlatformToolView updatePlatformTool(String companyId, String toolName, ToolGovernanceCommand command) {
+        ensurePlatformAssets(companyId);
+        PlatformToolDefinitionEntity tool = platformToolDefinitionRepository.findByCompanyIdAndToolName(companyId, toolName)
                 .orElseThrow(() -> new IllegalArgumentException("Platform tool not found"));
         tool.update(
                 requireText(command.displayName(), "displayName"),
@@ -437,17 +437,17 @@ public class PlatformGovernanceService {
                 command.enabled() == null || command.enabled()
         );
         platformToolDefinitionRepository.save(tool);
-        logAudit(orgId,
+        logAudit(companyId,
                 "platform.tool.update",
                 "PLATFORM_TOOL",
                 tool.getToolName(),
                 "updated platform tool governance");
-        return toToolView(orgId, tool, skillDefinitionRepository.findByOrgIdOrderByBuiltinDescNameAsc(orgId));
+        return toToolView(companyId, tool, skillDefinitionRepository.findByCompanyIdOrderByBuiltinDescNameAsc(companyId));
     }
 
-    public List<ToolCatalogItem> listEffectiveBuiltinTools(String orgId) {
-        ensurePlatformAssets(orgId);
-        return platformToolDefinitionRepository.findByOrgIdOrderByCategoryAscDisplayNameAsc(orgId).stream()
+    public List<ToolCatalogItem> listEffectiveBuiltinTools(String companyId) {
+        ensurePlatformAssets(companyId);
+        return platformToolDefinitionRepository.findByCompanyIdOrderByCategoryAscDisplayNameAsc(companyId).stream()
                 .filter(PlatformToolDefinitionEntity::isEnabled)
                 .map(item -> new ToolCatalogItem(
                         item.getToolName(),
@@ -459,29 +459,29 @@ public class PlatformGovernanceService {
                 .toList();
     }
 
-    public RuntimePolicyBundle resolvePublishedPolicyBundle(String orgId) {
-        ensurePlatformAssets(orgId);
+    public RuntimePolicyBundle resolvePublishedPolicyBundle(String companyId) {
+        ensurePlatformAssets(companyId);
         return platformPolicyBundleRepository
-                .findTopByOrgIdAndBundleCodeAndPublishStatusOrderByVersionNoDesc(orgId, CORE_POLICY_BUNDLE_CODE, "PUBLISHED")
+                .findTopByCompanyIdAndBundleCodeAndPublishStatusOrderByVersionNoDesc(companyId, CORE_POLICY_BUNDLE_CODE, "PUBLISHED")
                 .map(this::toRuntimePolicyBundle)
                 .orElse(RuntimePolicyBundle.EMPTY);
     }
 
-    public List<String> filterRuntimeAllowedToolNames(String orgId, List<String> toolNames) {
+    public List<String> filterRuntimeAllowedToolNames(String companyId, List<String> toolNames) {
         if (toolNames == null || toolNames.isEmpty()) {
             return List.of();
         }
-        ensurePlatformAssets(orgId);
+        ensurePlatformAssets(companyId);
         LinkedHashSet<String> filtered = new LinkedHashSet<>();
         for (String toolName : ToolNameNormalizer.canonicalizeAll(toolNames)) {
-            if (isRuntimeToolEnabled(orgId, toolName)) {
+            if (isRuntimeToolEnabled(companyId, toolName)) {
                 filtered.add(toolName);
             }
         }
         return List.copyOf(filtered);
     }
 
-    public boolean isRuntimeToolEnabled(String orgId, String toolName) {
+    public boolean isRuntimeToolEnabled(String companyId, String toolName) {
         String canonicalToolName = ToolNameNormalizer.canonicalize(toolName);
         if (canonicalToolName == null || canonicalToolName.isBlank()) {
             return false;
@@ -489,28 +489,28 @@ public class PlatformGovernanceService {
         if (!isBuiltinTool(canonicalToolName)) {
             return true;
         }
-        ensurePlatformAssets(orgId);
-        return platformToolDefinitionRepository.findByOrgIdAndToolName(orgId, canonicalToolName)
+        ensurePlatformAssets(companyId);
+        return platformToolDefinitionRepository.findByCompanyIdAndToolName(companyId, canonicalToolName)
                 .map(PlatformToolDefinitionEntity::isEnabled)
                 .orElse(true);
     }
 
-    private PlatformSkillView getPlatformSkillView(String orgId, Long skillId) {
-        return listPlatformSkills(orgId).stream()
+    private PlatformSkillView getPlatformSkillView(String companyId, Long skillId) {
+        return listPlatformSkills(companyId).stream()
                 .filter(item -> Objects.equals(item.id(), skillId))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Platform skill not found"));
     }
 
-    private PlatformSkillView toSkillView(String orgId,
+    private PlatformSkillView toSkillView(String companyId,
                                           SkillDefinitionEntity skill,
                                           int derivedSkillCount,
                                           int agentBindingCount) {
         String templateCode = safeTemplateCode(skill);
-        PlatformSkillTemplateEntity template = requireTemplate(orgId, templateCode);
+        PlatformSkillTemplateEntity template = requireTemplate(companyId, templateCode);
         List<PlatformSkillTemplateVersionEntity> versions =
-                platformSkillTemplateVersionRepository.findByOrgIdAndTemplateCodeOrderByVersionNoDesc(orgId, templateCode);
-        TemplateUsage templateUsage = summarizeTemplateUsage(orgId, templateCode, template.getCurrentVersionNo());
+                platformSkillTemplateVersionRepository.findByCompanyIdAndTemplateCodeOrderByVersionNoDesc(companyId, templateCode);
+        TemplateUsage templateUsage = summarizeTemplateUsage(companyId, templateCode, template.getCurrentVersionNo());
         Integer latestDraftVersionNo = versions.stream()
                 .filter(item -> "DRAFT".equalsIgnoreCase(item.getPublishStatus()))
                 .map(PlatformSkillTemplateVersionEntity::getVersionNo)
@@ -606,9 +606,9 @@ public class PlatformGovernanceService {
         );
     }
 
-    private TemplateUsage summarizeTemplateUsage(String orgId, String templateCode, Integer currentTemplateVersionNo) {
+    private TemplateUsage summarizeTemplateUsage(String companyId, String templateCode, Integer currentTemplateVersionNo) {
         List<AgentWorkflowSkillRefEntity> refs = agentWorkflowSkillRefRepository
-                .findByOrgIdAndTemplateCodeOrderByTemplateVersionNoDescIdAsc(orgId, templateCode);
+                .findByCompanyIdAndTemplateCodeOrderByTemplateVersionNoDescIdAsc(companyId, templateCode);
         if (refs.isEmpty()) {
             return TemplateUsage.EMPTY;
         }
@@ -666,8 +666,8 @@ public class PlatformGovernanceService {
         );
     }
 
-    private PublishedAgentUsage summarizePublishedAgentUsage(String orgId) {
-        List<AgentDefinitionEntity> publishedAgents = agentDefinitionRepository.findByOrgIdAndEnabledTrueOrderByBuiltinDescUpdatedAtDesc(orgId)
+    private PublishedAgentUsage summarizePublishedAgentUsage(String companyId) {
+        List<AgentDefinitionEntity> publishedAgents = agentDefinitionRepository.findByCompanyIdAndEnabledTrueOrderByBuiltinDescUpdatedAtDesc(companyId)
                 .stream()
                 .filter(item -> item.getPublishedVersionId() != null)
                 .toList();
@@ -728,7 +728,7 @@ public class PlatformGovernanceService {
         );
     }
 
-    private PlatformToolView toToolView(String orgId,
+    private PlatformToolView toToolView(String companyId,
                                         PlatformToolDefinitionEntity tool,
                                         List<SkillDefinitionEntity> allSkills) {
         List<SkillDefinitionEntity> dependentSkills = allSkills.stream()
@@ -737,7 +737,7 @@ public class PlatformGovernanceService {
                 .toList();
         List<Long> dependentSkillIds = dependentSkills.stream().map(SkillDefinitionEntity::getId).toList();
         int agentBindingCount = dependentSkillIds.isEmpty() ? 0
-                : agentSkillBindingRepository.findByOrgIdAndSkillIdInAndEnabledTrue(orgId, dependentSkillIds).size();
+                : agentSkillBindingRepository.findByCompanyIdAndSkillIdInAndEnabledTrue(companyId, dependentSkillIds).size();
         return new PlatformToolView(
                 tool.getToolName(),
                 tool.getDisplayName(),
@@ -751,16 +751,16 @@ public class PlatformGovernanceService {
         );
     }
 
-    private PlatformPolicyBundleEntity requireCorePolicyBundleVersion(String orgId, Integer versionNo) {
-        return platformPolicyBundleRepository.findByOrgIdAndBundleCodeAndVersionNo(orgId, CORE_POLICY_BUNDLE_CODE, versionNo)
+    private PlatformPolicyBundleEntity requireCorePolicyBundleVersion(String companyId, Integer versionNo) {
+        return platformPolicyBundleRepository.findByCompanyIdAndBundleCodeAndVersionNo(companyId, CORE_POLICY_BUNDLE_CODE, versionNo)
                 .orElseThrow(() -> new IllegalArgumentException("Platform policy bundle version not found"));
     }
 
-    private void ensureCorePolicyBundle(String orgId) {
-        if (!platformPolicyBundleRepository.findByOrgIdAndBundleCodeOrderByVersionNoDesc(orgId, CORE_POLICY_BUNDLE_CODE).isEmpty()) {
+    private void ensureCorePolicyBundle(String companyId) {
+        if (!platformPolicyBundleRepository.findByCompanyIdAndBundleCodeOrderByVersionNoDesc(companyId, CORE_POLICY_BUNDLE_CODE).isEmpty()) {
             return;
         }
-        Map<String, SkillDefinitionEntity> byCode = skillDefinitionRepository.findByOrgIdOrderByBuiltinDescNameAsc(orgId)
+        Map<String, SkillDefinitionEntity> byCode = skillDefinitionRepository.findByCompanyIdOrderByBuiltinDescNameAsc(companyId)
                 .stream()
                 .collect(Collectors.toMap(SkillDefinitionEntity::getSkillCode, item -> item, (left, right) -> left, LinkedHashMap::new));
         List<SkillDefinitionEntity> coreSkills = CORE_POLICY_SKILL_CODES.stream()
@@ -772,7 +772,7 @@ public class PlatformGovernanceService {
             return;
         }
         platformPolicyBundleRepository.save(new PlatformPolicyBundleEntity(
-                orgId,
+                companyId,
                 CORE_POLICY_BUNDLE_CODE,
                 "Platform Core Policy Bundle",
                 "Runtime-injected core safety and conversation policy bundle.",
@@ -828,11 +828,11 @@ public class PlatformGovernanceService {
                 .anyMatch(toolName::equals);
     }
 
-    private void ensureTemplateForSkill(String orgId, SkillDefinitionEntity skill) {
+    private void ensureTemplateForSkill(String companyId, SkillDefinitionEntity skill) {
         String templateCode = safeTemplateCode(skill);
-        PlatformSkillTemplateEntity template = platformSkillTemplateRepository.findByOrgIdAndTemplateCode(orgId, templateCode)
+        PlatformSkillTemplateEntity template = platformSkillTemplateRepository.findByCompanyIdAndTemplateCode(companyId, templateCode)
                 .orElseGet(() -> platformSkillTemplateRepository.save(new PlatformSkillTemplateEntity(
-                        orgId,
+                        companyId,
                         templateCode,
                         skill.getName(),
                         inferSkillCategory(skill, skill.getToolWhitelist()),
@@ -840,9 +840,9 @@ public class PlatformGovernanceService {
                         "ACTIVE",
                         1
                 )));
-        if (platformSkillTemplateVersionRepository.findTopByOrgIdAndTemplateCodeOrderByVersionNoDesc(orgId, templateCode).isEmpty()) {
+        if (platformSkillTemplateVersionRepository.findTopByCompanyIdAndTemplateCodeOrderByVersionNoDesc(companyId, templateCode).isEmpty()) {
             platformSkillTemplateVersionRepository.save(new PlatformSkillTemplateVersionEntity(
-                    orgId,
+                    companyId,
                     templateCode,
                     template.getCurrentVersionNo() == null ? 1 : template.getCurrentVersionNo(),
                     skill.getName(),
@@ -861,8 +861,8 @@ public class PlatformGovernanceService {
         }
     }
 
-    private SkillDefinitionEntity requirePlatformSkill(String orgId, Long skillId) {
-        SkillDefinitionEntity skill = skillDefinitionRepository.findByIdAndOrgId(skillId, orgId)
+    private SkillDefinitionEntity requirePlatformSkill(String companyId, Long skillId) {
+        SkillDefinitionEntity skill = skillDefinitionRepository.findByIdAndCompanyId(skillId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Platform skill not found"));
         if (skill.getSourceType() != SkillSourceType.PLATFORM_STANDARD) {
             throw new IllegalArgumentException("Platform skill not found");
@@ -870,13 +870,13 @@ public class PlatformGovernanceService {
         return skill;
     }
 
-    private PlatformSkillTemplateEntity requireTemplate(String orgId, String templateCode) {
-        return platformSkillTemplateRepository.findByOrgIdAndTemplateCode(orgId, templateCode)
+    private PlatformSkillTemplateEntity requireTemplate(String companyId, String templateCode) {
+        return platformSkillTemplateRepository.findByCompanyIdAndTemplateCode(companyId, templateCode)
                 .orElseThrow(() -> new IllegalArgumentException("Platform skill template not found"));
     }
 
-    private PlatformSkillTemplateVersionEntity requireTemplateVersion(String orgId, String templateCode, Integer versionNo) {
-        return platformSkillTemplateVersionRepository.findByOrgIdAndTemplateCodeAndVersionNo(orgId, templateCode, versionNo)
+    private PlatformSkillTemplateVersionEntity requireTemplateVersion(String companyId, String templateCode, Integer versionNo) {
+        return platformSkillTemplateVersionRepository.findByCompanyIdAndTemplateCodeAndVersionNo(companyId, templateCode, versionNo)
                 .orElseThrow(() -> new IllegalArgumentException("Platform skill template version not found"));
     }
 
@@ -912,7 +912,7 @@ public class PlatformGovernanceService {
 
     private SkillVersionEntity createPublishedSkillVersion(SkillDefinitionEntity skill,
                                                            PlatformSkillTemplateVersionEntity version) {
-        Integer nextVersionNo = skillVersionRepository.findTopByOrgIdAndSkillIdOrderByVersionNoDesc(skill.getOrgId(), skill.getId())
+        Integer nextVersionNo = skillVersionRepository.findTopByCompanyIdAndSkillIdOrderByVersionNoDesc(skill.getCompanyId(), skill.getId())
                 .map(item -> item.getVersionNo() + 1)
                 .orElse(1);
         SpecCompilerService.SpecCompilation compiled = specCompilerService.compile(new SpecCompilerService.SpecCompileCommand(
@@ -925,7 +925,7 @@ public class PlatformGovernanceService {
                 normalizeRiskLevel(version.getRiskLevel())
         ));
         return skillVersionRepository.save(new SkillVersionEntity(
-                skill.getOrgId(),
+                skill.getCompanyId(),
                 skill.getId(),
                 nextVersionNo,
                 fallback(version.getPromptFragment(), version.getDescription()),
@@ -1141,9 +1141,9 @@ public class PlatformGovernanceService {
                 .orElse(RoleCodes.PLATFORM_ADMIN);
     }
 
-    private void logAudit(String orgId, String eventType, String resourceType, String resourceKey, String detail) {
+    private void logAudit(String companyId, String eventType, String resourceType, String resourceKey, String detail) {
         platformAuditService.log(
-                orgId,
+                companyId,
                 currentActorId(),
                 currentPlatformRole(),
                 eventType,

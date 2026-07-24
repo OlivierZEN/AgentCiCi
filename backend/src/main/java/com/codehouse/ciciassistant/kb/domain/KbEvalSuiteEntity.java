@@ -19,8 +19,8 @@ public class KbEvalSuiteEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "knowledge_base_id", nullable = false)
     private Long knowledgeBaseId;
@@ -43,9 +43,9 @@ public class KbEvalSuiteEntity {
     protected KbEvalSuiteEntity() {
     }
 
-    public KbEvalSuiteEntity(String orgId, Long knowledgeBaseId, String name, String description) {
+    public KbEvalSuiteEntity(String companyId, Long knowledgeBaseId, String name, String description) {
         Instant now = Instant.now();
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.knowledgeBaseId = knowledgeBaseId;
         this.name = name;
         this.description = description;
@@ -56,7 +56,7 @@ public class KbEvalSuiteEntity {
 
     public Long getId() { return id; }
 
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
 
     public Long getKnowledgeBaseId() { return knowledgeBaseId; }
 

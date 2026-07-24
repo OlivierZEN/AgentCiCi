@@ -25,9 +25,9 @@ public class PublicAgentAvatarController {
     }
 
     @GetMapping("/avatars")
-    public ApiResponse<List<Map<String, Object>>> listAvatars(@RequestParam("orgId") @NotBlank String orgId) {
+    public ApiResponse<List<Map<String, Object>>> listAvatars(@RequestParam("companyId") @NotBlank String companyId) {
         List<Map<String, Object>> avatars = agentDefinitionRepository
-                .findTop24ByOrgIdAndEnabledTrueOrderByBuiltinDescUpdatedAtDesc(orgId.trim())
+                .findTop24ByCompanyIdAndEnabledTrueOrderByBuiltinDescUpdatedAtDesc(companyId.trim())
                 .stream()
                 .filter(item -> item.isBuiltin() || item.getPublishedVersionId() != null)
                 .filter(item -> item.getAvatarBase64() != null && !item.getAvatarBase64().isBlank())

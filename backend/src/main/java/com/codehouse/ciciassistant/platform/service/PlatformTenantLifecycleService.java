@@ -1,20 +1,20 @@
 package com.codehouse.ciciassistant.platform.service;
 
-import com.codehouse.ciciassistant.auth.domain.OrgEntity;
-import com.codehouse.ciciassistant.auth.domain.OrgRepository;
+import com.codehouse.ciciassistant.auth.domain.CompanyEntity;
+import com.codehouse.ciciassistant.auth.domain.CompanyRepository;
 import com.codehouse.ciciassistant.auth.domain.UserAccountEntity;
 import com.codehouse.ciciassistant.auth.domain.UserEntity;
-import com.codehouse.ciciassistant.auth.service.OrganizationProvisioningService;
+import com.codehouse.ciciassistant.auth.service.CompanyProvisioningService;
 import com.codehouse.ciciassistant.common.security.SecretKeyMatcher;
 import com.codehouse.ciciassistant.kb.service.VectorDeleteResult;
 import com.codehouse.ciciassistant.kb.service.VectorStoreAuditResult;
 import com.codehouse.ciciassistant.kb.service.VectorStoreClient;
-import com.codehouse.ciciassistant.platform.domain.OrganizationExportJobEntity;
-import com.codehouse.ciciassistant.platform.domain.OrganizationExportJobRepository;
-import com.codehouse.ciciassistant.platform.domain.OrganizationPurgeJobEntity;
-import com.codehouse.ciciassistant.platform.domain.OrganizationPurgeJobRepository;
-import com.codehouse.ciciassistant.platform.domain.OrganizationRetentionPolicyEntity;
-import com.codehouse.ciciassistant.platform.domain.OrganizationRetentionPolicyRepository;
+import com.codehouse.ciciassistant.platform.domain.CompanyExportJobEntity;
+import com.codehouse.ciciassistant.platform.domain.CompanyExportJobRepository;
+import com.codehouse.ciciassistant.platform.domain.CompanyPurgeJobEntity;
+import com.codehouse.ciciassistant.platform.domain.CompanyPurgeJobRepository;
+import com.codehouse.ciciassistant.platform.domain.CompanyRetentionPolicyEntity;
+import com.codehouse.ciciassistant.platform.domain.CompanyRetentionPolicyRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -53,7 +53,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class PlatformTenantLifecycleService {
 
     private static final List<DomainGroup> MANIFEST_DOMAINS = List.of(
-            new DomainGroup("members", "组织成员", List.of("organization_member")),
+            new DomainGroup("members", "组织成员", List.of("company_member")),
             new DomainGroup("chat", "会话与消息", List.of("chat_session", "chat_message", "chat_session_state")),
             new DomainGroup("memory", "专属记忆", List.of("user_memory")),
             new DomainGroup("agent_memory", "通用主体记忆与受控向量索引", List.of(
@@ -110,7 +110,7 @@ public class PlatformTenantLifecycleService {
             new DomainGroup("integrations", "集成、模型、工具、MCP 与邮箱", List.of(
                     "integration_app",
                     "model_provider_config",
-                    "org_model_config",
+                    "company_model_config",
                     "tool_definition",
                     "mcp_server",
                     "email_account"
@@ -153,9 +153,9 @@ public class PlatformTenantLifecycleService {
                     "platform_skill_template_version",
                     "platform_tool_definition",
                     "platform_policy_bundle",
-                    "organization_retention_policy",
-                    "organization_purge_job",
-                    "organization_export_job"
+                    "company_retention_policy",
+                    "company_purge_job",
+                    "company_export_job"
             ))
     );
 
@@ -175,7 +175,7 @@ public class PlatformTenantLifecycleService {
     private static final Set<String> EXPORT_TABLES = new HashSet<>(MANIFEST_DOMAINS.stream()
             .map(DomainGroup::tables)
             .flatMap(Collection::stream)
-            .filter(table -> !Set.of("platform_audit_log", "organization_purge_job").contains(table))
+            .filter(table -> !Set.of("platform_audit_log", "company_purge_job").contains(table))
             .toList());
 
     private static final List<String> PURGE_DELETE_TABLES = List.of(
@@ -253,7 +253,7 @@ public class PlatformTenantLifecycleService {
             "email_account",
             "mcp_server",
             "tool_definition",
-            "org_model_config",
+            "company_model_config",
             "model_provider_config",
             "integration_app",
             "agent_run_trace",
@@ -262,15 +262,15 @@ public class PlatformTenantLifecycleService {
             "platform_tool_definition",
             "platform_skill_template_version",
             "platform_skill_template",
-            "organization_export_job",
-            "organization_member"
+            "company_export_job",
+            "company_member"
     );
 
-    private final OrgRepository orgRepository;
-    private final OrganizationProvisioningService organizationProvisioningService;
-    private final OrganizationRetentionPolicyRepository retentionPolicyRepository;
-    private final OrganizationPurgeJobRepository purgeJobRepository;
-    private final OrganizationExportJobRepository exportJobRepository;
+    private final CompanyRepository companyRepository;
+    private final CompanyProvisioningService companyProvisioningService;
+    private final CompanyRetentionPolicyRepository retentionPolicyRepository;
+    private final CompanyPurgeJobRepository purgeJobRepository;
+    private final CompanyExportJobRepository exportJobRepository;
     private final PlatformAuditService platformAuditService;
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
@@ -281,11 +281,11 @@ public class PlatformTenantLifecycleService {
     private final String purgeWorkerId;
     private final long purgeWorkerLeaseMinutes;
 
-    public PlatformTenantLifecycleService(OrgRepository orgRepository,
-                                          OrganizationProvisioningService organizationProvisioningService,
-                                          OrganizationRetentionPolicyRepository retentionPolicyRepository,
-                                          OrganizationPurgeJobRepository purgeJobRepository,
-                                          OrganizationExportJobRepository exportJobRepository,
+    public PlatformTenantLifecycleService(CompanyRepository companyRepository,
+                                          CompanyProvisioningService companyProvisioningService,
+                                          CompanyRetentionPolicyRepository retentionPolicyRepository,
+                                          CompanyPurgeJobRepository purgeJobRepository,
+                                          CompanyExportJobRepository exportJobRepository,
                                           PlatformAuditService platformAuditService,
                                           JdbcTemplate jdbcTemplate,
                                           ObjectMapper objectMapper,
@@ -295,8 +295,8 @@ public class PlatformTenantLifecycleService {
                                           @Value("${app.lifecycle.export-dir:./data/org-exports}") String exportDir,
                                           @Value("${app.lifecycle.purge-worker-id:}") String configuredPurgeWorkerId,
                                           @Value("${app.lifecycle.purge-worker-lease-minutes:60}") long purgeWorkerLeaseMinutes) {
-        this.orgRepository = orgRepository;
-        this.organizationProvisioningService = organizationProvisioningService;
+        this.companyRepository = companyRepository;
+        this.companyProvisioningService = companyProvisioningService;
         this.retentionPolicyRepository = retentionPolicyRepository;
         this.purgeJobRepository = purgeJobRepository;
         this.exportJobRepository = exportJobRepository;
@@ -314,7 +314,7 @@ public class PlatformTenantLifecycleService {
     }
 
     public List<TenantLifecycleView> listTenants() {
-        return orgRepository.findAllByOrderByIdAsc().stream()
+        return companyRepository.findAllByOrderByIdAsc().stream()
                 .map(this::toTenantView)
                 .toList();
     }
@@ -328,7 +328,7 @@ public class PlatformTenantLifecycleService {
             throw new IllegalArgumentException("邮箱格式不正确");
         }
 
-        UserAccountEntity existingAccount = organizationProvisioningService.findMobileAccount(ownerMobile).orElse(null);
+        UserAccountEntity existingAccount = companyProvisioningService.findMobileAccount(ownerMobile).orElse(null);
         if (existingAccount == null) {
             String initialPassword = requireText(command.initialPassword(), "首次 Owner 账号需要初始密码");
             if (initialPassword.length() < 8) {
@@ -336,16 +336,16 @@ public class PlatformTenantLifecycleService {
             }
         }
 
-        OrgEntity org = organizationProvisioningService.createOrganization(tenantName);
+        CompanyEntity org = companyProvisioningService.createCompany(tenantName);
         UserAccountEntity account = existingAccount != null
                 ? existingAccount
-                : organizationProvisioningService.createMobileAccount(ownerMobile, command.ownerDisplayName(), ownerEmail);
+                : companyProvisioningService.createMobileAccount(ownerMobile, command.ownerDisplayName(), ownerEmail);
         if (existingAccount == null) {
-            organizationProvisioningService.assignPasswordCredential(account, command.initialPassword().trim());
+            companyProvisioningService.assignPasswordCredential(account, command.initialPassword().trim());
         }
-        UserEntity owner = organizationProvisioningService.createOwnerMembership(org, account, command.ownerDisplayName());
+        UserEntity owner = companyProvisioningService.createOwnerMembership(org, account, command.ownerDisplayName());
         retentionPolicyRepository.findById(org.getId())
-                .orElseGet(() -> retentionPolicyRepository.save(new OrganizationRetentionPolicyEntity(org.getId())));
+                .orElseGet(() -> retentionPolicyRepository.save(new CompanyRetentionPolicyEntity(org.getId())));
         platformAuditService.log(
                 org.getId(),
                 actorId,
@@ -365,21 +365,21 @@ public class PlatformTenantLifecycleService {
     }
 
     @Transactional
-    public TenantRetentionDetailView getRetentionDetail(String orgId) {
-        OrgEntity org = requireOrg(orgId);
-        OrganizationRetentionPolicyEntity policy = retentionPolicyRepository
+    public TenantRetentionDetailView getRetentionDetail(String companyId) {
+        CompanyEntity org = requireCompany(companyId);
+        CompanyRetentionPolicyEntity policy = retentionPolicyRepository
                 .findById(org.getId())
-                .orElseGet(() -> retentionPolicyRepository.save(new OrganizationRetentionPolicyEntity(org.getId())));
+                .orElseGet(() -> retentionPolicyRepository.save(new CompanyRetentionPolicyEntity(org.getId())));
         return toRetentionDetail(org, policy);
     }
 
     @Transactional
-    public TenantRetentionDetailView updateRetention(String orgId, RetentionUpdateCommand command,
+    public TenantRetentionDetailView updateRetention(String companyId, RetentionUpdateCommand command,
                                                     String actorId, String actorRole) {
-        OrgEntity org = requireOrg(orgId);
-        OrganizationRetentionPolicyEntity policy = retentionPolicyRepository
+        CompanyEntity org = requireCompany(companyId);
+        CompanyRetentionPolicyEntity policy = retentionPolicyRepository
                 .findById(org.getId())
-                .orElseGet(() -> new OrganizationRetentionPolicyEntity(org.getId()));
+                .orElseGet(() -> new CompanyRetentionPolicyEntity(org.getId()));
         boolean legalHold = command.legalHold() != null && command.legalHold();
         policy.update(
                 parseInstant(command.graceUntil(), "graceUntil"),
@@ -393,61 +393,61 @@ public class PlatformTenantLifecycleService {
                 legalHold ? parseInstant(command.legalHoldApprovedAt(), "legalHoldApprovedAt") : null,
                 legalHold ? parseInstant(command.legalHoldReviewAt(), "legalHoldReviewAt") : null
         );
-        OrganizationRetentionPolicyEntity saved = retentionPolicyRepository.save(policy);
+        CompanyRetentionPolicyEntity saved = retentionPolicyRepository.save(policy);
         platformAuditService.log(org.getId(), actorId, actorRole, "platform.tenant.retention.update",
                 "tenant", org.getId(), "Updated tenant retention policy");
         return toRetentionDetail(org, saved);
     }
 
     @Transactional
-    public TenantLifecycleView suspendTenant(String orgId, String actorId, String actorRole, String reason) {
-        OrgEntity org = requireOrg(orgId);
+    public TenantLifecycleView suspendTenant(String companyId, String actorId, String actorRole, String reason) {
+        CompanyEntity org = requireCompany(companyId);
         org.setStatus("SUSPENDED");
-        OrgEntity saved = orgRepository.save(org);
+        CompanyEntity saved = companyRepository.save(org);
         platformAuditService.log(saved.getId(), actorId, actorRole, "platform.tenant.suspend",
                 "tenant", saved.getId(), blankToDefault(reason, "Tenant suspended from platform lifecycle console"));
         return toTenantView(saved);
     }
 
     @Transactional
-    public TenantLifecycleView resumeTenant(String orgId, String actorId, String actorRole, String reason) {
-        OrgEntity org = requireOrg(orgId);
+    public TenantLifecycleView resumeTenant(String companyId, String actorId, String actorRole, String reason) {
+        CompanyEntity org = requireCompany(companyId);
         org.setStatus("ACTIVE");
-        OrgEntity saved = orgRepository.save(org);
+        CompanyEntity saved = companyRepository.save(org);
         platformAuditService.log(saved.getId(), actorId, actorRole, "platform.tenant.resume",
                 "tenant", saved.getId(), blankToDefault(reason, "Tenant resumed from platform lifecycle console"));
         return toTenantView(saved);
     }
 
     @Transactional
-    public TenantLifecycleView markPendingPurge(String orgId, String actorId, String actorRole, String reason) {
-        OrgEntity org = requireOrg(orgId);
+    public TenantLifecycleView markPendingPurge(String companyId, String actorId, String actorRole, String reason) {
+        CompanyEntity org = requireCompany(companyId);
         org.setStatus("PENDING_PURGE");
-        OrgEntity saved = orgRepository.save(org);
+        CompanyEntity saved = companyRepository.save(org);
         platformAuditService.log(saved.getId(), actorId, actorRole, "platform.tenant.pending_purge",
                 "tenant", saved.getId(), blankToDefault(reason, "Tenant marked pending purge"));
         return toTenantView(saved);
     }
 
     @Transactional
-    public PurgeJobView createPurgeJob(String orgId, PurgeJobCreateCommand command,
+    public PurgeJobView createPurgeJob(String companyId, PurgeJobCreateCommand command,
                                        String actorId, String actorRole) {
         if (command.dryRun() == null || command.dryRun()) {
-            return createDryRunPurgeJob(orgId, command, actorId, actorRole);
+            return createDryRunPurgeJob(companyId, command, actorId, actorRole);
         }
-        OrgEntity org = requireOrg(orgId);
-        OrganizationRetentionPolicyEntity policy = retentionPolicyRepository.findById(org.getId()).orElse(null);
+        CompanyEntity org = requireCompany(companyId);
+        CompanyRetentionPolicyEntity policy = retentionPolicyRepository.findById(org.getId()).orElse(null);
         validateRealPurgeRequest(org, policy, command);
         validateNoActiveRealPurge(org.getId());
-        OrganizationPurgeJobEntity sourceDryRun = purgeJobRepository
-                .findByIdAndOrgIdAndDryRunTrueAndStatus(command.sourceDryRunJobId(), orgId, OrganizationPurgeJobEntity.STATUS_SUCCEEDED)
+        CompanyPurgeJobEntity sourceDryRun = purgeJobRepository
+                .findByIdAndCompanyIdAndDryRunTrueAndStatus(command.sourceDryRunJobId(), companyId, CompanyPurgeJobEntity.STATUS_SUCCEEDED)
                 .orElseThrow(() -> new IllegalArgumentException("A successful source dry-run job is required"));
         if (sourceDryRun.getCreatedAt() == null || sourceDryRun.getCreatedAt().isBefore(Instant.now().minus(24, ChronoUnit.HOURS))) {
             throw new IllegalArgumentException("Source dry-run job is too old; generate a new manifest first");
         }
         Map<String, Object> manifest = buildDryRunManifest(org);
         String manifestJson = serializeManifest(manifest);
-        OrganizationPurgeJobEntity job = purgeJobRepository.save(OrganizationPurgeJobEntity.realPurge(
+        CompanyPurgeJobEntity job = purgeJobRepository.save(CompanyPurgeJobEntity.realPurge(
                 org.getId(),
                 actorId,
                 command.reason(),
@@ -461,29 +461,29 @@ public class PlatformTenantLifecycleService {
         return toJobView(job, true);
     }
 
-    public PurgeJobView getPurgeJob(String orgId, Long jobId) {
-        return toJobView(purgeJobRepository.findByIdAndOrgId(jobId, orgId)
+    public PurgeJobView getPurgeJob(String companyId, Long jobId) {
+        return toJobView(purgeJobRepository.findByIdAndCompanyId(jobId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Purge job not found")), true);
     }
 
     @Transactional
-    public PurgeJobView retryPurgeJob(String orgId, Long jobId, PurgeJobRetryCommand command,
+    public PurgeJobView retryPurgeJob(String companyId, Long jobId, PurgeJobRetryCommand command,
                                       String actorId, String actorRole) {
-        OrgEntity org = requireOrg(orgId);
-        OrganizationRetentionPolicyEntity policy = retentionPolicyRepository.findById(org.getId()).orElse(null);
-        OrganizationPurgeJobEntity failedJob = purgeJobRepository.findByIdAndOrgId(jobId, orgId)
+        CompanyEntity org = requireCompany(companyId);
+        CompanyRetentionPolicyEntity policy = retentionPolicyRepository.findById(org.getId()).orElse(null);
+        CompanyPurgeJobEntity failedJob = purgeJobRepository.findByIdAndCompanyId(jobId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Purge job not found"));
         validatePurgeRetryRequest(org, policy, failedJob, command);
         validateNoActiveRealPurge(org.getId());
-        OrganizationPurgeJobEntity sourceDryRun = purgeJobRepository
-                .findByIdAndOrgIdAndDryRunTrueAndStatus(failedJob.getSourceDryRunJobId(), orgId, OrganizationPurgeJobEntity.STATUS_SUCCEEDED)
+        CompanyPurgeJobEntity sourceDryRun = purgeJobRepository
+                .findByIdAndCompanyIdAndDryRunTrueAndStatus(failedJob.getSourceDryRunJobId(), companyId, CompanyPurgeJobEntity.STATUS_SUCCEEDED)
                 .orElseThrow(() -> new IllegalArgumentException("A successful source dry-run job is required"));
         if (sourceDryRun.getCreatedAt() == null || sourceDryRun.getCreatedAt().isBefore(Instant.now().minus(24, ChronoUnit.HOURS))) {
             throw new IllegalArgumentException("Source dry-run job is too old; generate a new manifest first");
         }
         Map<String, Object> manifest = buildDryRunManifest(org);
         String manifestJson = serializeManifest(manifest);
-        OrganizationPurgeJobEntity retryJob = purgeJobRepository.save(OrganizationPurgeJobEntity.realPurge(
+        CompanyPurgeJobEntity retryJob = purgeJobRepository.save(CompanyPurgeJobEntity.realPurge(
                 org.getId(),
                 actorId,
                 blankToDefault(command.reason(), "Retry purge job #" + failedJob.getId()),
@@ -498,20 +498,20 @@ public class PlatformTenantLifecycleService {
     }
 
     @Transactional
-    public PurgeJobView cancelPurgeJob(String orgId, Long jobId, String actorId, String actorRole, String reason) {
-        requireOrg(orgId);
-        OrganizationPurgeJobEntity job = purgeJobRepository.findByIdAndOrgId(jobId, orgId)
+    public PurgeJobView cancelPurgeJob(String companyId, Long jobId, String actorId, String actorRole, String reason) {
+        requireCompany(companyId);
+        CompanyPurgeJobEntity job = purgeJobRepository.findByIdAndCompanyId(jobId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Purge job not found"));
-        if (job.isDryRun() || !OrganizationPurgeJobEntity.PHASE_REAL_PURGE.equals(job.getPhase())) {
+        if (job.isDryRun() || !CompanyPurgeJobEntity.PHASE_REAL_PURGE.equals(job.getPhase())) {
             throw new IllegalArgumentException("Only real purge jobs can be canceled");
         }
-        if (!OrganizationPurgeJobEntity.STATUS_QUEUED.equals(job.getStatus())) {
+        if (!CompanyPurgeJobEntity.STATUS_QUEUED.equals(job.getStatus())) {
             throw new IllegalArgumentException("Only queued purge jobs can be canceled");
         }
         job.markCanceled(blankToDefault(reason, "Canceled by platform operator"));
-        OrganizationPurgeJobEntity saved = purgeJobRepository.save(job);
-        platformAuditService.log(orgId, actorId, actorRole, "platform.tenant.purge.cancel",
-                "tenant", orgId, "Canceled queued tenant purge job #" + job.getId());
+        CompanyPurgeJobEntity saved = purgeJobRepository.save(job);
+        platformAuditService.log(companyId, actorId, actorRole, "platform.tenant.purge.cancel",
+                "tenant", companyId, "Canceled queued tenant purge job #" + job.getId());
         return toJobView(saved, true);
     }
 
@@ -521,9 +521,9 @@ public class PlatformTenantLifecycleService {
     )
     public synchronized void processQueuedPurgeJobs() {
         markExpiredRunningPurgeJobs();
-        List<OrganizationPurgeJobEntity> queuedJobs = purgeJobRepository
-                .findTop5ByStatusAndDryRunFalseOrderByCreatedAtAsc(OrganizationPurgeJobEntity.STATUS_QUEUED);
-        for (OrganizationPurgeJobEntity job : queuedJobs) {
+        List<CompanyPurgeJobEntity> queuedJobs = purgeJobRepository
+                .findTop5ByStatusAndDryRunFalseOrderByCreatedAtAsc(CompanyPurgeJobEntity.STATUS_QUEUED);
+        for (CompanyPurgeJobEntity job : queuedJobs) {
             if (claimQueuedPurgeJob(job.getId())) {
                 executeClaimedPurgeJob(job.getId());
             }
@@ -531,9 +531,9 @@ public class PlatformTenantLifecycleService {
     }
 
     @Transactional
-    public ExportJobView createExportJob(String orgId, String actorId, String actorRole, String reason) {
-        OrgEntity org = requireOrg(orgId);
-        OrganizationExportJobEntity job = exportJobRepository.save(new OrganizationExportJobEntity(
+    public ExportJobView createExportJob(String companyId, String actorId, String actorRole, String reason) {
+        CompanyEntity org = requireCompany(companyId);
+        CompanyExportJobEntity job = exportJobRepository.save(new CompanyExportJobEntity(
                 org.getId(),
                 actorId,
                 reason
@@ -542,13 +542,13 @@ public class PlatformTenantLifecycleService {
             Map<String, Object> manifest = buildExportManifest(org, job.getId());
             Path archive = writeExportArchive(org, job.getId(), manifest);
             job.markSucceeded(archive.toString(), serializeManifest(manifest));
-            OrganizationExportJobEntity saved = exportJobRepository.save(job);
+            CompanyExportJobEntity saved = exportJobRepository.save(job);
             platformAuditService.log(org.getId(), actorId, actorRole, "platform.tenant.export.create",
-                    "tenant", org.getId(), "Created organization export archive");
+                    "tenant", org.getId(), "Created company export archive");
             return toExportJobView(saved, true, false);
         } catch (Exception ex) {
             job.markFailed(ex.getMessage(), serializeManifest(Map.of(
-                    "orgId", org.getId(),
+                    "companyId", org.getId(),
                     "generatedAt", Instant.now().toString(),
                     "error", ex.getMessage()
             )));
@@ -556,20 +556,20 @@ public class PlatformTenantLifecycleService {
         }
     }
 
-    public List<ExportJobView> listExportJobs(String orgId, boolean includeManifest) {
-        requireOrg(orgId);
-        return exportJobRepository.findTop20ByOrgIdOrderByCreatedAtDesc(orgId).stream()
+    public List<ExportJobView> listExportJobs(String companyId, boolean includeManifest) {
+        requireCompany(companyId);
+        return exportJobRepository.findTop20ByCompanyIdOrderByCreatedAtDesc(companyId).stream()
                 .map(job -> toExportJobView(job, includeManifest, false))
                 .toList();
     }
 
-    public ExportJobView getExportJob(String orgId, Long jobId, boolean includeManifest) {
-        return toExportJobView(requireExportJob(orgId, jobId), includeManifest, false);
+    public ExportJobView getExportJob(String companyId, Long jobId, boolean includeManifest) {
+        return toExportJobView(requireExportJob(companyId, jobId), includeManifest, false);
     }
 
-    public ExportArtifact downloadExport(String orgId, Long jobId) {
-        OrganizationExportJobEntity job = requireExportJob(orgId, jobId);
-        if (!OrganizationExportJobEntity.STATUS_SUCCEEDED.equals(job.getStatus())) {
+    public ExportArtifact downloadExport(String companyId, Long jobId) {
+        CompanyExportJobEntity job = requireExportJob(companyId, jobId);
+        if (!CompanyExportJobEntity.STATUS_SUCCEEDED.equals(job.getStatus())) {
             throw new IllegalArgumentException("Export job is not ready");
         }
         Path path = safeExportPath(job);
@@ -580,11 +580,11 @@ public class PlatformTenantLifecycleService {
         }
     }
 
-    private PurgeJobView createDryRunPurgeJob(String orgId, PurgeJobCreateCommand command,
+    private PurgeJobView createDryRunPurgeJob(String companyId, PurgeJobCreateCommand command,
                                              String actorId, String actorRole) {
-        OrgEntity org = requireOrg(orgId);
+        CompanyEntity org = requireCompany(companyId);
         String manifestJson = serializeManifest(buildDryRunManifest(org));
-        OrganizationPurgeJobEntity job = purgeJobRepository.save(new OrganizationPurgeJobEntity(
+        CompanyPurgeJobEntity job = purgeJobRepository.save(new CompanyPurgeJobEntity(
                 org.getId(),
                 actorId,
                 command.reason(),
@@ -595,37 +595,37 @@ public class PlatformTenantLifecycleService {
         return toJobView(job, true);
     }
 
-    private TenantLifecycleView toTenantView(OrgEntity org) {
+    private TenantLifecycleView toTenantView(CompanyEntity org) {
         return new TenantLifecycleView(
                 org.getId(),
                 org.getName(),
                 org.getStatus(),
-                countRows("organization_member", org.getId()),
+                countRows("company_member", org.getId()),
                 retentionPolicyRepository.findById(org.getId()).map(this::toRetentionView).orElse(null),
-                purgeJobRepository.findTopByOrgIdOrderByCreatedAtDesc(org.getId())
+                purgeJobRepository.findTopByCompanyIdOrderByCreatedAtDesc(org.getId())
                         .map(job -> toJobView(job, false))
                         .orElse(null)
         );
     }
 
-    private TenantRetentionDetailView toRetentionDetail(OrgEntity org, OrganizationRetentionPolicyEntity policy) {
+    private TenantRetentionDetailView toRetentionDetail(CompanyEntity org, CompanyRetentionPolicyEntity policy) {
         return new TenantRetentionDetailView(
                 toTenantView(org),
                 toRetentionView(policy),
-                purgeJobRepository.findTop20ByOrgIdOrderByCreatedAtDesc(org.getId())
+                purgeJobRepository.findTop20ByCompanyIdOrderByCreatedAtDesc(org.getId())
                         .stream()
                         .map(job -> toJobView(job, true))
                         .toList(),
-                exportJobRepository.findTop20ByOrgIdOrderByCreatedAtDesc(org.getId())
+                exportJobRepository.findTop20ByCompanyIdOrderByCreatedAtDesc(org.getId())
                         .stream()
                         .map(job -> toExportJobView(job, true, false))
                         .toList()
         );
     }
 
-    private RetentionPolicyView toRetentionView(OrganizationRetentionPolicyEntity policy) {
+    private RetentionPolicyView toRetentionView(CompanyRetentionPolicyEntity policy) {
         return new RetentionPolicyView(
-                policy.getOrgId(),
+                policy.getCompanyId(),
                 iso(policy.getGraceUntil()),
                 iso(policy.getSuspendUntil()),
                 iso(policy.getExportDeadline()),
@@ -641,14 +641,14 @@ public class PlatformTenantLifecycleService {
         );
     }
 
-    private PurgeJobView toJobView(OrganizationPurgeJobEntity job, boolean includeManifest) {
+    private PurgeJobView toJobView(CompanyPurgeJobEntity job, boolean includeManifest) {
         Map<String, Object> manifest = parseManifest(job.getManifestJson());
         Map<String, Object> totals = manifestValue(manifest, "totals");
         Long totalRows = longValue(totals.get("rows"));
         Long unsupportedCount = longValue(totals.get("unsupported"));
         return new PurgeJobView(
                 job.getId(),
-                job.getOrgId(),
+                job.getCompanyId(),
                 job.isDryRun(),
                 job.getStatus(),
                 job.getPhase(),
@@ -671,10 +671,10 @@ public class PlatformTenantLifecycleService {
         );
     }
 
-    private ExportJobView toExportJobView(OrganizationExportJobEntity job, boolean includeManifest, boolean includeFilePath) {
+    private ExportJobView toExportJobView(CompanyExportJobEntity job, boolean includeManifest, boolean includeFilePath) {
         return new ExportJobView(
                 job.getId(),
-                job.getOrgId(),
+                job.getCompanyId(),
                 job.getStatus(),
                 job.getRequestedBy(),
                 job.getReason(),
@@ -688,7 +688,7 @@ public class PlatformTenantLifecycleService {
         );
     }
 
-    private Map<String, Object> buildDryRunManifest(OrgEntity org) {
+    private Map<String, Object> buildDryRunManifest(CompanyEntity org) {
         List<Map<String, Object>> domains = new ArrayList<>();
         long totalRows = 0L;
         for (DomainGroup group : MANIFEST_DOMAINS) {
@@ -714,8 +714,8 @@ public class PlatformTenantLifecycleService {
         totals.put("unsupported", UNSUPPORTED_MANIFEST_DOMAINS.size());
 
         Map<String, Object> manifest = new LinkedHashMap<>();
-        manifest.put("orgId", org.getId());
-        manifest.put("orgName", org.getName());
+        manifest.put("companyId", org.getId());
+        manifest.put("companyName", org.getName());
         manifest.put("manifestVersion", "v2");
         manifest.put("dryRun", true);
         manifest.put("generatedAt", Instant.now().toString());
@@ -730,28 +730,28 @@ public class PlatformTenantLifecycleService {
         )));
         manifest.put("orphanAudit", buildOrphanAudit(org.getId()));
         manifest.put("retain_summary", List.of(
-                Map.of("table", "org", "reason", "保留组织 ID、名称和 PURGED 状态用于审计与账务摘要。"),
+                Map.of("table", "company", "reason", "保留公司 ID、名称和 PURGED 状态用于审计与账务摘要。"),
                 Map.of("table", "user_account", "reason", "全局账号可属于其他组织，不随单个组织销毁。"),
-                Map.of("table", "organization_retention_policy", "reason", "保留生命周期策略和 legal hold 审计元数据。"),
-                Map.of("table", "organization_purge_job", "reason", "保留 purge manifest 和执行摘要。"),
+                Map.of("table", "company_retention_policy", "reason", "保留生命周期策略和 legal hold 审计元数据。"),
+                Map.of("table", "company_purge_job", "reason", "保留 purge manifest 和执行摘要。"),
                 Map.of("table", "platform_audit_log", "reason", "保留最小平台审计摘要，不含业务正文。")
         ));
         manifest.put("unsupported", UNSUPPORTED_MANIFEST_DOMAINS);
         return manifest;
     }
 
-    private Map<String, Object> buildOrphanAudit(String orgId) {
+    private Map<String, Object> buildOrphanAudit(String companyId) {
         Map<String, Object> audit = new LinkedHashMap<>();
         audit.put("generatedAt", Instant.now().toString());
-        audit.put("fileStorage", auditKbFileStorage(orgId));
-        audit.put("vectorStore", auditVectorStore(orgId));
+        audit.put("fileStorage", auditKbFileStorage(companyId));
+        audit.put("vectorStore", auditVectorStore(companyId));
         audit.put("mode", "read_only");
         return audit;
     }
 
-    private Map<String, Object> auditKbFileStorage(String orgId) {
-        Set<Path> registered = registeredKbFilePaths(orgId);
-        List<Path> actualFiles = scanOrgKbFiles(orgId);
+    private Map<String, Object> auditKbFileStorage(String companyId) {
+        Set<Path> registered = registeredKbFilePaths(companyId);
+        List<Path> actualFiles = scanOrgKbFiles(companyId);
         List<String> orphanFiles = actualFiles.stream()
                 .filter(file -> !registered.contains(file))
                 .map(file -> kbStorageRoot.relativize(file).toString())
@@ -771,10 +771,10 @@ public class PlatformTenantLifecycleService {
         );
     }
 
-    private Map<String, Object> auditVectorStore(String orgId) {
-        List<String> registeredVectorIds = new ArrayList<>(registeredVectorIds(orgId));
-        registeredVectorIds.addAll(memoryVectorIds(orgId));
-        VectorStoreAuditResult audit = vectorStoreClient.auditOrgVectors(orgId, registeredVectorIds);
+    private Map<String, Object> auditVectorStore(String companyId) {
+        List<String> registeredVectorIds = new ArrayList<>(registeredVectorIds(companyId));
+        registeredVectorIds.addAll(memoryVectorIds(companyId));
+        VectorStoreAuditResult audit = vectorStoreClient.auditOrgVectors(companyId, registeredVectorIds);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("status", audit.success() ? "SCANNED" : "FAILED");
         out.put("registeredVectors", audit.registeredCount());
@@ -787,10 +787,10 @@ public class PlatformTenantLifecycleService {
         return out;
     }
 
-    private Set<Path> registeredKbFilePaths(String orgId) {
+    private Set<Path> registeredKbFilePaths(String companyId) {
         Set<Path> files = new HashSet<>();
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(
-                "SELECT storage_path FROM kb_document WHERE org_id = ? AND storage_path IS NOT NULL", orgId);
+                "SELECT storage_path FROM kb_document WHERE company_id = ? AND storage_path IS NOT NULL", companyId);
         for (Map<String, Object> row : rows) {
             Object raw = row.get("storage_path");
             if (raw == null || raw.toString().isBlank()) {
@@ -804,8 +804,8 @@ public class PlatformTenantLifecycleService {
         return files;
     }
 
-    private List<Path> scanOrgKbFiles(String orgId) {
-        Path orgRoot = kbStorageRoot.resolve(orgId).normalize();
+    private List<Path> scanOrgKbFiles(String companyId) {
+        Path orgRoot = kbStorageRoot.resolve(companyId).normalize();
         if (!orgRoot.startsWith(kbStorageRoot) || !Files.isDirectory(orgRoot)) {
             return List.of();
         }
@@ -820,9 +820,9 @@ public class PlatformTenantLifecycleService {
         }
     }
 
-    private List<String> registeredVectorIds(String orgId) {
+    private List<String> registeredVectorIds(String companyId) {
         return jdbcTemplate.queryForList(
-                        "SELECT DISTINCT vector_id FROM kb_chunk WHERE org_id = ? AND vector_id IS NOT NULL", orgId)
+                        "SELECT DISTINCT vector_id FROM kb_chunk WHERE company_id = ? AND vector_id IS NOT NULL", companyId)
                 .stream()
                 .map(row -> row.get("vector_id"))
                 .filter(value -> value != null && !value.toString().isBlank())
@@ -830,10 +830,10 @@ public class PlatformTenantLifecycleService {
                 .toList();
     }
 
-    private Map<String, Object> buildExportManifest(OrgEntity org, Long jobId) {
+    private Map<String, Object> buildExportManifest(CompanyEntity org, Long jobId) {
         Map<String, Object> manifest = new LinkedHashMap<>();
-        manifest.put("orgId", org.getId());
-        manifest.put("orgName", org.getName());
+        manifest.put("companyId", org.getId());
+        manifest.put("companyName", org.getName());
         manifest.put("jobId", jobId);
         manifest.put("manifestVersion", "v2");
         manifest.put("generatedAt", Instant.now().toString());
@@ -843,7 +843,7 @@ public class PlatformTenantLifecycleService {
         return manifest;
     }
 
-    private Path writeExportArchive(OrgEntity org, Long jobId, Map<String, Object> manifest) throws IOException {
+    private Path writeExportArchive(CompanyEntity org, Long jobId, Map<String, Object> manifest) throws IOException {
         Path orgExportDir = exportRoot.resolve(org.getId()).normalize();
         if (!orgExportDir.startsWith(exportRoot)) {
             throw new IllegalArgumentException("Invalid export path");
@@ -868,9 +868,9 @@ public class PlatformTenantLifecycleService {
         return archive;
     }
 
-    private void writeTableExport(ZipOutputStream zip, String orgId, String table) throws IOException {
+    private void writeTableExport(ZipOutputStream zip, String companyId, String table) throws IOException {
         zip.putNextEntry(new ZipEntry("tables/" + table + ".jsonl"));
-        List<Map<String, Object>> rows = tenantRows(table, orgId);
+        List<Map<String, Object>> rows = tenantRows(table, companyId);
         for (Map<String, Object> row : rows) {
             zip.write(objectMapper.writeValueAsString(redactRow(table, row)).getBytes(StandardCharsets.UTF_8));
             zip.write('\n');
@@ -935,9 +935,9 @@ public class PlatformTenantLifecycleService {
         return redacted;
     }
 
-    private List<Path> listKbFiles(String orgId) {
+    private List<Path> listKbFiles(String companyId) {
         List<Path> files = new ArrayList<>();
-        for (Path path : registeredKbFilePaths(orgId)) {
+        for (Path path : registeredKbFilePaths(companyId)) {
             if (path.startsWith(kbStorageRoot) && Files.isRegularFile(path)) {
                 files.add(path);
             }
@@ -951,7 +951,7 @@ public class PlatformTenantLifecycleService {
         zip.closeEntry();
     }
 
-    private void validateRealPurgeRequest(OrgEntity org, OrganizationRetentionPolicyEntity policy, PurgeJobCreateCommand command) {
+    private void validateRealPurgeRequest(CompanyEntity org, CompanyRetentionPolicyEntity policy, PurgeJobCreateCommand command) {
         if (!"PENDING_PURGE".equalsIgnoreCase(org.getStatus())) {
             throw new IllegalArgumentException("Tenant must be PENDING_PURGE before real purge");
         }
@@ -966,23 +966,23 @@ public class PlatformTenantLifecycleService {
         }
     }
 
-    private void validateNoActiveRealPurge(String orgId) {
-        if (purgeJobRepository.existsByOrgIdAndDryRunFalseAndStatusIn(orgId, List.of(
-                OrganizationPurgeJobEntity.STATUS_QUEUED,
-                OrganizationPurgeJobEntity.STATUS_RUNNING
+    private void validateNoActiveRealPurge(String companyId) {
+        if (purgeJobRepository.existsByCompanyIdAndDryRunFalseAndStatusIn(companyId, List.of(
+                CompanyPurgeJobEntity.STATUS_QUEUED,
+                CompanyPurgeJobEntity.STATUS_RUNNING
         ))) {
             throw new IllegalArgumentException("A real purge job is already queued or running");
         }
     }
 
-    private void validatePurgeRetryRequest(OrgEntity org,
-                                           OrganizationRetentionPolicyEntity policy,
-                                           OrganizationPurgeJobEntity failedJob,
+    private void validatePurgeRetryRequest(CompanyEntity org,
+                                           CompanyRetentionPolicyEntity policy,
+                                           CompanyPurgeJobEntity failedJob,
                                            PurgeJobRetryCommand command) {
-        if (failedJob.isDryRun() || !OrganizationPurgeJobEntity.PHASE_REAL_PURGE.equals(failedJob.getPhase())) {
+        if (failedJob.isDryRun() || !CompanyPurgeJobEntity.PHASE_REAL_PURGE.equals(failedJob.getPhase())) {
             throw new IllegalArgumentException("Only real purge jobs can be retried");
         }
-        if (!Set.of(OrganizationPurgeJobEntity.STATUS_FAILED, OrganizationPurgeJobEntity.STATUS_PARTIAL_FAILED)
+        if (!Set.of(CompanyPurgeJobEntity.STATUS_FAILED, CompanyPurgeJobEntity.STATUS_PARTIAL_FAILED)
                 .contains(failedJob.getStatus())) {
             throw new IllegalArgumentException("Only failed purge jobs can be retried");
         }
@@ -1005,8 +1005,8 @@ public class PlatformTenantLifecycleService {
         Instant lockExpiresAt = lockedAt.plus(purgeWorkerLeaseMinutes, ChronoUnit.MINUTES);
         Integer updated = transactionTemplate.execute(status -> purgeJobRepository.claimQueuedJob(
                 jobId,
-                OrganizationPurgeJobEntity.STATUS_QUEUED,
-                OrganizationPurgeJobEntity.STATUS_RUNNING,
+                CompanyPurgeJobEntity.STATUS_QUEUED,
+                CompanyPurgeJobEntity.STATUS_RUNNING,
                 purgeWorkerId,
                 lockedAt,
                 lockExpiresAt
@@ -1017,21 +1017,21 @@ public class PlatformTenantLifecycleService {
     private void executeClaimedPurgeJob(Long jobId) {
         try {
             transactionTemplate.executeWithoutResult(status -> {
-                OrganizationPurgeJobEntity job = purgeJobRepository.findById(jobId)
+                CompanyPurgeJobEntity job = purgeJobRepository.findById(jobId)
                         .orElseThrow(() -> new IllegalArgumentException("Purge job not found"));
-                if (!OrganizationPurgeJobEntity.STATUS_RUNNING.equals(job.getStatus())
+                if (!CompanyPurgeJobEntity.STATUS_RUNNING.equals(job.getStatus())
                         || !purgeWorkerId.equals(job.getWorkerId())) {
                     return;
                 }
-                OrgEntity org = requireOrg(job.getOrgId());
-                OrganizationRetentionPolicyEntity policy = retentionPolicyRepository.findById(org.getId()).orElse(null);
+                CompanyEntity org = requireCompany(job.getCompanyId());
+                CompanyRetentionPolicyEntity policy = retentionPolicyRepository.findById(org.getId()).orElse(null);
                 validateQueuedPurgeCanRun(org, policy, job);
                 PurgeExecutionResult result = executeRealPurge(org.getId());
                 job.markFinished(result.status(), serializeManifest(result.result()), result.errorMessage());
                 purgeJobRepository.save(job);
-                if (OrganizationPurgeJobEntity.STATUS_SUCCEEDED.equals(result.status())) {
+                if (CompanyPurgeJobEntity.STATUS_SUCCEEDED.equals(result.status())) {
                     org.setStatus("PURGED");
-                    orgRepository.save(org);
+                    companyRepository.save(org);
                 }
                 platformAuditService.log(org.getId(), job.getRequestedBy(), "PLATFORM_WORKER", "platform.tenant.purge.execute",
                         "tenant", org.getId(), "Executed queued tenant purge job #" + job.getId()
@@ -1044,52 +1044,52 @@ public class PlatformTenantLifecycleService {
 
     private void markClaimedPurgeJobFailed(Long jobId, Exception ex) {
         transactionTemplate.executeWithoutResult(status -> {
-            OrganizationPurgeJobEntity job = purgeJobRepository.findById(jobId)
+            CompanyPurgeJobEntity job = purgeJobRepository.findById(jobId)
                     .orElseThrow(() -> new IllegalArgumentException("Purge job not found"));
-            job.markFinished(OrganizationPurgeJobEntity.STATUS_FAILED, serializeManifest(Map.of(
-                    "orgId", job.getOrgId(),
+            job.markFinished(CompanyPurgeJobEntity.STATUS_FAILED, serializeManifest(Map.of(
+                    "companyId", job.getCompanyId(),
                     "jobId", job.getId(),
                     "workerId", purgeWorkerId,
                     "error", ex.getMessage() == null ? "Queued purge failed" : ex.getMessage()
             )), ex.getMessage());
             purgeJobRepository.save(job);
-            platformAuditService.log(job.getOrgId(), job.getRequestedBy(), "PLATFORM_WORKER", "platform.tenant.purge.failed",
-                    "tenant", job.getOrgId(), "Queued tenant purge job failed before completion");
+            platformAuditService.log(job.getCompanyId(), job.getRequestedBy(), "PLATFORM_WORKER", "platform.tenant.purge.failed",
+                    "tenant", job.getCompanyId(), "Queued tenant purge job failed before completion");
         });
     }
 
     private void markExpiredRunningPurgeJobs() {
         Instant now = Instant.now();
-        List<OrganizationPurgeJobEntity> expiredJobs = purgeJobRepository
+        List<CompanyPurgeJobEntity> expiredJobs = purgeJobRepository
                 .findTop10ByStatusAndDryRunFalseAndLockExpiresAtBeforeOrderByLockExpiresAtAsc(
-                        OrganizationPurgeJobEntity.STATUS_RUNNING, now);
-        for (OrganizationPurgeJobEntity expiredJob : expiredJobs) {
+                        CompanyPurgeJobEntity.STATUS_RUNNING, now);
+        for (CompanyPurgeJobEntity expiredJob : expiredJobs) {
             transactionTemplate.executeWithoutResult(status -> {
-                OrganizationPurgeJobEntity job = purgeJobRepository.findById(expiredJob.getId())
+                CompanyPurgeJobEntity job = purgeJobRepository.findById(expiredJob.getId())
                         .orElseThrow(() -> new IllegalArgumentException("Purge job not found"));
-                if (!OrganizationPurgeJobEntity.STATUS_RUNNING.equals(job.getStatus())
+                if (!CompanyPurgeJobEntity.STATUS_RUNNING.equals(job.getStatus())
                         || job.getLockExpiresAt() == null
                         || !job.getLockExpiresAt().isBefore(now)) {
                     return;
                 }
                 String reason = "Purge worker lease expired before completion; manual inspection is required before retry";
                 job.markDeadLetter(serializeManifest(Map.of(
-                        "orgId", job.getOrgId(),
+                        "companyId", job.getCompanyId(),
                         "jobId", job.getId(),
                         "workerId", job.getWorkerId(),
                         "lockExpiresAt", job.getLockExpiresAt().toString(),
                         "error", reason
                 )), reason);
                 purgeJobRepository.save(job);
-                platformAuditService.log(job.getOrgId(), job.getRequestedBy(), "PLATFORM_WORKER", "platform.tenant.purge.dead_letter",
-                        "tenant", job.getOrgId(), "Marked stale tenant purge job #" + job.getId() + " as dead-letter");
+                platformAuditService.log(job.getCompanyId(), job.getRequestedBy(), "PLATFORM_WORKER", "platform.tenant.purge.dead_letter",
+                        "tenant", job.getCompanyId(), "Marked stale tenant purge job #" + job.getId() + " as dead-letter");
             });
         }
     }
 
-    private void validateQueuedPurgeCanRun(OrgEntity org,
-                                           OrganizationRetentionPolicyEntity policy,
-                                           OrganizationPurgeJobEntity job) {
+    private void validateQueuedPurgeCanRun(CompanyEntity org,
+                                           CompanyRetentionPolicyEntity policy,
+                                           CompanyPurgeJobEntity job) {
         if (!"PENDING_PURGE".equalsIgnoreCase(org.getStatus())) {
             throw new IllegalArgumentException("Tenant must be PENDING_PURGE before queued purge can run");
         }
@@ -1102,47 +1102,47 @@ public class PlatformTenantLifecycleService {
         if (job.getSourceDryRunJobId() == null) {
             throw new IllegalArgumentException("sourceDryRunJobId is required");
         }
-        OrganizationPurgeJobEntity sourceDryRun = purgeJobRepository
-                .findByIdAndOrgIdAndDryRunTrueAndStatus(job.getSourceDryRunJobId(), org.getId(), OrganizationPurgeJobEntity.STATUS_SUCCEEDED)
+        CompanyPurgeJobEntity sourceDryRun = purgeJobRepository
+                .findByIdAndCompanyIdAndDryRunTrueAndStatus(job.getSourceDryRunJobId(), org.getId(), CompanyPurgeJobEntity.STATUS_SUCCEEDED)
                 .orElseThrow(() -> new IllegalArgumentException("A successful source dry-run job is required"));
         if (sourceDryRun.getCreatedAt() == null || sourceDryRun.getCreatedAt().isBefore(Instant.now().minus(24, ChronoUnit.HOURS))) {
             throw new IllegalArgumentException("Source dry-run job is too old; generate a new manifest first");
         }
     }
 
-    private PurgeExecutionResult executeRealPurge(String orgId) {
+    private PurgeExecutionResult executeRealPurge(String companyId) {
         Map<String, Object> result = new LinkedHashMap<>();
         List<String> failures = new ArrayList<>();
-        deleteVectors(orgId, result, failures);
-        deleteKbFiles(orgId, result, failures);
-        deleteExportArchives(orgId, result, failures);
+        deleteVectors(companyId, result, failures);
+        deleteKbFiles(companyId, result, failures);
+        deleteExportArchives(companyId, result, failures);
         for (String table : PURGE_DELETE_TABLES) {
             try {
-                int deleted = deleteTenantRows(table, orgId);
+                int deleted = deleteTenantRows(table, companyId);
                 result.put(table, deleted);
             } catch (Exception ex) {
                 failures.add(table + ": " + ex.getMessage());
             }
         }
-        long remainingRows = countRemainingBusinessRows(orgId);
+        long remainingRows = countRemainingBusinessRows(companyId);
         result.put("remainingBusinessRows", remainingRows);
         if (remainingRows > 0 && failures.isEmpty()) {
             failures.add("business rows remain after purge");
         }
         String status = failures.isEmpty()
-                ? OrganizationPurgeJobEntity.STATUS_SUCCEEDED
-                : OrganizationPurgeJobEntity.STATUS_PARTIAL_FAILED;
+                ? CompanyPurgeJobEntity.STATUS_SUCCEEDED
+                : CompanyPurgeJobEntity.STATUS_PARTIAL_FAILED;
         if (!failures.isEmpty()) {
             result.put("failures", failures);
         }
         return new PurgeExecutionResult(status, result, failures.isEmpty() ? null : String.join("; ", failures));
     }
 
-    private void deleteVectors(String orgId, Map<String, Object> result, List<String> failures) {
-        List<String> vectorIds = new ArrayList<>(registeredVectorIds(orgId));
-        vectorIds.addAll(memoryVectorIds(orgId));
+    private void deleteVectors(String companyId, Map<String, Object> result, List<String> failures) {
+        List<String> vectorIds = new ArrayList<>(registeredVectorIds(companyId));
+        vectorIds.addAll(memoryVectorIds(companyId));
         if (!vectorIds.isEmpty()) {
-            VectorDeleteResult byIds = vectorStoreClient.deleteByVectorIds(orgId, vectorIds);
+            VectorDeleteResult byIds = vectorStoreClient.deleteByVectorIds(companyId, vectorIds);
             result.put("vectorDeleteByIds", Map.of(
                     "requested", byIds.requestedCount(),
                     "deleted", byIds.deletedCount(),
@@ -1152,26 +1152,26 @@ public class PlatformTenantLifecycleService {
                 failures.add("vector ids: " + byIds.message());
             }
         }
-        List<Map<String, Object>> kbs = jdbcTemplate.queryForList("SELECT id FROM knowledge_base WHERE org_id = ?", orgId);
+        List<Map<String, Object>> kbs = jdbcTemplate.queryForList("SELECT id FROM knowledge_base WHERE company_id = ?", companyId);
         for (Map<String, Object> row : kbs) {
             Object rawKbId = row.get("id");
             if (rawKbId == null) {
                 continue;
             }
-            VectorDeleteResult byKb = vectorStoreClient.deleteByKnowledgeBase(orgId, rawKbId.toString());
+            VectorDeleteResult byKb = vectorStoreClient.deleteByKnowledgeBase(companyId, rawKbId.toString());
             if (!byKb.success()) {
                 failures.add("vector kb " + rawKbId + ": " + byKb.message());
             }
         }
     }
 
-    private List<String> memoryVectorIds(String orgId) {
-        return jdbcTemplate.queryForList("SELECT vector_id FROM memory_vector_fragment WHERE org_id = ? AND status = 'ACTIVE'", String.class, orgId);
+    private List<String> memoryVectorIds(String companyId) {
+        return jdbcTemplate.queryForList("SELECT vector_id FROM memory_vector_fragment WHERE company_id = ? AND status = 'ACTIVE'", String.class, companyId);
     }
 
-    private void deleteKbFiles(String orgId, Map<String, Object> result, List<String> failures) {
+    private void deleteKbFiles(String companyId, Map<String, Object> result, List<String> failures) {
         int deleted = 0;
-        for (Path file : listKbFiles(orgId)) {
+        for (Path file : listKbFiles(companyId)) {
             try {
                 if (Files.deleteIfExists(file)) {
                     deleted++;
@@ -1182,7 +1182,7 @@ public class PlatformTenantLifecycleService {
         }
         result.put("deletedFiles", deleted);
         int deletedOrphans = 0;
-        for (Path file : scanOrgKbFiles(orgId)) {
+        for (Path file : scanOrgKbFiles(companyId)) {
             try {
                 if (Files.deleteIfExists(file)) {
                     deletedOrphans++;
@@ -1194,9 +1194,9 @@ public class PlatformTenantLifecycleService {
         result.put("deletedOrphanFiles", deletedOrphans);
     }
 
-    private void deleteExportArchives(String orgId, Map<String, Object> result, List<String> failures) {
+    private void deleteExportArchives(String companyId, Map<String, Object> result, List<String> failures) {
         int deleted = 0;
-        for (OrganizationExportJobEntity job : exportJobRepository.findAllByOrgId(orgId)) {
+        for (CompanyExportJobEntity job : exportJobRepository.findAllByCompanyId(companyId)) {
             if (job.getFilePath() == null || job.getFilePath().isBlank()) {
                 continue;
             }
@@ -1212,47 +1212,47 @@ public class PlatformTenantLifecycleService {
         result.put("deletedExportArchives", deleted);
     }
 
-    private long countRemainingBusinessRows(String orgId) {
+    private long countRemainingBusinessRows(String companyId) {
         long total = 0L;
         for (String table : PURGE_DELETE_TABLES) {
-            total += countRows(table, orgId);
+            total += countRows(table, companyId);
         }
         return total;
     }
 
-    private long countRows(String table, String orgId) {
+    private long countRows(String table, String companyId) {
         Long value;
         if ("agent_api_memory_binding".equals(table)) {
             value = jdbcTemplate.queryForObject("""
                     SELECT COUNT(*) FROM agent_api_memory_binding binding
                     JOIN agent_api_credential credential ON credential.id = binding.credential_id
-                    WHERE credential.org_id = ?
-                    """, Long.class, orgId);
+                    WHERE credential.company_id = ?
+                    """, Long.class, companyId);
         } else {
-            value = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM " + table + " WHERE org_id = ?", Long.class, orgId);
+            value = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM " + table + " WHERE company_id = ?", Long.class, companyId);
         }
         return value == null ? 0L : value;
     }
 
-    private List<Map<String, Object>> tenantRows(String table, String orgId) {
+    private List<Map<String, Object>> tenantRows(String table, String companyId) {
         if ("agent_api_memory_binding".equals(table)) {
             return jdbcTemplate.queryForList("""
                     SELECT binding.* FROM agent_api_memory_binding binding
                     JOIN agent_api_credential credential ON credential.id = binding.credential_id
-                    WHERE credential.org_id = ?
-                    """, orgId);
+                    WHERE credential.company_id = ?
+                    """, companyId);
         }
-        return jdbcTemplate.queryForList("SELECT * FROM " + table + " WHERE org_id = ?", orgId);
+        return jdbcTemplate.queryForList("SELECT * FROM " + table + " WHERE company_id = ?", companyId);
     }
 
-    private int deleteTenantRows(String table, String orgId) {
+    private int deleteTenantRows(String table, String companyId) {
         if ("agent_api_memory_binding".equals(table)) {
             return jdbcTemplate.update("""
                     DELETE FROM agent_api_memory_binding
-                    WHERE credential_id IN (SELECT id FROM agent_api_credential WHERE org_id = ?)
-                    """, orgId);
+                    WHERE credential_id IN (SELECT id FROM agent_api_credential WHERE company_id = ?)
+                    """, companyId);
         }
-        return jdbcTemplate.update("DELETE FROM " + table + " WHERE org_id = ?", orgId);
+        return jdbcTemplate.update("DELETE FROM " + table + " WHERE company_id = ?", companyId);
     }
 
     private String buildTenantCreateAuditDetail(UserAccountEntity account, boolean reusedExistingAccount, String provisionNote) {
@@ -1291,20 +1291,20 @@ public class PlatformTenantLifecycleService {
         return trimmed.isEmpty() ? null : trimmed;
     }
 
-    private OrgEntity requireOrg(String orgId) {
-        if (orgId == null || orgId.isBlank()) {
+    private CompanyEntity requireCompany(String companyId) {
+        if (companyId == null || companyId.isBlank()) {
             throw new IllegalArgumentException("Tenant not found");
         }
-        return orgRepository.findById(orgId)
+        return companyRepository.findById(companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Tenant not found"));
     }
 
-    private OrganizationExportJobEntity requireExportJob(String orgId, Long jobId) {
-        return exportJobRepository.findByIdAndOrgId(jobId, orgId)
+    private CompanyExportJobEntity requireExportJob(String companyId, Long jobId) {
+        return exportJobRepository.findByIdAndCompanyId(jobId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Export job not found"));
     }
 
-    private Path safeExportPath(OrganizationExportJobEntity job) {
+    private Path safeExportPath(CompanyExportJobEntity job) {
         if (job.getFilePath() == null || job.getFilePath().isBlank()) {
             throw new IllegalArgumentException("Export archive is missing");
         }
@@ -1435,7 +1435,7 @@ public class PlatformTenantLifecycleService {
     }
 
     public record TenantLifecycleView(
-            String orgId,
+            String companyId,
             String name,
             String status,
             long memberCount,
@@ -1453,8 +1453,8 @@ public class PlatformTenantLifecycleService {
     }
 
     public record TenantProvisionView(
-            String orgId,
-            String orgName,
+            String companyId,
+            String companyName,
             String status,
             String ownerMemberId,
             String ownerAccountId,
@@ -1463,7 +1463,7 @@ public class PlatformTenantLifecycleService {
     }
 
     public record RetentionPolicyView(
-            String orgId,
+            String companyId,
             String graceUntil,
             String suspendUntil,
             String exportDeadline,
@@ -1481,7 +1481,7 @@ public class PlatformTenantLifecycleService {
 
     public record PurgeJobView(
             Long id,
-            String orgId,
+            String companyId,
             boolean dryRun,
             String status,
             String phase,
@@ -1506,7 +1506,7 @@ public class PlatformTenantLifecycleService {
 
     public record ExportJobView(
             Long id,
-            String orgId,
+            String companyId,
             String status,
             String requestedBy,
             String reason,

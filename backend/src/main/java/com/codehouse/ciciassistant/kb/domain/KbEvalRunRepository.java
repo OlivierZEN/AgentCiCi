@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface KbEvalRunRepository extends JpaRepository<KbEvalRunEntity, Long> {
 
-    List<KbEvalRunEntity> findTop20ByOrgIdAndSuiteIdOrderByIdDesc(String orgId, Long suiteId);
+    List<KbEvalRunEntity> findTop20ByCompanyIdAndSuiteIdOrderByIdDesc(String companyId, Long suiteId);
 
-    Optional<KbEvalRunEntity> findByIdAndOrgId(Long id, String orgId);
+    Optional<KbEvalRunEntity> findByIdAndCompanyId(Long id, String companyId);
 }

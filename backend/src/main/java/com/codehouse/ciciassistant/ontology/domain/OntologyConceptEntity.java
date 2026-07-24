@@ -42,7 +42,7 @@ public class OntologyConceptEntity extends AbstractOntologyWorkspaceEntity {
     }
 
     public OntologyConceptEntity(
-            String orgId,
+            String companyId,
             Long workspaceId,
             String key,
             String name,
@@ -54,7 +54,7 @@ public class OntologyConceptEntity extends AbstractOntologyWorkspaceEntity {
             double positionY,
             boolean queryable,
             boolean enabled) {
-        super(orgId, workspaceId);
+        super(companyId, workspaceId);
         this.key = key;
         this.name = name;
         this.pluralName = pluralName;

@@ -6,8 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AgentWorkflowExecutionLogRepository extends JpaRepository<AgentWorkflowExecutionLogEntity, Long> {
 
-    List<AgentWorkflowExecutionLogEntity> findByOrgIdAndAgentIdOrderByCreatedAtDesc(String orgId, String agentId, Pageable pageable);
+    List<AgentWorkflowExecutionLogEntity> findByCompanyIdAndAgentIdOrderByCreatedAtDesc(String companyId, String agentId, Pageable pageable);
 
-    List<AgentWorkflowExecutionLogEntity> findByOrgIdAndAgentIdAndVersionNoOrderByCreatedAtDesc(
-            String orgId, String agentId, Integer versionNo, Pageable pageable);
+    List<AgentWorkflowExecutionLogEntity> findByCompanyIdAndAgentIdAndVersionNoOrderByCreatedAtDesc(
+            String companyId, String agentId, Integer versionNo, Pageable pageable);
 }

@@ -5,8 +5,8 @@ import com.codehouse.ciciassistant.embed.domain.EmbedAppDefinitionEntity;
 import com.codehouse.ciciassistant.embed.domain.EmbedAppDefinitionRepository;
 import com.codehouse.ciciassistant.embed.domain.MeetingSessionEntity;
 import com.codehouse.ciciassistant.embed.domain.MeetingSessionRepository;
-import com.codehouse.ciciassistant.embed.domain.OrgEmbedAppConfigEntity;
-import com.codehouse.ciciassistant.embed.domain.OrgEmbedAppConfigRepository;
+import com.codehouse.ciciassistant.embed.domain.CompanyEmbedAppConfigEntity;
+import com.codehouse.ciciassistant.embed.domain.CompanyEmbedAppConfigRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -28,13 +28,13 @@ public class EmbedAppService {
     private static final TypeReference<Map<String, Object>> MAP_REF = new TypeReference<>() {};
 
     private final EmbedAppDefinitionRepository definitionRepository;
-    private final OrgEmbedAppConfigRepository configRepository;
+    private final CompanyEmbedAppConfigRepository configRepository;
     private final MeetingSessionRepository meetingSessionRepository;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
 
     public EmbedAppService(EmbedAppDefinitionRepository definitionRepository,
-                           OrgEmbedAppConfigRepository configRepository,
+                           CompanyEmbedAppConfigRepository configRepository,
                            MeetingSessionRepository meetingSessionRepository,
                            UserRepository userRepository,
                            ObjectMapper objectMapper) {
@@ -45,9 +45,9 @@ public class EmbedAppService {
         this.objectMapper = objectMapper;
     }
 
-    public List<Map<String, Object>> listAdminApps(String orgId) {
-        Map<String, OrgEmbedAppConfigEntity> configs = new LinkedHashMap<>();
-        for (OrgEmbedAppConfigEntity config : configRepository.findByOrgId(orgId)) {
+    public List<Map<String, Object>> listAdminApps(String companyId) {
+        Map<String, CompanyEmbedAppConfigEntity> configs = new LinkedHashMap<>();
+        for (CompanyEmbedAppConfigEntity config : configRepository.findByCompanyId(companyId)) {
             configs.put(config.getAppCode(), config);
         }
         return definitionRepository.findAllByOrderByAppCodeAsc().stream()
@@ -55,35 +55,35 @@ public class EmbedAppService {
                 .toList();
     }
 
-    public Map<String, Object> adminDetail(String orgId, String appCode) {
+    public Map<String, Object> adminDetail(String companyId, String appCode) {
         EmbedAppDefinitionEntity definition = requireDefinition(appCode);
-        OrgEmbedAppConfigEntity config = configRepository.findByOrgIdAndAppCode(orgId, definition.getAppCode())
+        CompanyEmbedAppConfigEntity config = configRepository.findByCompanyIdAndAppCode(companyId, definition.getAppCode())
                 .orElse(null);
         return view(definition, config);
     }
 
-    public List<Map<String, Object>> recentSessions(String orgId, String appCode, int limit) {
+    public List<Map<String, Object>> recentSessions(String companyId, String appCode, int limit) {
         EmbedAppDefinitionEntity definition = requireDefinition(appCode);
         int size = Math.max(1, Math.min(limit, 50));
-        return meetingSessionRepository.findByOrgIdAndAppCodeOrderByUpdatedAtDesc(orgId, definition.getAppCode(), PageRequest.of(0, size))
+        return meetingSessionRepository.findByCompanyIdAndAppCodeOrderByUpdatedAtDesc(companyId, definition.getAppCode(), PageRequest.of(0, size))
                 .stream()
                 .map(this::sessionView)
                 .toList();
     }
 
     @Transactional
-    public Map<String, Object> updateConfig(String orgId, String appCode, ConfigCommand command) {
+    public Map<String, Object> updateConfig(String companyId, String appCode, ConfigCommand command) {
         EmbedAppDefinitionEntity definition = requireDefinition(appCode);
-        OrgEmbedAppConfigEntity existing = configRepository.findByOrgIdAndAppCode(orgId, definition.getAppCode())
+        CompanyEmbedAppConfigEntity existing = configRepository.findByCompanyIdAndAppCode(companyId, definition.getAppCode())
                 .orElse(null);
         int ttl = clampTtl(command.tokenTtlSeconds(), definition.getDefaultTokenTtlSeconds());
-        String runAs = normalizeRunAsUser(orgId, command.runAsUserId());
+        String runAs = normalizeRunAsUser(companyId, command.runAsUserId());
         String allowedOriginsJson = toJson(normalizeOrigins(command.allowedOrigins()));
         String sourceBindingsJson = toJson(command.sourceBindings() == null ? Map.of() : command.sourceBindings());
         String scopeOverridesJson = toJson(normalizeScopes(command.scopeOverrides(), requiredScopes(definition)));
         if (existing == null) {
-            existing = configRepository.save(new OrgEmbedAppConfigEntity(
-                    orgId,
+            existing = configRepository.save(new CompanyEmbedAppConfigEntity(
+                    companyId,
                     definition.getAppCode(),
                     command.enabled() == null || command.enabled(),
                     allowedOriginsJson,
@@ -104,10 +104,10 @@ public class EmbedAppService {
     }
 
     @Transactional
-    public OrgEmbedAppConfigEntity ensureConfig(String orgId, EmbedAppDefinitionEntity definition) {
-        return configRepository.findByOrgIdAndAppCode(orgId, definition.getAppCode())
-                .orElseGet(() -> configRepository.save(new OrgEmbedAppConfigEntity(
-                        orgId,
+    public CompanyEmbedAppConfigEntity ensureConfig(String companyId, EmbedAppDefinitionEntity definition) {
+        return configRepository.findByCompanyIdAndAppCode(companyId, definition.getAppCode())
+                .orElseGet(() -> configRepository.save(new CompanyEmbedAppConfigEntity(
+                        companyId,
                         definition.getAppCode(),
                         true,
                         "[]",
@@ -131,11 +131,11 @@ public class EmbedAppService {
         return readStringList(definition.getSupportedSourcesJson());
     }
 
-    public List<String> allowedOrigins(OrgEmbedAppConfigEntity config) {
+    public List<String> allowedOrigins(CompanyEmbedAppConfigEntity config) {
         return readStringList(config.getAllowedOriginsJson());
     }
 
-    public List<String> scopeOverrides(OrgEmbedAppConfigEntity config) {
+    public List<String> scopeOverrides(CompanyEmbedAppConfigEntity config) {
         return readStringList(config.getScopeOverridesJson());
     }
 
@@ -206,7 +206,7 @@ public class EmbedAppService {
                 || origin.equals("http://127.0.0.1");
     }
 
-    private Map<String, Object> view(EmbedAppDefinitionEntity definition, OrgEmbedAppConfigEntity config) {
+    private Map<String, Object> view(EmbedAppDefinitionEntity definition, CompanyEmbedAppConfigEntity config) {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("appCode", definition.getAppCode());
         data.put("name", definition.getName());
@@ -226,7 +226,7 @@ public class EmbedAppService {
         return data;
     }
 
-    private Map<String, Object> configView(OrgEmbedAppConfigEntity config) {
+    private Map<String, Object> configView(CompanyEmbedAppConfigEntity config) {
         if (config == null) {
             return Map.of(
                     "enabled", true,
@@ -273,12 +273,12 @@ public class EmbedAppService {
         return text;
     }
 
-    private String normalizeRunAsUser(String orgId, String raw) {
+    private String normalizeRunAsUser(String companyId, String raw) {
         String text = raw == null ? "" : raw.trim();
         if (text.isBlank()) {
             return null;
         }
-        userRepository.findByIdAndOrg_Id(text, orgId)
+        userRepository.findByIdAndCompany_Id(text, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("runAsUserId must belong to the current org"));
         return text;
     }

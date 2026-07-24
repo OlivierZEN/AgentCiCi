@@ -10,7 +10,7 @@ type ExportJobSummary = {
   updatedAt?: string;
 };
 
-type OrganizationUsageSummary = {
+type CompanyUsageSummary = {
   activeUserCount: number;
   createdUserCount: number;
   knowledgeBaseCount: number;
@@ -21,8 +21,8 @@ type OrganizationUsageSummary = {
   exportJobCount: number;
 };
 
-type OrganizationProfile = {
-  orgId: string;
+type CompanyProfile = {
+  companyId: string;
   name: string;
   shortName?: string;
   status: string;
@@ -31,7 +31,7 @@ type OrganizationProfile = {
   contactEmail?: string;
   website?: string;
   industry?: string;
-  organizationSize?: string;
+  companySize?: string;
   timezone?: string;
   notes?: string;
   owner?: { memberId: string; displayName: string; mobile?: string } | null;
@@ -40,10 +40,10 @@ type OrganizationProfile = {
   updatedAt?: string | null;
   updatedBy?: string;
   recentExportJobs?: ExportJobSummary[];
-  usageSummary?: OrganizationUsageSummary;
+  usageSummary?: CompanyUsageSummary;
 };
 
-type OrganizationProfileForm = {
+type CompanyProfileForm = {
   name: string;
   shortName: string;
   contactName: string;
@@ -51,7 +51,7 @@ type OrganizationProfileForm = {
   contactEmail: string;
   website: string;
   industry: string;
-  organizationSize: string;
+  companySize: string;
   timezone: string;
   notes: string;
 };
@@ -80,7 +80,7 @@ function statusLabel(status?: string): string {
   return status || "未知";
 }
 
-function profileToForm(profile: OrganizationProfile): OrganizationProfileForm {
+function profileToForm(profile: CompanyProfile): CompanyProfileForm {
   return {
     name: profile.name || "",
     shortName: profile.shortName || "",
@@ -89,21 +89,21 @@ function profileToForm(profile: OrganizationProfile): OrganizationProfileForm {
     contactEmail: profile.contactEmail || "",
     website: profile.website || "",
     industry: profile.industry || "",
-    organizationSize: profile.organizationSize || "",
+    companySize: profile.companySize || "",
     timezone: profile.timezone || "Asia/Shanghai",
     notes: profile.notes || "",
   };
 }
 
-export default function AdminOrganizationPage() {
+export default function AdminCompanyPage() {
   const token = useAdminToken();
-  const [profile, setProfile] = useState<OrganizationProfile | null>(null);
+  const [profile, setProfile] = useState<CompanyProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [copied, setCopied] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState<OrganizationProfileForm | null>(null);
+  const [form, setForm] = useState<CompanyProfileForm | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
 
@@ -112,13 +112,13 @@ export default function AdminOrganizationPage() {
   const fields = useMemo<ProfileField[]>(
     () => [
       { label: "组织名称", value: formatText(profile?.name) },
-      { label: "组织 ID", value: profile?.orgId ?? "暂无", mono: true, action: "copy-org-id" },
+      { label: "组织 ID", value: profile?.companyId ?? "暂无", mono: true, action: "copy-org-id" },
       { label: "联系人", value: formatText(profile?.contactName) },
       { label: "联系电话", value: formatText(profile?.contactPhone) },
       { label: "联系邮箱", value: formatText(profile?.contactEmail) },
       { label: "官网", value: formatText(profile?.website) },
       { label: "行业", value: formatText(profile?.industry) },
-      { label: "组织规模", value: formatText(profile?.organizationSize) },
+      { label: "组织规模", value: formatText(profile?.companySize) },
       { label: "时区", value: formatText(profile?.timezone || "Asia/Shanghai") },
     ],
     [profile],
@@ -144,14 +144,14 @@ export default function AdminOrganizationPage() {
       setLoading(true);
       setError("");
       try {
-        const res = await fetch("/admin/organization/profile", { headers: { Authorization: `Bearer ${token}` } });
+        const res = await fetch("/admin/company/profile", { headers: { Authorization: `Bearer ${token}` } });
         const json = await res.json();
         if (!res.ok || !json.success) {
           if (!ignore) setError(json.message ?? "组织简档加载失败");
           return;
         }
         if (!ignore) {
-          setProfile(json.data as OrganizationProfile);
+          setProfile(json.data as CompanyProfile);
           setSuccess("");
         }
       } catch {
@@ -178,9 +178,9 @@ export default function AdminOrganizationPage() {
     return () => document.removeEventListener("keydown", closeOnEscape);
   }, [editing, saving]);
 
-  const copyOrgId = async () => {
-    if (!profile?.orgId) return;
-    await navigator.clipboard.writeText(profile.orgId);
+  const copyCompanyId = async () => {
+    if (!profile?.companyId) return;
+    await navigator.clipboard.writeText(profile.companyId);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1600);
   };
@@ -199,7 +199,7 @@ export default function AdminOrganizationPage() {
     setSaveError("");
   };
 
-  const updateForm = (field: keyof OrganizationProfileForm, value: string) => {
+  const updateForm = (field: keyof CompanyProfileForm, value: string) => {
     setForm((current) => (current ? { ...current, [field]: value } : current));
   };
 
@@ -211,7 +211,7 @@ export default function AdminOrganizationPage() {
     setError("");
     setSuccess("");
     try {
-      const res = await fetch("/admin/organization/profile", {
+      const res = await fetch("/admin/company/profile", {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -224,14 +224,14 @@ export default function AdminOrganizationPage() {
         setSaveError(json.message ?? "组织信息保存失败");
         return;
       }
-      const nextProfile = json.data as OrganizationProfile;
+      const nextProfile = json.data as CompanyProfile;
       setProfile(nextProfile);
       setForm(profileToForm(nextProfile));
       setEditing(false);
       setSuccess("组织信息已更新");
       window.dispatchEvent(
-        new CustomEvent("admin-organization-profile-updated", {
-          detail: { orgId: nextProfile.orgId, name: nextProfile.name },
+        new CustomEvent("admin-company-profile-updated", {
+          detail: { companyId: nextProfile.companyId, name: nextProfile.name },
         }),
       );
     } catch {
@@ -244,26 +244,26 @@ export default function AdminOrganizationPage() {
   const canSave = Boolean(form && form.name.trim().length >= 2) && !saving;
 
   return (
-    <div className="admin-page admin-organization-page">
-      <header className="admin-organization-header">
+    <div className="admin-page admin-company-page">
+      <header className="admin-company-header">
         <div>
           <h1>组织简档</h1>
           <p className="subtle">查看当前组织的基础信息、系统标识和使用情况。</p>
         </div>
-        <div className="admin-organization-header__actions">
+        <div className="admin-company-header__actions">
           {!loading && profile ? (
-            <button type="button" className="admin-organization-edit-button" onClick={openEditor}>
+            <button type="button" className="admin-company-edit-button" onClick={openEditor}>
               编辑
             </button>
           ) : null}
-          {error && <p className="admin-organization-feedback is-error">{error}</p>}
-          {success && <p className="admin-organization-feedback">{success}</p>}
+          {error && <p className="admin-company-feedback is-error">{error}</p>}
+          {success && <p className="admin-company-feedback">{success}</p>}
         </div>
       </header>
 
       {loading ? (
-        <section className="admin-organization-panel" aria-label="正在加载组织简档">
-          <div className="admin-organization-skeleton">
+        <section className="admin-company-panel" aria-label="正在加载组织简档">
+          <div className="admin-company-skeleton">
             {Array.from({ length: 12 }).map((_, index) => (
               <span key={index} />
             ))}
@@ -271,20 +271,20 @@ export default function AdminOrganizationPage() {
         </section>
       ) : (
         <>
-          <section className="admin-organization-panel admin-organization-panel--profile" aria-label="组织信息">
-            <div className="admin-organization-section admin-organization-section--intro">
+          <section className="admin-company-panel admin-company-panel--profile" aria-label="组织信息">
+            <div className="admin-company-section admin-company-section--intro">
               <h2>{formatText(profile?.name)}</h2>
             </div>
-            <dl className="admin-organization-profile-list">
+            <dl className="admin-company-profile-list">
               {fieldColumns.map((column, index) => (
-                <div className="admin-organization-profile-column" key={index}>
+                <div className="admin-company-profile-column" key={index}>
                   {column.map((field) => (
-                    <div className="admin-organization-profile-item" key={field.label}>
+                    <div className="admin-company-profile-item" key={field.label}>
                       <dt>{field.label}</dt>
                       <dd>
-                        <span className={field.mono ? "admin-organization-mono" : undefined}>{field.value}</span>
+                        <span className={field.mono ? "admin-company-mono" : undefined}>{field.value}</span>
                         {field.action === "copy-org-id" ? (
-                          <button type="button" className="admin-organization-text-action" onClick={() => void copyOrgId()} disabled={!profile?.orgId}>
+                          <button type="button" className="admin-company-text-action" onClick={() => void copyCompanyId()} disabled={!profile?.companyId}>
                             {copied ? "已复制" : "复制"}
                           </button>
                         ) : null}
@@ -296,13 +296,13 @@ export default function AdminOrganizationPage() {
             </dl>
           </section>
 
-          <section className="admin-organization-panel admin-organization-panel--usage" aria-label="组织使用情况汇总">
-            <div className="admin-organization-section admin-organization-section--intro">
+          <section className="admin-company-panel admin-company-panel--usage" aria-label="组织使用情况汇总">
+            <div className="admin-company-section admin-company-section--intro">
               <h2>使用情况汇总</h2>
             </div>
-            <div className="admin-organization-usage-grid">
+            <div className="admin-company-usage-grid">
               {usageItems.map((item) => (
-                <div key={item.label} className="admin-organization-usage-item">
+                <div key={item.label} className="admin-company-usage-item">
                   <span>{item.label}</span>
                   <strong>{item.value}</strong>
                   <small>{item.hint}</small>
@@ -315,27 +315,27 @@ export default function AdminOrganizationPage() {
 
       {editing && form && profile ? (
         <div
-          className="admin-organization-modal-backdrop"
+          className="admin-company-modal-backdrop"
           role="presentation"
           onClick={(event) => {
             if (event.target === event.currentTarget) closeEditor();
           }}
         >
           <form
-            className="admin-organization-modal"
+            className="admin-company-modal"
             role="dialog"
             aria-modal="true"
-            aria-labelledby="admin-organization-edit-title"
+            aria-labelledby="admin-company-edit-title"
             onSubmit={(event) => void saveProfile(event)}
           >
-            <div className="admin-organization-modal__head">
+            <div className="admin-company-modal__head">
               <div>
-                <h2 id="admin-organization-edit-title">编辑组织信息</h2>
+                <h2 id="admin-company-edit-title">编辑组织信息</h2>
                 <p>组织 ID 保持只读，保存后会同步左侧组织名称。</p>
               </div>
               <button
                 type="button"
-                className="admin-organization-modal__close"
+                className="admin-company-modal__close"
                 aria-label="关闭组织信息编辑"
                 onClick={closeEditor}
                 disabled={saving}
@@ -344,14 +344,14 @@ export default function AdminOrganizationPage() {
               </button>
             </div>
 
-            <div className="admin-organization-modal__body">
-              {saveError && <p className="admin-organization-modal__error">{saveError}</p>}
-              <div className="admin-organization-modal__readonly">
+            <div className="admin-company-modal__body">
+              {saveError && <p className="admin-company-modal__error">{saveError}</p>}
+              <div className="admin-company-modal__readonly">
                 <span>组织 ID</span>
-                <strong className="admin-organization-mono">{profile.orgId}</strong>
+                <strong className="admin-company-mono">{profile.companyId}</strong>
               </div>
-              <div className="admin-organization-form-grid">
-                <label className="admin-organization-field">
+              <div className="admin-company-form-grid">
+                <label className="admin-company-field">
                   <span>组织名称</span>
                   <input
                     value={form.name}
@@ -361,19 +361,19 @@ export default function AdminOrganizationPage() {
                     required
                   />
                 </label>
-                <label className="admin-organization-field">
+                <label className="admin-company-field">
                   <span>组织简称</span>
                   <input value={form.shortName} onChange={(event) => updateForm("shortName", event.target.value)} maxLength={64} />
                 </label>
-                <label className="admin-organization-field">
+                <label className="admin-company-field">
                   <span>联系人</span>
                   <input value={form.contactName} onChange={(event) => updateForm("contactName", event.target.value)} maxLength={128} />
                 </label>
-                <label className="admin-organization-field">
+                <label className="admin-company-field">
                   <span>联系电话</span>
                   <input value={form.contactPhone} onChange={(event) => updateForm("contactPhone", event.target.value)} maxLength={64} />
                 </label>
-                <label className="admin-organization-field">
+                <label className="admin-company-field">
                   <span>联系邮箱</span>
                   <input
                     type="email"
@@ -382,7 +382,7 @@ export default function AdminOrganizationPage() {
                     maxLength={256}
                   />
                 </label>
-                <label className="admin-organization-field">
+                <label className="admin-company-field">
                   <span>官网</span>
                   <input
                     type="url"
@@ -392,30 +392,30 @@ export default function AdminOrganizationPage() {
                     placeholder="https://example.com"
                   />
                 </label>
-                <label className="admin-organization-field">
+                <label className="admin-company-field">
                   <span>行业</span>
                   <input value={form.industry} onChange={(event) => updateForm("industry", event.target.value)} maxLength={128} />
                 </label>
-                <label className="admin-organization-field">
+                <label className="admin-company-field">
                   <span>组织规模</span>
-                  <input value={form.organizationSize} onChange={(event) => updateForm("organizationSize", event.target.value)} maxLength={64} />
+                  <input value={form.companySize} onChange={(event) => updateForm("companySize", event.target.value)} maxLength={64} />
                 </label>
-                <label className="admin-organization-field">
+                <label className="admin-company-field">
                   <span>时区</span>
                   <input value={form.timezone} onChange={(event) => updateForm("timezone", event.target.value)} maxLength={64} />
                 </label>
               </div>
-              <label className="admin-organization-field admin-organization-field--wide">
+              <label className="admin-company-field admin-company-field--wide">
                 <span>备注</span>
                 <textarea value={form.notes} onChange={(event) => updateForm("notes", event.target.value)} maxLength={4000} rows={4} />
               </label>
             </div>
 
-            <div className="admin-organization-modal__foot">
-              <button type="button" className="admin-organization-modal__secondary" onClick={closeEditor} disabled={saving}>
+            <div className="admin-company-modal__foot">
+              <button type="button" className="admin-company-modal__secondary" onClick={closeEditor} disabled={saving}>
                 取消
               </button>
-              <button type="submit" className="admin-organization-modal__primary" disabled={!canSave}>
+              <button type="submit" className="admin-company-modal__primary" disabled={!canSave}>
                 {saving ? "保存中" : "保存"}
               </button>
             </div>

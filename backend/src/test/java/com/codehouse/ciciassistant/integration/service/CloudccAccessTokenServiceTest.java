@@ -33,7 +33,7 @@ class CloudccAccessTokenServiceTest {
             userInfoRequests.incrementAndGet();
             accessTokenHeaders.add(exchange.getRequestHeaders().getFirst("accessToken"));
             byte[] body = """
-                    {"result":true,"data":{"userId":"cloudcc-user","loginName":"sales@example.com","orgId":"cloudcc-org"}}
+                    {"result":true,"data":{"userId":"cloudcc-user","loginName":"sales@example.com","companyId":"cloudcc-org"}}
                     """.getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().add("Content-Type", "application/json");
             exchange.sendResponseHeaders(200, body.length);
@@ -43,9 +43,9 @@ class CloudccAccessTokenServiceTest {
         server.start();
 
         try {
-            String orgId = "agent-org";
+            String companyId = "agent-org";
             IntegrationAppRepository appRepository = configuredAppRepository(
-                    orgId,
+                    companyId,
                     "http://127.0.0.1:%d/lightningapi".formatted(server.getAddress().getPort()));
             CloudccAccessTokenService service = new CloudccAccessTokenService(
                     appRepository,
@@ -53,12 +53,12 @@ class CloudccAccessTokenServiceTest {
                     new ObjectMapper());
 
             Optional<CloudccAccessTokenService.ValidatedCloudccToken> validated = service
-                    .validateRuntimeAccessToken(orgId, "current-crm-session-token");
+                    .validateRuntimeAccessToken(companyId, "current-crm-session-token");
 
             assertThat(validated).get()
                     .satisfies(token -> {
                         assertThat(token.actorId()).isEqualTo("sales@example.com");
-                        assertThat(token.cloudccOrgId()).isEqualTo("cloudcc-org");
+                        assertThat(token.cloudccCompanyId()).isEqualTo("cloudcc-org");
                     });
             assertThat(userInfoRequests).hasValue(1);
             assertThat(accessTokenHeaders).containsExactly("current-crm-session-token");
@@ -82,16 +82,16 @@ class CloudccAccessTokenServiceTest {
         server.start();
 
         try {
-            String orgId = "agent-org";
+            String companyId = "agent-org";
             CloudccAccessTokenService service = new CloudccAccessTokenService(
                     configuredAppRepository(
-                            orgId,
+                            companyId,
                             "http://127.0.0.1:%d/lightningapi".formatted(server.getAddress().getPort())),
                     mock(UserRepository.class),
                     new ObjectMapper());
 
             assertThat(service.validateRuntimeAccessToken(
-                    orgId,
+                    companyId,
                     "expired-crm-session-token")).isEmpty();
         } finally {
             server.stop(0);
@@ -120,21 +120,21 @@ class CloudccAccessTokenServiceTest {
 
         ExecutorService executor = Executors.newFixedThreadPool(8);
         try {
-            String orgId = "agent-org";
+            String companyId = "agent-org";
             String userId = "member-1";
             String config = """
-                    {"orgId":"cloudcc-org","clientId":"client","secretKey":"secret",
+                    {"companyId":"cloudcc-org","clientId":"client","secretKey":"secret",
                      "orgapi_switch_address":"http://127.0.0.1:%d/lightningapi"}
                     """.formatted(server.getAddress().getPort());
             IntegrationAppRepository appRepository = mock(IntegrationAppRepository.class);
-            when(appRepository.findByOrgIdAndAppCode(orgId, IntegrationAppService.APP_CODE_CLOUDCC_CRM))
-                    .thenReturn(Optional.of(new IntegrationAppEntity(orgId, IntegrationAppService.APP_CODE_CLOUDCC_CRM,
+            when(appRepository.findByCompanyIdAndAppCode(companyId, IntegrationAppService.APP_CODE_CLOUDCC_CRM))
+                    .thenReturn(Optional.of(new IntegrationAppEntity(companyId, IntegrationAppService.APP_CODE_CLOUDCC_CRM,
                             "CloudCC", "", true, config)));
             UserEntity user = mock(UserEntity.class);
             when(user.getCcUsername()).thenReturn("member@example.com");
             when(user.getCcSafetymark()).thenReturn("safety");
             UserRepository userRepository = mock(UserRepository.class);
-            when(userRepository.findByIdAndOrg_Id(userId, orgId)).thenReturn(Optional.of(user));
+            when(userRepository.findByIdAndCompany_Id(userId, companyId)).thenReturn(Optional.of(user));
             CloudccAccessTokenService service = new CloudccAccessTokenService(appRepository, userRepository, new ObjectMapper());
 
             CountDownLatch start = new CountDownLatch(1);
@@ -142,7 +142,7 @@ class CloudccAccessTokenServiceTest {
             for (int i = 0; i < 8; i++) {
                 futures.add(executor.submit(() -> {
                     start.await();
-                    return service.getSessionContext(orgId, userId);
+                    return service.getSessionContext(companyId, userId);
                 }));
             }
             start.countDown();
@@ -158,14 +158,14 @@ class CloudccAccessTokenServiceTest {
         }
     }
 
-    private IntegrationAppRepository configuredAppRepository(String orgId, String gateway) {
+    private IntegrationAppRepository configuredAppRepository(String companyId, String gateway) {
         String config = """
-                {"orgId":"cloudcc-org","clientId":"client","secretKey":"secret",
+                {"companyId":"cloudcc-org","clientId":"client","secretKey":"secret",
                  "orgapi_switch_address":"%s"}
                 """.formatted(gateway);
         IntegrationAppRepository repository = mock(IntegrationAppRepository.class);
-        when(repository.findByOrgIdAndAppCode(orgId, IntegrationAppService.APP_CODE_CLOUDCC_CRM))
-                .thenReturn(Optional.of(new IntegrationAppEntity(orgId, IntegrationAppService.APP_CODE_CLOUDCC_CRM,
+        when(repository.findByCompanyIdAndAppCode(companyId, IntegrationAppService.APP_CODE_CLOUDCC_CRM))
+                .thenReturn(Optional.of(new IntegrationAppEntity(companyId, IntegrationAppService.APP_CODE_CLOUDCC_CRM,
                         "CloudCC", "", true, config)));
         return repository;
     }

@@ -1,4 +1,4 @@
-package com.codehouse.ciciassistant.organization;
+package com.codehouse.ciciassistant.company;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -26,7 +26,7 @@ import org.springframework.test.web.servlet.MvcResult;
 @TestPropertySource(properties = {
         "spring.profiles.active=default"
 })
-class AdminOrganizationProfileIntegrationTest {
+class AdminCompanyProfileIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -38,14 +38,14 @@ class AdminOrganizationProfileIntegrationTest {
     private JdbcTemplate jdbcTemplate;
 
     @Test
-    void ownerCanReadAndUpdateOrganizationProfileWithoutChangingOrgId() throws Exception {
+    void ownerCanReadAndUpdateCompanyProfileWithoutChangingCompanyId() throws Exception {
         CreatedOrg created = registerOrg("组织设置测试组织");
-        seedUsageSummaryData(created.orgId());
+        seedUsageSummaryData(created.companyId());
 
-        mockMvc.perform(get("/admin/organization/profile")
+        mockMvc.perform(get("/admin/company/profile")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + created.token()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.orgId").value(created.orgId()))
+                .andExpect(jsonPath("$.data.companyId").value(created.companyId()))
                 .andExpect(jsonPath("$.data.name").value("组织设置测试组织"))
                 .andExpect(jsonPath("$.data.owner.displayName").isNotEmpty())
                 .andExpect(jsonPath("$.data.memberCount").value(1))
@@ -58,7 +58,7 @@ class AdminOrganizationProfileIntegrationTest {
                 .andExpect(jsonPath("$.data.usageSummary.publishedAgentCount").value(1))
                 .andExpect(jsonPath("$.data.usageSummary.exportJobCount").value(1));
 
-        mockMvc.perform(patch("/admin/organization/profile")
+        mockMvc.perform(patch("/admin/company/profile")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + created.token())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -70,52 +70,52 @@ class AdminOrganizationProfileIntegrationTest {
                                   "contactEmail": "ops@example.com",
                                   "website": "https://example.com",
                                   "industry": "企业服务",
-                                  "organizationSize": "51-200",
+                                  "companySize": "51-200",
                                   "timezone": "Asia/Shanghai",
                                   "notes": "内部支持备注"
                                 }
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.orgId").value(created.orgId()))
+                .andExpect(jsonPath("$.data.companyId").value(created.companyId()))
                 .andExpect(jsonPath("$.data.name").value("鎏金账房科技"))
                 .andExpect(jsonPath("$.data.shortName").value("账房科技"))
                 .andExpect(jsonPath("$.data.contactEmail").value("ops@example.com"));
 
-        assertThat(jdbcTemplate.queryForObject("SELECT name FROM org WHERE id = ?", String.class, created.orgId()))
+        assertThat(jdbcTemplate.queryForObject("SELECT name FROM company WHERE id = ?", String.class, created.companyId()))
                 .isEqualTo("鎏金账房科技");
         assertThat(jdbcTemplate.queryForObject(
-                "SELECT contact_email FROM organization_profile WHERE org_id = ?",
+                "SELECT contact_email FROM company_profile WHERE company_id = ?",
                 String.class,
-                created.orgId()))
+                created.companyId()))
                 .isEqualTo("ops@example.com");
         Long auditCount = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM audit_log WHERE org_id = ? AND event_type = 'organization.name.update'",
+                "SELECT COUNT(*) FROM audit_log WHERE company_id = ? AND event_type = 'company.name.update'",
                 Long.class,
-                created.orgId());
+                created.companyId());
         assertThat(auditCount).isEqualTo(1);
 
-        mockMvc.perform(patch("/admin/organization/profile")
+        mockMvc.perform(patch("/admin/company/profile")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + created.token())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "orgId": "other-org",
+                                  "companyId": "other-org",
                                   "name": "不能改系统标识"
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("组织 ID 是系统标识，不允许修改"));
 
-        assertThat(jdbcTemplate.queryForObject("SELECT id FROM org WHERE id = ?", String.class, created.orgId()))
-                .isEqualTo(created.orgId());
+        assertThat(jdbcTemplate.queryForObject("SELECT id FROM company WHERE id = ?", String.class, created.companyId()))
+                .isEqualTo(created.companyId());
     }
 
     @Test
-    void orgUserCannotUpdateOrganizationProfile() throws Exception {
+    void orgUserCannotUpdateCompanyProfile() throws Exception {
         CreatedOrg created = registerOrg("组织权限测试组织");
-        String userToken = loginOrgUser(created.orgId());
+        String userToken = loginOrgUser(created.companyId());
 
-        mockMvc.perform(patch("/admin/organization/profile")
+        mockMvc.perform(patch("/admin/company/profile")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -126,7 +126,7 @@ class AdminOrganizationProfileIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
-    private CreatedOrg registerOrg(String organizationName) throws Exception {
+    private CreatedOrg registerOrg(String companyName) throws Exception {
         String mobile = randomMobile();
         MvcResult result = mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -134,71 +134,71 @@ class AdminOrganizationProfileIntegrationTest {
                                 {
                                   "mobile": "%s",
                                   "password": "szyd1234",
-                                  "organizationName": "%s"
+                                  "companyName": "%s"
                                 }
-                                """.formatted(mobile, organizationName)))
+                                """.formatted(mobile, companyName)))
                 .andExpect(status().isOk())
                 .andReturn();
         JsonNode data = objectMapper.readTree(result.getResponse().getContentAsString()).path("data");
-        return new CreatedOrg(data.path("orgId").asText(), data.path("token").asText());
+        return new CreatedOrg(data.path("companyId").asText(), data.path("token").asText());
     }
 
-    private String loginOrgUser(String orgId) throws Exception {
+    private String loginOrgUser(String companyId) throws Exception {
         MvcResult result = mockMvc.perform(post("/auth/password/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "orgId": "%s",
+                                  "companyId": "%s",
                                   "mobile": "%s",
                                   "password": "szyd1234"
                                 }
-                                """.formatted(orgId, randomMobile())))
+                                """.formatted(companyId, randomMobile())))
                 .andExpect(status().isOk())
                 .andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString()).path("data").path("token").asText();
     }
 
-    private void seedUsageSummaryData(String orgId) {
+    private void seedUsageSummaryData(String companyId) {
         jdbcTemplate.update("""
-                INSERT INTO knowledge_base(org_id, name, description, status, created_at, updated_at)
+                INSERT INTO knowledge_base(company_id, name, description, status, created_at, updated_at)
                 VALUES (?, '组织简档统计知识库', 'usage summary fixture', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                """, orgId);
+                """, companyId);
         Long kbId = jdbcTemplate.queryForObject(
-                "SELECT id FROM knowledge_base WHERE org_id = ? AND name = '组织简档统计知识库'",
+                "SELECT id FROM knowledge_base WHERE company_id = ? AND name = '组织简档统计知识库'",
                 Long.class,
-                orgId);
+                companyId);
         jdbcTemplate.update("""
-                INSERT INTO kb_document(org_id, knowledge_base_id, name, content_type, storage_path, status, created_at, updated_at)
+                INSERT INTO kb_document(company_id, knowledge_base_id, name, content_type, storage_path, status, created_at, updated_at)
                 VALUES (?, ?, '组织简档统计文档', 'text/plain', '/tmp/usage-summary.txt', 'PUBLISHED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                """, orgId, kbId);
+                """, companyId, kbId);
         jdbcTemplate.update("""
                 INSERT INTO skill_definition(
-                    org_id, skill_code, name, description, builtin, enabled, prompt_fragment,
+                    company_id, skill_code, name, description, builtin, enabled, prompt_fragment,
                     tool_whitelist, kb_whitelist, handoff_rule, output_contract, risk_level, created_at, updated_at
                 )
                 VALUES (?, 'usage-summary-skill', '统计技能', 'usage summary fixture', FALSE, TRUE, '',
                     '', '', '', '', 'LOW', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                """, orgId);
+                """, companyId);
         jdbcTemplate.update("""
                 INSERT INTO agent_definition(
-                    org_id, agent_id, name, summary, greeting, model, system_prompt, handoff_rule,
+                    company_id, agent_id, name, summary, greeting, model, system_prompt, handoff_rule,
                     safety_level, execution_mode, version_label, builtin, enabled, published_version_id, created_at, updated_at
                 )
                 VALUES (?, 'usage-summary-agent-published', '已发布统计智能体', '', '', 'demo-model', '', '',
                     'LOW', 'CHAT', 'v1', FALSE, TRUE, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                """, orgId);
+                """, companyId);
         jdbcTemplate.update("""
                 INSERT INTO agent_definition(
-                    org_id, agent_id, name, summary, greeting, model, system_prompt, handoff_rule,
+                    company_id, agent_id, name, summary, greeting, model, system_prompt, handoff_rule,
                     safety_level, execution_mode, version_label, builtin, enabled, published_version_id, created_at, updated_at
                 )
                 VALUES (?, 'usage-summary-agent-draft', '草稿统计智能体', '', '', 'demo-model', '', '',
                     'LOW', 'CHAT', 'draft', FALSE, TRUE, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                """, orgId);
+                """, companyId);
         jdbcTemplate.update("""
-                INSERT INTO organization_export_job(org_id, status, requested_by, reason, manifest_json, created_at, updated_at)
+                INSERT INTO company_export_job(company_id, status, requested_by, reason, manifest_json, created_at, updated_at)
                 VALUES (?, 'SUCCEEDED', 'test-owner', 'usage summary fixture', '{}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                """, orgId);
+                """, companyId);
     }
 
     private static String randomMobile() {
@@ -206,6 +206,6 @@ class AdminOrganizationProfileIntegrationTest {
         return "139" + String.format("%08d", suffix);
     }
 
-    private record CreatedOrg(String orgId, String token) {
+    private record CreatedOrg(String companyId, String token) {
     }
 }

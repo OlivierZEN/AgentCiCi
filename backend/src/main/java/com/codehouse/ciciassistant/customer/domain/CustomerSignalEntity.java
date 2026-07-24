@@ -18,8 +18,8 @@ public class CustomerSignalEntity {
 
     @Column(name = "public_id", nullable = false, unique = true, length = 64)
     private String publicId;
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
     @Column(name = "crm_account_id", nullable = false, length = 128)
     private String crmAccountId;
     @Column(name = "mode", nullable = false, length = 32)
@@ -47,11 +47,11 @@ public class CustomerSignalEntity {
 
     protected CustomerSignalEntity() {}
 
-    public CustomerSignalEntity(String publicId, String orgId, String crmAccountId, String mode,
+    public CustomerSignalEntity(String publicId, String companyId, String crmAccountId, String mode,
                                 String signalType, String title, String detail, String severity,
                                 String evidenceJson, String assignee, Instant sourceUpdatedAt) {
         this.publicId = publicId;
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.crmAccountId = crmAccountId;
         this.mode = mode;
         this.signalType = signalType;
@@ -67,7 +67,7 @@ public class CustomerSignalEntity {
     }
 
     public String getPublicId() { return publicId; }
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
     public String getCrmAccountId() { return crmAccountId; }
     public String getMode() { return mode; }
     public String getSignalType() { return signalType; }

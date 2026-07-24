@@ -6,16 +6,16 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CustomerWorkbenchRecommendationRepository extends JpaRepository<CustomerWorkbenchRecommendationEntity, Long> {
 
-    List<CustomerWorkbenchRecommendationEntity> findByOrgIdAndCrmAccountIdOrderByUpdatedAtDesc(String orgId, String crmAccountId);
+    List<CustomerWorkbenchRecommendationEntity> findByCompanyIdAndCrmAccountIdOrderByUpdatedAtDesc(String companyId, String crmAccountId);
 
-    List<CustomerWorkbenchRecommendationEntity> findByOrgIdAndCrmAccountIdAndRecommendationTypeAndActionKeyOrderByUpdatedAtDesc(
-            String orgId, String crmAccountId, String recommendationType, String actionKey);
+    List<CustomerWorkbenchRecommendationEntity> findByCompanyIdAndCrmAccountIdAndRecommendationTypeAndActionKeyOrderByUpdatedAtDesc(
+            String companyId, String crmAccountId, String recommendationType, String actionKey);
 
-    List<CustomerWorkbenchRecommendationEntity> findByOrgIdOrderByUpdatedAtDesc(String orgId);
+    List<CustomerWorkbenchRecommendationEntity> findByCompanyIdOrderByUpdatedAtDesc(String companyId);
 
-    Optional<CustomerWorkbenchRecommendationEntity> findByOrgIdAndPublicId(String orgId, String publicId);
+    Optional<CustomerWorkbenchRecommendationEntity> findByCompanyIdAndPublicId(String companyId, String publicId);
 
-    long countByOrgIdAndCrmAccountIdAndStatus(String orgId, String crmAccountId, String status);
+    long countByCompanyIdAndCrmAccountIdAndStatus(String companyId, String crmAccountId, String status);
 
-    long countByOrgId(String orgId);
+    long countByCompanyId(String companyId);
 }

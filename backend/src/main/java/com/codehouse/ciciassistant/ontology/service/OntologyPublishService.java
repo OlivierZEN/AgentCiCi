@@ -55,13 +55,13 @@ public class OntologyPublishService {
 
     @Transactional
     public OntologyVersionEntity publish(
-            String orgId,
+            String companyId,
             String userId,
             Long workspaceId,
             Long expectedRevision) {
-        requireCurrentOrg(orgId);
+        requireCurrentOrg(companyId);
         requireCurrentHuman(userId);
-        OntologyWorkspaceEntity workspace = workspaces.findForUpdateByIdAndOrgId(workspaceId, orgId)
+        OntologyWorkspaceEntity workspace = workspaces.findForUpdateByIdAndCompanyId(workspaceId, companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Ontology workspace not found"));
         if (!Objects.equals(workspace.getDraftRevision(), expectedRevision)) {
             throw new ConflictException("ONTOLOGY_REVISION_CONFLICT");
@@ -70,28 +70,28 @@ public class OntologyPublishService {
             throw new ConflictException("ONTOLOGY_WORKSPACE_ARCHIVED");
         }
         OntologyVersionEntity existingVersion = versions
-                .findByWorkspaceIdAndOrgIdAndSourceDraftRevision(
+                .findByWorkspaceIdAndCompanyIdAndSourceDraftRevision(
                         workspaceId,
-                        orgId,
+                        companyId,
                         workspace.getDraftRevision())
                 .orElse(null);
         if (existingVersion != null) {
             return existingVersion;
         }
 
-        OntologyDocument document = drafts.loadDraft(orgId, workspaceId, workspace);
+        OntologyDocument document = drafts.loadDraft(companyId, workspaceId, workspace);
         List<OntologyValidationService.ValidationIssue> issues = validation.validate(document, true);
         if (issues.stream().anyMatch(issue ->
                 issue.severity() == OntologyValidationService.Severity.ERROR)) {
             throw new ConflictException("ONTOLOGY_VALIDATION_FAILED");
         }
-        requireFreshServerMappings(orgId, workspaceId, document);
+        requireFreshServerMappings(companyId, workspaceId, document);
 
         int nextVersion = workspace.getPublishedVersion() == null
                 ? 1 : workspace.getPublishedVersion() + 1;
         OntologyCompilerService.CompiledContracts contracts = compiler.compile(document, nextVersion);
         OntologyVersionEntity version = new OntologyVersionEntity(
-                orgId,
+                companyId,
                 workspaceId,
                 nextVersion,
                 workspace.getDraftRevision(),
@@ -109,7 +109,7 @@ public class OntologyPublishService {
     }
 
     private void requireFreshServerMappings(
-            String orgId,
+            String companyId,
             Long workspaceId,
             OntologyDocument document) {
         for (OntologyDocument.Mapping mapping : document.mappings() == null
@@ -119,9 +119,9 @@ public class OntologyPublishService {
                     ? ""
                     : mapping.targetType().trim().toUpperCase(java.util.Locale.ROOT);
             OntologyMappingEntity stored = mappings
-                    .findByWorkspaceIdAndOrgIdAndTargetTypeAndTargetKeyAndDataSourceId(
+                    .findByWorkspaceIdAndCompanyIdAndTargetTypeAndTargetKeyAndDataSourceId(
                             workspaceId,
-                            orgId,
+                            companyId,
                             targetType,
                             mapping.targetKey(),
                             mapping.dataSourceId())
@@ -135,9 +135,9 @@ public class OntologyPublishService {
                     java.math.BigDecimal.valueOf(mapping.confidence()))
                     || !"VALID".equals(stored.getValidationStatus())
                     || stored.getLastValidatedAt() == null
-                    || !mappingIntegrity.validate(orgId, workspaceId, document, mapping).valid()
+                    || !mappingIntegrity.validate(companyId, workspaceId, document, mapping).valid()
                     || !mappingIntegrity.isFresh(
-                    orgId,
+                    companyId,
                     workspaceId,
                     document,
                     mapping,
@@ -147,9 +147,9 @@ public class OntologyPublishService {
         }
     }
 
-    private void requireCurrentOrg(String orgId) {
-        if (!Objects.equals(TenantContext.requireOrgId(), orgId)) {
-            throw new ForbiddenException("Ontology organization does not match current organization");
+    private void requireCurrentOrg(String companyId) {
+        if (!Objects.equals(TenantContext.requireCompanyId(), companyId)) {
+            throw new ForbiddenException("Ontology company does not match current company");
         }
     }
 

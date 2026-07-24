@@ -17,7 +17,7 @@ class AgentRuntimeModeRouterTest {
                 .isEqualTo(AgentRuntimeModeRouter.Mode.LEGACY_REACT);
 
         properties.setEnabled(true);
-        properties.setAllowedOrgIds(List.of("org-a"));
+        properties.setAllowedCompanyIds(List.of("org-a"));
         properties.setAllowedAgentIds(List.of("agent-ab"));
         assertThat(router.decide(input("agent-a", "先查询订单，再查询工单", List.of("get_order"), false, false)).mode())
                 .isEqualTo(AgentRuntimeModeRouter.Mode.LEGACY_REACT);
@@ -41,10 +41,10 @@ class AgentRuntimeModeRouterTest {
     }
 
     @Test
-    void shouldKeepLegacyPathOutsideTheExactOrganizationAllowlist() {
+    void shouldKeepLegacyPathOutsideTheExactCompanyAllowlist() {
         AgentRuntimeModeRouterProperties properties = new AgentRuntimeModeRouterProperties();
         properties.setEnabled(true);
-        properties.setAllowedOrgIds(List.of("org-a"));
+        properties.setAllowedCompanyIds(List.of("org-a"));
         properties.setAllowedAgentIds(List.of("agent-a"));
         AgentRuntimeModeRouter router = new AgentRuntimeModeRouter(properties);
 
@@ -88,7 +88,7 @@ class AgentRuntimeModeRouterTest {
     private static AgentRuntimeModeRouter enabledRouter() {
         AgentRuntimeModeRouterProperties properties = new AgentRuntimeModeRouterProperties();
         properties.setEnabled(true);
-        properties.setAllowedOrgIds(List.of("org-a"));
+        properties.setAllowedCompanyIds(List.of("org-a"));
         properties.setAllowedAgentIds(List.of("agent-a"));
         return new AgentRuntimeModeRouter(properties);
     }

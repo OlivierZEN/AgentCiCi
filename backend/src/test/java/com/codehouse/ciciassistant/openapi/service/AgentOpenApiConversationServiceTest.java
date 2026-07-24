@@ -115,7 +115,7 @@ class AgentOpenApiConversationServiceTest {
                 objectMapper);
         AgentApiCredentialEntity credential = mock(AgentApiCredentialEntity.class);
         when(credential.getId()).thenReturn(1L);
-        when(credential.getOrgId()).thenReturn("demo-org");
+        when(credential.getCompanyId()).thenReturn("demo-org");
         when(credential.getAgentId()).thenReturn("agent-safe");
         AgentOpenApiAuthService.AuthenticatedCredential auth =
                 new AgentOpenApiAuthService.AuthenticatedCredential(credential, null, "127.0.0.1", null);

@@ -130,12 +130,12 @@ public class EmailToolService {
     // Execution entry point called by ToolOrchestratorService
     // =============================================================================================
 
-    public String dispatch(String orgId, String userId, String toolName, String argumentsJson) {
-        EmailAccountEntity account = emailAccountService.findDefaultAccount(orgId, userId).orElse(null);
+    public String dispatch(String companyId, String userId, String toolName, String argumentsJson) {
+        EmailAccountEntity account = emailAccountService.findDefaultAccount(companyId, userId).orElse(null);
         if (account == null) {
             return "❌ 当前用户尚未配置邮箱，请先在「个人信息 → 我的邮箱」中绑定。";
         }
-        String rateDenyMessage = checkRateLimit(orgId, userId, toolName);
+        String rateDenyMessage = checkRateLimit(companyId, userId, toolName);
         if (rateDenyMessage != null) {
             return rateDenyMessage;
         }
@@ -150,7 +150,7 @@ public class EmailToolService {
                 default -> "❌ 未知邮件工具: " + toolName;
             };
         } catch (Exception ex) {
-            log.warn("Email tool {} failed for org={} user={}: {}", toolName, orgId, userId, ex.toString());
+            log.warn("Email tool {} failed for org={} user={}: {}", toolName, companyId, userId, ex.toString());
             return failure(ex);
         }
     }
@@ -713,11 +713,11 @@ public class EmailToolService {
         return "❌ 邮件工具执行失败：" + message;
     }
 
-    private String checkRateLimit(String orgId, String userId, String toolName) {
+    private String checkRateLimit(String companyId, String userId, String toolName) {
         boolean writeOperation = TOOL_SEND.equals(toolName) || TOOL_REPLY.equals(toolName);
         int limit = writeOperation ? RATE_LIMIT_WRITE_PER_MIN : RATE_LIMIT_READ_PER_MIN;
         String bucket = writeOperation ? "write" : "read";
-        String key = orgId + ":" + userId + ":email:" + bucket;
+        String key = companyId + ":" + userId + ":email:" + bucket;
         long nowMinute = System.currentTimeMillis() / 60_000L;
         RateWindow updated = rateMap.compute(key, (k, current) -> {
             if (current == null || current.windowStart() != nowMinute) {

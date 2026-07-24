@@ -40,20 +40,20 @@ public class AgentPlanExecCanaryService {
         this.operationsMetrics = operationsMetrics;
     }
 
-    public CanaryExecution start(String orgId, String sessionId, String agentId, String channel,
+    public CanaryExecution start(String companyId, String sessionId, String agentId, String channel,
                                  String goalSummary, String executorId) {
-        if (!properties.isEnabledFor(orgId, agentId)) {
+        if (!properties.isEnabledFor(companyId, agentId)) {
             operationsMetrics.recordPlanExec("NOT_SELECTED", "SCOPE_NOT_ALLOWLISTED");
             return CanaryExecution.notSelected();
         }
         try {
             AgentTaskRuntimeService.RunView run = runtime.createRun(new AgentTaskRuntimeService.CreateRunCommand(
-                    orgId, sessionId, agentId, channel, "PLAN_EXEC", goalSummary, 2));
-            runtime.attachInitialPlan(orgId, run.id(), fixedPlan(goalSummary));
+                    companyId, sessionId, agentId, channel, "PLAN_EXEC", goalSummary, 2));
+            runtime.attachInitialPlan(companyId, run.id(), fixedPlan(goalSummary));
             AgentTaskRuntimeService.ClaimedStep claimed = runtime.claimNextReadyStep(
-                    orgId, run.id(), executorId, LEASE_SECONDS).orElseThrow();
+                    companyId, run.id(), executorId, LEASE_SECONDS).orElseThrow();
             operationsMetrics.recordPlanExec("SELECTED", "NONE");
-            return CanaryExecution.active(run.id(), orgId, executorId, claimed.step());
+            return CanaryExecution.active(run.id(), companyId, executorId, claimed.step());
         } catch (RuntimeException ex) {
             operationsMetrics.recordPlanExec("FALLBACK", "PLAN_SETUP_FAILED");
             return CanaryExecution.fallback("PLAN_SETUP_FAILED");
@@ -71,7 +71,7 @@ public class AgentPlanExecCanaryService {
     public void fail(CanaryExecution execution, String errorCode) {
         if (!execution.active() || execution.step() == null) return;
         try {
-            runtime.failStep(execution.orgId(), execution.runId(), execution.step().id(), execution.executorId(),
+            runtime.failStep(execution.companyId(), execution.runId(), execution.step().id(), execution.executorId(),
                     execution.step().version(), errorCode == null || errorCode.isBlank() ? "CHAT_EXECUTION_FAILED" : errorCode);
             execution.clearStep();
             operationsMetrics.recordPlanExec("FAILED", errorCode);
@@ -99,13 +99,13 @@ public class AgentPlanExecCanaryService {
         if (!expectedKind.equals(current.kind())) {
             throw new IllegalStateException("Unexpected Plan-Exec canary step");
         }
-        runtime.completeStep(execution.orgId(), execution.runId(), current.id(), execution.executorId(), current.version(), summary);
+        runtime.completeStep(execution.companyId(), execution.runId(), current.id(), execution.executorId(), current.version(), summary);
         if ("SYNTHESIZE".equals(expectedKind)) {
             execution.clearStep();
             operationsMetrics.recordPlanExec("SUCCEEDED", "NONE");
             return;
         }
-        runtime.claimNextReadyStep(execution.orgId(), execution.runId(), execution.executorId(), LEASE_SECONDS)
+        runtime.claimNextReadyStep(execution.companyId(), execution.runId(), execution.executorId(), LEASE_SECONDS)
                 .ifPresentOrElse(next -> execution.setStep(next.step()), execution::clearStep);
     }
 
@@ -128,29 +128,29 @@ public class AgentPlanExecCanaryService {
     public static final class CanaryExecution {
         private final boolean selected;
         private final long runId;
-        private final String orgId;
+        private final String companyId;
         private final String executorId;
         private final String fallbackReason;
         private AgentTaskRuntimeService.StepView step;
 
-        private CanaryExecution(boolean selected, long runId, String orgId, String executorId,
+        private CanaryExecution(boolean selected, long runId, String companyId, String executorId,
                                 AgentTaskRuntimeService.StepView step, String fallbackReason) {
             this.selected = selected;
             this.runId = runId;
-            this.orgId = orgId;
+            this.companyId = companyId;
             this.executorId = executorId;
             this.step = step;
             this.fallbackReason = fallbackReason;
         }
         public static CanaryExecution notSelected() { return new CanaryExecution(false, 0L, "", "", null, ""); }
         static CanaryExecution fallback(String reason) { return new CanaryExecution(true, 0L, "", "", null, reason); }
-        static CanaryExecution active(long runId, String orgId, String executorId, AgentTaskRuntimeService.StepView step) {
-            return new CanaryExecution(true, runId, orgId, executorId, step, "");
+        static CanaryExecution active(long runId, String companyId, String executorId, AgentTaskRuntimeService.StepView step) {
+            return new CanaryExecution(true, runId, companyId, executorId, step, "");
         }
         public boolean selected() { return selected; }
         public boolean active() { return selected && runId > 0 && fallbackReason.isBlank(); }
         public long runId() { return runId; }
-        public String orgId() { return orgId; }
+        public String companyId() { return companyId; }
         public String executorId() { return executorId; }
         public AgentTaskRuntimeService.StepView step() { return step; }
         public String fallbackReason() { return fallbackReason; }

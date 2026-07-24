@@ -6,8 +6,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 public interface ChatSessionStateRepository extends JpaRepository<ChatSessionStateEntity, ChatSessionStateId> {
 
-    Optional<ChatSessionStateEntity> findBySessionIdAndOrgId(String sessionId, String orgId);
+    Optional<ChatSessionStateEntity> findBySessionIdAndCompanyId(String sessionId, String companyId);
 
     @Transactional
-    void deleteBySessionIdAndOrgId(String sessionId, String orgId);
+    void deleteBySessionIdAndCompanyId(String sessionId, String companyId);
 }

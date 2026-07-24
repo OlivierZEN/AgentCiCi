@@ -8,26 +8,26 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface OrganizationPurgeJobRepository extends JpaRepository<OrganizationPurgeJobEntity, Long> {
+public interface CompanyPurgeJobRepository extends JpaRepository<CompanyPurgeJobEntity, Long> {
 
-    Optional<OrganizationPurgeJobEntity> findTopByOrgIdOrderByCreatedAtDesc(String orgId);
+    Optional<CompanyPurgeJobEntity> findTopByCompanyIdOrderByCreatedAtDesc(String companyId);
 
-    List<OrganizationPurgeJobEntity> findTop20ByOrgIdOrderByCreatedAtDesc(String orgId);
+    List<CompanyPurgeJobEntity> findTop20ByCompanyIdOrderByCreatedAtDesc(String companyId);
 
-    Optional<OrganizationPurgeJobEntity> findByIdAndOrgId(Long id, String orgId);
+    Optional<CompanyPurgeJobEntity> findByIdAndCompanyId(Long id, String companyId);
 
-    Optional<OrganizationPurgeJobEntity> findByIdAndOrgIdAndDryRunTrueAndStatus(Long id, String orgId, String status);
+    Optional<CompanyPurgeJobEntity> findByIdAndCompanyIdAndDryRunTrueAndStatus(Long id, String companyId, String status);
 
-    List<OrganizationPurgeJobEntity> findTop5ByStatusAndDryRunFalseOrderByCreatedAtAsc(String status);
+    List<CompanyPurgeJobEntity> findTop5ByStatusAndDryRunFalseOrderByCreatedAtAsc(String status);
 
-    List<OrganizationPurgeJobEntity> findTop10ByStatusAndDryRunFalseAndLockExpiresAtBeforeOrderByLockExpiresAtAsc(
+    List<CompanyPurgeJobEntity> findTop10ByStatusAndDryRunFalseAndLockExpiresAtBeforeOrderByLockExpiresAtAsc(
             String status, Instant lockExpiresAt);
 
-    boolean existsByOrgIdAndDryRunFalseAndStatusIn(String orgId, List<String> statuses);
+    boolean existsByCompanyIdAndDryRunFalseAndStatusIn(String companyId, List<String> statuses);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
-            UPDATE OrganizationPurgeJobEntity job
+            UPDATE CompanyPurgeJobEntity job
             SET job.status = :runningStatus,
                 job.workerId = :workerId,
                 job.lockedAt = :lockedAt,

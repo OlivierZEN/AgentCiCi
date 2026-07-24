@@ -31,14 +31,14 @@ public class OntologyPhysicalObjectEntity extends AbstractOntologyWorkspaceEntit
     }
 
     public OntologyPhysicalObjectEntity(
-            String orgId,
+            String companyId,
             Long workspaceId,
             Long dataSourceId,
             String objectKey,
             String name,
             String objectType,
             String metadataJson) {
-        super(orgId, workspaceId);
+        super(companyId, workspaceId);
         this.dataSourceId = dataSourceId;
         this.objectKey = objectKey;
         this.name = name;

@@ -52,17 +52,17 @@ public class CloudccAccessTokenService {
         this.objectMapper = objectMapper;
     }
 
-    public Optional<String> getAccessToken(String orgId, String userId) {
-        return getSessionContext(orgId, userId).map(CloudccSessionContext::accessToken);
+    public Optional<String> getAccessToken(String companyId, String userId) {
+        return getSessionContext(companyId, userId).map(CloudccSessionContext::accessToken);
     }
 
-    public <T> T withSessionContextOverride(String orgId,
+    public <T> T withSessionContextOverride(String companyId,
                                             String userId,
                                             CloudccSessionContext sessionContext,
                                             Supplier<T> supplier) {
         CloudccSessionOverride previous = requestOverride.get();
         requestOverride.set(new CloudccSessionOverride(
-                blankToEmpty(orgId),
+                blankToEmpty(companyId),
                 blankToEmpty(userId),
                 sessionContext));
         try {
@@ -76,31 +76,31 @@ public class CloudccAccessTokenService {
         }
     }
 
-    public void invalidateSessionContext(String orgId, String userId) {
-        if (orgId == null || orgId.isBlank() || userId == null || userId.isBlank()) {
+    public void invalidateSessionContext(String companyId, String userId) {
+        if (companyId == null || companyId.isBlank() || userId == null || userId.isBlank()) {
             return;
         }
-        tokenCache.remove(orgId + "::" + userId);
+        tokenCache.remove(companyId + "::" + userId);
     }
 
-    public void invalidateSessionContext(String orgId, String userId, String rejectedToken) {
-        if (orgId == null || orgId.isBlank() || userId == null || userId.isBlank()) {
+    public void invalidateSessionContext(String companyId, String userId, String rejectedToken) {
+        if (companyId == null || companyId.isBlank() || userId == null || userId.isBlank()) {
             return;
         }
-        String cacheKey = orgId + "::" + userId;
+        String cacheKey = companyId + "::" + userId;
         tokenCache.computeIfPresent(cacheKey, (ignored, cached) ->
                 rejectedToken != null && rejectedToken.equals(cached.token()) ? null : cached);
     }
 
-    public Optional<CloudccSessionContext> getSessionContext(String orgId, String userId) {
-        if (orgId == null || orgId.isBlank() || userId == null || userId.isBlank()) {
+    public Optional<CloudccSessionContext> getSessionContext(String companyId, String userId) {
+        if (companyId == null || companyId.isBlank() || userId == null || userId.isBlank()) {
             return Optional.empty();
         }
         CloudccSessionOverride override = requestOverride.get();
-        if (override != null && override.orgId().equals(orgId)) {
+        if (override != null && override.companyId().equals(companyId)) {
             return override.userId().equals(userId) ? Optional.of(override.sessionContext()) : Optional.empty();
         }
-        String cacheKey = orgId + "::" + userId;
+        String cacheKey = companyId + "::" + userId;
         CachedToken cached = tokenCache.get(cacheKey);
         if (isUsable(cached)) {
             return Optional.of(new CloudccSessionContext(cached.token(), cached.baseUrl(), cached.setupSvc()));
@@ -111,11 +111,11 @@ public class CloudccAccessTokenService {
                 return Optional.of(new CloudccSessionContext(cached.token(), cached.baseUrl(), cached.setupSvc()));
             }
             try {
-                Optional<CloudccSessionContext> fresh = fetchAndCacheToken(orgId, userId, cacheKey);
-                fresh.ifPresent(t -> log.debug("CloudCC token refreshed for org={}, user={}", orgId, userId));
+                Optional<CloudccSessionContext> fresh = fetchAndCacheToken(companyId, userId, cacheKey);
+                fresh.ifPresent(t -> log.debug("CloudCC token refreshed for org={}, user={}", companyId, userId));
                 return fresh;
             } catch (Exception e) {
-                log.warn("Failed to obtain CloudCC token for org={}, user={}: {}", orgId, userId, e.getMessage());
+                log.warn("Failed to obtain CloudCC token for org={}, user={}: {}", companyId, userId, e.getMessage());
                 return Optional.empty();
             }
         }
@@ -125,41 +125,41 @@ public class CloudccAccessTokenService {
         return cached != null && cached.expiresAt().isAfter(Instant.now().plusSeconds(30));
     }
 
-    public Optional<CloudccGatewayContext> getConfiguredGateway(String orgId) {
-        if (orgId == null || orgId.isBlank()) {
+    public Optional<CloudccGatewayContext> getConfiguredGateway(String companyId) {
+        if (companyId == null || companyId.isBlank()) {
             return Optional.empty();
         }
         try {
-            IntegrationAppEntity app = integrationAppRepository.findByOrgIdAndAppCode(orgId, APP_CODE).orElse(null);
+            IntegrationAppEntity app = integrationAppRepository.findByCompanyIdAndAppCode(companyId, APP_CODE).orElse(null);
             if (app == null || !app.isEnabled()) {
                 return Optional.empty();
             }
             Map<String, Object> config = readConfig(app.getConfigJson());
-            String cloudccOrgId = stringVal(config.get("orgId"));
+            String cloudccCompanyId = stringVal(config.get("companyId"));
             String orgapiSwitchAddress = stringVal(config.get("orgapi_switch_address"));
             if (orgapiSwitchAddress.isBlank()) {
                 orgapiSwitchAddress = stringVal(config.get("baseUrl"));
             }
-            if (orgapiSwitchAddress.isBlank() && cloudccOrgId.isBlank()) {
+            if (orgapiSwitchAddress.isBlank() && cloudccCompanyId.isBlank()) {
                 return Optional.empty();
             }
-            String gateway = resolveGateway(cloudccOrgId, orgapiSwitchAddress);
+            String gateway = resolveGateway(cloudccCompanyId, orgapiSwitchAddress);
             return Optional.of(new CloudccGatewayContext(gateway, deriveSetupSvc(gateway)));
         } catch (Exception ex) {
-            log.debug("Failed to resolve configured CloudCC gateway for org={}: {}", orgId, ex.getMessage());
+            log.debug("Failed to resolve configured CloudCC gateway for org={}: {}", companyId, ex.getMessage());
             return Optional.empty();
         }
     }
 
-    public Optional<ValidatedCloudccToken> validateRuntimeAccessToken(String orgId, String accessToken) {
-        if (orgId == null || orgId.isBlank() || accessToken == null || accessToken.isBlank()) {
+    public Optional<ValidatedCloudccToken> validateRuntimeAccessToken(String companyId, String accessToken) {
+        if (companyId == null || companyId.isBlank() || accessToken == null || accessToken.isBlank()) {
             return Optional.empty();
         }
         if (accessToken.length() > 8192) {
             return Optional.empty();
         }
         try {
-            CloudccGatewayContext gateway = getConfiguredGateway(orgId).orElse(null);
+            CloudccGatewayContext gateway = getConfiguredGateway(companyId).orElse(null);
             if (gateway == null || gateway.baseUrl().isBlank()) {
                 return Optional.empty();
             }
@@ -173,13 +173,13 @@ public class CloudccAccessTokenService {
             HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
             if (resp.statusCode() < 200 || resp.statusCode() >= 300 || resp.body() == null || resp.body().isBlank()) {
                 log.warn("CloudCC runtime session validation returned no usable response for org={}, status={}",
-                        orgId, resp.statusCode());
+                        companyId, resp.statusCode());
                 return Optional.empty();
             }
             JsonNode root = objectMapper.readTree(resp.body());
             if (!looksLikeSuccessfulCloudccValidation(root)) {
                 log.warn("CloudCC runtime session validation was rejected for org={}, status={}, returnCode={}",
-                        orgId,
+                        companyId,
                         resp.statusCode(),
                         firstText(root, "returnCode", "code", "status"));
                 return Optional.empty();
@@ -193,25 +193,25 @@ public class CloudccAccessTokenService {
                 actor = firstText(jwtPayload,
                         "actorId", "userId", "userid", "username", "userName", "loginName", "login_name", "email", "sub");
             }
-            String cloudccOrgId = firstText(root,
-                    "orgId", "organizationId", "data.orgId", "data.organizationId", "userInfo.orgId", "userInfo.organizationId");
-            if (cloudccOrgId.isBlank() && jwtPayload != null) {
-                cloudccOrgId = firstText(jwtPayload, "orgId", "organizationId");
+            String cloudccCompanyId = firstText(root,
+                    "companyId", "companyId", "data.companyId", "data.companyId", "userInfo.companyId", "userInfo.companyId");
+            if (cloudccCompanyId.isBlank() && jwtPayload != null) {
+                cloudccCompanyId = firstText(jwtPayload, "companyId", "companyId");
             }
-            return Optional.of(new ValidatedCloudccToken(actor, cloudccOrgId, gateway.setupSvc()));
+            return Optional.of(new ValidatedCloudccToken(actor, cloudccCompanyId, gateway.setupSvc()));
         } catch (Exception ex) {
-            log.debug("Failed to validate CloudCC runtime token for org={}: {}", orgId, ex.getMessage());
+            log.debug("Failed to validate CloudCC runtime token for org={}: {}", companyId, ex.getMessage());
             return Optional.empty();
         }
     }
 
-    private Optional<CloudccSessionContext> fetchAndCacheToken(String orgId, String userId, String cacheKey) throws Exception {
-        IntegrationAppEntity app = integrationAppRepository.findByOrgIdAndAppCode(orgId, APP_CODE).orElse(null);
+    private Optional<CloudccSessionContext> fetchAndCacheToken(String companyId, String userId, String cacheKey) throws Exception {
+        IntegrationAppEntity app = integrationAppRepository.findByCompanyIdAndAppCode(companyId, APP_CODE).orElse(null);
         if (app == null || !app.isEnabled()) {
             return Optional.empty();
         }
         Map<String, Object> config = readConfig(app.getConfigJson());
-        String cloudccOrgId = stringVal(config.get("orgId"));
+        String cloudccCompanyId = stringVal(config.get("companyId"));
         String clientId = stringVal(config.get("clientId"));
         String secretKey = stringVal(config.get("secretKey"));
         // 优先读取 orgapi_switch_address（新的配置字段），兼容历史 baseUrl。
@@ -219,10 +219,10 @@ public class CloudccAccessTokenService {
         if (orgapiSwitchAddress.isBlank()) {
             orgapiSwitchAddress = stringVal(config.get("baseUrl"));
         }
-        if (cloudccOrgId.isBlank() || clientId.isBlank() || secretKey.isBlank()) {
+        if (cloudccCompanyId.isBlank() || clientId.isBlank() || secretKey.isBlank()) {
             return Optional.empty();
         }
-        UserEntity user = userRepository.findByIdAndOrg_Id(userId, orgId).orElse(null);
+        UserEntity user = userRepository.findByIdAndCompany_Id(userId, companyId).orElse(null);
         if (user == null) {
             return Optional.empty();
         }
@@ -232,9 +232,9 @@ public class CloudccAccessTokenService {
             return Optional.empty();
         }
 
-        String gateway = resolveGateway(cloudccOrgId, orgapiSwitchAddress);
+        String gateway = resolveGateway(cloudccCompanyId, orgapiSwitchAddress);
         String setupSvc = deriveSetupSvc(gateway);
-        String token = requestToken(gateway, cloudccOrgId, username, safetyMark, clientId, secretKey);
+        String token = requestToken(gateway, cloudccCompanyId, username, safetyMark, clientId, secretKey);
         Instant exp = parseJwtExp(token).orElse(Instant.now().plus(DEFAULT_TOKEN_TTL));
         tokenCache.put(cacheKey, new CachedToken(token, gateway, setupSvc, exp));
         return Optional.of(new CloudccSessionContext(token, gateway, setupSvc));
@@ -242,18 +242,18 @@ public class CloudccAccessTokenService {
 
     /**
      * 解析 CloudCC 组织网关地址：
-     * - 若配置了 orgapi_switch_address，则直接请求该地址（通常包含 scope 和 orgId 查询参数）；
+     * - 若配置了 orgapi_switch_address，则直接请求该地址（通常包含 scope 和 companyId 查询参数）；
      * - 否则回退到官方默认的 apidomain 接口。
      * 响应中的 orgapi_address 将作为实际网关（baseUrl）返回，例如 https://szyd.apis.cloudcc.cn/lightningapi。
      */
-    private String resolveGateway(String cloudccOrgId, String orgapiSwitchAddress) throws Exception {
+    private String resolveGateway(String cloudccCompanyId, String orgapiSwitchAddress) throws Exception {
         if (looksLikeDirectApiGateway(orgapiSwitchAddress)) {
             return normalizeDirectApiGateway(orgapiSwitchAddress);
         }
         String url = !orgapiSwitchAddress.isBlank()
                 ? orgapiSwitchAddress
-                : "https://developer.apis.cloudcc.cn/oauth/apidomain?scope=cloudccCRM&orgId="
-                        + URLEncoder.encode(cloudccOrgId, StandardCharsets.UTF_8);
+                : "https://developer.apis.cloudcc.cn/oauth/apidomain?scope=cloudccCRM&companyId="
+                        + URLEncoder.encode(cloudccCompanyId, StandardCharsets.UTF_8);
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .timeout(HTTP_TIMEOUT)
@@ -309,7 +309,7 @@ public class CloudccAccessTokenService {
 
     private String requestToken(
             String gateway,
-            String orgId,
+            String companyId,
             String username,
             String safetyMark,
             String clientId,
@@ -320,7 +320,7 @@ public class CloudccAccessTokenService {
                 "safetyMark", safetyMark,
                 "clientId", clientId,
                 "secretKey", secretKey,
-                "orgId", orgId,
+                "companyId", companyId,
                 "grant_type", "password"
         ));
         HttpRequest req = HttpRequest.newBuilder()
@@ -492,7 +492,7 @@ public class CloudccAccessTokenService {
 
     public record CloudccGatewayContext(String baseUrl, String setupSvc) {}
 
-    public record ValidatedCloudccToken(String actorId, String cloudccOrgId, String setupSvc) {}
+    public record ValidatedCloudccToken(String actorId, String cloudccCompanyId, String setupSvc) {}
 
-    private record CloudccSessionOverride(String orgId, String userId, CloudccSessionContext sessionContext) {}
+    private record CloudccSessionOverride(String companyId, String userId, CloudccSessionContext sessionContext) {}
 }

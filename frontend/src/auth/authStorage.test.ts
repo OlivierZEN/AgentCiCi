@@ -49,10 +49,10 @@ afterEach(() => {
 
 describe("authStorage", () => {
   it("parses auth payloads and trims tokens", () => {
-    writeAuthPayload("auth", { token: " abc ", orgId: "o1" });
+    writeAuthPayload("auth", { token: " abc ", companyId: "o1" });
 
     expect(readAuthToken("auth")).toBe("abc");
-    expect(readAuthPayload("auth")).toEqual({ token: " abc ", orgId: "o1" });
+    expect(readAuthPayload("auth")).toEqual({ token: " abc ", companyId: "o1" });
   });
 
   it("tolerates missing and malformed payloads", () => {

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { adminBillingLabels } from "./AdminBillingPage";
 
 describe("AdminBillingPage labels", () => {
-  it("formats organization billing labels for credits and limits", () => {
+  it("formats company billing labels for credits and limits", () => {
     expect(adminBillingLabels.formatCredits(12345.678)).toBe("12,345.68");
     expect(adminBillingLabels.formatLimit(null)).toBe("合同约定");
     expect(adminBillingLabels.ledgerTypeLabel("usage_debit")).toBe("用量扣减");

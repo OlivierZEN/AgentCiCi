@@ -45,7 +45,7 @@ class MemoryCandidateGovernanceServiceTest {
         MemoryCandidateEntity candidate = new MemoryCandidateEntity("org-a", "agent-a", 7L, "SUBJECT_SHARED", null,
                 "PREFERENCE", "brief preference", "NORMAL", BigDecimal.ONE, Instant.now(), null, "HUMAN", "[]");
         setId(candidate, 3L);
-        when(candidateRepository.findByIdAndOrgIdAndAgentId(3L, "org-a", "agent-a")).thenReturn(Optional.of(candidate));
+        when(candidateRepository.findByIdAndCompanyIdAndAgentId(3L, "org-a", "agent-a")).thenReturn(Optional.of(candidate));
         when(candidateRepository.save(any(MemoryCandidateEntity.class))).thenAnswer(i -> i.getArgument(0));
         when(recordRepository.save(any(MemoryRecordEntity.class))).thenAnswer(i -> i.getArgument(0));
 
@@ -53,7 +53,7 @@ class MemoryCandidateGovernanceServiceTest {
 
         assertThat(candidate.getStatus()).isEqualTo("APPROVED");
         assertThat(record.getStatus()).isEqualTo("ACTIVE");
-        assertThat(record.getOrgId()).isEqualTo("org-a");
+        assertThat(record.getCompanyId()).isEqualTo("org-a");
         verify(semanticRetrieval).index(record);
     }
 
@@ -63,7 +63,7 @@ class MemoryCandidateGovernanceServiceTest {
                 "PREFERENCE", "brief preference", "NORMAL", BigDecimal.ONE, Instant.now(), null, "HUMAN", "[]");
         setId(candidate, 3L);
         candidate.review("REJECTED", "reviewer-1", "not supported");
-        when(candidateRepository.findByIdAndOrgIdAndAgentId(3L, "org-a", "agent-a")).thenReturn(Optional.of(candidate));
+        when(candidateRepository.findByIdAndCompanyIdAndAgentId(3L, "org-a", "agent-a")).thenReturn(Optional.of(candidate));
 
         assertThatThrownBy(() -> service.approve("org-a", "agent-a", 3L, "reviewer-2", "retry"))
                 .isInstanceOf(IllegalStateException.class);

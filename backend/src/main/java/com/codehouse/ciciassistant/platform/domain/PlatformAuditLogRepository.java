@@ -9,18 +9,18 @@ import org.springframework.data.repository.query.Param;
 
 public interface PlatformAuditLogRepository extends JpaRepository<PlatformAuditLogEntity, Long> {
 
-    List<PlatformAuditLogEntity> findTop100ByOrgIdOrderByIdDesc(String orgId);
+    List<PlatformAuditLogEntity> findTop100ByCompanyIdOrderByIdDesc(String companyId);
 
     @Query("""
             select item from PlatformAuditLogEntity item
-            where item.orgId = :orgId
+            where item.companyId = :companyId
               and item.createdAt between :from and :to
               and (:eventType is null or lower(item.eventType) = :eventType)
               and (:resourceType is null or lower(item.resourceType) = :resourceType)
             order by item.createdAt desc
             """)
     List<PlatformAuditLogEntity> filterPlatformAuditLogs(
-            @Param("orgId") String orgId,
+            @Param("companyId") String companyId,
             @Param("from") Instant from,
             @Param("to") Instant to,
             @Param("eventType") String eventType,
@@ -29,7 +29,7 @@ public interface PlatformAuditLogRepository extends JpaRepository<PlatformAuditL
 
     @Query("""
             select item from PlatformAuditLogEntity item
-            where item.orgId = :orgId
+            where item.companyId = :companyId
               and item.createdAt between :from and :to
               and (:eventType is null or lower(item.eventType) = :eventType)
               and (:resourceType is null or lower(item.resourceType) = :resourceType)
@@ -43,7 +43,7 @@ public interface PlatformAuditLogRepository extends JpaRepository<PlatformAuditL
             order by item.createdAt desc
             """)
     List<PlatformAuditLogEntity> searchPlatformAuditLogs(
-            @Param("orgId") String orgId,
+            @Param("companyId") String companyId,
             @Param("from") Instant from,
             @Param("to") Instant to,
             @Param("eventType") String eventType,

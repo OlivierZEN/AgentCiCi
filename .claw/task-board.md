@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-23T08:10:00Z
+updated_at: 2026-07-24T08:28:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -26,16 +26,16 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `Semattice production migration 13 requires a dedicated migrator connection not present in the runtime host configuration`
 - next_action: 使用专用 migrator 显式执行 Semattice migration 13；随后重新部署并验证真实成功开户。
 
-### TASK-240 - 混合智能体运行时 P6：组织隔离灰度与运营验证
+### TASK-240 - 混合智能体运行时 P6：公司隔离灰度与运营验证
 
-- status: `review`
+- status: `blocked`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md`
 - task_status_path: `.claw/tasks/TASK-240.md`
 - assignment_path: `.claw/assignments/TASK-240.yaml`
-- blocked_by: `production pilot organization and agent selection`
-- next_action: 默认关闭实现、预发布质量门和发布 dry-run 已通过；等待用户指定生产试点组织、只读 Agent 与观察窗口后执行 Runbook。
+- blocked_by: `production pilot company and agent selection`
+- next_action: 默认关闭的公司 + Agent 双白名单与脱敏指标已合并 main；真实发布/试点只在用户指定目标与观察窗口后执行。
 
 ### TASK-239 - 混合智能体运行时 P5：Trace 运行执行投影与多主题界面
 
@@ -237,14 +237,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-219 - 运营管理端信息架构与独立主题重构
 
-- status: `ready`
+- status: `review`
 - priority: `high`
 - owner_role: `frontend-agent`
 - spec_path: `docs/specs/FEAT-124-platform-operations-information-architecture.md`
 - task_status_path: `.claw/tasks/TASK-219.md`
 - assignment_path: `.claw/assignments/TASK-219.yaml`
 - blocked_by: `TASK-218 (PlatformModelsPage.tsx 子路由拆分)`
-- next_action: Start the non-overlapping Shell, overview, routing and isolated platform-theme work on `codex/TASK-219-platform-operations-ia`; merge TASK-218 before editing the model page.
+- next_action: 评审租户应用中心的前端实现；集成 FEAT-134 的应用状态读取投影后补齐刷新后的持久状态回读。
 
 ### TASK-217 - 智能体定时任务真实创建与链路事实纠偏
 
@@ -1140,6 +1140,16 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-242 - 顶层租户 company_id 统一
+
+- status: `done`
+- priority: `critical`
+- owner_role: `integration-agent`
+- spec_path: `docs/specs/FEAT-135-company-id-unification.md`
+- task_status_path: `.claw/tasks/TASK-242.md`
+- assignment_path: `.claw/assignments/TASK-242.yaml`
+- next_action: 已发布生产 `2.8.9 / 0194706`，V94/V95 成功且六服务健康；后续受控开户由运营账号按 company_id 契约验收。
 
 ### TASK-234 - 发布修订版本号上限调整为365
 

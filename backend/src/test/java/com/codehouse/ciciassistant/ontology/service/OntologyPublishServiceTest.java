@@ -69,7 +69,7 @@ class OntologyPublishServiceTest {
                 mappings,
                 mappingIntegrity,
                 new ObjectMapper());
-        TenantContext.setOrgId("org-a");
+        TenantContext.setCompanyId("org-a");
         TenantContext.setUserId("human-a");
     }
 
@@ -82,7 +82,7 @@ class OntologyPublishServiceTest {
     void rejectsPublishWhenValidationContainsAnError() {
         OntologyWorkspaceEntity workspace = workspace(41L, 2L, null);
         OntologyDocument document = OntologyCompilerServiceTest.projectDeliveryDocument();
-        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+        when(workspaces.findForUpdateByIdAndCompanyId(41L, "org-a"))
                 .thenReturn(Optional.of(workspace));
         when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(document);
         when(validation.validate(document, true)).thenReturn(List.of(
@@ -107,7 +107,7 @@ class OntologyPublishServiceTest {
                 new OntologyCompilerService.CompiledContracts(
                         "hash-v4", "{\"snapshot\":true}", "{\"schema\":true}",
                         "type Query { project: Project }", "{\"query\":true}");
-        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+        when(workspaces.findForUpdateByIdAndCompanyId(41L, "org-a"))
                 .thenReturn(Optional.of(workspace));
         when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(document);
         when(validation.validate(document, true)).thenReturn(List.of());
@@ -147,9 +147,9 @@ class OntologyPublishServiceTest {
                 "[]",
                 "human-original");
         ReflectionTestUtils.setField(existing, "id", 501L);
-        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+        when(workspaces.findForUpdateByIdAndCompanyId(41L, "org-a"))
                 .thenReturn(Optional.of(workspace));
-        when(versions.findByWorkspaceIdAndOrgIdAndSourceDraftRevision(
+        when(versions.findByWorkspaceIdAndCompanyIdAndSourceDraftRevision(
                 41L, "org-a", 2L))
                 .thenReturn(Optional.of(existing));
 
@@ -164,7 +164,7 @@ class OntologyPublishServiceTest {
     @Test
     void rejectsRevisionConflictBeforeLoadingOrWritingDraft() {
         OntologyWorkspaceEntity workspace = workspace(41L, 5L, 2);
-        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+        when(workspaces.findForUpdateByIdAndCompanyId(41L, "org-a"))
                 .thenReturn(Optional.of(workspace));
 
         assertThatThrownBy(() -> service.publish("org-a", "human-a", 41L, 4L))
@@ -179,13 +179,13 @@ class OntologyPublishServiceTest {
     void rejectsClientClaimedValidMappingWithoutFreshServerValidation() {
         OntologyWorkspaceEntity workspace = workspace(41L, 2L, null);
         OntologyDocument document = OntologyCompilerServiceTest.projectDeliveryDocument();
-        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+        when(workspaces.findForUpdateByIdAndCompanyId(41L, "org-a"))
                 .thenReturn(Optional.of(workspace));
         when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(document);
         when(validation.validate(document, true)).thenReturn(List.of());
         OntologyDocument.Mapping first = document.mappings().getFirst();
         OntologyMappingEntity pending = mapping(first);
-        when(mappings.findByWorkspaceIdAndOrgIdAndTargetTypeAndTargetKeyAndDataSourceId(
+        when(mappings.findByWorkspaceIdAndCompanyIdAndTargetTypeAndTargetKeyAndDataSourceId(
                 41L, "org-a", first.targetType(), first.targetKey(), first.dataSourceId()))
                 .thenReturn(Optional.of(pending));
 
@@ -233,7 +233,7 @@ class OntologyPublishServiceTest {
         for (OntologyDocument.Mapping value : document.mappings()) {
             OntologyMappingEntity entity = mapping(value);
             entity.applyValidation(true);
-            when(mappings.findByWorkspaceIdAndOrgIdAndTargetTypeAndTargetKeyAndDataSourceId(
+            when(mappings.findByWorkspaceIdAndCompanyIdAndTargetTypeAndTargetKeyAndDataSourceId(
                     41L, "org-a", value.targetType(), value.targetKey(), value.dataSourceId()))
                     .thenReturn(Optional.of(entity));
             when(mappingIntegrity.validate("org-a", 41L, document, value))

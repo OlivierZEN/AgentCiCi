@@ -100,14 +100,14 @@ public class SkillApiToolService {
         }
     }
 
-    public RuntimeApiCompilePreview previewCompileApis(String orgId, String skillCode, String runtimeApiJson) {
+    public RuntimeApiCompilePreview previewCompileApis(String companyId, String skillCode, String runtimeApiJson) {
         List<Map<String, Object>> rawApis = readDraftApis(runtimeApiJson);
         List<Map<String, Object>> toolDefinitions = new ArrayList<>();
         List<String> errors = new ArrayList<>();
         List<String> warnings = new ArrayList<>();
         for (int i = 0; i < rawApis.size(); i++) {
             try {
-                CompiledApi api = compileOne(orgId, skillCode, rawApis.get(i), new LinkedHashSet<>());
+                CompiledApi api = compileOne(companyId, skillCode, rawApis.get(i), new LinkedHashSet<>());
                 toolDefinitions.add(api.toolDefinition());
                 if ("HIGH".equals(api.riskLevel())) {
                     warnings.add(api.apiCode() + ": 高风险 API 已配置确认策略，运行时未确认前不会执行。");
@@ -120,11 +120,11 @@ public class SkillApiToolService {
     }
 
     @Transactional
-    public List<SkillApiToolEntity> publishApisForVersion(String orgId,
+    public List<SkillApiToolEntity> publishApisForVersion(String companyId,
                                                           SkillDefinitionEntity skill,
                                                           SkillVersionEntity version,
                                                           String runtimeApiJson) {
-        repository.deleteByOrgIdAndSkillVersionId(orgId, version.getId());
+        repository.deleteByCompanyIdAndSkillVersionId(companyId, version.getId());
         List<Map<String, Object>> rawApis = readDraftApis(runtimeApiJson);
         if (rawApis.isEmpty()) {
             return List.of();
@@ -132,9 +132,9 @@ public class SkillApiToolService {
         LinkedHashSet<String> seenApiCodes = new LinkedHashSet<>();
         List<SkillApiToolEntity> entities = new ArrayList<>();
         for (Map<String, Object> rawApi : rawApis) {
-            CompiledApi compiled = compileOne(orgId, skill.getSkillCode(), rawApi, seenApiCodes);
+            CompiledApi compiled = compileOne(companyId, skill.getSkillCode(), rawApi, seenApiCodes);
             entities.add(new SkillApiToolEntity(
-                    orgId,
+                    companyId,
                     skill.getId(),
                     version.getId(),
                     skill.getSkillCode(),
@@ -151,7 +151,7 @@ public class SkillApiToolService {
         return repository.saveAll(entities);
     }
 
-    public List<ResolvedSkillApiTool> findRuntimeTools(String orgId, Collection<Long> skillVersionIds) {
+    public List<ResolvedSkillApiTool> findRuntimeTools(String companyId, Collection<Long> skillVersionIds) {
         if (skillVersionIds == null || skillVersionIds.isEmpty()) {
             return List.of();
         }
@@ -159,7 +159,7 @@ public class SkillApiToolService {
         if (ids.isEmpty()) {
             return List.of();
         }
-        return repository.findByOrgIdAndSkillVersionIdInAndEnabledTrueOrderByIdAsc(orgId, ids).stream()
+        return repository.findByCompanyIdAndSkillVersionIdInAndEnabledTrueOrderByIdAsc(companyId, ids).stream()
                 .map(item -> new ResolvedSkillApiTool(
                         item.getSkillCode(),
                         item.getSkillVersionId(),
@@ -188,13 +188,13 @@ public class SkillApiToolService {
                 .toList();
     }
 
-    public String dispatch(String orgId, String userId, String toolName, String argumentsJson) {
+    public String dispatch(String companyId, String userId, String toolName, String argumentsJson) {
         long started = System.nanoTime();
-        SkillApiToolEntity entity = repository.findByOrgIdAndToolNameAndEnabledTrue(orgId, toolName)
+        SkillApiToolEntity entity = repository.findByCompanyIdAndToolNameAndEnabledTrue(companyId, toolName)
                 .orElseThrow(() -> new IllegalArgumentException("Skill API tool not found: " + toolName));
         try {
             if ("HIGH".equalsIgnoreCase(entity.getRiskLevel())) {
-                audit(orgId, userId, entity, "BLOCKED_CONFIRMATION_REQUIRED", 0, started, argumentsJson, "confirmation required");
+                audit(companyId, userId, entity, "BLOCKED_CONFIRMATION_REQUIRED", 0, started, argumentsJson, "confirmation required");
                 return "{\"ok\":false,\"error\":\"CONFIRMATION_REQUIRED\",\"message\":\"高风险 Skill API 需要用户确认后才能执行。\"}";
             }
             Map<String, Object> args = argumentsJson == null || argumentsJson.isBlank()
@@ -203,11 +203,11 @@ public class SkillApiToolService {
             Map<String, Object> inputSchema = readJsonMap(entity.getInputSchemaJson());
             validateArguments(inputSchema, args);
             Map<String, Object> plan = readJsonMap(entity.getExecutionPlanJson());
-            HttpRequest request = buildHttpRequest(orgId, userId, plan, args);
+            HttpRequest request = buildHttpRequest(companyId, userId, plan, args);
             HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
             int maxBytes = intValue(mapValue(plan, "responseMapping", "maxBytes"), 12000);
             if (response.body().length > maxBytes) {
-                audit(orgId, userId, entity, "FAILED_RESPONSE_TOO_LARGE", response.statusCode(), started, argumentsJson, "response too large");
+                audit(companyId, userId, entity, "FAILED_RESPONSE_TOO_LARGE", response.statusCode(), started, argumentsJson, "response too large");
                 return "{\"ok\":false,\"error\":\"RESPONSE_TOO_LARGE\"}";
             }
             Object data = extractAndShapeResponse(plan, response.body());
@@ -217,16 +217,16 @@ public class SkillApiToolService {
             payload.put("skillCode", entity.getSkillCode());
             payload.put("apiCode", entity.getApiCode());
             payload.put("data", data);
-            audit(orgId, userId, entity, "SUCCESS", response.statusCode(), started, argumentsJson, null);
+            audit(companyId, userId, entity, "SUCCESS", response.statusCode(), started, argumentsJson, null);
             return objectMapper.writeValueAsString(payload);
         } catch (Exception ex) {
-            audit(orgId, userId, entity, "FAILED", 0, started, argumentsJson, ex.getMessage());
+            audit(companyId, userId, entity, "FAILED", 0, started, argumentsJson, ex.getMessage());
             return "{\"ok\":false,\"error\":\"SKILL_API_EXECUTION_FAILED\",\"message\":\""
                     + escapeJson(ex.getMessage()) + "\"}";
         }
     }
 
-    private CompiledApi compileOne(String orgId,
+    private CompiledApi compileOne(String companyId,
                                    String skillCode,
                                    Map<String, Object> rawApi,
                                    LinkedHashSet<String> seenApiCodes) {
@@ -260,7 +260,7 @@ public class SkillApiToolService {
         if (authRef != null && !authRef.matches("[a-zA-Z0-9_.:-]{1,128}")) {
             throw new IllegalArgumentException("authRef format is invalid");
         }
-        validateAuthRef(orgId, authRef);
+        validateAuthRef(companyId, authRef);
         Map<String, Object> inputSchema = getObjectMap(rawApi.get("inputSchema"));
         validateInputSchema(inputSchema);
         Map<String, Object> requestTemplate = getObjectMap(rawApi.get("request"));
@@ -311,7 +311,7 @@ public class SkillApiToolService {
         }
     }
 
-    private HttpRequest buildHttpRequest(String orgId, String userId, Map<String, Object> plan, Map<String, Object> args) throws IOException {
+    private HttpRequest buildHttpRequest(String companyId, String userId, Map<String, Object> plan, Map<String, Object> args) throws IOException {
         String method = requiredString(plan, "method");
         String renderedUrl = renderString(requiredString(plan, "url"), args);
         Map<String, Object> template = getObjectMap(plan.get("requestTemplate"));
@@ -329,7 +329,7 @@ public class SkillApiToolService {
                 builder.header(key, String.valueOf(value));
             }
         });
-        Map<String, String> authHeaders = resolveAuthHeaders(orgId, userId, trimToNull(stringValue(plan.get("authRef"))), headers.keySet());
+        Map<String, String> authHeaders = resolveAuthHeaders(companyId, userId, trimToNull(stringValue(plan.get("authRef"))), headers.keySet());
         authHeaders.forEach(builder::header);
         Object renderedBody = renderValue(template.get("body"), args);
         if ("GET".equals(method) || "DELETE".equals(method)) {
@@ -344,18 +344,18 @@ public class SkillApiToolService {
         return builder.build();
     }
 
-    private void validateAuthRef(String orgId, String authRef) {
+    private void validateAuthRef(String companyId, String authRef) {
         if (authRef == null) {
             return;
         }
         if (isTavilyApiKeyRef(authRef)) {
-            if (resolveTavilyApiKey(orgId) == null) {
+            if (resolveTavilyApiKey(companyId) == null) {
                 throw new IllegalArgumentException("authRef integration:tavily.apiKey is not configured");
             }
             return;
         }
         if (isCloudccAccessTokenRef(authRef)) {
-            if (integrationAppService.findRawConfig(orgId, IntegrationAppService.APP_CODE_CLOUDCC_CRM).isEmpty()) {
+            if (integrationAppService.findRawConfig(companyId, IntegrationAppService.APP_CODE_CLOUDCC_CRM).isEmpty()) {
                 throw new IllegalArgumentException("authRef integration:cloudcc.accessToken is not configured");
             }
             return;
@@ -363,7 +363,7 @@ public class SkillApiToolService {
         throw new IllegalArgumentException("unsupported authRef: " + authRef);
     }
 
-    private Map<String, String> resolveAuthHeaders(String orgId,
+    private Map<String, String> resolveAuthHeaders(String companyId,
                                                    String userId,
                                                    String authRef,
                                                    Collection<String> existingHeaderNames) {
@@ -374,7 +374,7 @@ public class SkillApiToolService {
             if (containsHeader(existingHeaderNames, "Authorization")) {
                 throw new IllegalArgumentException("authRef cannot be combined with request.headers.Authorization");
             }
-            String apiKey = resolveTavilyApiKey(orgId);
+            String apiKey = resolveTavilyApiKey(companyId);
             if (apiKey == null) {
                 throw new IllegalArgumentException("authRef integration:tavily.apiKey is not configured");
             }
@@ -385,7 +385,7 @@ public class SkillApiToolService {
                 throw new IllegalArgumentException("authRef cannot be combined with request.headers.accessToken");
             }
             CloudccAccessTokenService.CloudccSessionContext ctx = cloudccAccessTokenService
-                    .getSessionContext(orgId, userId)
+                    .getSessionContext(companyId, userId)
                     .orElseThrow(() -> new IllegalArgumentException(
                             "authRef integration:cloudcc.accessToken is not available for current user"));
             return Map.of("accessToken", ctx.accessToken());
@@ -404,8 +404,8 @@ public class SkillApiToolService {
                 || "cloudcc.userToken".equals(authRef);
     }
 
-    private String resolveTavilyApiKey(String orgId) {
-        return integrationAppService.findRawConfig(orgId, IntegrationAppService.APP_CODE_TAVILY)
+    private String resolveTavilyApiKey(String companyId) {
+        return integrationAppService.findRawConfig(companyId, IntegrationAppService.APP_CODE_TAVILY)
                 .flatMap(integrationAppService::decryptTavilyApiKey)
                 .orElse(null);
     }
@@ -663,7 +663,7 @@ public class SkillApiToolService {
                 || host.toLowerCase(Locale.ROOT).startsWith("fe80");
     }
 
-    private void audit(String orgId,
+    private void audit(String companyId,
                        String userId,
                        SkillApiToolEntity entity,
                        String status,
@@ -690,7 +690,7 @@ public class SkillApiToolService {
             if (error != null && !error.isBlank()) {
                 detail.put("error", error.length() > 300 ? error.substring(0, 300) : error);
             }
-            auditService.log(orgId, userId, "SKILL_API_TOOL_INVOCATION", objectMapper.writeValueAsString(detail));
+            auditService.log(companyId, userId, "SKILL_API_TOOL_INVOCATION", objectMapper.writeValueAsString(detail));
         } catch (Exception ignored) {
             // Runtime API execution must not fail because audit persistence failed.
         }

@@ -16,8 +16,8 @@ public class PlatformPolicyBundleEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "bundle_code", nullable = false, length = 64)
     private String bundleCode;
@@ -64,7 +64,7 @@ public class PlatformPolicyBundleEntity {
     protected PlatformPolicyBundleEntity() {
     }
 
-    public PlatformPolicyBundleEntity(String orgId,
+    public PlatformPolicyBundleEntity(String companyId,
                                       String bundleCode,
                                       String name,
                                       String description,
@@ -77,7 +77,7 @@ public class PlatformPolicyBundleEntity {
                                       String publishStatus,
                                       String createdBy,
                                       Instant publishedAt) {
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.bundleCode = bundleCode;
         this.name = name;
         this.description = description;
@@ -98,8 +98,8 @@ public class PlatformPolicyBundleEntity {
         return id;
     }
 
-    public String getOrgId() {
-        return orgId;
+    public String getCompanyId() {
+        return companyId;
     }
 
     public String getBundleCode() {

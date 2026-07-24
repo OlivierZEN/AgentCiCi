@@ -70,7 +70,7 @@ public class QdrantVectorStoreClient implements VectorStoreClient {
             text = text.substring(0, 4000);
         }
         Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("org_id", command.orgId());
+        payload.put("company_id", command.companyId());
         payload.put("knowledge_base_id", command.knowledgeBaseId());
         if (command.documentId() != null) {
             payload.put("document_id", command.documentId());
@@ -104,7 +104,7 @@ public class QdrantVectorStoreClient implements VectorStoreClient {
             return List.of();
         }
         List<Map<String, Object>> must = new ArrayList<>();
-        must.add(matchField("org_id", query.orgId()));
+        must.add(matchField("company_id", query.companyId()));
         must.add(matchKnowledgeBases(query.knowledgeBaseIds()));
         Map<String, Object> filter = Map.of("must", must);
         Map<String, Object> body = new LinkedHashMap<>();
@@ -145,7 +145,7 @@ public class QdrantVectorStoreClient implements VectorStoreClient {
     }
 
     @Override
-    public VectorDeleteResult deleteByVectorIds(String orgId, List<String> vectorIds) {
+    public VectorDeleteResult deleteByVectorIds(String companyId, List<String> vectorIds) {
         if (vectorIds == null || vectorIds.isEmpty()) {
             return VectorDeleteResult.success(0, 0);
         }
@@ -153,33 +153,33 @@ public class QdrantVectorStoreClient implements VectorStoreClient {
             postJson("/collections/" + collection + "/points/delete?wait=true", Map.of("points", vectorIds));
             return VectorDeleteResult.success(vectorIds.size(), vectorIds.size());
         } catch (Exception ex) {
-            log.warn("Qdrant delete by vector ids failed for org {}: {}", orgId, ex.getMessage());
+            log.warn("Qdrant delete by vector ids failed for org {}: {}", companyId, ex.getMessage());
             return VectorDeleteResult.failure(vectorIds.size(), ex.getMessage());
         }
     }
 
     @Override
-    public VectorDeleteResult deleteByDocument(String orgId, String knowledgeBaseId, Long documentId) {
+    public VectorDeleteResult deleteByDocument(String companyId, String knowledgeBaseId, Long documentId) {
         if (documentId == null) {
             return VectorDeleteResult.success(0, 0);
         }
         List<Map<String, Object>> must = new ArrayList<>();
-        must.add(matchField("org_id", orgId));
+        must.add(matchField("company_id", companyId));
         must.add(matchField("knowledge_base_id", knowledgeBaseId));
         must.add(matchField("document_id", documentId));
-        return deleteByFilter(orgId, Map.of("must", must), "document " + documentId);
+        return deleteByFilter(companyId, Map.of("must", must), "document " + documentId);
     }
 
     @Override
-    public VectorDeleteResult deleteByKnowledgeBase(String orgId, String knowledgeBaseId) {
+    public VectorDeleteResult deleteByKnowledgeBase(String companyId, String knowledgeBaseId) {
         List<Map<String, Object>> must = new ArrayList<>();
-        must.add(matchField("org_id", orgId));
+        must.add(matchField("company_id", companyId));
         must.add(matchField("knowledge_base_id", knowledgeBaseId));
-        return deleteByFilter(orgId, Map.of("must", must), "knowledge base " + knowledgeBaseId);
+        return deleteByFilter(companyId, Map.of("must", must), "knowledge base " + knowledgeBaseId);
     }
 
     @Override
-    public VectorStoreAuditResult auditOrgVectors(String orgId, List<String> registeredVectorIds) {
+    public VectorStoreAuditResult auditOrgVectors(String companyId, List<String> registeredVectorIds) {
         List<String> registered = registeredVectorIds == null ? List.of() : registeredVectorIds;
         try {
             List<String> orphanIds = new ArrayList<>();
@@ -188,7 +188,7 @@ public class QdrantVectorStoreClient implements VectorStoreClient {
             Object offset = null;
             do {
                 Map<String, Object> body = new LinkedHashMap<>();
-                body.put("filter", Map.of("must", List.of(matchField("org_id", orgId))));
+                body.put("filter", Map.of("must", List.of(matchField("company_id", companyId))));
                 body.put("limit", 256);
                 body.put("with_payload", false);
                 body.put("with_vector", false);
@@ -218,17 +218,17 @@ public class QdrantVectorStoreClient implements VectorStoreClient {
             } while (offset != null);
             return VectorStoreAuditResult.success(scanned, registered.size(), orphanCount, orphanIds);
         } catch (Exception ex) {
-            log.warn("Qdrant vector audit failed for org {}: {}", orgId, ex.getMessage());
+            log.warn("Qdrant vector audit failed for org {}: {}", companyId, ex.getMessage());
             return VectorStoreAuditResult.failure(registered.size(), ex.getMessage());
         }
     }
 
-    private VectorDeleteResult deleteByFilter(String orgId, Map<String, Object> filter, String scope) {
+    private VectorDeleteResult deleteByFilter(String companyId, Map<String, Object> filter, String scope) {
         try {
             postJson("/collections/" + collection + "/points/delete?wait=true", Map.of("filter", filter));
             return VectorDeleteResult.success(1, 1);
         } catch (Exception ex) {
-            log.warn("Qdrant delete by {} failed for org {}: {}", scope, orgId, ex.getMessage());
+            log.warn("Qdrant delete by {} failed for org {}: {}", scope, companyId, ex.getMessage());
             return VectorDeleteResult.failure(1, ex.getMessage());
         }
     }

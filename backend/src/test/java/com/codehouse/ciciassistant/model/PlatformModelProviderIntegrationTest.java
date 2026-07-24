@@ -126,7 +126,7 @@ class PlatformModelProviderIntegrationTest {
     }
 
     @Test
-    void platformCanGovernModelProvidersWhileOrganizationProviderWritesAreForbidden() throws Exception {
+    void platformCanGovernModelProvidersWhileCompanyProviderWritesAreForbidden() throws Exception {
         String platformToken = platformToken();
         String orgToken = orgToken();
 
@@ -259,7 +259,7 @@ class PlatformModelProviderIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "orgId": "demo-org",
+                                  "companyId": "demo-org",
                                   "mobile": "13800138111",
                                   "password": "szyd1234"
                                 }

@@ -40,7 +40,7 @@ public class AliyunBailianClient {
             "Thinking Process", "思考过程", "Analysis", or similar. Reply with only the final user-facing answer.
             """;
 
-    /** Used when the organization enables "show thinking" in model settings. */
+    /** Used when the company enables "show thinking" in model settings. */
     static final String SYSTEM_PROMPT_WITH_THINKING = """
             You are CiCi, an enterprise digital employee assistant. Answer in the same language as the user's question.
             Use readable Markdown (##/### headings, lists, **bold**, short paragraphs, blank lines between sections).

@@ -69,7 +69,7 @@ class AgentTaskReflectServiceTest {
         Fixture fixture = new Fixture(true);
         fixture.stubSucceededPlan();
         fixture.properties.setAllowedAgentIds(List.of("agent-a", "agent-other"));
-        when(fixture.reviewRepository.findByOrgIdAndRunIdOrderByReviewRoundAsc("org-a", 10L))
+        when(fixture.reviewRepository.findByCompanyIdAndRunIdOrderByReviewRoundAsc("org-a", 10L))
                 .thenReturn(List.of(mock(AgentTaskReviewEntity.class)));
 
         AgentTaskReflectService.ReflectResult exhausted = fixture.service.reflect(command(false));
@@ -95,7 +95,7 @@ class AgentTaskReflectServiceTest {
 
         private Fixture(boolean enabled) {
             properties.setEnabled(enabled);
-            properties.setAllowedOrgIds(List.of("org-a"));
+            properties.setAllowedCompanyIds(List.of("org-a"));
             properties.setAllowedAgentIds(List.of("agent-a"));
             service = new AgentTaskReflectService(properties, runRepository, stepRepository, reviewRepository,
                     eventRepository, new ObjectMapper());
@@ -112,10 +112,10 @@ class AgentTaskReflectServiceTest {
             when(run.getMaxSteps()).thenReturn(2);
             when(retrieve.getStatus()).thenReturn(AgentTaskStepEntity.STATUS_SUCCEEDED);
             when(synthesize.getStatus()).thenReturn(AgentTaskStepEntity.STATUS_SUCCEEDED);
-            when(runRepository.findByIdAndOrgId(10L, "org-a")).thenReturn(Optional.of(run));
-            when(stepRepository.findByOrgIdAndRunIdOrderByStepOrderAsc("org-a", 10L))
+            when(runRepository.findByIdAndCompanyId(10L, "org-a")).thenReturn(Optional.of(run));
+            when(stepRepository.findByCompanyIdAndRunIdOrderByStepOrderAsc("org-a", 10L))
                     .thenReturn(List.of(retrieve, synthesize));
-            when(reviewRepository.findByOrgIdAndRunIdOrderByReviewRoundAsc("org-a", 10L)).thenReturn(List.of());
+            when(reviewRepository.findByCompanyIdAndRunIdOrderByReviewRoundAsc("org-a", 10L)).thenReturn(List.of());
             when(reviewRepository.saveAndFlush(any())).thenReturn(review);
             when(review.getId()).thenReturn(33L);
         }

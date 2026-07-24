@@ -10,11 +10,11 @@ import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
 
 @Entity
-@Table(name = "customer_score_snapshot", uniqueConstraints = @UniqueConstraint(columnNames = {"org_id", "crm_account_id"}))
+@Table(name = "customer_score_snapshot", uniqueConstraints = @UniqueConstraint(columnNames = {"company_id", "crm_account_id"}))
 public class CustomerScoreSnapshotEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name = "org_id", nullable = false, length = 64) private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64) private String companyId;
     @Column(name = "crm_account_id", nullable = false, length = 128) private String crmAccountId;
     @Column(name = "health_score", nullable = false) private int healthScore;
     @Column(name = "health_dimension_score", nullable = false) private int healthDimensionScore;
@@ -31,8 +31,8 @@ public class CustomerScoreSnapshotEntity {
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;
 
     protected CustomerScoreSnapshotEntity() {}
-    public CustomerScoreSnapshotEntity(String orgId, String crmAccountId) {
-        this.orgId = orgId; this.crmAccountId = crmAccountId; this.createdAt = Instant.now();
+    public CustomerScoreSnapshotEntity(String companyId, String crmAccountId) {
+        this.companyId = companyId; this.crmAccountId = crmAccountId; this.createdAt = Instant.now();
         update(50, 50, 50, 50, 50, 50, 0, 0, 0, "ai-evidence-v1");
     }
     public void update(int healthScore, int healthDimensionScore, int expansionScore, int renewalScore,
@@ -45,7 +45,7 @@ public class CustomerScoreSnapshotEntity {
         this.pendingSignalCount = pendingSignalCount; this.calculationVersion = calculationVersion;
         this.calculatedAt = Instant.now(); this.updatedAt = this.calculatedAt;
     }
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
     public String getCrmAccountId() { return crmAccountId; }
     public int getHealthScore() { return healthScore; }
     public int getHealthDimensionScore() { return healthDimensionScore; }

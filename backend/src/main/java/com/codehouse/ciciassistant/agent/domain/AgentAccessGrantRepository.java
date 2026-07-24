@@ -5,8 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AgentAccessGrantRepository extends JpaRepository<AgentAccessGrantEntity, String> {
 
-    List<AgentAccessGrantEntity> findByOrgIdAndAgentIdAndStatusOrderByPrincipalTypeAscPrincipalIdAscPermissionAsc(
-            String orgId, String agentId, String status);
+    List<AgentAccessGrantEntity> findByCompanyIdAndAgentIdAndStatusOrderByPrincipalTypeAscPrincipalIdAscPermissionAsc(
+            String companyId, String agentId, String status);
 
-    List<AgentAccessGrantEntity> findByOrgIdAndAgentIdAndStatus(String orgId, String agentId, String status);
+    List<AgentAccessGrantEntity> findByCompanyIdAndAgentIdAndStatus(String companyId, String agentId, String status);
 }

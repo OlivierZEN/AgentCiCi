@@ -34,11 +34,11 @@ public class CloudccSsoService {
     }
 
     @Transactional
-    public Map<String, Object> issueTicket(String agentOrgId,
+    public Map<String, Object> issueTicket(String agentCompanyId,
                                            String cloudccAccessToken,
                                            Map<String, Object> cloudccUser,
                                            String targetPath) {
-        String orgId = requireText(agentOrgId, "缺少 AgentCiCi 组织 ID");
+        String companyId = requireText(agentCompanyId, "缺少 AgentCiCi 组织 ID");
         String runtimeToken = requireText(cloudccAccessToken, "缺少 CloudCC runtime token");
         List<String> reportedIdentities = cloudccIdentityCandidates(cloudccUser);
         if (reportedIdentities.isEmpty()) {
@@ -46,7 +46,7 @@ public class CloudccSsoService {
         }
 
         CloudccAccessTokenService.ValidatedCloudccToken validated = cloudccAccessTokenService
-                .validateRuntimeAccessToken(orgId, runtimeToken)
+                .validateRuntimeAccessToken(companyId, runtimeToken)
                 .orElseThrow(() -> new UnauthorizedException("CloudCC runtime token 校验失败"));
         String actorId = normalize(validated.actorId());
         if (actorId.isBlank()) {
@@ -56,21 +56,21 @@ public class CloudccSsoService {
             throw new UnauthorizedException("CloudCC runtime token 用户与当前页面用户不一致");
         }
 
-        UserEntity member = findMappedMember(orgId, reportedIdentities);
+        UserEntity member = findMappedMember(companyId, reportedIdentities);
         if (!containsIdentity(reportedIdentities, member.getCcUsername()) && !identityEquals(actorId, member.getCcUsername())) {
             throw new UnauthorizedException("CloudCC 用户未绑定到当前 AgentCiCi 成员");
         }
-        cloudccAccessTokenService.getSessionContext(orgId, member.getId())
+        cloudccAccessTokenService.getSessionContext(companyId, member.getId())
                 .orElseThrow(() -> new UnauthorizedException("当前 AgentCiCi 成员无法生成 CloudCC accessToken"));
 
         pruneExpiredTickets();
         String ticket = "ccsso_" + UUID.randomUUID();
         Instant expiresAt = Instant.now().plus(TICKET_TTL);
-        tickets.put(ticket, new SsoTicket(orgId, member.getId(), member.getCcUsername(), expiresAt, safeTargetPath(targetPath)));
+        tickets.put(ticket, new SsoTicket(companyId, member.getId(), member.getCcUsername(), expiresAt, safeTargetPath(targetPath)));
         return Map.of(
                 "ticket", ticket,
                 "expiresAt", expiresAt.toString(),
-                "orgId", orgId,
+                "companyId", companyId,
                 "memberId", member.getId(),
                 "cloudccUsername", member.getCcUsername(),
                 "targetPath", safeTargetPath(targetPath)
@@ -84,19 +84,19 @@ public class CloudccSsoService {
         if (ssoTicket == null || ssoTicket.expiresAt().isBefore(Instant.now())) {
             throw new UnauthorizedException("SSO ticket 已失效，请重新从 CloudCC CRM 进入");
         }
-        Map<String, Object> login = new LinkedHashMap<>(authService.loginAsMember(ssoTicket.orgId(), ssoTicket.userId()));
+        Map<String, Object> login = new LinkedHashMap<>(authService.loginAsMember(ssoTicket.companyId(), ssoTicket.userId()));
         login.put("loginSource", "cloudcc_sso");
         login.put("cloudccUsername", ssoTicket.cloudccUsername());
         return login;
     }
 
-    private UserEntity findMappedMember(String orgId, List<String> candidates) {
+    private UserEntity findMappedMember(String companyId, List<String> candidates) {
         for (String candidate : candidates) {
             if (candidate.isBlank()) {
                 continue;
             }
             UserEntity member = userRepository
-                    .findByOrg_IdAndCcUsernameIgnoreCaseAndMemberStatus(orgId, candidate, UserEntity.STATUS_ACTIVE)
+                    .findByCompany_IdAndCcUsernameIgnoreCaseAndMemberStatus(companyId, candidate, UserEntity.STATUS_ACTIVE)
                     .orElse(null);
             if (member != null) {
                 return member;
@@ -188,5 +188,5 @@ public class CloudccSsoService {
         return value == null ? "" : value.trim();
     }
 
-    private record SsoTicket(String orgId, String userId, String cloudccUsername, Instant expiresAt, String targetPath) {}
+    private record SsoTicket(String companyId, String userId, String cloudccUsername, Instant expiresAt, String targetPath) {}
 }

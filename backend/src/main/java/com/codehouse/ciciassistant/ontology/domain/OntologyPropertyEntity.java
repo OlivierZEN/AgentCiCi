@@ -48,7 +48,7 @@ public class OntologyPropertyEntity extends AbstractOntologyWorkspaceEntity {
     }
 
     public OntologyPropertyEntity(
-            String orgId,
+            String companyId,
             Long workspaceId,
             Long conceptId,
             String key,
@@ -62,7 +62,7 @@ public class OntologyPropertyEntity extends AbstractOntologyWorkspaceEntity {
             String enumValuesJson,
             String formatHint,
             String displayStrategy) {
-        super(orgId, workspaceId);
+        super(companyId, workspaceId);
         this.conceptId = conceptId;
         this.key = key;
         this.name = name;

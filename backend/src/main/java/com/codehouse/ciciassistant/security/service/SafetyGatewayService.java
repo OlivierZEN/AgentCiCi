@@ -55,31 +55,31 @@ public class SafetyGatewayService {
         this.eventRepository = eventRepository;
     }
 
-    public SafetyDecision checkInput(String orgId, String userId, String surface, String text) {
-        return check(orgId, userId, surface, text, ruleRepository.findByOrgIdAndEnabledTrueOrderByUpdatedAtDescIdDesc(orgId));
+    public SafetyDecision checkInput(String companyId, String userId, String surface, String text) {
+        return check(companyId, userId, surface, text, ruleRepository.findByCompanyIdAndEnabledTrueOrderByUpdatedAtDescIdDesc(companyId));
     }
 
-    public SafetyDecision checkOutput(String orgId, String userId, String surface, String text) {
-        return check(orgId, userId, surface, text, ruleRepository.findByOrgIdAndEnabledTrueOrderByUpdatedAtDescIdDesc(orgId));
+    public SafetyDecision checkOutput(String companyId, String userId, String surface, String text) {
+        return check(companyId, userId, surface, text, ruleRepository.findByCompanyIdAndEnabledTrueOrderByUpdatedAtDescIdDesc(companyId));
     }
 
-    public SafetyDecision checkToolCall(String orgId, String userId, String toolName, String argumentsJson) {
-        return checkInput(orgId, userId, "TOOL_CALL:" + safeSurface(toolName), argumentsJson);
+    public SafetyDecision checkToolCall(String companyId, String userId, String toolName, String argumentsJson) {
+        return checkInput(companyId, userId, "TOOL_CALL:" + safeSurface(toolName), argumentsJson);
     }
 
     public String redactForAudit(String raw) {
         return redactionService.redact(raw);
     }
 
-    public SafetyDecision checkWithDraftRule(String orgId,
+    public SafetyDecision checkWithDraftRule(String companyId,
                                              String userId,
                                              String surface,
                                              String text,
                                              SecurityRuleEntity draftRule) {
-        return check(orgId, userId, surface, text, List.of(draftRule));
+        return check(companyId, userId, surface, text, List.of(draftRule));
     }
 
-    private SafetyDecision check(String orgId,
+    private SafetyDecision check(String companyId,
                                  String userId,
                                  String surface,
                                  String text,
@@ -110,7 +110,7 @@ public class SafetyGatewayService {
         boolean blocked = "BLOCK".equals(action) || "ESCALATE".equals(action);
         String safeText = blocked ? "" : redactionService.redact(source);
         SafetyDecision decision = new SafetyDecision(action, safeText, List.copyOf(findings), blocked, POLICY_VERSION);
-        recordEvent(orgId, userId, surface, decision, severity);
+        recordEvent(companyId, userId, surface, decision, severity);
         return decision;
     }
 
@@ -172,19 +172,19 @@ public class SafetyGatewayService {
         return pattern.length() <= 64 ? pattern : pattern.substring(0, 61) + "...";
     }
 
-    private void recordEvent(String orgId,
+    private void recordEvent(String companyId,
                              String userId,
                              String surface,
                              SafetyDecision decision,
                              String severity) {
-        if (orgId == null || orgId.isBlank() || decision.findings().isEmpty()) {
+        if (companyId == null || companyId.isBlank() || decision.findings().isEmpty()) {
             return;
         }
         SecurityFinding primary = decision.findings().stream()
                 .max(Comparator.comparingInt(item -> severityRank(item.severity())))
                 .orElse(decision.findings().getFirst());
         eventRepository.save(new SecurityDetectionEventEntity(
-                orgId,
+                companyId,
                 userId,
                 safeSurface(surface),
                 decision.action(),

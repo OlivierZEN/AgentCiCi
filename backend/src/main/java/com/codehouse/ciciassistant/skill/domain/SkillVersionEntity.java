@@ -16,8 +16,8 @@ public class SkillVersionEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "skill_id", nullable = false)
     private Long skillId;
@@ -97,7 +97,7 @@ public class SkillVersionEntity {
     protected SkillVersionEntity() {
     }
 
-    public SkillVersionEntity(String orgId,
+    public SkillVersionEntity(String companyId,
                               Long skillId,
                               Integer versionNo,
                               String specText,
@@ -113,7 +113,7 @@ public class SkillVersionEntity {
                               String compileSummary,
                               String warnings,
                               String publishStatus) {
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.skillId = skillId;
         this.versionNo = versionNo;
         this.specText = specText;
@@ -142,8 +142,8 @@ public class SkillVersionEntity {
         return id;
     }
 
-    public String getOrgId() {
-        return orgId;
+    public String getCompanyId() {
+        return companyId;
     }
 
     public Long getSkillId() {

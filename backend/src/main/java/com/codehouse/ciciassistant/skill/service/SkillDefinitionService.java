@@ -380,33 +380,33 @@ public class SkillDefinitionService {
     }
 
     @Transactional
-    public void ensurePhaseOneDefaults(String orgId) {
-        ensureBuiltinSkills(orgId);
-        fileBackedBuiltinSkillSyncService.syncOrg(orgId);
-        ensureDefaultBindings(orgId);
+    public void ensurePhaseOneDefaults(String companyId) {
+        ensureBuiltinSkills(companyId);
+        fileBackedBuiltinSkillSyncService.syncOrg(companyId);
+        ensureDefaultBindings(companyId);
     }
 
-    public List<SkillDefinitionEntity> listSkills(String orgId) {
-        ensurePhaseOneDefaults(orgId);
-        return skillDefinitionRepository.findByOrgIdOrderByBuiltinDescNameAsc(orgId).stream()
+    public List<SkillDefinitionEntity> listSkills(String companyId) {
+        ensurePhaseOneDefaults(companyId);
+        return skillDefinitionRepository.findByCompanyIdOrderByBuiltinDescNameAsc(companyId).stream()
                 .filter(SkillDefinitionEntity::isVisibleToTenant)
                 .toList();
     }
 
-    public SkillDefinitionEntity getSkill(String orgId, Long id) {
-        ensurePhaseOneDefaults(orgId);
-        return skillDefinitionRepository.findByIdAndOrgId(id, orgId)
+    public SkillDefinitionEntity getSkill(String companyId, Long id) {
+        ensurePhaseOneDefaults(companyId);
+        return skillDefinitionRepository.findByIdAndCompanyId(id, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Skill not found"));
     }
 
-    public List<SkillDefinitionEntity> listSkillsForAgent(String orgId, String agentId) {
-        ensurePhaseOneDefaults(orgId);
-        List<AgentSkillBindingEntity> bindings = listBindingsInternal(orgId, agentId);
+    public List<SkillDefinitionEntity> listSkillsForAgent(String companyId, String agentId) {
+        ensurePhaseOneDefaults(companyId);
+        List<AgentSkillBindingEntity> bindings = listBindingsInternal(companyId, agentId);
         List<Long> skillIds = bindings.stream().map(AgentSkillBindingEntity::getSkillId).toList();
         if (skillIds.isEmpty()) {
             return List.of();
         }
-        Map<Long, SkillDefinitionEntity> byId = skillDefinitionRepository.findByOrgIdAndIdInAndEnabledTrue(orgId, skillIds)
+        Map<Long, SkillDefinitionEntity> byId = skillDefinitionRepository.findByCompanyIdAndIdInAndEnabledTrue(companyId, skillIds)
                 .stream()
                 .collect(java.util.stream.Collectors.toMap(SkillDefinitionEntity::getId, item -> item));
         return skillIds.stream()
@@ -417,10 +417,10 @@ public class SkillDefinitionService {
     }
 
     @Transactional
-    public SkillDefinitionEntity createSkill(String orgId, UpsertCommand command) {
-        ensurePhaseOneDefaults(orgId);
+    public SkillDefinitionEntity createSkill(String companyId, UpsertCommand command) {
+        ensurePhaseOneDefaults(companyId);
         String skillCode = normalizeSkillCode(command.skillCode());
-        Optional<SkillDefinitionEntity> existing = skillDefinitionRepository.findByOrgIdAndSkillCode(orgId, skillCode);
+        Optional<SkillDefinitionEntity> existing = skillDefinitionRepository.findByCompanyIdAndSkillCode(companyId, skillCode);
         if (existing.isPresent() && "DELETED".equals(existing.get().getLifecycleStatus())) {
             existing.get().archiveDeletedSkillCode();
             skillDefinitionRepository.saveAndFlush(existing.get());
@@ -428,7 +428,7 @@ public class SkillDefinitionService {
             throw new IllegalArgumentException("Skill code already exists: " + skillCode);
         }
         SkillDefinitionEntity created = new SkillDefinitionEntity(
-                orgId,
+                companyId,
                 skillCode,
                 requireText(command.name(), "name"),
                 trimToNull(command.description()),
@@ -451,15 +451,15 @@ public class SkillDefinitionService {
         );
         created.setRuntimeApiDraftJson(skillApiToolService.serializeDraftApis(command.runtimeApis()));
         SkillDefinitionEntity saved = skillDefinitionRepository.save(created);
-        SkillVersionEntity draft = createDraftVersion(orgId, saved, command, "CREATE", null);
+        SkillVersionEntity draft = createDraftVersion(companyId, saved, command, "CREATE", null);
         saved.markDraft(draft.getId());
         return skillDefinitionRepository.save(saved);
     }
 
     @Transactional
-    public SkillDefinitionEntity updateSkill(String orgId, Long id, UpsertCommand command) {
-        ensurePhaseOneDefaults(orgId);
-        SkillDefinitionEntity entity = getSkill(orgId, id);
+    public SkillDefinitionEntity updateSkill(String companyId, Long id, UpsertCommand command) {
+        ensurePhaseOneDefaults(companyId);
+        SkillDefinitionEntity entity = getSkill(companyId, id);
         if (!entity.isVisibleToTenant()) {
             throw new IllegalArgumentException("Skill not found");
         }
@@ -473,7 +473,7 @@ public class SkillDefinitionService {
 
         String requestedCode = normalizeSkillCode(command.skillCode());
         if (!requestedCode.equals(entity.getSkillCode())
-                && skillDefinitionRepository.existsByOrgIdAndSkillCodeAndIdNot(orgId, requestedCode, id)) {
+                && skillDefinitionRepository.existsByCompanyIdAndSkillCodeAndIdNot(companyId, requestedCode, id)) {
             throw new IllegalArgumentException("Skill code already exists: " + requestedCode);
         }
 
@@ -492,18 +492,18 @@ public class SkillDefinitionService {
                 normalizeRiskLevel(command.riskLevel())
         );
         SkillDefinitionEntity saved = skillDefinitionRepository.save(entity);
-        SkillVersionEntity draft = createDraftVersion(orgId, saved, command, "SAVE", null);
+        SkillVersionEntity draft = createDraftVersion(companyId, saved, command, "SAVE", null);
         saved.markDraft(draft.getId());
         return skillDefinitionRepository.save(saved);
     }
 
     @Transactional
-    public DeleteImpact deleteImpact(String orgId, Long id) {
-        ensurePhaseOneDefaults(orgId);
-        SkillDefinitionEntity entity = getSkill(orgId, id);
-        boolean bound = agentSkillBindingRepository.findByOrgIdAndSkillIdInAndEnabledTrue(orgId, List.of(id)).stream()
+    public DeleteImpact deleteImpact(String companyId, Long id) {
+        ensurePhaseOneDefaults(companyId);
+        SkillDefinitionEntity entity = getSkill(companyId, id);
+        boolean bound = agentSkillBindingRepository.findByCompanyIdAndSkillIdInAndEnabledTrue(companyId, List.of(id)).stream()
                 .anyMatch(AgentSkillBindingEntity::isEnabled);
-        boolean pinned = agentWorkflowSkillRefRepository.countActivePublishedRuntimeByOrgIdAndSkillId(orgId, id) > 0;
+        boolean pinned = agentWorkflowSkillRefRepository.countActivePublishedRuntimeByCompanyIdAndSkillId(companyId, id) > 0;
         List<String> blockers = new ArrayList<>();
         if (!entity.isTenantDeletable()) {
             blockers.add("仅租户自定义技能可以删除");
@@ -519,24 +519,24 @@ public class SkillDefinitionService {
     }
 
     @Transactional
-    public void deleteSkill(String orgId, Long id, String deletedBy, String reason) {
-        DeleteImpact impact = deleteImpact(orgId, id);
+    public void deleteSkill(String companyId, Long id, String deletedBy, String reason) {
+        DeleteImpact impact = deleteImpact(companyId, id);
         if (!impact.canDelete()) {
             throw new IllegalArgumentException("Skill cannot be deleted: " + String.join("; ", impact.blockers()));
         }
-        SkillDefinitionEntity entity = getSkill(orgId, id);
+        SkillDefinitionEntity entity = getSkill(companyId, id);
         entity.markDeleted(fallback(trimToNull(deletedBy), "system"), trimToNull(reason));
         skillDefinitionRepository.save(entity);
     }
 
     @Transactional
-    public SkillDefinitionEntity publishSkill(String orgId, Long id, PublishCommand command) {
-        ensurePhaseOneDefaults(orgId);
-        SkillDefinitionEntity entity = getSkill(orgId, id);
+    public SkillDefinitionEntity publishSkill(String companyId, Long id, PublishCommand command) {
+        ensurePhaseOneDefaults(companyId);
+        SkillDefinitionEntity entity = getSkill(companyId, id);
         if (!entity.isVisibleToTenant() || entity.getSourceType() != SkillSourceType.TENANT_CUSTOM || !entity.isTenantEditable()) {
             throw new IllegalArgumentException("Only tenant custom editable skills can be published");
         }
-        PreviewResult preview = previewCompile(orgId, new PreviewCommand(
+        PreviewResult preview = previewCompile(companyId, new PreviewCommand(
                 entity.getSkillCode(),
                 entity.getName(),
                 entity.getDraftSpecText(),
@@ -553,23 +553,23 @@ public class SkillDefinitionService {
         }
         UpsertCommand snapshot = UpsertCommand.fromEntity(entity, command == null ? null : command.changeLog(),
                 command == null ? null : command.actorUserId());
-        SkillVersionEntity published = createDraftVersion(orgId, entity, snapshot, "PUBLISH", null);
+        SkillVersionEntity published = createDraftVersion(companyId, entity, snapshot, "PUBLISH", null);
         published.markPublished();
         skillVersionRepository.save(published);
-        skillApiToolService.publishApisForVersion(orgId, entity, published, published.getRuntimeApiSnapshotJson());
+        skillApiToolService.publishApisForVersion(companyId, entity, published, published.getRuntimeApiSnapshotJson());
         entity.markPublished(published.getId(), command == null ? "system" : fallback(trimToNull(command.actorUserId()), "system"));
         return skillDefinitionRepository.save(entity);
     }
 
     @Transactional
-    public SkillDefinitionEntity restoreVersion(String orgId, Long id, Long versionId, RestoreCommand command) {
-        ensurePhaseOneDefaults(orgId);
-        SkillDefinitionEntity entity = getSkill(orgId, id);
+    public SkillDefinitionEntity restoreVersion(String companyId, Long id, Long versionId, RestoreCommand command) {
+        ensurePhaseOneDefaults(companyId);
+        SkillDefinitionEntity entity = getSkill(companyId, id);
         if (entity.getSourceType() != SkillSourceType.TENANT_CUSTOM || !entity.isTenantEditable()) {
             throw new IllegalArgumentException("Only tenant custom editable skills can restore versions");
         }
         SkillVersionEntity source = skillVersionRepository.findById(versionId)
-                .filter(item -> orgId.equals(item.getOrgId()) && id.equals(item.getSkillId()))
+                .filter(item -> companyId.equals(item.getCompanyId()) && id.equals(item.getSkillId()))
                 .filter(item -> Boolean.TRUE.equals(item.getRestoreVisible()))
                 .orElseThrow(() -> new IllegalArgumentException("Version not found"));
         entity.update(
@@ -590,48 +590,48 @@ public class SkillDefinitionService {
         UpsertCommand snapshot = UpsertCommand.fromEntity(saved,
                 command == null ? "恢复自 v" + source.getVersionNo() : command.changeLog(),
                 command == null ? null : command.actorUserId());
-        SkillVersionEntity restored = createDraftVersion(orgId, saved, snapshot, "RESTORE", source.getId());
+        SkillVersionEntity restored = createDraftVersion(companyId, saved, snapshot, "RESTORE", source.getId());
         saved.markDraft(restored.getId());
         return skillDefinitionRepository.save(saved);
     }
 
-    public List<SkillVersionEntity> listRestoreVersions(String orgId, Long skillId, int limit) {
-        ensurePhaseOneDefaults(orgId);
-        SkillDefinitionEntity skill = getSkill(orgId, skillId);
+    public List<SkillVersionEntity> listRestoreVersions(String companyId, Long skillId, int limit) {
+        ensurePhaseOneDefaults(companyId);
+        SkillDefinitionEntity skill = getSkill(companyId, skillId);
         if (!skill.isVisibleToTenant()) {
             throw new IllegalArgumentException("Skill not found");
         }
-        return skillVersionRepository.findByOrgIdAndSkillIdAndRestoreVisibleTrueOrderByVersionNoDesc(orgId, skillId).stream()
+        return skillVersionRepository.findByCompanyIdAndSkillIdAndRestoreVisibleTrueOrderByVersionNoDesc(companyId, skillId).stream()
                 .limit(Math.max(1, Math.min(limit, 20)))
                 .toList();
     }
 
     @Transactional
-    public SkillDefinitionEntity deriveSkill(String orgId, Long sourceSkillId, DeriveCommand command) {
-        ensurePhaseOneDefaults(orgId);
+    public SkillDefinitionEntity deriveSkill(String companyId, Long sourceSkillId, DeriveCommand command) {
+        ensurePhaseOneDefaults(companyId);
         throw new IllegalArgumentException("Skill derivation is hidden in this release");
         /*
-        SkillDefinitionEntity source = getSkill(orgId, sourceSkillId);
+        SkillDefinitionEntity source = getSkill(companyId, sourceSkillId);
         if (!source.isVisibleToTenant() || source.getSourceType() != SkillSourceType.PLATFORM_STANDARD) {
             throw new IllegalArgumentException("Only platform standard skills can be derived");
         }
         String skillCode = normalizeSkillCode(command.skillCode());
-        if (skillDefinitionRepository.existsByOrgIdAndSkillCode(orgId, skillCode)) {
+        if (skillDefinitionRepository.existsByCompanyIdAndSkillCode(companyId, skillCode)) {
             throw new IllegalArgumentException("Skill code already exists: " + skillCode);
         }
-        Integer baseTemplateVersion = platformSkillTemplateRepository.findByOrgIdAndTemplateCode(
-                        orgId,
+        Integer baseTemplateVersion = platformSkillTemplateRepository.findByCompanyIdAndTemplateCode(
+                        companyId,
                         fallback(source.getTemplateCode(), source.getSkillCode())
                 )
                 .map(template -> template.getCurrentVersionNo() == null ? 1 : template.getCurrentVersionNo())
                 .or(() -> Optional.ofNullable(source.getCurrentPublishedVersionId())
                         .flatMap(skillVersionRepository::findById)
                         .map(SkillVersionEntity::getVersionNo))
-                .or(() -> skillVersionRepository.findTopByOrgIdAndSkillIdOrderByVersionNoDesc(orgId, source.getId())
+                .or(() -> skillVersionRepository.findTopByCompanyIdAndSkillIdOrderByVersionNoDesc(companyId, source.getId())
                         .map(SkillVersionEntity::getVersionNo))
                 .orElse(1);
         SkillDefinitionEntity derived = new SkillDefinitionEntity(
-                orgId,
+                companyId,
                 skillCode,
                 requireText(command.name(), "name"),
                 trimToNull(fallback(command.description(), source.getDescription())),
@@ -653,7 +653,7 @@ public class SkillDefinitionService {
                 baseTemplateVersion
         );
         SkillDefinitionEntity saved = skillDefinitionRepository.save(derived);
-        SkillVersionEntity draft = createDraftVersion(orgId, saved, new UpsertCommand(
+        SkillVersionEntity draft = createDraftVersion(companyId, saved, new UpsertCommand(
                 saved.getSkillCode(),
                 saved.getName(),
                 saved.getDescription(),
@@ -676,20 +676,20 @@ public class SkillDefinitionService {
         */
     }
 
-    public List<AgentSkillBindingEntity> listBindings(String orgId, String agentId) {
-        ensurePhaseOneDefaults(orgId);
-        return listBindingsInternal(orgId, agentId);
+    public List<AgentSkillBindingEntity> listBindings(String companyId, String agentId) {
+        ensurePhaseOneDefaults(companyId);
+        return listBindingsInternal(companyId, agentId);
     }
 
     @Transactional
-    public List<AgentSkillBindingEntity> replaceBindings(String orgId, String requestedAgentId, List<BindingInput> inputs) {
-        ensurePhaseOneDefaults(orgId);
+    public List<AgentSkillBindingEntity> replaceBindings(String companyId, String requestedAgentId, List<BindingInput> inputs) {
+        ensurePhaseOneDefaults(companyId);
         String agentId = normalizeAgentId(requestedAgentId);
         if (inputs == null || inputs.isEmpty()) {
             throw new IllegalArgumentException("bindings cannot be empty");
         }
 
-        Map<Long, SkillDefinitionEntity> skillById = skillDefinitionRepository.findByOrgIdOrderByBuiltinDescNameAsc(orgId)
+        Map<Long, SkillDefinitionEntity> skillById = skillDefinitionRepository.findByCompanyIdOrderByBuiltinDescNameAsc(companyId)
                 .stream()
                 .collect(java.util.stream.Collectors.toMap(SkillDefinitionEntity::getId, item -> item));
         List<AgentSkillBindingEntity> next = new ArrayList<>();
@@ -697,7 +697,7 @@ public class SkillDefinitionService {
 
         int fallbackPriority = 10;
         for (BindingInput input : inputs) {
-            Long skillId = resolveSkillId(orgId, input, skillById);
+            Long skillId = resolveSkillId(companyId, input, skillById);
             if (!seenSkillIds.add(skillId)) {
                 throw new IllegalArgumentException("duplicate skill binding: " + skillId);
             }
@@ -708,7 +708,7 @@ public class SkillDefinitionService {
             int priority = input.priority() == null ? fallbackPriority : input.priority();
             fallbackPriority += 10;
             next.add(new AgentSkillBindingEntity(
-                    orgId,
+                    companyId,
                     agentId,
                     skillId,
                     normalizeActivationMode(input.activationMode()),
@@ -718,13 +718,13 @@ public class SkillDefinitionService {
             ));
         }
 
-        agentSkillBindingRepository.deleteByOrgIdAndAgentId(orgId, agentId);
+        agentSkillBindingRepository.deleteByCompanyIdAndAgentId(companyId, agentId);
         agentSkillBindingRepository.flush();
         return agentSkillBindingRepository.saveAll(next);
     }
 
-    public PreviewResult previewCompile(String orgId, PreviewCommand command) {
-        ensurePhaseOneDefaults(orgId);
+    public PreviewResult previewCompile(String companyId, PreviewCommand command) {
+        ensurePhaseOneDefaults(companyId);
         String riskLevel = normalizeRiskLevel(command.riskLevel());
         List<String> tools = normalizeNameList(command.toolWhitelist());
         List<String> kbIds = normalizeNameList(command.kbWhitelist());
@@ -792,7 +792,7 @@ public class SkillDefinitionService {
         compileSummary.add("skillCode=" + normalizeSkillCode(command.skillCode()) + ", riskLevel=" + riskLevel);
         String runtimeApiJson = skillApiToolService.serializeDraftApis(command.runtimeApis());
         SkillApiToolService.RuntimeApiCompilePreview apiPreview =
-                skillApiToolService.previewCompileApis(orgId, normalizeSkillCode(command.skillCode()), runtimeApiJson);
+                skillApiToolService.previewCompileApis(companyId, normalizeSkillCode(command.skillCode()), runtimeApiJson);
         warnings.addAll(apiPreview.warnings());
         apiPreview.errors().forEach(error -> warnings.add("阻断: " + error));
         compileSummary.add("runtimeApis=" + apiPreview.toolDefinitions().size());
@@ -819,13 +819,13 @@ public class SkillDefinitionService {
         return trimmed;
     }
 
-    private List<AgentSkillBindingEntity> listBindingsInternal(String orgId, String agentId) {
-        return agentSkillBindingRepository.findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(
-                orgId, normalizeAgentId(agentId)
+    private List<AgentSkillBindingEntity> listBindingsInternal(String companyId, String agentId) {
+        return agentSkillBindingRepository.findByCompanyIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(
+                companyId, normalizeAgentId(agentId)
         );
     }
 
-    private Long resolveSkillId(String orgId, BindingInput input, Map<Long, SkillDefinitionEntity> skillById) {
+    private Long resolveSkillId(String companyId, BindingInput input, Map<Long, SkillDefinitionEntity> skillById) {
         if (input.skillId() != null) {
             return input.skillId();
         }
@@ -833,7 +833,7 @@ public class SkillDefinitionService {
             throw new IllegalArgumentException("skillId or skillCode is required");
         }
         String code = normalizeSkillCode(input.skillCode());
-        return skillDefinitionRepository.findByOrgIdAndSkillCode(orgId, code)
+        return skillDefinitionRepository.findByCompanyIdAndSkillCode(companyId, code)
                 .map(SkillDefinitionEntity::getId)
                 .orElseThrow(() -> new IllegalArgumentException("Skill not found for code: " + code));
     }
@@ -912,12 +912,12 @@ public class SkillDefinitionService {
         return trimToNull(promptFragment);
     }
 
-    private SkillVersionEntity createDraftVersion(String orgId,
+    private SkillVersionEntity createDraftVersion(String companyId,
                                                   SkillDefinitionEntity skill,
                                                   UpsertCommand command,
                                                   String versionSource,
                                                   Long restoredFromVersionId) {
-        Integer nextVersionNo = skillVersionRepository.findTopByOrgIdAndSkillIdOrderByVersionNoDesc(orgId, skill.getId())
+        Integer nextVersionNo = skillVersionRepository.findTopByCompanyIdAndSkillIdOrderByVersionNoDesc(companyId, skill.getId())
                 .map(existing -> existing.getVersionNo() + 1)
                 .orElse(1);
         List<String> tools = normalizeNameList(command.toolWhitelist());
@@ -934,7 +934,7 @@ public class SkillDefinitionService {
                 riskLevel
         ));
         SkillVersionEntity saved = skillVersionRepository.save(new SkillVersionEntity(
-                orgId,
+                companyId,
                 skill.getId(),
                 nextVersionNo,
                 specText,
@@ -963,16 +963,16 @@ public class SkillDefinitionService {
                 null
         );
         SkillVersionEntity version = skillVersionRepository.save(saved);
-        pruneRestoreHistory(orgId, skill.getId());
+        pruneRestoreHistory(companyId, skill.getId());
         return version;
     }
 
-    private void pruneRestoreHistory(String orgId, Long skillId) {
+    private void pruneRestoreHistory(String companyId, Long skillId) {
         List<SkillVersionEntity> versions = skillVersionRepository
-                .findByOrgIdAndSkillIdAndRestoreVisibleTrueOrderByVersionNoDesc(orgId, skillId);
+                .findByCompanyIdAndSkillIdAndRestoreVisibleTrueOrderByVersionNoDesc(companyId, skillId);
         for (int i = 3; i < versions.size(); i++) {
             SkillVersionEntity version = versions.get(i);
-            boolean protectedRuntime = agentWorkflowSkillRefRepository.existsByOrgIdAndSkillVersionId(orgId, version.getId());
+            boolean protectedRuntime = agentWorkflowSkillRefRepository.existsByCompanyIdAndSkillVersionId(companyId, version.getId());
             version.markRetention(protectedRuntime ? "PROTECTED_RUNTIME" : "PRUNED", false);
             skillVersionRepository.save(version);
         }
@@ -1010,14 +1010,14 @@ public class SkillDefinitionService {
         }
     }
 
-    private void ensureBuiltinSkills(String orgId) {
+    private void ensureBuiltinSkills(String companyId) {
         for (BuiltinSkillSpec spec : BUILTIN_SKILLS) {
-            Optional<SkillDefinitionEntity> existing = skillDefinitionRepository.findByOrgIdAndSkillCode(orgId, spec.skillCode());
+            Optional<SkillDefinitionEntity> existing = skillDefinitionRepository.findByCompanyIdAndSkillCode(companyId, spec.skillCode());
             if (existing.isPresent()) {
                 continue;
             }
             skillDefinitionRepository.save(new SkillDefinitionEntity(
-                    orgId,
+                    companyId,
                     spec.skillCode(),
                     spec.name(),
                     spec.description(),
@@ -1064,9 +1064,9 @@ public class SkillDefinitionService {
                 .toList();
     }
 
-    private void ensureDefaultBindings(String orgId) {
+    private void ensureDefaultBindings(String companyId) {
         Map<String, SkillDefinitionEntity> skillByCode = new LinkedHashMap<>();
-        for (SkillDefinitionEntity entity : skillDefinitionRepository.findByOrgIdAndEnabledTrueOrderByBuiltinDescNameAsc(orgId)) {
+        for (SkillDefinitionEntity entity : skillDefinitionRepository.findByCompanyIdAndEnabledTrueOrderByBuiltinDescNameAsc(companyId)) {
             skillByCode.put(entity.getSkillCode(), entity);
         }
         for (Map.Entry<String, List<DefaultBinding>> entry : DEFAULT_AGENT_SKILLS.entrySet()) {
@@ -1078,11 +1078,11 @@ public class SkillDefinitionService {
                 if (skill == null) {
                     continue;
                 }
-                if (agentSkillBindingRepository.existsByOrgIdAndAgentIdAndSkillId(orgId, agentId, skill.getId())) {
+                if (agentSkillBindingRepository.existsByCompanyIdAndAgentIdAndSkillId(companyId, agentId, skill.getId())) {
                     continue;
                 }
                 agentSkillBindingRepository.save(new AgentSkillBindingEntity(
-                        orgId,
+                        companyId,
                         agentId,
                         skill.getId(),
                         binding.activationMode(),

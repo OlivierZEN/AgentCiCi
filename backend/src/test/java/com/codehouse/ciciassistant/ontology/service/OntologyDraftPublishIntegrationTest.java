@@ -66,7 +66,7 @@ class OntologyDraftPublishIntegrationTest {
 
     @Test
     void replacesDraftChildrenWhilePreservingImmutablePublishedVersions() {
-        TenantContext.setOrgId("org-task-213-service");
+        TenantContext.setCompanyId("org-task-213-service");
         TenantContext.setUserId("human-a");
         OntologyWorkspaceEntity workspace = persistence.saveForCurrentOrg(
                 new OntologyWorkspaceEntity(
@@ -84,9 +84,9 @@ class OntologyDraftPublishIntegrationTest {
                 OntologyCompilerServiceTest.projectDeliveryDocument());
 
         assertThat(savedDraft.getDraftRevision()).isEqualTo(1L);
-        assertThat(concepts.findByWorkspaceIdAndOrgIdOrderByIdAsc(
+        assertThat(concepts.findByWorkspaceIdAndCompanyIdOrderByIdAsc(
                 workspace.getId(), "org-task-213-service")).hasSize(2);
-        assertThat(mappings.findByWorkspaceIdAndOrgIdOrderByIdAsc(
+        assertThat(mappings.findByWorkspaceIdAndCompanyIdOrderByIdAsc(
                 workspace.getId(), "org-task-213-service")).hasSize(6);
 
         long publishRevision = discoverAndValidateMappings(
@@ -102,11 +102,11 @@ class OntologyDraftPublishIntegrationTest {
         assertThat(published.getSourceDraftRevision()).isEqualTo(publishRevision);
         assertThat(published.getContentHash()).hasSize(64);
         assertThat(published.getGraphqlSdl()).contains("type Project", "type Query");
-        assertThat(versions.findByWorkspaceIdAndOrgIdOrderByVersionNoDesc(
+        assertThat(versions.findByWorkspaceIdAndCompanyIdOrderByVersionNoDesc(
                 workspace.getId(), "org-task-213-service"))
                 .extracting(OntologyVersionEntity::getVersionNo)
                 .containsExactly(1);
-        assertThat(workspaces.findByIdAndOrgId(
+        assertThat(workspaces.findByIdAndCompanyId(
                 workspace.getId(), "org-task-213-service"))
                 .get()
                 .satisfies(stored -> {
@@ -124,7 +124,7 @@ class OntologyDraftPublishIntegrationTest {
                 OntologyCompilerServiceTest.projectDeliveryDocument());
         assertThat(revisedDraft.getDraftRevision()).isEqualTo(publishRevision + 1);
         assertThat(revisedDraft.getStatus()).isEqualTo("DRAFT");
-        assertThat(versions.findByWorkspaceIdAndOrgIdOrderByVersionNoDesc(
+        assertThat(versions.findByWorkspaceIdAndCompanyIdOrderByVersionNoDesc(
                 workspace.getId(), "org-task-213-service"))
                 .extracting(OntologyVersionEntity::getVersionNo)
                 .containsExactly(1);
@@ -138,11 +138,11 @@ class OntologyDraftPublishIntegrationTest {
 
         assertThat(secondVersion.getVersionNo()).isEqualTo(2);
         assertThat(secondVersion.getContentHash()).isNotEqualTo(firstHash);
-        assertThat(versions.findByWorkspaceIdAndOrgIdOrderByVersionNoDesc(
+        assertThat(versions.findByWorkspaceIdAndCompanyIdOrderByVersionNoDesc(
                 workspace.getId(), "org-task-213-service"))
                 .extracting(OntologyVersionEntity::getVersionNo)
                 .containsExactly(2, 1);
-        assertThat(versions.findByWorkspaceIdAndOrgIdAndVersionNo(
+        assertThat(versions.findByWorkspaceIdAndCompanyIdAndVersionNo(
                 workspace.getId(), "org-task-213-service", 1))
                 .get()
                 .satisfies(firstVersion -> {
@@ -153,21 +153,21 @@ class OntologyDraftPublishIntegrationTest {
 
     @Test
     void roundTripsRelationEndpointAndJoinMappingChangesAtomically() {
-        String orgId = "org-relation-roundtrip-" + UUID.randomUUID();
-        TenantContext.setOrgId(orgId);
+        String companyId = "org-relation-roundtrip-" + UUID.randomUUID();
+        TenantContext.setCompanyId(companyId);
         TenantContext.setUserId("human-a");
         OntologyWorkspaceEntity workspace = persistence.saveForCurrentOrg(
                 new OntologyWorkspaceEntity(
-                        orgId, "project-delivery", "项目交付", "原子关系变更", "human-a"));
+                        companyId, "project-delivery", "项目交付", "原子关系变更", "human-a"));
         OntologyWorkspaceEntity initial = drafts.saveDraft(
-                orgId,
+                companyId,
                 "human-a",
                 workspace.getId(),
                 0L,
                 OntologyCompilerServiceTest.projectDeliveryDocument());
-        OntologyDocument loaded = drafts.loadDraft(orgId, workspace.getId(), initial);
-        var originalMapping = mappings.findByWorkspaceIdAndOrgIdOrderByIdAsc(
-                        workspace.getId(), orgId).stream()
+        OntologyDocument loaded = drafts.loadDraft(companyId, workspace.getId(), initial);
+        var originalMapping = mappings.findByWorkspaceIdAndCompanyIdOrderByIdAsc(
+                        workspace.getId(), companyId).stream()
                 .filter(mapping -> "RELATION".equals(mapping.getTargetType()))
                 .filter(mapping -> "contains-task".equals(mapping.getTargetKey()))
                 .findFirst()
@@ -197,8 +197,8 @@ class OntologyDraftPublishIntegrationTest {
                 loaded.dataSources(), changedMappings);
 
         OntologyWorkspaceEntity revised = drafts.saveDraft(
-                orgId, "human-a", workspace.getId(), 1L, changed);
-        OntologyDocument roundTrip = drafts.loadDraft(orgId, workspace.getId(), revised);
+                companyId, "human-a", workspace.getId(), 1L, changed);
+        OntologyDocument roundTrip = drafts.loadDraft(companyId, workspace.getId(), revised);
 
         assertThat(revised.getDraftRevision()).isEqualTo(2L);
         assertThat(roundTrip.relations()).filteredOn(
@@ -218,8 +218,8 @@ class OntologyDraftPublishIntegrationTest {
                     assertThat(mapping.relationTargetFieldKey()).isEqualTo("id");
                     assertThat(mapping.validationStatus()).isEqualTo("PENDING");
                 });
-        var storedMapping = mappings.findByWorkspaceIdAndOrgIdOrderByIdAsc(
-                        workspace.getId(), orgId).stream()
+        var storedMapping = mappings.findByWorkspaceIdAndCompanyIdOrderByIdAsc(
+                        workspace.getId(), companyId).stream()
                 .filter(mapping -> "RELATION".equals(mapping.getTargetType()))
                 .filter(mapping -> "contains-task".equals(mapping.getTargetKey()))
                 .findFirst()
@@ -230,12 +230,12 @@ class OntologyDraftPublishIntegrationTest {
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void serializesConcurrentRevisionChecksSoOnlyOneDraftSaveWins() throws Exception {
-        String orgId = "org-concurrent-" + UUID.randomUUID();
-        TenantContext.setOrgId(orgId);
+        String companyId = "org-concurrent-" + UUID.randomUUID();
+        TenantContext.setCompanyId(companyId);
         TenantContext.setUserId("human-a");
         Long workspaceId = new TransactionTemplate(transactionManager).execute(status ->
                 persistence.saveForCurrentOrg(new OntologyWorkspaceEntity(
-                        orgId, "project-delivery", "交付", "并发修订", "human-a")).getId());
+                        companyId, "project-delivery", "交付", "并发修订", "human-a")).getId());
         TenantContext.clear();
 
         CountDownLatch ready = new CountDownLatch(2);
@@ -243,9 +243,9 @@ class OntologyDraftPublishIntegrationTest {
         ExecutorService executor = Executors.newFixedThreadPool(2);
         try {
             CompletableFuture<String> first = concurrentSave(
-                    executor, ready, start, orgId, workspaceId, "human-a");
+                    executor, ready, start, companyId, workspaceId, "human-a");
             CompletableFuture<String> second = concurrentSave(
-                    executor, ready, start, orgId, workspaceId, "human-b");
+                    executor, ready, start, companyId, workspaceId, "human-b");
             ready.await();
             start.countDown();
 
@@ -259,36 +259,36 @@ class OntologyDraftPublishIntegrationTest {
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void reusesPublishedVersionForRepeatedRevisionAndAdvancesForNewRevision() {
-        String orgId = "org-publish-repeat-" + UUID.randomUUID();
-        TenantContext.setOrgId(orgId);
+        String companyId = "org-publish-repeat-" + UUID.randomUUID();
+        TenantContext.setCompanyId(companyId);
         TenantContext.setUserId("human-a");
         Long workspaceId = new TransactionTemplate(transactionManager).execute(status ->
                 persistence.saveForCurrentOrg(new OntologyWorkspaceEntity(
-                        orgId, "project-delivery", "交付", "重复发布", "human-a")).getId());
+                        companyId, "project-delivery", "交付", "重复发布", "human-a")).getId());
         OntologyWorkspaceEntity savedDraft = drafts.saveDraft(
-                orgId,
+                companyId,
                 "human-a",
                 workspaceId,
                 0L,
                 OntologyCompilerServiceTest.projectDeliveryDocument());
         long publishRevision = discoverAndValidateMappings(
-                orgId, "human-a", workspaceId, savedDraft);
+                companyId, "human-a", workspaceId, savedDraft);
 
         OntologyVersionEntity first = publisher.publish(
-                orgId, "human-a", workspaceId, publishRevision);
+                companyId, "human-a", workspaceId, publishRevision);
         TenantContext.setUserId("human-b");
         OntologyVersionEntity repeated = publisher.publish(
-                orgId, "human-b", workspaceId, publishRevision);
+                companyId, "human-b", workspaceId, publishRevision);
 
         assertThat(repeated.getId()).isEqualTo(first.getId());
         assertThat(repeated.getVersionNo()).isEqualTo(1);
         assertThat(repeated.getSourceDraftRevision()).isEqualTo(publishRevision);
         assertThat(repeated.getContentHash()).isEqualTo(first.getContentHash());
         assertThat(repeated.getPublishedBy()).isEqualTo("human-a");
-        assertThat(versions.findByWorkspaceIdAndOrgIdOrderByVersionNoDesc(workspaceId, orgId))
+        assertThat(versions.findByWorkspaceIdAndCompanyIdOrderByVersionNoDesc(workspaceId, companyId))
                 .extracting(OntologyVersionEntity::getVersionNo)
                 .containsExactly(1);
-        assertThat(workspaces.findByIdAndOrgId(workspaceId, orgId))
+        assertThat(workspaces.findByIdAndCompanyId(workspaceId, companyId))
                 .get()
                 .satisfies(stored -> {
                     assertThat(stored.getPublishedVersion()).isEqualTo(1);
@@ -296,17 +296,17 @@ class OntologyDraftPublishIntegrationTest {
                 });
 
         OntologyWorkspaceEntity revisedDraft = drafts.saveDraft(
-                orgId,
+                companyId,
                 "human-b",
                 workspaceId,
                 publishRevision,
                 OntologyCompilerServiceTest.projectDeliveryDocument());
         OntologyVersionEntity next = publisher.publish(
-                orgId, "human-b", workspaceId, revisedDraft.getDraftRevision());
+                companyId, "human-b", workspaceId, revisedDraft.getDraftRevision());
 
         assertThat(next.getVersionNo()).isEqualTo(2);
         assertThat(next.getSourceDraftRevision()).isEqualTo(publishRevision + 1);
-        assertThat(versions.findByWorkspaceIdAndOrgIdOrderByVersionNoDesc(workspaceId, orgId))
+        assertThat(versions.findByWorkspaceIdAndCompanyIdOrderByVersionNoDesc(workspaceId, companyId))
                 .extracting(OntologyVersionEntity::getVersionNo)
                 .containsExactly(2, 1);
     }
@@ -314,20 +314,20 @@ class OntologyDraftPublishIntegrationTest {
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void serializesConcurrentPublishesSoSameRevisionCreatesOneVersion() throws Exception {
-        String orgId = "org-publish-concurrent-" + UUID.randomUUID();
-        TenantContext.setOrgId(orgId);
+        String companyId = "org-publish-concurrent-" + UUID.randomUUID();
+        TenantContext.setCompanyId(companyId);
         TenantContext.setUserId("human-a");
         Long workspaceId = new TransactionTemplate(transactionManager).execute(status ->
                 persistence.saveForCurrentOrg(new OntologyWorkspaceEntity(
-                        orgId, "project-delivery", "交付", "并发发布", "human-a")).getId());
+                        companyId, "project-delivery", "交付", "并发发布", "human-a")).getId());
         OntologyWorkspaceEntity savedDraft = drafts.saveDraft(
-                orgId,
+                companyId,
                 "human-a",
                 workspaceId,
                 0L,
                 OntologyCompilerServiceTest.projectDeliveryDocument());
         long publishRevision = discoverAndValidateMappings(
-                orgId, "human-a", workspaceId, savedDraft);
+                companyId, "human-a", workspaceId, savedDraft);
         TenantContext.clear();
 
         CountDownLatch ready = new CountDownLatch(2);
@@ -335,9 +335,9 @@ class OntologyDraftPublishIntegrationTest {
         ExecutorService executor = Executors.newFixedThreadPool(2);
         try {
             CompletableFuture<OntologyVersionEntity> first = concurrentPublish(
-                    executor, ready, start, orgId, workspaceId, publishRevision, "human-a");
+                    executor, ready, start, companyId, workspaceId, publishRevision, "human-a");
             CompletableFuture<OntologyVersionEntity> second = concurrentPublish(
-                    executor, ready, start, orgId, workspaceId, publishRevision, "human-b");
+                    executor, ready, start, companyId, workspaceId, publishRevision, "human-b");
             assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue();
             start.countDown();
 
@@ -348,16 +348,16 @@ class OntologyDraftPublishIntegrationTest {
                     .extracting(OntologyVersionEntity::getVersionNo)
                     .containsOnly(1);
 
-            TenantContext.setOrgId(orgId);
+            TenantContext.setCompanyId(companyId);
             TenantContext.setUserId("human-a");
-            assertThat(versions.findByWorkspaceIdAndOrgIdOrderByVersionNoDesc(workspaceId, orgId))
+            assertThat(versions.findByWorkspaceIdAndCompanyIdOrderByVersionNoDesc(workspaceId, companyId))
                     .singleElement()
                     .satisfies(version -> {
                         assertThat(version.getVersionNo()).isEqualTo(1);
                         assertThat(version.getSourceDraftRevision()).isEqualTo(publishRevision);
                         assertThat(version.getContentHash()).isEqualTo(firstResult.getContentHash());
                     });
-            assertThat(workspaces.findByIdAndOrgId(workspaceId, orgId))
+            assertThat(workspaces.findByIdAndCompanyId(workspaceId, companyId))
                     .get()
                     .extracting(OntologyWorkspaceEntity::getPublishedVersion)
                     .isEqualTo(1);
@@ -370,17 +370,17 @@ class OntologyDraftPublishIntegrationTest {
             ExecutorService executor,
             CountDownLatch ready,
             CountDownLatch start,
-            String orgId,
+            String companyId,
             Long workspaceId,
             String userId) {
         return CompletableFuture.supplyAsync(() -> {
-            TenantContext.setOrgId(orgId);
+            TenantContext.setCompanyId(companyId);
             TenantContext.setUserId(userId);
             ready.countDown();
             try {
                 start.await();
                 drafts.saveDraft(
-                        orgId,
+                        companyId,
                         userId,
                         workspaceId,
                         0L,
@@ -401,12 +401,12 @@ class OntologyDraftPublishIntegrationTest {
             ExecutorService executor,
             CountDownLatch ready,
             CountDownLatch start,
-            String orgId,
+            String companyId,
             Long workspaceId,
             long expectedRevision,
             String userId) {
         return CompletableFuture.supplyAsync(() -> {
-            TenantContext.setOrgId(orgId);
+            TenantContext.setCompanyId(companyId);
             TenantContext.setUserId(userId);
             ready.countDown();
             try {
@@ -414,7 +414,7 @@ class OntologyDraftPublishIntegrationTest {
                     throw new IllegalStateException("Concurrent publish start timed out");
                 }
                 return publisher.publish(
-                        orgId, userId, workspaceId, expectedRevision);
+                        companyId, userId, workspaceId, expectedRevision);
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
                 throw new IllegalStateException(exception);
@@ -425,21 +425,21 @@ class OntologyDraftPublishIntegrationTest {
     }
 
     private long discoverAndValidateMappings(
-            String orgId,
+            String companyId,
             String userId,
             Long workspaceId,
             OntologyWorkspaceEntity workspace) {
-        Long sourceId = drafts.loadDraft(orgId, workspaceId, workspace)
+        Long sourceId = drafts.loadDraft(companyId, workspaceId, workspace)
                 .dataSources().getFirst().id();
         long revision = catalog.discoverObjects(
-                orgId, userId, workspaceId, sourceId, workspace.getDraftRevision()).revision();
+                companyId, userId, workspaceId, sourceId, workspace.getDraftRevision()).revision();
         revision = catalog.discoverFields(
-                orgId, userId, workspaceId, sourceId, "projects", revision).revision();
+                companyId, userId, workspaceId, sourceId, "projects", revision).revision();
         revision = catalog.discoverFields(
-                orgId, userId, workspaceId, sourceId, "tasks", revision).revision();
-        for (var mapping : mappings.findByWorkspaceIdAndOrgIdOrderByIdAsc(workspaceId, orgId)) {
+                companyId, userId, workspaceId, sourceId, "tasks", revision).revision();
+        for (var mapping : mappings.findByWorkspaceIdAndCompanyIdOrderByIdAsc(workspaceId, companyId)) {
             revision = catalog.validateMapping(
-                    orgId,
+                    companyId,
                     userId,
                     workspaceId,
                     revision,

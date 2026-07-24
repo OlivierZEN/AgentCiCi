@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AgentEvalIssueRepository extends JpaRepository<AgentEvalIssueEntity, Long> {
 
-    List<AgentEvalIssueEntity> findByOrgIdOrderByUpdatedAtDesc(String orgId);
+    List<AgentEvalIssueEntity> findByCompanyIdOrderByUpdatedAtDesc(String companyId);
 
-    long countByOrgIdAndStatus(String orgId, String status);
+    long countByCompanyIdAndStatus(String companyId, String status);
 }

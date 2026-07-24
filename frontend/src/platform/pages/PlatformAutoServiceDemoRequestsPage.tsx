@@ -139,8 +139,8 @@ export default function PlatformAutoServiceDemoRequestsPage() {
     <div className="admin-page skills-catalog platform-page autoservice-demo-admin">
       <header className="skills-catalog__header platform-page-head autoservice-demo-admin__header">
         <div className="platform-page-head__main">
-          <h1 className="skills-catalog__title">网站注册与预约演示</h1>
-          <p className="subtle skills-catalog__subtitle">统一跟进官网提交的注册线索与预约演示请求。</p>
+          <h1 className="skills-catalog__title">演示线索</h1>
+          <p className="subtle skills-catalog__subtitle">统一跟进官网提交的预约演示请求。</p>
         </div>
         <div className="platform-page-head__aside">
           <span className="platform-inline-stat">当前 {counts.all}</span>
@@ -151,7 +151,7 @@ export default function PlatformAutoServiceDemoRequestsPage() {
         </div>
       </header>
 
-      <section className="autoservice-demo-admin__summary" aria-label="预约概览">
+      <section className="autoservice-demo-admin__summary" aria-label="演示线索概览">
         <div>
           <span>当前列表</span>
           <strong>{counts.all}</strong>
@@ -166,8 +166,8 @@ export default function PlatformAutoServiceDemoRequestsPage() {
         </div>
       </section>
 
-      <section className="autoservice-demo-admin__toolbar" aria-label="预约筛选">
-        <nav className="autoservice-demo-admin__tabs" aria-label="预约状态">
+      <section className="autoservice-demo-admin__toolbar" aria-label="演示线索筛选">
+        <nav className="autoservice-demo-admin__tabs" aria-label="演示线索状态">
           {statusOptions.map(([value, label]) => (
             <button
               key={value}
@@ -196,7 +196,7 @@ export default function PlatformAutoServiceDemoRequestsPage() {
 
       {notice && <p className="notice">{notice}</p>}
 
-      <section className="autoservice-demo-admin__table-wrap" aria-label="预约演示用户列表">
+      <section className="autoservice-demo-admin__table-wrap" aria-label="演示线索列表">
         <table className="autoservice-demo-admin__table">
           <colgroup>
             <col className="autoservice-demo-admin__col-main" />

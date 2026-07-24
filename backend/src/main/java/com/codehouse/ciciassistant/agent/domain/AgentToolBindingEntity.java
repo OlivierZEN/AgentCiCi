@@ -16,8 +16,8 @@ public class AgentToolBindingEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "agent_id", nullable = false, length = 64)
     private String agentId;
@@ -37,8 +37,8 @@ public class AgentToolBindingEntity {
     protected AgentToolBindingEntity() {
     }
 
-    public AgentToolBindingEntity(String orgId, String agentId, String toolId, Integer priority, boolean enabled) {
-        this.orgId = orgId;
+    public AgentToolBindingEntity(String companyId, String agentId, String toolId, Integer priority, boolean enabled) {
+        this.companyId = companyId;
         this.agentId = agentId;
         this.toolId = toolId;
         this.priority = priority;

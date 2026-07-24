@@ -7,16 +7,16 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface SecurityDetectionEventRepository extends JpaRepository<SecurityDetectionEventEntity, Long> {
 
-    List<SecurityDetectionEventEntity> findByOrgIdOrderByCreatedAtDescIdDesc(String orgId, Pageable pageable);
+    List<SecurityDetectionEventEntity> findByCompanyIdOrderByCreatedAtDescIdDesc(String companyId, Pageable pageable);
 
-    List<SecurityDetectionEventEntity> findByOrgIdAndReviewedOrderByCreatedAtDescIdDesc(
-            String orgId, boolean reviewed, Pageable pageable);
+    List<SecurityDetectionEventEntity> findByCompanyIdAndReviewedOrderByCreatedAtDescIdDesc(
+            String companyId, boolean reviewed, Pageable pageable);
 
-    long countByOrgId(String orgId);
+    long countByCompanyId(String companyId);
 
-    long countByOrgIdAndAction(String orgId, String action);
+    long countByCompanyIdAndAction(String companyId, String action);
 
-    long countByOrgIdAndReviewedFalse(String orgId);
+    long countByCompanyIdAndReviewedFalse(String companyId);
 
-    Optional<SecurityDetectionEventEntity> findByIdAndOrgId(Long id, String orgId);
+    Optional<SecurityDetectionEventEntity> findByIdAndCompanyId(Long id, String companyId);
 }

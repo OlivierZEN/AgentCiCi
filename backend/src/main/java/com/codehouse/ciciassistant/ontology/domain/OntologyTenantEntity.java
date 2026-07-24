@@ -4,5 +4,5 @@ public interface OntologyTenantEntity {
 
     Long getId();
 
-    String getOrgId();
+    String getCompanyId();
 }

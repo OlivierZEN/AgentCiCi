@@ -5,5 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface KbSourceDocumentMapRepository extends JpaRepository<KbSourceDocumentMapEntity, Long> {
 
-    Optional<KbSourceDocumentMapEntity> findByOrgIdAndDataSourceIdAndExternalDocumentId(String orgId, Long dataSourceId, String externalDocumentId);
+    Optional<KbSourceDocumentMapEntity> findByCompanyIdAndDataSourceIdAndExternalDocumentId(String companyId, Long dataSourceId, String externalDocumentId);
 }

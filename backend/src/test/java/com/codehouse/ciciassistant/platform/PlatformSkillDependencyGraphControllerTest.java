@@ -37,7 +37,7 @@ class PlatformSkillDependencyGraphControllerTest {
 
     @BeforeEach
     void setUp() {
-        when(platformAccountProperties.getGovernanceOrgId()).thenReturn(GOVERNANCE_ORG_ID);
+        when(platformAccountProperties.getGovernanceCompanyId()).thenReturn(GOVERNANCE_ORG_ID);
         controller = new PlatformController(
                 platformGovernanceService,
                 platformAuditService,

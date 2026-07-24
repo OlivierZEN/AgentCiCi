@@ -7,5 +7,5 @@ public interface SematticeProvisioningBindingRepository extends JpaRepository<Se
 
     Optional<SematticeProvisioningBindingEntity> findByIdempotencyKey(String idempotencyKey);
 
-    Optional<SematticeProvisioningBindingEntity> findByOrgId(String orgId);
+    Optional<SematticeProvisioningBindingEntity> findByCompanyId(String companyId);
 }

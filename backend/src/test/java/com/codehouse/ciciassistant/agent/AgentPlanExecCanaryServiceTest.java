@@ -42,7 +42,7 @@ class AgentPlanExecCanaryServiceTest {
     void shouldCreateAndAdvanceFixedReadOnlyPlanForExactAllowlistedAgent() {
         AgentRuntimePlanExecProperties properties = new AgentRuntimePlanExecProperties();
         properties.setEnabled(true);
-        properties.setAllowedOrgIds(List.of("org-a"));
+        properties.setAllowedCompanyIds(List.of("org-a"));
         properties.setAllowedAgentIds(List.of("agent-canary"));
         AgentTaskRuntimeService runtime = org.mockito.Mockito.mock(AgentTaskRuntimeService.class);
         AgentPlanExecCanaryService service = new AgentPlanExecCanaryService(properties, runtime, new ObjectMapper());
@@ -78,7 +78,7 @@ class AgentPlanExecCanaryServiceTest {
     void shouldNotSelectPrefixOrWildcardLikeAgentIds() {
         AgentRuntimePlanExecProperties properties = new AgentRuntimePlanExecProperties();
         properties.setEnabled(true);
-        properties.setAllowedOrgIds(List.of("org-a"));
+        properties.setAllowedCompanyIds(List.of("org-a"));
         properties.setAllowedAgentIds(List.of("agent-canary"));
         AgentTaskRuntimeService runtime = org.mockito.Mockito.mock(AgentTaskRuntimeService.class);
         AgentPlanExecCanaryService service = new AgentPlanExecCanaryService(properties, runtime, new ObjectMapper());
@@ -91,10 +91,10 @@ class AgentPlanExecCanaryServiceTest {
     }
 
     @Test
-    void shouldNotCreateRuntimeForAllowlistedAgentOutsideAllowlistedOrganization() {
+    void shouldNotCreateRuntimeForAllowlistedAgentOutsideAllowlistedCompany() {
         AgentRuntimePlanExecProperties properties = new AgentRuntimePlanExecProperties();
         properties.setEnabled(true);
-        properties.setAllowedOrgIds(List.of("org-a"));
+        properties.setAllowedCompanyIds(List.of("org-a"));
         properties.setAllowedAgentIds(List.of("agent-canary"));
         AgentTaskRuntimeService runtime = org.mockito.Mockito.mock(AgentTaskRuntimeService.class);
         AgentPlanExecCanaryService service = new AgentPlanExecCanaryService(properties, runtime, new ObjectMapper());
