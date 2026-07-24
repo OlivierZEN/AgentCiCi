@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-24T13:31:00Z
+updated_at: 2026-07-24T13:37:58Z
 updated_by: MANAGER-001
-phase: multi-track-production-and-review
-active_task: TASK-245
-next_action: "等待受权平台账号复核 TASK-246 的真实租户详情页；TASK-245 保持 review。"
+phase: platform-user-directory-implementation
+active_task: TASK-247
+next_action: "实现并验证平台全量个人用户目录；不发布生产。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-247 / FEAT-140：用户要求运营端“注册用户”展示平台全部个人账户，包括已加入组织者；一个账户属于多个组织时只显示一条。已确认当前账户查询以 `not exists company_member` 排除了组织成员。将改为以 `user_account` 为唯一查询源，保持平台鉴权、搜索、分页和响应形状，不展示组织明细且不发布生产。
 
 - TASK-246 / FEAT-139：已合并 `main`（`6cee975`）并发布 `2.8.14`。租户 API 边界会把迁移期 `orgId` 归一为 `companyId`，并在生成/请求详情路由前拒绝无效标识，避免 `/platform/tenants/undefined` 触发 `Validation failure`。合并后 21 项前端定向测试、构建、Compose 配置和 diff 检查通过；发布前四项备份均非空，backend/frontend 健康，版本接口为 `2.8.14 / 6cee975539e4`，Nginx 与公网 `agentcici.com`、`/platform/tenants`、`x` 均通过。未使用平台账号，真实受保护页面交互待受权复核。
 
