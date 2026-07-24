@@ -24,4 +24,4 @@ spec_path: docs/specs/FEAT-135-company-id-unification.md
 
 ## Next action
 
-完成最终回归：fresh PostgreSQL V1→V94、认证旧 JWT fail-closed、平台生命周期与 Semattice 受控开户；随后提交 AgentCiCi 变更并同步 Semattice 契约文档。
+安排生产维护窗口：备份数据库，停止旧 backend 写入，发布含 V94 的新 backend，完成迁移后启动新 backend/frontend，并用新 `company_id` 执行 AgentCiCi→Semattice 受控开户 smoke。旧二进制不得连接迁移后的数据库。

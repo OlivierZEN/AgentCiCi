@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-23T08:00:00Z
+updated_at: 2026-07-24T05:40:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -23,7 +23,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - spec_path: `docs/specs/FEAT-135-company-id-unification.md`
 - task_status_path: `.claw/tasks/TASK-242.md`
 - assignment_path: `.claw/assignments/TASK-242.yaml`
-- next_action: 完成 V94 无损 schema 重命名、全栈契约切换与跨产品验收。
+- next_action: 已合并 AgentCiCi PR #17 与 Semattice 契约 PR #3；等待维护窗口执行 V94 生产发布与受控开户 smoke。
 
 ### TASK-241 - AgentCiCi / Semattice 受控开户绑定
 
