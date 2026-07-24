@@ -163,6 +163,7 @@ public class TenantContextFilter extends OncePerRequestFilter {
                 || "/auth/oidc/login".equals(path)
                 || "/auth/oidc/callback".equals(path)
                 || "/auth/oidc/complete".equals(path)
+                || "/.well-known/agentcici-oact-jwks.json".equals(path)
                 || "/auth/register".equals(path)
                 || "/auth/cloudcc-sso/ticket".equals(path)
                 || "/auth/cloudcc-sso/consume".equals(path)
