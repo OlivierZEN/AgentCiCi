@@ -4,8 +4,8 @@ version: 4
 updated_at: 2026-07-24T14:28:53Z
 updated_by: MANAGER-001
 phase: production-and-review
-active_task: TASK-248
-next_action: "完成 TASK-248：保持账户一行，批量补充当前有效组织并在平台注册用户目录显示；不合并或发布。"
+active_task: TASK-249
+next_action: "修复组织简档 API 被 SPA HTML 回退吞掉的问题；未获授权不发布生产。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-249 / FEAT-142：用户报告组织管理端“组织简档”加载失败。已定位为生产 Nginx 和本地 Vite 仍代理旧 `/admin/organization/...`，而当前 `GET /admin/company/profile` 落入 SPA `index.html`：生产匿名请求返回 `200 text/html`，不是后端鉴权 JSON。当前生产 V96 的组织简档统计相关表和 `company_id` 字段已只读核实存在；本任务仅补齐精确 API 代理，不改后端、数据、权限、UI 或生产环境。
 
 - TASK-248 / FEAT-141：已获授权在平台全量注册用户目录中显示每个账户当前已加入的组织。账户分页继续以 `user_account` 为唯一行源，服务层仅批量读取当前有效 `company_member` 后按组织去重，接口新增只读 `organizations`，前端新增“已加入组织”列。任务只允许实现、验证并推送功能分支；未获合并主线或生产发布授权。
 

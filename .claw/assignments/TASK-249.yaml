@@ -1,0 +1,50 @@
+task_id: TASK-249
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-24T14:31:37Z
+expires_at: none
+spec_path: docs/specs/FEAT-142-admin-company-profile-proxy-route.md
+task_status_path: .claw/tasks/TASK-249.md
+branch: codex/TASK-249-admin-company-profile-proxy
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - deploy/nginx.cici.conf
+  - deploy/nginx.cici.ssl.conf
+  - frontend/vite.config.ts
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/developers/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+scope_files:
+  - deploy/nginx.cici.conf
+  - deploy/nginx.cici.ssl.conf
+  - frontend/vite.config.ts
+  - docs/specs/FEAT-142-admin-company-profile-proxy-route.md
+  - .claw/tasks/TASK-249.md
+  - .claw/assignments/TASK-249.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+touch_policy: exclusive
+shared_contracts:
+  - GET/PATCH /admin/company/profile
+  - AdminCompanyProfileController @RequireOrgAdmin authorization
+  - SPA /admin/company route and Nginx proxy precedence
+task_boundary:
+  - "将 /admin/company/profile 正确代理到后端，修复组织简档加载 HTML 而非 JSON 的问题。"
+  - "同步生产 Nginx 与本地 Vite，保留既有 organization 兼容代理。"
+  - "不修改后端、数据库、权限、UI、移动端或生产环境。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
+signature: "MANAGER-001; user reported the organization profile load failure on 2026-07-24."
