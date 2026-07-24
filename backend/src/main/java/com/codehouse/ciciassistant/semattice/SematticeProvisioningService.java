@@ -106,6 +106,17 @@ public class SematticeProvisioningService {
         return view(saved);
     }
 
+    @Transactional(readOnly = true)
+    public BindingView getProvisioningStatus(String companyId) {
+        String normalizedCompanyId = required(companyId, "company_id");
+        if (!COMPANY_ID_PATTERN.matcher(normalizedCompanyId).matches()) {
+            throw invalid();
+        }
+        return bindingRepository.findByCompanyId(normalizedCompanyId)
+                .map(this::view)
+                .orElse(new BindingView(null, normalizedCompanyId, "NOT_PROVISIONED", null, null, null));
+    }
+
     private BindingView view(SematticeProvisioningBindingEntity binding) {
         return new BindingView(binding.getReservationId(), binding.getCompanyId(), binding.getState(),
                 binding.getSematticeTenantId(), binding.getSematticeOperationId(), binding.getFailureCode());

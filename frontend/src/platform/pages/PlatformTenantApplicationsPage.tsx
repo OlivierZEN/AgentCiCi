@@ -3,7 +3,13 @@ import { Bot, Boxes, CheckCircle2, CircleDashed, Database, ShieldCheck } from "l
 import { useNavigate, useParams } from "react-router-dom";
 import { PLATFORM_API_BASE } from "../../constants";
 import { safeFetchJson } from "../../utils/http";
-import { TenantDetail, fetchTenantDetail, readPlatformToken, statusLabel } from "./platformTenantsShared";
+import {
+  TenantDetail,
+  fetchSematticeProvisioning,
+  fetchTenantDetail,
+  readPlatformToken,
+  statusLabel,
+} from "./platformTenantsShared";
 
 type SematticeProvisioningState = "NOT_PROVISIONED" | "PROVISIONING" | "PROVISIONED" | "FAILED";
 
@@ -32,8 +38,11 @@ export default function PlatformTenantApplicationsPage() {
 
   useEffect(() => {
     if (!token || !companyId) return;
-    void fetchTenantDetail(token, companyId)
-      .then(setDetail)
+    void Promise.all([fetchTenantDetail(token, companyId), fetchSematticeProvisioning(token, companyId)])
+      .then(([tenantDetail, provisioning]) => {
+        setDetail(tenantDetail);
+        setSematticeProvisioningState(provisioning.state === "RESERVED" ? "PROVISIONING" : provisioning.state);
+      })
       .catch((err) => setError(err instanceof Error ? err.message : "加载租户应用失败"));
   }, [token, companyId]);
 

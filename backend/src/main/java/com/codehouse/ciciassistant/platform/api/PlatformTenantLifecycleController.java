@@ -5,6 +5,7 @@ import com.codehouse.ciciassistant.auth.RoleCodes;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.codehouse.ciciassistant.platform.service.PlatformTenantLifecycleService;
 import com.codehouse.ciciassistant.semattice.SematticeProvisioningClient;
+import com.codehouse.ciciassistant.semattice.SematticeProvisioningService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import jakarta.validation.Valid;
@@ -30,11 +31,14 @@ public class PlatformTenantLifecycleController {
 
     private final PlatformTenantLifecycleService tenantLifecycleService;
     private final SematticeProvisioningClient sematticeProvisioningClient;
+    private final SematticeProvisioningService sematticeProvisioningService;
 
     public PlatformTenantLifecycleController(PlatformTenantLifecycleService tenantLifecycleService,
-                                             SematticeProvisioningClient sematticeProvisioningClient) {
+                                             SematticeProvisioningClient sematticeProvisioningClient,
+                                             SematticeProvisioningService sematticeProvisioningService) {
         this.tenantLifecycleService = tenantLifecycleService;
         this.sematticeProvisioningClient = sematticeProvisioningClient;
+        this.sematticeProvisioningService = sematticeProvisioningService;
     }
 
     @GetMapping
@@ -66,6 +70,12 @@ public class PlatformTenantLifecycleController {
             @Valid @RequestBody SematticeProvisioningRequest request) {
         return ApiResponse.ok(sematticeProvisioningClient.provision(companyId, request.idempotencyKey(), request.displayName(),
                 request.serviceTier(), request.entitlements()));
+    }
+
+    @GetMapping("/{companyId}/semattice-provisionings")
+    public ApiResponse<SematticeProvisioningService.BindingView> getSematticeProvisioningStatus(
+            @PathVariable @Pattern(regexp = "^org[a-z0-9]{17}$") String companyId) {
+        return ApiResponse.ok(sematticeProvisioningService.getProvisioningStatus(companyId));
     }
 
     @GetMapping("/{companyId}/retention")

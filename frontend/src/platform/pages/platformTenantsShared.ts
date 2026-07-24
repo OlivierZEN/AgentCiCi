@@ -95,6 +95,15 @@ export type TenantDetail = {
   exportJobs: ExportJob[];
 };
 
+export type SematticeProvisioning = {
+  reservationId?: string | null;
+  companyId: string;
+  state: "NOT_PROVISIONED" | "RESERVED" | "PROVISIONED" | "FAILED";
+  sematticeTenantId?: string | null;
+  sematticeOperationId?: string | null;
+  failureCode?: string | null;
+};
+
 export type TenantProvisionPayload = {
   tenantName: string;
   ownerMobile: string;
@@ -186,6 +195,15 @@ export async function fetchTenantList(token: string): Promise<Tenant[]> {
 export async function fetchTenantDetail(token: string, companyId: string): Promise<TenantDetail> {
   const response = await authFetch(LS_PLATFORM_TOKEN, `${PLATFORM_API_BASE}/tenants/${encodeURIComponent(companyId)}/retention`);
   const { body } = await safeFetchJson<TenantDetail>(response);
+  if (!response.ok || !body?.success || !body.data) {
+    throw new Error(body?.message ?? `HTTP ${response.status}`);
+  }
+  return body.data;
+}
+
+export async function fetchSematticeProvisioning(token: string, companyId: string): Promise<SematticeProvisioning> {
+  const response = await authFetch(LS_PLATFORM_TOKEN, `${PLATFORM_API_BASE}/tenants/${encodeURIComponent(companyId)}/semattice-provisionings`);
+  const { body } = await safeFetchJson<SematticeProvisioning>(response);
   if (!response.ok || !body?.success || !body.data) {
     throw new Error(body?.message ?? `HTTP ${response.status}`);
   }

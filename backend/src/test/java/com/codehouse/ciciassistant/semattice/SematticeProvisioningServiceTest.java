@@ -60,6 +60,24 @@ class SematticeProvisioningServiceTest {
         assertStatus(HttpStatus.CONFLICT, () -> service.reserve(COMPANY_ID, "request-3"));
     }
 
+    @Test
+    void returnsPersistedProvisioningStatusOrExplicitNotProvisionedState() {
+        CompanyRepository orgs = mock(CompanyRepository.class);
+        SematticeProvisioningBindingRepository bindings = mock(SematticeProvisioningBindingRepository.class);
+        SematticeProvisioningService service = new SematticeProvisioningService(orgs, bindings, mock(PlatformAuditService.class));
+        when(bindings.findByCompanyId(COMPANY_ID)).thenReturn(Optional.empty());
+
+        assertEquals("NOT_PROVISIONED", service.getProvisioningStatus(COMPANY_ID).state());
+
+        SematticeProvisioningBindingEntity binding = new SematticeProvisioningBindingEntity("reservation-1", COMPANY_ID, "request-1");
+        binding.complete("tenant-1", "operation-1", true, null);
+        when(bindings.findByCompanyId(COMPANY_ID)).thenReturn(Optional.of(binding));
+
+        SematticeProvisioningService.BindingView status = service.getProvisioningStatus(COMPANY_ID);
+        assertEquals("PROVISIONED", status.state());
+        assertEquals("tenant-1", status.sematticeTenantId());
+    }
+
     private void assertStatus(HttpStatus status, Runnable action) {
         ResponseStatusException exception = assertThrows(ResponseStatusException.class, action::run);
         assertEquals(status, exception.getStatusCode());

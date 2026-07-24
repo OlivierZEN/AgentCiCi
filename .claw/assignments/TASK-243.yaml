@@ -13,11 +13,13 @@ allowed_write_roots:
   - backend/src/main/java/com/codehouse/ciciassistant/auth/**
   - backend/src/main/java/com/codehouse/ciciassistant/tenant/**
   - backend/src/main/java/com/codehouse/ciciassistant/semattice/**
+  - backend/src/main/java/com/codehouse/ciciassistant/platform/api/PlatformTenantLifecycleController.java
   - backend/src/main/resources/db/migration/**
   - backend/src/main/resources/application.yml
   - backend/src/test/java/com/codehouse/ciciassistant/auth/**
   - backend/src/test/java/com/codehouse/ciciassistant/tenant/**
   - backend/src/test/java/com/codehouse/ciciassistant/semattice/**
+  - frontend/src/platform/**
   - deploy/**
   - docs/specs/**
   - docs/production-release-runbook.md
