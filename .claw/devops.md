@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-23T11:56:00Z
+updated_at: 2026-07-24T06:12:00Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -21,6 +21,13 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.8.9 TASK-242 company_id identity unification on 2026-07-24:
+  - Git/发布：主线提交 `0194706ffc7b`；新不可变 tag `2.8.9` 已推送。`2.8.7` 因 V60 遗留 `ORG` principal 的 CHECK 顺序失败，V94 事务已完整回滚；`2.8.8` 已成功写入 V94 但暴露旧 profile 的 `organization_size` 字段遗漏。二者均未成为健康交付版本。
+  - 修复/验证：V94 先替换 `ck_agent_access_principal_type` 再把遗留 `ORG` 改为 `COMPANY`；V95 将 `company_profile.organization_size` 重命名为 `company_size`。全新 PostgreSQL 的 V1→V93→插入遗留授权→V95 测试、以及完整应用启动/Hibernate schema validation/health 均通过。
+  - 镜像：backend/frontend index digest 分别为 `sha256:690eded9507a91c7e7e596266320c51af6e5f8a822d3f8c2c7ca1a733b1d1995` 与 `sha256:e4a83f72ea699668c8f874a1c966793ab62f412f76d5909e79e8ded0feb89e9d`。
+  - 备份/部署：复用发布前备份 `/opt/cici/backups/20260724-134723-before-2.8.7-company-id`（env、PostgreSQL、KB、Qdrant 均非空）；只 pull/force-recreate backend/frontend，database、Redis、RabbitMQ、Qdrant 未重启。
+  - 运行/公网：生产库 V94 后成功应用 V95；六服务 healthy，health `UP`，版本 `2.8.9 / 0194706ffc7b`。x HTTP 301/HTTPS 200、生产 IP/SNI onechat HTTPS 200、匿名 `/auth/me` 401；90 秒窗口 backend error 0。
 
 - 2.8.5 FEAT-131 通用外部应用智能体记忆平台 on 2026-07-23:
   - Git/发布：主线提交 `02d380d10508beaf67c96993b9df55978d72072f`；`scripts/release-acr.sh --dry-run` 和 `--version 2.8.5` 成功，annotated tag `2.8.5` 已推送。

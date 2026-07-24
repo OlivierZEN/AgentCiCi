@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-24T02:05:00Z
+updated_at: 2026-07-24T06:12:00Z
 updated_by: MANAGER-001
 phase: agent-runtime-mixed-orchestration-p6-implementation
 active_task: TASK-242
-next_action: "为已合并的 AgentCiCi V94 company_id 统一安排维护窗口；备份、停止旧 backend 写入、迁移和新制品启动后完成 AgentCiCi→Semattice smoke。"
+next_action: "观察生产 2.8.9 的 company_id 统一运行态；后续受控开户可由已授权运营账号发起。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-242 / FEAT-135：用户已确认以 `company_id` 统一 AgentCiCi 与 Semattice 的顶层企业身份，`organization_id` 只为未来公司内部组织架构保留。实现使用 V94 正向迁移将当前 131 个顶层 `org_id` 列和根表/生命周期表物理改名为 `company_id`/`company*`，不重写既有 `org...` ID 值；旧 JSON、旧 Header 与旧 JWT claim 不保留兼容，必须 fail closed。AgentCiCi PR #17（`8e5f505`）和 Semattice 契约 PR #3（`1787b9e`）均已合并 main；fresh PostgreSQL V1→V94、认证旧 JWT 拒绝、生命周期与受控开户回归、后端打包和前端构建通过。此变更要求维护窗口，旧二进制不能连接 V94 schema；尚未为本项发布生产。
+- TASK-242 / FEAT-135：顶层企业身份已在生产统一为 `company_id`。AgentCiCi `2.8.9 / 0194706` 已健康发布，Flyway V94/V95 成功：V94 将顶层 `org_id` / 根表 / 生命周期表物理改为 `company_id` / `company*`，V95 补齐既有 profile 的 `organization_size → company_size`；既有 `org...` 值不重写，旧 JSON、Header 与 JWT claim 均 fail closed。V60 遗留 `ORG` 授权记录已先替换约束再转为 `COMPANY`。备份位于 `/opt/cici/backups/20260724-134723-before-2.8.7-company-id`；六服务健康，外部 HTTPS 与匿名鉴权边界 smoke 通过。AgentCiCi PR #17/#19 和 Semattice 契约 PR #3 均已合并 main。
 
 - TASK-241 / FEAT-134：AgentCiCi 已发布内测 `2.8.5-beta.3 / bef088d5769c`，V93 正向迁移、双向密钥注入、未签名 HMAC 403 与健康检查均通过。Semattice 的实现与 Go 全量/race/vet/build 已通过，但其 ECS 仍是 migration 1–12；试验性新制品在真实 reservation 后因缺少 migration 13 返回 500，已立刻原子回滚到上一健康 release。继续发布必须使用专用 migrator 显式执行 migration 13，不能复用运行时 control/runtime 凭据或改写历史。
 

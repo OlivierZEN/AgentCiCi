@@ -1,14 +1,20 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-24T02:35:00Z
+updated_at: 2026-07-24T06:12:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-24T02:35:00Z
+last_run_at: 2026-07-24T06:12:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## Production Release 2.8.9 - TASK-242 / FEAT-135
+
+- `migration`：新建后删除的 PostgreSQL 16 临时库先迁移 V1→V93，插入真实形状的 `agent_access_grant(principal_type='ORG')`，再迁移 V94/V95；断言 principal 为 `COMPANY`、`company_profile.company_size` 存在且无旧字段。
+- `application-startup`：同一类全新 V1→V95 数据库以完整 AgentCiCi 应用启动，Hibernate schema validation 通过，`/actuator/health` 返回 `UP`。
+- `production`：`2.8.9 / 0194706ffc7b` 后端和前端均运行健康；日志确认 V95 成功，版本与 health 正确。x HTTP 301、x HTTPS 200、生产 IP/SNI onechat HTTPS 200，匿名 `/auth/me` 401；90 秒 backend `ERROR|Exception|Application run failed` 为 0。
 
 ## TASK-242 - 顶层租户 `company_id` 统一
 

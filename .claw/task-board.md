@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-24T05:40:00Z
+updated_at: 2026-07-24T06:12:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,16 +14,6 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
-
-### TASK-242 - 顶层租户 company_id 统一
-
-- status: `in_progress`
-- priority: `critical`
-- owner_role: `integration-agent`
-- spec_path: `docs/specs/FEAT-135-company-id-unification.md`
-- task_status_path: `.claw/tasks/TASK-242.md`
-- assignment_path: `.claw/assignments/TASK-242.yaml`
-- next_action: 已合并 AgentCiCi PR #17 与 Semattice 契约 PR #3；等待维护窗口执行 V94 生产发布与受控开户 smoke。
 
 ### TASK-241 - AgentCiCi / Semattice 受控开户绑定
 
@@ -1150,6 +1140,16 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-242 - 顶层租户 company_id 统一
+
+- status: `done`
+- priority: `critical`
+- owner_role: `integration-agent`
+- spec_path: `docs/specs/FEAT-135-company-id-unification.md`
+- task_status_path: `.claw/tasks/TASK-242.md`
+- assignment_path: `.claw/assignments/TASK-242.yaml`
+- next_action: 已发布生产 `2.8.9 / 0194706`，V94/V95 成功且六服务健康；后续受控开户由运营账号按 company_id 契约验收。
 
 ### TASK-234 - 发布修订版本号上限调整为365
 
