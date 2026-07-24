@@ -10,6 +10,7 @@ import com.codehouse.ciciassistant.tenant.TenantContext;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -63,7 +64,13 @@ public class AuthController {
     }
 
     @GetMapping("/oidc/login")
-    public ResponseEntity<Void> startOidcLogin(@RequestParam(name = "return_to", required = false) String returnTo) {
+    public ResponseEntity<Void> startOidcLogin(@RequestParam(name = "return_to", required = false) String returnTo,
+                                               HttpServletRequest request) {
+        if (!keycloakOidcLoginService.isCanonicalStartHost(request.getHeader(HttpHeaders.HOST))) {
+            return ResponseEntity.status(302)
+                    .header(HttpHeaders.LOCATION, keycloakOidcLoginService.canonicalStartUri(returnTo).toString())
+                    .build();
+        }
         KeycloakOidcLoginService.LoginStart login = keycloakOidcLoginService.start(returnTo);
         ResponseCookie cookie = ResponseCookie.from(KeycloakOidcLoginService.STATE_COOKIE, login.state())
                 .httpOnly(true)

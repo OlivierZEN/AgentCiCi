@@ -13,8 +13,9 @@ status: active
 - ISSUE-2026-07-24-oidc-state-cross-origin:
   - Symptom: 用户完成 Keycloak SSO 后，`https://x.agentcici.com/auth/oidc/callback` 返回 `Invalid OIDC login state`，无法进入系统。
   - Verified root cause: `agentcici.com/auth/oidc/login` 与 `x.agentcici.com/auth/oidc/login` 均创建 host-only `CICI_OIDC_STATE` Cookie，但 Keycloak client 的 redirect URI 固定为 `https://x.agentcici.com/auth/oidc/callback`。从主站域发起时 Cookie 不会发送到 `x`，state 比较在读取 Redis 事务前失败。
-  - Resolution plan: TASK-244 将 OIDC start 规范到 callback 所属源站；保留 host-only Cookie 和 fail-closed 比较，不扩展 Cookie Domain。
-  - Status: in progress.
+  - Resolution: TASK-244 将 OIDC start 规范到 callback 所属源站；保留 host-only Cookie 和 fail-closed 比较，不扩展 Cookie Domain。
+  - Verification: `KeycloakOidcLoginServiceTest` 3/3、后端编译和静态检查通过；尚待生产发布后的真实 Keycloak 回调 smoke。
+  - Status: fixed in code; pending production release.
 
 - ISSUE-033:
   - Symptom: 工作台选择指定技能后，回复行为没有稳定体现所选技能；只有用户在消息正文中再次声明技能时，模型才更稳定遵循该技能。

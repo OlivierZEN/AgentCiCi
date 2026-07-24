@@ -17,13 +17,13 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-244 - OIDC 统一入口 state 修复
 
-- status: `ready`
+- status: `review`
 - priority: `critical`
 - owner_role: `integration-agent`
 - spec_path: `docs/specs/FEAT-137-oidc-canonical-entrypoint-state.md`
 - task_status_path: `.claw/tasks/TASK-244.md`
 - assignment_path: `.claw/assignments/TASK-244.yaml`
-- next_action: 通过身份和任务范围门禁后，以规范入口跳转保持 OIDC state Cookie 与固定回调源站一致。
+- next_action: 本地定向回归已通过；等待审核和单独生产发布授权后，从主站入口验证完整 Keycloak 回调。
 
 ### TASK-243 - Keycloak 统一身份与官方应用访问
 

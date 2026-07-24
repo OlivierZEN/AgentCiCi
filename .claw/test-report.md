@@ -1,14 +1,21 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-24T11:53:00Z
+updated_at: 2026-07-24T12:11:02Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-24T11:53:00Z
-last_run_status: partial
+last_run_at: 2026-07-24T12:11:02Z
+last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-244 - OIDC 统一入口 state 修复
+
+- `identity/assignment`：`dev-login.py .claw --ssh-key ... --developer MANAGER-001 --task TASK-244 --branch codex/TASK-244-oidc-canonical-entrypoint ...` 返回 `allowed`；SSH 私钥持有、Git 身份、分支与三份实现/测试文件范围均已验证。
+- `backend-focused`：`mvn -q -Dmaven.repo.local=.m2 -Dtest=KeycloakOidcLoginServiceTest test` 通过（3/3）；覆盖主站跳转至 callback 规范 host、规范/相似/畸形 host 判断，以及 callback state 不匹配仍 fail closed。
+- `backend-compile/static`：`mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` 与 `git diff --check` 通过。
+- `production-limit`：未改生产 Keycloak/client 或部署；须在单独发布授权后从 `agentcici.com` 发起真实 SSO，验证跳转至 `x`、callback 生成一次性 ticket 并进入应用。
 
 ## TASK-243 - Keycloak 统一身份与官方应用访问
 

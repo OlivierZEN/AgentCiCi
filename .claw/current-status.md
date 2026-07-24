@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-24T12:10:00Z
+updated_at: 2026-07-24T12:11:02Z
 updated_by: MANAGER-001
 phase: keycloak-unified-identity-live
-active_task: TASK-244
-next_action: "修复 OIDC 登录入口跨 host 导致 state Cookie 与固定 x.agentcici.com callback 不一致的问题；完成定向回归后等待单独发布授权。"
+active_task: none
+next_action: "TASK-244 的 OIDC 规范入口修复已通过定向回归；等待审核与单独生产发布授权后，从主站入口完成真实 Keycloak SSO smoke。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-244 / FEAT-137：用户反馈完成 SSO 后回调 `x.agentcici.com/auth/oidc/callback` 返回 `Invalid OIDC login state`。已只读验证主站 `agentcici.com` 与应用 `x.agentcici.com` 都可发起 OIDC，却分别写入 host-only `CICI_OIDC_STATE`，而 Keycloak callback 固定至 `x`；主站发起必然丢失 Cookie。将以规范入口跳转修复，不扩展 Cookie 父域，且尚未发布生产。
+- TASK-244 / FEAT-137：用户反馈完成 SSO 后回调 `x.agentcici.com/auth/oidc/callback` 返回 `Invalid OIDC login state`。已只读验证主站 `agentcici.com` 与应用 `x.agentcici.com` 都可发起 OIDC，却分别写入 host-only `CICI_OIDC_STATE`，而 Keycloak callback 固定至 `x`；主站发起必然丢失 Cookie。现已改为先跳转到 `x` 再创建 state，未扩展 Cookie 父域；3 项定向测试、编译和静态检查通过，尚未发布生产。
 
 - TASK-243 / FEAT-136：已完成生产发布。Keycloak 26.7.0 在 `sso.agentcici.com` 作为唯一 IdP；AgentCiCi 以 OIDC BFF 映射全局账户，签发 10 分钟 RS256 OACT，Semattice 仅通过 AgentCiCi JWKS 本地验签。真实公司 `org2sva14i4udjmi2t4s` 已绑定 Semattice tenant `93ff0c87-a626-529e-b8cf-195825df2488`，真实成员 OACT 访问通过。AgentCiCi `2.8.12 / 6574f168234e` 进一步修复租户应用页状态：刷新后读取持久化 binding，不再误显示“未开通”。
 

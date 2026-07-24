@@ -93,6 +93,35 @@ public class KeycloakOidcLoginService {
         return new LoginStart(URI.create(issuer + "/protocol/openid-connect/auth?" + queryString(query)), state);
     }
 
+    /**
+     * The state cookie deliberately remains host-only. OIDC must therefore start from the same
+     * origin that Keycloak uses for the configured callback URI.
+     */
+    public boolean isCanonicalStartHost(String hostHeader) {
+        if (!hasText(hostHeader)) {
+            return false;
+        }
+        try {
+            URI candidate = URI.create("https://" + hostHeader.trim());
+            URI callback = URI.create(redirectUri);
+            return candidate.getUserInfo() == null
+                    && hasText(candidate.getHost())
+                    && (candidate.getRawPath() == null || candidate.getRawPath().isEmpty())
+                    && candidate.getRawQuery() == null
+                    && candidate.getRawFragment() == null
+                    && candidate.getHost().equalsIgnoreCase(callback.getHost())
+                    && normalizedHttpsPort(candidate.getPort()) == normalizedHttpsPort(callback.getPort());
+        } catch (IllegalArgumentException ex) {
+            return false;
+        }
+    }
+
+    public URI canonicalStartUri(String requestedReturnTo) {
+        URI callback = URI.create(redirectUri);
+        return URI.create(callback.getScheme() + "://" + callback.getRawAuthority()
+                + "/auth/oidc/login?return_to=" + encode(safeReturnTo(requestedReturnTo)));
+    }
+
     public URI complete(String code, String state, String stateCookie) {
         requireEnabled();
         if (!hasText(code) || !hasText(state) || !MessageDigest.isEqual(state.getBytes(StandardCharsets.UTF_8), blank(stateCookie).getBytes(StandardCharsets.UTF_8))) {
@@ -211,6 +240,10 @@ public class KeycloakOidcLoginService {
     private static String safeReturnTo(String value) {
         String path = trim(value);
         return path.startsWith("/") && !path.startsWith("//") ? path : "/";
+    }
+
+    private static int normalizedHttpsPort(int port) {
+        return port == -1 ? 443 : port;
     }
 
     private static String appendQuery(String path, String key, String value) {
