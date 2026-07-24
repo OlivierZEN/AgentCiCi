@@ -22,6 +22,12 @@ status: active
 
 ## Latest Release
 
+- 2.8.13 TASK-244 OIDC 规范入口 state 修复 on 2026-07-24:
+  - Git/发布：提交 `877337078ea8`，`scripts/release-acr.sh --dry-run --version 2.8.13` 与正式发布通过，annotated tag `2.8.13` 已推送。
+  - 镜像：backend/frontend ACR index digest 分别为 `sha256:66e929c6aaee94e2ed13aa09a643f6aef2bb44c3e42c256891091d566f11ff0e`、`sha256:c77614e4c6216fc329962f8c23c971b354caeedf69074f999534a4653c3a6591`。
+  - 备份/部署：`/opt/cici/backups/20260724-201945-before-2.8.13-oidc-canonical-entrypoint` 的 env、PostgreSQL、KB、Qdrant 均非空；仅 pull/force-recreate backend/frontend，四个状态服务保持运行。
+  - 验收：backend/frontend 及四个状态服务健康，后端版本 `2.8.13 / 877337078ea8`，Nginx 有效，`x` HTTPS 为 200；主站 OIDC start 先 302 到 `x`，规范 `x` start 设置 host-only state Cookie 后跳转 Keycloak。真实用户完整登录待复验。
+
 - 2.8.12 TASK-243 租户应用 Semattice 开通状态修复 on 2026-07-24:
   - Git/发布：提交 `6574f168234e`，`scripts/release-acr.sh --dry-run --version 2.8.12` 与正式发布通过，annotated tag `2.8.12` 已推送。
   - 镜像：backend/frontend ACR index digest 分别为 `sha256:5bd8801e66e93bb8628c2e725f56bb8b1f9d1cda2b98df23dff2dc7fb31e9c4b` 与 `sha256:3126c5115587ef36e9eb82012a014166a8760877695c31b5e9a90c466d31ccea`。

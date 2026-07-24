@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-137
 title: OIDC 统一登录入口与 state Cookie 一致性
-status: in_review
+status: released
 owner_role: integration-agent
 task_ids: TASK-244
 related_decisions: FEAT-136 Keycloak-first-party-access design
 related_issues: ISSUE-2026-07-24-oidc-state-cross-origin
-updated_at: 2026-07-24T12:11:02Z
+updated_at: 2026-07-24T12:21:15Z
 updated_by: MANAGER-001
 ---
 
@@ -43,4 +43,4 @@ updated_by: MANAGER-001
 
 - TASK-244 仅处理入口规范化与相关回归，不改变任何身份授权边界。
 - 根因依据：2026-07-24 生产只读请求已确认两个 host 都返回 `Set-Cookie: CICI_OIDC_STATE`，但 `Location.redirect_uri` 始终为 `https://x.agentcici.com/auth/oidc/callback`。
-- 已实现：Controller 在非规范 host 上仅跳转到规范 `/auth/oidc/login`，不会先创建 state；服务层以 callback URI 的 host/HTTPS port 验证入口，拒绝相似或畸形 Host。定向单测和后端编译通过，尚未发布生产。
+- 已发布生产 `2.8.13 / 877337078ea8`。主站入口返回 `302 https://x.agentcici.com/auth/oidc/login?...`；规范入口才写入 state Cookie 并跳转 Keycloak。后端/前端健康、版本、Nginx 与公网入口 smoke 均通过；真实用户 Keycloak 登录留待用户复验。

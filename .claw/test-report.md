@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-24T12:11:02Z
+updated_at: 2026-07-24T12:21:15Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-24T12:11:02Z
+last_run_at: 2026-07-24T12:21:15Z
 last_run_status: passed
 ---
 
@@ -15,7 +15,8 @@ last_run_status: passed
 - `identity/assignment`：`dev-login.py .claw --ssh-key ... --developer MANAGER-001 --task TASK-244 --branch codex/TASK-244-oidc-canonical-entrypoint ...` 返回 `allowed`；SSH 私钥持有、Git 身份、分支与三份实现/测试文件范围均已验证。
 - `backend-focused`：`mvn -q -Dmaven.repo.local=.m2 -Dtest=KeycloakOidcLoginServiceTest test` 通过（3/3）；覆盖主站跳转至 callback 规范 host、规范/相似/畸形 host 判断，以及 callback state 不匹配仍 fail closed。
 - `backend-compile/static`：`mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` 与 `git diff --check` 通过。
-- `production-limit`：未改生产 Keycloak/client 或部署；须在单独发布授权后从 `agentcici.com` 发起真实 SSO，验证跳转至 `x`、callback 生成一次性 ticket 并进入应用。
+- `user-acceptance-limit`：未使用或请求真实用户凭据；须由用户从 `agentcici.com` 发起真实 SSO，验证 Keycloak callback 生成一次性 ticket 并进入应用。
+- `production-2.8.13`：`scripts/release-acr.sh --dry-run` 与正式构建/推送通过；backend/frontend ACR index digest 分别为 `sha256:66e929c6aaee94e2ed13aa09a643f6aef2bb44c3e42c256891091d566f11ff0e`、`sha256:c77614e4c6216fc329962f8c23c971b354caeedf69074f999534a4653c3a6591`。备份 `/opt/cici/backups/20260724-201945-before-2.8.13-oidc-canonical-entrypoint` 的 env、PostgreSQL、KB、Qdrant 均非空；仅重建 backend/frontend，六服务健康。后端返回 `2.8.13 / 877337078ea8`，Nginx 配置有效，`x` HTTPS 为 200；`agentcici.com/auth/oidc/login` 已 302 至 `x.agentcici.com/auth/oidc/login`，仅后者设置 `CICI_OIDC_STATE` 并跳转 Keycloak。
 
 ## TASK-243 - Keycloak 统一身份与官方应用访问
 

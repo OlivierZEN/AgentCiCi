@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-24T12:11:02Z
+updated_at: 2026-07-24T12:21:15Z
 updated_by: MANAGER-001
 phase: keycloak-unified-identity-live
 active_task: none
-next_action: "TASK-244 的 OIDC 规范入口修复已通过定向回归；等待审核与单独生产发布授权后，从主站入口完成真实 Keycloak SSO smoke。"
+next_action: "TASK-244 已发布生产 2.8.13；请用户完成真实 Keycloak SSO 复验，若失败则以 2.8.13 callback 日志继续诊断。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-244 / FEAT-137：用户反馈完成 SSO 后回调 `x.agentcici.com/auth/oidc/callback` 返回 `Invalid OIDC login state`。已只读验证主站 `agentcici.com` 与应用 `x.agentcici.com` 都可发起 OIDC，却分别写入 host-only `CICI_OIDC_STATE`，而 Keycloak callback 固定至 `x`；主站发起必然丢失 Cookie。现已改为先跳转到 `x` 再创建 state，未扩展 Cookie 父域；3 项定向测试、编译和静态检查通过，尚未发布生产。
+- TASK-244 / FEAT-137：用户反馈完成 SSO 后回调 `x.agentcici.com/auth/oidc/callback` 返回 `Invalid OIDC login state`。根因是主站和应用站都创建 host-only state Cookie、而 callback 固定到 `x`。现已以 `2.8.13 / 877337078ea8` 发布：主站先跳 `x`，仅 `x` 创建 state。发布前备份 `/opt/cici/backups/20260724-201945-before-2.8.13-oidc-canonical-entrypoint` 四项均非空；backend/frontend 健康，版本、Nginx 和公网 canonical-start smoke 均通过。真实用户 Keycloak 复验待完成。
 
 - TASK-243 / FEAT-136：已完成生产发布。Keycloak 26.7.0 在 `sso.agentcici.com` 作为唯一 IdP；AgentCiCi 以 OIDC BFF 映射全局账户，签发 10 分钟 RS256 OACT，Semattice 仅通过 AgentCiCi JWKS 本地验签。真实公司 `org2sva14i4udjmi2t4s` 已绑定 Semattice tenant `93ff0c87-a626-529e-b8cf-195825df2488`，真实成员 OACT 访问通过。AgentCiCi `2.8.12 / 6574f168234e` 进一步修复租户应用页状态：刷新后读取持久化 binding，不再误显示“未开通”。
 

@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-244
-status: review
-updated_at: 2026-07-24T12:11:02Z
+status: done
+updated_at: 2026-07-24T12:21:15Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: integration-agent
@@ -14,8 +14,8 @@ spec_path: docs/specs/FEAT-137-oidc-canonical-entrypoint-state.md
 
 ## Current State
 
-- Status: `review`
-- Next action: 审核并在获得单独生产发布授权后，按 Runbook 发布和执行真实 SSO 回调 smoke。
+- Status: `done`
+- Next action: 等待用户完成一次真实 Keycloak 登录；若仍失败，以当前 `2.8.13` 后端日志中的 callback Cookie/Host 诊断为准。
 - Blocked: none
 - Spec: `docs/specs/FEAT-137-oidc-canonical-entrypoint-state.md`
 - Assignment: `.claw/assignments/TASK-244.yaml`
@@ -24,6 +24,7 @@ spec_path: docs/specs/FEAT-137-oidc-canonical-entrypoint-state.md
 
 - 已只读确认根因：主站 host 发起时写入 host-only state Cookie，而 Keycloak callback 固定至 `x.agentcici.com`，Cookie 不会跨 host 发送。
 - 已实现入口规范化：非 callback host 只重定向到 `redirect-uri` 的源站；规范 host 才创建 state Cookie 与 Redis transaction。
+- 已发布 `2.8.13 / 877337078ea8`；生产备份、镜像、容器健康、版本、Nginx、公网入口重定向与规范 host state Cookie smoke 均已通过。
 
 ## Changed Files
 
@@ -44,4 +45,4 @@ spec_path: docs/specs/FEAT-137-oidc-canonical-entrypoint-state.md
 
 ## Handoff
 
-- 保持 state Cookie host-only；通过规范入口消除跨 host 回调，不能用父域 Cookie 作为快捷修复。生产需要从主站入口完成一次 Keycloak 登录并确认回调带 `oidc_ticket` 后进入应用。
+- 保持 state Cookie host-only；通过规范入口消除跨 host 回调，不能用父域 Cookie 作为快捷修复。最终验收为用户从主站入口完成 Keycloak 登录后确认回调带 `oidc_ticket` 并进入应用。
