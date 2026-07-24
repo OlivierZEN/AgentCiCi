@@ -15,6 +15,9 @@ allowed_write_roots:
   - frontend/src/App.tsx
   - frontend/src/constants.ts
   - frontend/src/styles.css
+  - README.md
+  - AgentCiCi智能体平台实现设计方案.md
+  - DESIGN.json
   - docs/specs/**
   - .claw/tasks/**
   - .claw/assignments/**
@@ -30,6 +33,9 @@ scope_files:
   - frontend/src/App.tsx
   - frontend/src/constants.ts
   - frontend/src/styles.css
+  - README.md
+  - AgentCiCi智能体平台实现设计方案.md
+  - DESIGN.json
 touch_policy: exclusive
 shared_contracts:
   - /auth/companies response roleCode
