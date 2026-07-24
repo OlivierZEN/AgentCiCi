@@ -1,0 +1,43 @@
+task_id: TASK-244
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-24T12:10:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-137-oidc-canonical-entrypoint-state.md
+task_status_path: .claw/tasks/TASK-244.md
+branch: codex/TASK-244-oidc-canonical-entrypoint
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/api/AuthController.java
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/service/KeycloakOidcLoginService.java
+  - backend/src/test/java/com/codehouse/ciciassistant/auth/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/issue-list.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/developers/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+scope_files:
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/api/AuthController.java
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/service/KeycloakOidcLoginService.java
+touch_policy: exclusive
+shared_contracts:
+  - app.auth.oidc.redirect-uri
+  - Keycloak client callback URI
+task_boundary:
+  - "将 OIDC 登录入口规范到回调 URI 所属源站，避免跨 host state Cookie 丢失。"
+  - "保留 host-only Secure HttpOnly SameSite=Lax Cookie、PKCE、nonce 与 state fail-closed 校验。"
+  - "不修改生产 Keycloak 配置、用户绑定、数据库或 OACT。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
+signature: "MANAGER-001; user reported failed SSO callback with Invalid OIDC login state on 2026-07-24."
