@@ -42,6 +42,7 @@ class AgentPlanExecCanaryServiceTest {
     void shouldCreateAndAdvanceFixedReadOnlyPlanForExactAllowlistedAgent() {
         AgentRuntimePlanExecProperties properties = new AgentRuntimePlanExecProperties();
         properties.setEnabled(true);
+        properties.setAllowedCompanyIds(List.of("org-a"));
         properties.setAllowedAgentIds(List.of("agent-canary"));
         AgentTaskRuntimeService runtime = org.mockito.Mockito.mock(AgentTaskRuntimeService.class);
         AgentPlanExecCanaryService service = new AgentPlanExecCanaryService(properties, runtime, new ObjectMapper());
@@ -77,6 +78,7 @@ class AgentPlanExecCanaryServiceTest {
     void shouldNotSelectPrefixOrWildcardLikeAgentIds() {
         AgentRuntimePlanExecProperties properties = new AgentRuntimePlanExecProperties();
         properties.setEnabled(true);
+        properties.setAllowedCompanyIds(List.of("org-a"));
         properties.setAllowedAgentIds(List.of("agent-canary"));
         AgentTaskRuntimeService runtime = org.mockito.Mockito.mock(AgentTaskRuntimeService.class);
         AgentPlanExecCanaryService service = new AgentPlanExecCanaryService(properties, runtime, new ObjectMapper());
@@ -86,5 +88,21 @@ class AgentPlanExecCanaryServiceTest {
 
         assertThat(execution.selected()).isFalse();
         verify(runtime, never()).createRun(any());
+    }
+
+    @Test
+    void shouldNotCreateRuntimeForAllowlistedAgentOutsideAllowlistedCompany() {
+        AgentRuntimePlanExecProperties properties = new AgentRuntimePlanExecProperties();
+        properties.setEnabled(true);
+        properties.setAllowedCompanyIds(List.of("org-a"));
+        properties.setAllowedAgentIds(List.of("agent-canary"));
+        AgentTaskRuntimeService runtime = org.mockito.Mockito.mock(AgentTaskRuntimeService.class);
+        AgentPlanExecCanaryService service = new AgentPlanExecCanaryService(properties, runtime, new ObjectMapper());
+
+        AgentPlanExecCanaryService.CanaryExecution execution =
+                service.start("org-b", "session-a", "agent-canary", "web", "查知识库", "executor-a");
+
+        assertThat(execution.selected()).isFalse();
+        verifyNoInteractions(runtime);
     }
 }

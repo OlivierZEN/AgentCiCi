@@ -1,9 +1,9 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-24T13:09:40Z
+updated_at: 2026-07-24T13:16:55Z
 updated_by: MANAGER-001
-phase: keycloak-unified-identity-live
+phase: multi-track-production-and-review
 active_task: TASK-245
 next_action: "等待真实组织管理员会话验收 TASK-245 的同组织、跨组织与后台返回前台流程；未获授权不发布生产。"
 read_next:
@@ -28,7 +28,7 @@ read_next:
 
 - TASK-243 / FEAT-136：已完成生产发布。Keycloak 26.7.0 在 `sso.agentcici.com` 作为唯一 IdP；AgentCiCi 以 OIDC BFF 映射全局账户，签发 10 分钟 RS256 OACT，Semattice 仅通过 AgentCiCi JWKS 本地验签。真实公司 `org2sva14i4udjmi2t4s` 已绑定 Semattice tenant `93ff0c87-a626-529e-b8cf-195825df2488`，真实成员 OACT 访问通过。AgentCiCi `2.8.12 / 6574f168234e` 进一步修复租户应用页状态：刷新后读取持久化 binding，不再误显示“未开通”。
 
-- TASK-242 / FEAT-135：用户已确认以 `company_id` 统一 AgentCiCi 与 Semattice 的顶层企业身份，`organization_id` 只为未来公司内部组织架构保留。实现使用 V94 正向迁移将当前 131 个顶层 `org_id` 列和根表/生命周期表物理改名为 `company_id`/`company*`，不重写既有 `org...` ID 值；旧 JSON、旧 Header 与旧 JWT claim 不保留兼容，必须 fail closed。AgentCiCi PR #17（`8e5f505`）和 Semattice 契约 PR #3（`1787b9e`）均已合并 main；fresh PostgreSQL V1→V94、认证旧 JWT 拒绝、生命周期与受控开户回归、后端打包和前端构建通过。此变更要求维护窗口，旧二进制不能连接 V94 schema；尚未为本项发布生产。
+- TASK-242 / FEAT-135：顶层企业身份已在生产统一为 `company_id`。AgentCiCi `2.8.9 / 0194706` 已健康发布，Flyway V94/V95 成功：V94 将顶层 `org_id` / 根表 / 生命周期表物理改为 `company_id` / `company*`，V95 补齐既有 profile 的 `organization_size → company_size`；既有 `org...` 值不重写，旧 JSON、Header 与 JWT claim 均 fail closed。V60 遗留 `ORG` 授权记录已先替换约束再转为 `COMPANY`。备份位于 `/opt/cici/backups/20260724-134723-before-2.8.7-company-id`；六服务健康，外部 HTTPS 与匿名鉴权边界 smoke 通过。AgentCiCi PR #17/#19 和 Semattice 契约 PR #3 均已合并 main。
 
 - TASK-241 / FEAT-134：AgentCiCi 已发布内测 `2.8.5-beta.3 / bef088d5769c`，V93 正向迁移、双向密钥注入、未签名 HMAC 403 与健康检查均通过。Semattice 的实现与 Go 全量/race/vet/build 已通过，但其 ECS 仍是 migration 1–12；试验性新制品在真实 reservation 后因缺少 migration 13 返回 500，已立刻原子回滚到上一健康 release。继续发布必须使用专用 migrator 显式执行 migration 13，不能复用运行时 control/runtime 凭据或改写历史。
 
@@ -46,7 +46,7 @@ read_next:
 
 - TASK-239 已完成 P5：阻塞/流式 Chat 将精确 `runtimeRunId` 作为 Trace 脱敏详情的一部分保存；Trace 详情仅以同组织运行 ID 回读运行、计划、步骤、事件和审查事实，未关联历史 Trace 显示明确空态。现有详情新增运行总览、步骤/事件时间线、折叠证据与条件性例外说明，样式仅用语义主题 token。后端定向回归、V1→V92 全新库集成、前端 3/3 与生产构建通过；受权组织管理员在隔离最小事实库完成 `gilded`/`galaxy` 的关联 Trace、展开/复制和 1280px 无横向溢出验收。审计日志的独立 `/ops/audit/logs` 在该最小库返回 500，不归因于 P5 Trace 投影。
 
-- TASK-240 已获授权实施 P6：当前三项运行时能力仍默认关闭且仅有 Agent 白名单。P6 将补齐组织 + Agent 精确灰度和低基数脱敏运营指标，再进行发布质量门；没有用户明确指定生产组织、只读 Agent 与观察窗口时，不发布镜像、不改线上配置或开启任何生产开关。
+- TASK-240 / P6 与 TASK-241 / FEAT-134 的历史功能分支已于 2026-07-24 合并回主线；冲突按当前 `company_id` 契约消解。P6 三项能力均保持默认关闭，须同时精确命中 `allowed-company-ids` 与 Agent 白名单，指标不含公司或用户高基数字段；没有用户明确指定生产试点公司、只读 Agent 与观察窗口时，不改线上开关或发布 P6。
 
 - TASK-234 已按用户要求调整生产版本规则：修订段最大值为 365，`2.8.365` 的下一版为 `2.9.1`；主、次版本上限仍为 12。脚本级边界回归与 dry-run 校验均通过，未发布生产。
 

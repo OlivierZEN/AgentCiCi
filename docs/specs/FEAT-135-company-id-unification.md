@@ -3,7 +3,7 @@ kind: feature-spec
 feature_id: FEAT-135
 title: AgentCiCi company identity unification
 status: verified
-updated_at: 2026-07-24T02:35:00Z
+updated_at: 2026-07-24T06:12:00Z
 updated_by: MANAGER-001
 owner_role: integration-agent
 ---
@@ -36,12 +36,13 @@ Semattice 已采用 `company_id` 作为受控开户契约；AgentCiCi 完成切�
 
 ## 数据库迁移
 
-新增 AgentCiCi 正向 Flyway migration `V94__company_identity_unification.sql`，不得修改 V1–V93。
+新增 AgentCiCi 正向 Flyway migrations `V94__company_identity_unification.sql` 与 `V95__company_profile_vocabulary.sql`，不得修改 V1–V93。
 
 1. 将根表 `org` 重命名为 `company`，`organization_member` 重命名为 `company_member`；所有公司生命周期表从 `organization_*` 改为 `company_*`。
 2. 对生产 catalog 中全部顶层租户 `org_id` 列（当前已核验为 131 张表的 131 列）无损重命名为 `company_id`；主键、外键、唯一约束和索引继续约束相同的值。
 3. 统一重命名受影响的约束和索引标识，删除遗留的 `org` 命名；迁移应在 fresh V1–V93 库和现有 V93 数据库均验证。
-4. 不执行 `UPDATE` 重写 ID 值，不删除数据，不修改历史 migration checksum。
+4. `agent_access_grant` 先将遗留 `ORG` CHECK 约束替换为 `COMPANY` 版本，再转换既有授权记录；不执行 `UPDATE` 重写 ID 值，不删除数据，不修改历史 migration checksum。
+5. V95 将 legacy `organization_size` 物理列改为 `company_size`，与 company profile 的 JPA/API 契约一致。
 
 ## 实现范围
 
@@ -51,7 +52,7 @@ Semattice 已采用 `company_id` 作为受控开户契约；AgentCiCi 完成切�
 
 ## 上线与回滚
 
-此迁移与新代码不兼容，必须在维护窗口按以下顺序执行：备份 → 停止旧 backend 写入 → 发布包含 V94 的新 backend → 迁移完成后启动 backend/frontend → 重新登录与受控开户 smoke。旧二进制不得在 V94 后启动；回滚仅限于切回包含兼容 schema 的数据库备份，不能把新库直接配给旧二进制。
+此迁移与新代码不兼容，执行顺序为：备份 → 停止旧 backend 写入 → 发布包含 V94/V95 的新 backend → 迁移完成后启动 backend/frontend → 重新登录与受控开户 smoke。旧二进制不得在 V94 后启动；回滚仅限于切回包含兼容 schema 的数据库备份，不能把新库直接配给旧二进制。2026-07-24 经用户明确授权即时发布后，生产 `2.8.9 / 0194706` 已完成该流程并健康运行。
 
 ## 验收
 

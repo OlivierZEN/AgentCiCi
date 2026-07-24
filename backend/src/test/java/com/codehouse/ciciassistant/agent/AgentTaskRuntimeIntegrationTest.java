@@ -102,6 +102,7 @@ class AgentTaskRuntimeIntegrationTest {
     @Test
     void shouldPersistFixedCanaryPlanToSuccessfulTerminalState() {
         canaryProperties.setEnabled(true);
+        canaryProperties.setAllowedCompanyIds(List.of("demo-org"));
         canaryProperties.setAllowedAgentIds(List.of("canary-agent"));
         try {
             AgentPlanExecCanaryService.CanaryExecution execution = canaryService.start(
@@ -121,6 +122,7 @@ class AgentTaskRuntimeIntegrationTest {
                     .contains("RUN_CREATED", "PLAN_VALIDATED", "STEP_SUCCEEDED", "RUN_SUCCEEDED");
         } finally {
             canaryProperties.setEnabled(false);
+            canaryProperties.setAllowedCompanyIds(List.of());
             canaryProperties.setAllowedAgentIds(List.of());
         }
     }
@@ -128,8 +130,10 @@ class AgentTaskRuntimeIntegrationTest {
     @Test
     void shouldPersistControlledReflectForSucceededPlanWithoutCrossOrgLeakage() {
         canaryProperties.setEnabled(true);
+        canaryProperties.setAllowedCompanyIds(List.of("demo-org"));
         canaryProperties.setAllowedAgentIds(List.of("reflect-agent"));
         reflectProperties.setEnabled(true);
+        reflectProperties.setAllowedCompanyIds(List.of("demo-org"));
         reflectProperties.setAllowedAgentIds(List.of("reflect-agent"));
         reflectProperties.setMaxRounds(1);
         try {
@@ -153,8 +157,10 @@ class AgentTaskRuntimeIntegrationTest {
                             true, false, "结构化报告已完成")));
         } finally {
             canaryProperties.setEnabled(false);
+            canaryProperties.setAllowedCompanyIds(List.of());
             canaryProperties.setAllowedAgentIds(List.of());
             reflectProperties.setEnabled(false);
+            reflectProperties.setAllowedCompanyIds(List.of());
             reflectProperties.setAllowedAgentIds(List.of());
         }
     }

@@ -7,6 +7,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -28,19 +29,27 @@ public class AgentRuntimeModeRouter {
             "create", "update", "delete", "send", "approve", "submit", "pay", "write");
 
     private final AgentRuntimeModeRouterProperties properties;
+    private final AgentRuntimeOperationsMetrics operationsMetrics;
 
     public AgentRuntimeModeRouter(AgentRuntimeModeRouterProperties properties) {
+        this(properties, AgentRuntimeOperationsMetrics.noop());
+    }
+
+    @Autowired
+    public AgentRuntimeModeRouter(AgentRuntimeModeRouterProperties properties,
+                                  AgentRuntimeOperationsMetrics operationsMetrics) {
         this.properties = properties;
+        this.operationsMetrics = operationsMetrics;
     }
 
     public ModeDecision decide(RoutingInput input) {
-        if (input == null) return legacy(ReasonCode.INVALID_INPUT);
-        if (!properties.isEnabled()) return legacy(ReasonCode.ROUTER_DISABLED);
-        if (!properties.isEnabledFor(input.agentId())) return legacy(ReasonCode.AGENT_NOT_ALLOWLISTED);
-        if (input.pendingConfirmation()) return legacy(ReasonCode.PENDING_CONFIRMATION_CONTINUATION);
+        if (input == null) return recorded(legacy(ReasonCode.INVALID_INPUT));
+        if (!properties.isEnabled()) return recorded(legacy(ReasonCode.ROUTER_DISABLED));
+        if (!properties.isEnabledFor(input.companyId(), input.agentId())) return recorded(legacy(ReasonCode.SCOPE_NOT_ALLOWLISTED));
+        if (input.pendingConfirmation()) return recorded(legacy(ReasonCode.PENDING_CONFIRMATION_CONTINUATION));
 
         String question = normalize(input.question());
-        if (question.isBlank()) return legacy(ReasonCode.INVALID_INPUT);
+        if (question.isBlank()) return recorded(legacy(ReasonCode.INVALID_INPUT));
         List<String> tools = input.allowedToolNames() == null ? List.of() : input.allowedToolNames();
         boolean sensitiveIntent = SENSITIVE_PATTERN.matcher(question).matches() || hasWriteLikeTool(tools);
         boolean reflectRequired = sensitiveIntent || STRUCTURED_OR_REVIEW_PATTERN.matcher(question).matches();
@@ -48,19 +57,19 @@ public class AgentRuntimeModeRouter {
         Budget budget = budget();
 
         if (DEPENDENCY_PATTERN.matcher(question).matches()) {
-            return decision(Mode.PLAN_EXEC, ReasonCode.EXPLICIT_DEPENDENCY, riskLevel, budget, sensitiveIntent, reflectRequired);
+            return recorded(decision(Mode.PLAN_EXEC, ReasonCode.EXPLICIT_DEPENDENCY, riskLevel, budget, sensitiveIntent, reflectRequired));
         }
         if (MULTI_SOURCE_PATTERN.matcher(question).matches()) {
-            return decision(Mode.PLAN_EXEC, ReasonCode.MULTI_SOURCE, riskLevel, budget, sensitiveIntent, reflectRequired);
+            return recorded(decision(Mode.PLAN_EXEC, ReasonCode.MULTI_SOURCE, riskLevel, budget, sensitiveIntent, reflectRequired));
         }
         if (tools.size() > budget.maxToolRounds()) {
-            return decision(Mode.PLAN_EXEC, ReasonCode.REACT_BUDGET_EXCEEDED, riskLevel, budget, sensitiveIntent, reflectRequired);
+            return recorded(decision(Mode.PLAN_EXEC, ReasonCode.REACT_BUDGET_EXCEEDED, riskLevel, budget, sensitiveIntent, reflectRequired));
         }
         if (tools.isEmpty() && !input.externalFactRequired()) {
-            return decision(Mode.DIRECT, ReasonCode.NO_EXTERNAL_CONTEXT, riskLevel, budget, sensitiveIntent, reflectRequired);
+            return recorded(decision(Mode.DIRECT, ReasonCode.NO_EXTERNAL_CONTEXT, riskLevel, budget, sensitiveIntent, reflectRequired));
         }
-        return decision(Mode.REACT, input.externalFactRequired() ? ReasonCode.KNOWLEDGE_LOOKUP : ReasonCode.READONLY_TOOL_LOOKUP,
-                riskLevel, budget, sensitiveIntent, reflectRequired);
+        return recorded(decision(Mode.REACT, input.externalFactRequired() ? ReasonCode.KNOWLEDGE_LOOKUP : ReasonCode.READONLY_TOOL_LOOKUP,
+                riskLevel, budget, sensitiveIntent, reflectRequired));
     }
 
     public Map<String, Object> payload(ModeDecision decision) {
@@ -90,6 +99,11 @@ public class AgentRuntimeModeRouter {
         return decision(Mode.LEGACY_REACT, reason, RiskLevel.LOW, budget(), false, false);
     }
 
+    private ModeDecision recorded(ModeDecision decision) {
+        operationsMetrics.recordMode(decision);
+        return decision;
+    }
+
     private ModeDecision decision(Mode mode, ReasonCode reason, RiskLevel riskLevel, Budget budget,
                                   boolean requiresConfirmation, boolean reflectRequired) {
         return new ModeDecision(mode, List.of(reason), riskLevel, budget, requiresConfirmation, reflectRequired);
@@ -113,12 +127,12 @@ public class AgentRuntimeModeRouter {
     public enum Mode { LEGACY_REACT, DIRECT, REACT, PLAN_EXEC }
     public enum RiskLevel { LOW, MEDIUM, HIGH }
     public enum ReasonCode {
-        ROUTER_DISABLED, AGENT_NOT_ALLOWLISTED, PENDING_CONFIRMATION_CONTINUATION, INVALID_INPUT,
+        ROUTER_DISABLED, SCOPE_NOT_ALLOWLISTED, PENDING_CONFIRMATION_CONTINUATION, INVALID_INPUT,
         NO_EXTERNAL_CONTEXT, KNOWLEDGE_LOOKUP, READONLY_TOOL_LOOKUP, EXPLICIT_DEPENDENCY,
         MULTI_SOURCE, REACT_BUDGET_EXCEEDED, PLAN_EXEC_GATE_NOT_MET
     }
     public record Budget(int maxToolRounds, int maxSteps, int maxReplans, int maxReflectRounds) {}
-    public record RoutingInput(String agentId, String channel, String question, List<String> allowedToolNames,
+    public record RoutingInput(String companyId, String agentId, String channel, String question, List<String> allowedToolNames,
                                boolean externalFactRequired, boolean pendingConfirmation) {}
     public record ModeDecision(Mode mode, List<ReasonCode> reasonCodes, RiskLevel riskLevel, Budget budget,
                                boolean requiresConfirmation, boolean reflectRequired) {

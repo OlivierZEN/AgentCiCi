@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -20,26 +21,41 @@ public class AgentPlanExecCanaryService {
     private final AgentRuntimePlanExecProperties properties;
     private final AgentTaskRuntimeService runtime;
     private final ObjectMapper objectMapper;
+    private final AgentRuntimeOperationsMetrics operationsMetrics;
 
     public AgentPlanExecCanaryService(AgentRuntimePlanExecProperties properties,
                                       AgentTaskRuntimeService runtime,
                                       ObjectMapper objectMapper) {
+        this(properties, runtime, objectMapper, AgentRuntimeOperationsMetrics.noop());
+    }
+
+    @Autowired
+    public AgentPlanExecCanaryService(AgentRuntimePlanExecProperties properties,
+                                      AgentTaskRuntimeService runtime,
+                                      ObjectMapper objectMapper,
+                                      AgentRuntimeOperationsMetrics operationsMetrics) {
         this.properties = properties;
         this.runtime = runtime;
         this.objectMapper = objectMapper;
+        this.operationsMetrics = operationsMetrics;
     }
 
     public CanaryExecution start(String companyId, String sessionId, String agentId, String channel,
                                  String goalSummary, String executorId) {
-        if (!properties.isEnabledFor(agentId)) return CanaryExecution.notSelected();
+        if (!properties.isEnabledFor(companyId, agentId)) {
+            operationsMetrics.recordPlanExec("NOT_SELECTED", "SCOPE_NOT_ALLOWLISTED");
+            return CanaryExecution.notSelected();
+        }
         try {
             AgentTaskRuntimeService.RunView run = runtime.createRun(new AgentTaskRuntimeService.CreateRunCommand(
                     companyId, sessionId, agentId, channel, "PLAN_EXEC", goalSummary, 2));
             runtime.attachInitialPlan(companyId, run.id(), fixedPlan(goalSummary));
             AgentTaskRuntimeService.ClaimedStep claimed = runtime.claimNextReadyStep(
                     companyId, run.id(), executorId, LEASE_SECONDS).orElseThrow();
+            operationsMetrics.recordPlanExec("SELECTED", "NONE");
             return CanaryExecution.active(run.id(), companyId, executorId, claimed.step());
         } catch (RuntimeException ex) {
+            operationsMetrics.recordPlanExec("FALLBACK", "PLAN_SETUP_FAILED");
             return CanaryExecution.fallback("PLAN_SETUP_FAILED");
         }
     }
@@ -58,6 +74,7 @@ public class AgentPlanExecCanaryService {
             runtime.failStep(execution.companyId(), execution.runId(), execution.step().id(), execution.executorId(),
                     execution.step().version(), errorCode == null || errorCode.isBlank() ? "CHAT_EXECUTION_FAILED" : errorCode);
             execution.clearStep();
+            operationsMetrics.recordPlanExec("FAILED", errorCode);
         } catch (RuntimeException ignored) {
             // Chat's existing failure path remains authoritative; task state is best-effort evidence only.
         }
@@ -85,6 +102,7 @@ public class AgentPlanExecCanaryService {
         runtime.completeStep(execution.companyId(), execution.runId(), current.id(), execution.executorId(), current.version(), summary);
         if ("SYNTHESIZE".equals(expectedKind)) {
             execution.clearStep();
+            operationsMetrics.recordPlanExec("SUCCEEDED", "NONE");
             return;
         }
         runtime.claimNextReadyStep(execution.companyId(), execution.runId(), execution.executorId(), LEASE_SECONDS)
