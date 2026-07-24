@@ -1,5 +1,6 @@
 import { FormEvent, KeyboardEvent, PointerEvent as ReactPointerEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { applyProductTheme } from "../theme/theme";
 import {
   streamAiChat,
@@ -14,6 +15,7 @@ import ChatMarkdown from "../components/ChatMarkdown";
 import { authFetch, clearAuthPayload, readAuthPayload, writeAuthPayload } from "../auth/authStorage";
 import { useAuthStorageSync } from "../auth/useAuthStorageSync";
 import { LS_ASSISTANT_TOKEN } from "../constants";
+import { beginOrganizationAdminSession, hasOrganizationAdminRole } from "../admin/adminSession";
 import { MeetingMinutesPanel } from "../meeting/MeetingMinutesPanel";
 import AppVersionBadge from "../shared/AppVersionBadge";
 import { getDisplayInitial, getCompanyMonogram, getThemeSeriesClass } from "../shared/avatar";
@@ -1252,6 +1254,7 @@ function HumanModeStaticLogin() {
 }
 
 export default function AssistantApp() {
+  const navigate = useNavigate();
   const initialAiAppCode = aiApplicationCodeFromLocation();
   const initialCustomerWorkbenchEmbedded = isCustomerWorkbenchEmbedLocation();
   const [mobile, setMobile] = useState("");
@@ -1261,6 +1264,7 @@ export default function AssistantApp() {
   const [pendingCompanies, setPendingCompanies] = useState<CompanyOption[]>([]);
   const [companies, setCompanies] = useState<CompanyOption[]>([]);
   const [companyMenuOpen, setCompanyMenuOpen] = useState(false);
+  const [adminEntryCompanyId, setAdminEntryCompanyId] = useState("");
   const [notice, setNotice] = useState("");
   const [auth, setAuth] = useState<AuthPayload | null>(() => {
     return readAuthPayload<AuthPayload>(LS_ASSISTANT_TOKEN);
@@ -2650,6 +2654,44 @@ export default function AssistantApp() {
     }
   };
 
+  const enterOrganizationAdmin = async (company: CompanyOption) => {
+    if (!auth?.token || !hasOrganizationAdminRole([company.roleCode])) {
+      return;
+    }
+    setAdminEntryCompanyId(company.companyId);
+    try {
+      let nextAuth = auth;
+      if (company.companyId !== auth.companyId) {
+        setNotice("正在切换组织...");
+        const response = await authFetch(LS_ASSISTANT_TOKEN, "/auth/switch-company", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ companyId: company.companyId }),
+        }, {
+          onUnauthorized: () => persistAuth(null),
+        });
+        const { body } = await safeFetchJson<AuthPayload>(response);
+        if (!response.ok || !body?.success || !body.data?.token) {
+          setNotice(`切换失败：${body?.message ?? `HTTP ${response.status}`}`);
+          return;
+        }
+        nextAuth = body.data;
+        await completeLogin(nextAuth, "已切换组织，正在进入管理后台...");
+      }
+      if (!hasOrganizationAdminRole(nextAuth.roles)) {
+        setNotice("当前组织没有管理权限，请返回前台后选择其他组织。");
+        return;
+      }
+      beginOrganizationAdminSession(nextAuth);
+      setCompanyMenuOpen(false);
+      navigate("/admin");
+    } catch (error) {
+      setNotice(`进入管理后台失败：${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setAdminEntryCompanyId("");
+    }
+  };
+
   const toggleKb = (id: number) => {
     setSelectedKbIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
   };
@@ -3870,17 +3912,32 @@ export default function AssistantApp() {
           <div className="cici-org-menu__list">
             {companyOptions.map((item) => {
               const isCurrent = item.companyId === auth.companyId || item.current;
+              const canManage = hasOrganizationAdminRole([item.roleCode]);
+              const enteringAdmin = adminEntryCompanyId === item.companyId;
               return (
-                <button
-                  key={item.companyId}
-                  type="button"
-                  className={`cici-org-menu__item${isCurrent ? " is-current" : ""}`}
-                  onClick={() => switchCompany(item.companyId)}
-                  aria-current={isCurrent ? "true" : undefined}
-                >
-                  <span>{item.companyName}</span>
-                  {isCurrent ? <small>当前</small> : null}
-                </button>
+                <div key={item.companyId} className={`cici-org-menu__row${enteringAdmin ? " is-entering" : ""}`}>
+                  <button
+                    type="button"
+                    className={`cici-org-menu__item${isCurrent ? " is-current" : ""}`}
+                    onClick={() => switchCompany(item.companyId)}
+                    aria-current={isCurrent ? "true" : undefined}
+                    disabled={Boolean(adminEntryCompanyId)}
+                  >
+                    <span>{item.companyName}</span>
+                    {isCurrent ? <small>当前</small> : null}
+                  </button>
+                  {canManage ? (
+                    <button
+                      type="button"
+                      className="cici-org-menu__admin-link"
+                      onClick={() => void enterOrganizationAdmin(item)}
+                      disabled={Boolean(adminEntryCompanyId)}
+                      aria-label={`进入${item.companyName}管理后台`}
+                    >
+                      {enteringAdmin ? "正在进入…" : "管理后台"}
+                    </button>
+                  ) : null}
+                </div>
               );
             })}
           </div>

@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-24T12:21:15Z
+updated_at: 2026-07-24T13:09:40Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-24T12:21:15Z
+last_run_at: 2026-07-24T13:09:40Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-245 - 前台会话内置组织管理入口
+
+- `identity/assignment`：MANAGER-001 的 SSH 身份、TASK-245 分支以及实现、设计、状态文件代表路径均返回 `allowed`；扩展 README、设计方案与 DESIGN.json 范围后已先提交并推送授权变更。
+- `frontend-focused`：`npm test -- --run src/admin/adminSession.test.ts src/admin/adminNavigationGuard.test.ts src/theme/theme.test.ts` 通过（3 files / 18 tests），覆盖助手管理员与 OWNER 会话接管、普通成员拒绝及后台导航守卫/主题既有回归。
+- `frontend-build/static`：`npm run build` 与 `git diff --check` 通过；帮助中心和官网导航已移除旧的独立后台登录链接；构建仅有既有 Vite 大 chunk 警告。
+- `browser-desktop`：1280×900 本地浏览器访问 `/admin/login` 直接重定向到 `/app` 的统一登录界面，控制台 error/warning 为 0。
+- `manual-acceptance-limit`：本会话没有真实组织管理员凭据，未伪造“管理后台”菜单的同组织进入、跨组织 `/auth/switch-company`、普通成员无入口/直达拒绝，以及后台返回后助手会话保留的端到端结果；这些为 review 阶段的真实会话验收项。
 
 ## TASK-244 - OIDC 统一入口 state 修复
 

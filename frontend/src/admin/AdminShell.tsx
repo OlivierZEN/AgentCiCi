@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { NavLink, Navigate, Outlet, useLocation } from "react-router-dom";
+import { NavLink, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { authFetch, clearAuthPayload, readAuthPayload, writeAuthPayload } from "../auth/authStorage";
 import { useAuthStorageSync } from "../auth/useAuthStorageSync";
 import { LS_ADMIN_TOKEN } from "../constants";
@@ -14,6 +14,7 @@ import {
   isAdminAsyncRequestCurrent,
 } from "./adminAuthScope";
 import { applyProductTheme } from "../theme/theme";
+import { endOrganizationAdminSession } from "./adminSession";
 
 type AuthPayload = { token: string; companyId: string; companyName?: string; userId: string; roles: string[] };
 type MePayload = { nickname?: string; avatarBase64?: string; mobile?: string; themeCode?: string };
@@ -57,6 +58,7 @@ function readAuth(): AuthPayload | null {
 
 export default function AdminShell() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [auth, setAuth] = useState<AuthPayload | null>(() => readAuth());
   const token = auth?.token ?? "";
   const [me, setMe] = useState<MePayload>({});
@@ -219,9 +221,10 @@ export default function AdminShell() {
   const logout = () => {
     if (!confirmAdminNavigation(navigationGuard, (message) => window.confirm(message))) return;
     invalidateAdminAuthRequests(createAdminAuthScopeKey("", ""));
-    clearAuthPayload(LS_ADMIN_TOKEN);
+    endOrganizationAdminSession();
     setAuth(null);
     setMe({});
+    navigate("/app", { replace: true });
   };
 
   const toggleNavGroup = (label: string) => {
@@ -231,7 +234,7 @@ export default function AdminShell() {
   };
 
   if (!auth) {
-    return <Navigate to="/admin/login" replace />;
+    return <Navigate to="/app" replace />;
   }
 
   const displayCompanyName = companyName && companyName !== auth.companyId ? companyName : "组织名称未设置";
@@ -241,7 +244,7 @@ export default function AdminShell() {
       <aside className="admin-nav">
         <div className="admin-nav__head">
           <p className="brand admin-brand">组织控制台</p>
-          <button type="button" className="admin-nav__logout-icon" onClick={logout} aria-label="退出后台" title="退出后台">
+          <button type="button" className="admin-nav__logout-icon" onClick={logout} aria-label="返回前台工作台" title="返回前台工作台">
             <svg viewBox="0 0 24 24" aria-hidden>
               <path d="M10 6H6.8A1.8 1.8 0 0 0 5 7.8v8.4A1.8 1.8 0 0 0 6.8 18H10" />
               <path d="M14 8l4 4-4 4" />

@@ -301,6 +301,13 @@
   padding: 3px 0 0;
 }
 
+.cici-org-menu__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
 .cici-org-menu__item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -347,6 +354,42 @@
   color: #876223;
   font-size: 11px;
   font-weight: 700;
+}
+
+.cici-org-menu__admin-link {
+  min-height: 28px;
+  border: 0;
+  border-radius: 0;
+  padding: 4px 0;
+  background: transparent;
+  color: var(--theme-accent-strong, #876223);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: none;
+  transform: none;
+}
+
+.cici-org-menu__admin-link:hover,
+.cici-org-menu__admin-link:active {
+  border: 0;
+  background: transparent;
+  color: var(--theme-text-secondary, #5f523f);
+  box-shadow: none;
+  transform: none;
+}
+
+.cici-org-menu .cici-org-menu__item:focus-visible,
+.cici-org-menu__admin-link:focus-visible {
+  outline: 2px solid var(--theme-accent-strong, #876223);
+  outline-offset: 2px;
+}
+
+.cici-org-menu__row.is-entering .cici-org-menu__item,
+.cici-org-menu__admin-link:disabled {
+  cursor: wait;
+  opacity: 0.56;
 }
 
 .cici-ai-apps-flyout {

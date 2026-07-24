@@ -51,8 +51,6 @@ type SiteCopy = {
     eyebrow: string;
     loginLabel: string;
     loginHref: string;
-    adminLoginLabel: string;
-    adminLoginHref: string;
     platformLoginLabel: string;
     platformLoginHref: string;
     footerLine: string;
@@ -156,8 +154,6 @@ const COPY: Record<Locale, SiteCopy> = {
       eyebrow: "AgentCiCi Platform",
       loginLabel: "登录",
       loginHref: "/login",
-      adminLoginLabel: "管理后台",
-      adminLoginHref: "/admin/login",
       platformLoginLabel: "运营平台",
       platformLoginHref: "/platform/login",
       footerLine: "AgentCiCi 将企业业务系统、知识、渠道和智能体运行治理连接成可执行闭环。",
@@ -406,8 +402,6 @@ const COPY: Record<Locale, SiteCopy> = {
       eyebrow: "AgentCiCi Platform",
       loginLabel: "Sign in",
       loginHref: "/login",
-      adminLoginLabel: "Admin",
-      adminLoginHref: "/admin/login",
       platformLoginLabel: "Platform",
       platformLoginHref: "/platform/login",
       footerLine: "AgentCiCi connects business systems, knowledge, channels, and governed agent runtime into executable loops.",
@@ -725,7 +719,6 @@ export default function AgentCiciWebsite() {
         <a className="acw-mobile-menu__login" href={copy.shared.loginHref}>
           {copy.shared.loginLabel}
         </a>
-        <a href={copy.shared.adminLoginHref}>{copy.shared.adminLoginLabel}</a>
         <a href={copy.shared.platformLoginHref}>{copy.shared.platformLoginLabel}</a>
       </div>
 
@@ -753,7 +746,6 @@ export default function AgentCiciWebsite() {
             </a>
           ))}
           <a href={copy.shared.loginHref}>{copy.shared.loginLabel}</a>
-          <a href={copy.shared.adminLoginHref}>{copy.shared.adminLoginLabel}</a>
           <a href={copy.shared.platformLoginHref}>{copy.shared.platformLoginLabel}</a>
         </div>
       </footer>

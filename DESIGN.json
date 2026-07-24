@@ -187,7 +187,8 @@
         "Galaxy is the only dark palette. It remains a restrained enterprise workspace and must preserve WCAG-readable text, controls, forms, dividers, statuses, and focus states.",
         "Theme option UI uses compact radio rows, three-color swatches, one structural boundary, and no nested cards, hover movement, shadows, or decorative illustrations.",
         "Authenticated frontend data visualizations use four theme-owned semantic series tokens. Business modules must not bypass the selected theme with fixed chart, identity, status, or panel colors.",
-        "The organization switcher monogram is derived from the first visible character of the current organization name. Latin initials are uppercase and empty names fall back to the Chinese character 组; fixed vendor or product abbreviations are forbidden."
+        "The organization switcher monogram is derived from the first visible character of the current organization name. Latin initials are uppercase and empty names fall back to the Chinese character 组; fixed vendor or product abbreviations are forbidden.",
+        "组织切换菜单中，对 OWNER 或 ORG_ADMIN 组织可在选择动作旁显示中文文本命令“管理后台”；不得使用胶囊、选中填充、嵌套卡片或 hover 填充，进入中禁用同组织动作并保留语义色 focus-visible 轮廓。"
       ]
     },
     "breakpoints": {

@@ -8,7 +8,6 @@ import {
 import AssistantApp from "./assistant/AssistantApp";
 import AgentCiciWebsite from "./suite/AgentCiciWebsite";
 import AdminGuard from "./admin/AdminGuard";
-import AdminLogin from "./admin/AdminLogin";
 import AdminShell from "./admin/AdminShell";
 import AdminKnowledgePage from "./admin/pages/AdminKnowledgePage";
 import AdminDataQualityPage from "./admin/pages/AdminDataQualityPage";
@@ -66,7 +65,7 @@ const router = createBrowserRouter(createRoutesFromElements(
         <Route path="/pricing/global" element={<Navigate to="/global/pricing" replace />} />
         <Route path="/autoservice/*" element={<Navigate to="/solutions" replace />} />
         <Route path="/embed/meeting-minutes" element={<EmbedMeetingMinutesPage />} />
-        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/login" element={<Navigate to="/app" replace />} />
         <Route path="/admin" element={<AdminGuard />}>
           <Route element={<AdminShell />}>
             <Route index element={<Navigate to="kb" replace />} />

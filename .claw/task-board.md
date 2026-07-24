@@ -17,13 +17,13 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-245 - 前台会话内置组织管理入口
 
-- status: `ready`
+- status: `review`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-138-assistant-admin-session-entrypoint.md`
 - task_status_path: `.claw/tasks/TASK-245.md`
 - assignment_path: `.claw/assignments/TASK-245.yaml`
-- next_action: 完成前台组织菜单管理员入口、后台会话接管、独立登录入口关闭与定向回归。
+- next_action: 等待真实组织管理员会话完成菜单内同组织、跨组织和后台返回前台验收；未授权生产发布。
 
 ### TASK-244 - OIDC 统一入口 state 修复
 

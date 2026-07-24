@@ -20,7 +20,7 @@
 - 元数据存储：PostgreSQL（多组织 + 业务元数据）
 - 缓存：Redis（会话状态、验证码、短期上下文）
 - 异步处理：RabbitMQ（文档解析/索引、审计异步写入）
-- 前端：React + Vite（**助手端**与**管理后台**分路由、分登录入口，见 §4.5）
+- 前端：React + Vite（**助手端**与**管理后台**分路由；组织管理从助手会话内进入，见 §4.5）
 - 对外依赖：阿里云短信服务、各大模型 API（阿里云百炼等）
 
 ## 3. 总体架构
@@ -30,7 +30,7 @@
 ### 3.1 接入层（Client / Channel）
 
 - **助手端（`/`）**：面向员工 / 普通用户；会话聊天、只读知识库列表（勾选参与 RAG）；与管理功能隔离。
-- **管理后台（`/admin/login` → `/admin/*`）**：面向 **组织管理员（`ORG_ADMIN`）**；知识库维护、模型/工具/运维、用户与角色管理，以及 `/admin/evaluation` 组织 AI 质量中心；独立登录与 Token 存储，不与助手端混用同一界面。
+- **管理后台（`/admin/*`）**：面向 **组织管理员（`OWNER` / `ORG_ADMIN`）**；知识库维护、模型/工具/运维、用户与角色管理，以及 `/admin/evaluation` 组织 AI 质量中心。入口位于助手端“切换组织”菜单，复用当前组织会话；后台仍保持独立工作区路由与布局，不提供第二次登录。
 - **平台运营端（`/platform/login` → `/platform/*`）**：面向平台管理员、运营与审计角色；`/platform/evaluation` 维护平台核心、标准应用和行业评测资产，组织原始输入与隐藏挑战集按角色最小化可见。
 - 后续可扩展：内嵌助手组件（抽屉/悬浮）仍应对接同一套助手 API 与权限模型。
 - 所有调用统一通过后端 API（Spring Boot）进入。
@@ -105,7 +105,7 @@
    - 按手机号创建或复用全局 `user_account` 与 `account_login_identifier`
    - 按 `org_id + account_id` 创建或复用 `organization_member`
    - 生成 JWT（包含 `org_id`、`account_id`、`member_id`、`roles` 等；`sub` 当前为 `organization_member.id`）
-   - 返回给前端；当前 SPA 将登录态存 **`localStorage`**（助手端键名 `cici_assistant_token`，管理端键名 `cici_admin_token`，互不覆盖）。生产环境可演进为 `httpOnly` Cookie + CSRF 等更强方案。
+   - 返回给前端；当前 SPA 将助手登录态存 **`localStorage`** 键 `cici_assistant_token`。进入组织管理后台时，`cici_admin_token` 仅保存该助手管理员会话的临时镜像，不能单独建立或延续管理登录；退出后台只清除该镜像。生产环境可演进为 `httpOnly` Cookie + CSRF 等更强方案。
    - **Bootstrap 管理员手机号**：配置项 `app.auth.bootstrap-admin-mobiles`（逗号分隔）。**新建成员**时：命中则 `ORG_ADMIN`，否则 `ORG_USER`。**已存在成员**若当前为 `ORG_USER` 且手机号在名单内，**每次密码登录成功时会升为** `ORG_ADMIN`（便于先注册后补名单的场景）；名单内成员不会仅因登录被自动降级（降级需管理员在后台修改角色）。
 
 #### 4.1.2 相关核心表
@@ -221,20 +221,20 @@
 5. 对候选分段进行重排与截断，并拼接成上下文
 6. 与用户问题一起输入到模型中，让模型生成带引用回答
 
-### 4.5 前端 React 模块（双入口，与实现对齐）
+### 4.5 前端 React 模块（助手内置组织管理入口，与实现对齐）
 
 | 入口 | 路由 | 受众 | 能力概要 |
 |------|------|------|----------|
 | 助手端 | `/` | `ORG_USER` / `ORG_ADMIN` 均可登录使用助手 | 手机号验证码登录；对话；**只读**知识库列表 + 多选参与 RAG |
-| 管理后台 | `/admin/login`，业务页 `/admin/kb`、`/admin/models`、`/admin/tools`、`/admin/ops`、`/admin/users`、`/admin/evaluation` | 仅 **`ORG_ADMIN`** | 知识库与文档全生命周期管理；模型/工具配置；观测运维；用户与角色；组织私有评测、运行、问题和 Trace 回归闭环 |
+| 管理后台 | `/admin/*`，业务页 `/admin/kb`、`/admin/models`、`/admin/tools`、`/admin/ops`、`/admin/users`、`/admin/evaluation` | 仅 **`OWNER`** / **`ORG_ADMIN`** | 从助手端“切换组织”菜单的“管理后台”进入；知识库与文档全生命周期管理；模型/工具配置；观测运维；用户与角色；组织私有评测、运行、问题和 Trace 回归闭环 |
 | 平台运营端 | `/platform/login`，质量页 `/platform/evaluation` | 平台角色；资产写入仅 `PLATFORM_ADMIN` / `PLATFORM_OPERATOR` | 平台核心、标准应用、行业评测资产的版本、隐藏用例、授权、全局脱敏运行摘要与审计 |
 
 **鉴权与体验约定**
 
-- 管理后台登录成功后，前端根据登录响应中的 `roles` 判断是否包含 `ORG_ADMIN`；不包含则拒绝写入管理 Token 并提示错误。
-- 访问 `/admin` 下受保护路由时，用已存管理 Token 调用 `GET /auth/me` 再次校验 `ORG_ADMIN`，不通过则清除管理 Token 并跳转 `/admin/login`。
-- 助手端与管理端 **不使用同一 Tab 混排控制台**；两侧通过页脚/文案链结互相跳转（`/admin/login` ↔ `/`）。
-- 开发环境下 Vite 将 `/auth`、`/kb`、`/ai`、`/models`、`/tools`、`/ops`、`/evaluation`、**`/admin`** 与 `/api/platform` 等代理至后端（见 `frontend/vite.config.ts`）；各入口使用独立 Token 存储。
+- 助手端根据 `/auth/companies` 返回的目标组织 `roleCode`，只为 **OWNER** / **ORG_ADMIN** 显示“管理后台”；跨组织进入时先调用既有 `/auth/switch-company`，再使用返回的当前组织会话进入 `/admin`。
+- 访问 `/admin` 下受保护路由时，守卫从当前助手会话建立临时后台镜像，并调用 `GET /auth/me` 再次校验 **OWNER** / **ORG_ADMIN**；会话、角色或校验不通过则清除后台镜像并跳转 `/app`。`/admin/login` 也统一跳转 `/app`。
+- 助手端与管理端 **不使用同一 Tab 混排控制台**；管理后台保持独立工作区路由与布局，退出后台回到 `/app` 且保留助手会话。
+- 开发环境下 Vite 将 `/auth`、`/kb`、`/ai`、`/models`、`/tools`、`/ops`、`/evaluation`、**`/admin`** 与 `/api/platform` 等代理至后端（见 `frontend/vite.config.ts`）；管理镜像不构成独立登录态。
 
 **后续扩展**
 
@@ -319,7 +319,7 @@
 - AI 生成后端基础工程（Java 21）、鉴权中间件、`org_id` 上下文拦截器、统一异常与审计骨架。
 - AI 生成登录模块：手机号验证码登录、阿里云短信客户端封装、限流与风控规则。
 - AI 生成知识库基础链路：文档上传、RabbitMQ 任务投递、Qdrant/PostgreSQL 最小打通。
-- AI 生成 React 基础界面：助手端登录与会话页；管理后台独立登录与分栏布局（知识库/模型/工具/运维/用户管理）。
+- AI 生成 React 基础界面：助手端登录、会话页与组织管理入口；管理后台分栏布局（知识库/模型/工具/运维/用户管理）。
 - 人工只做关键验收：登录安全、组织隔离、核心接口契约正确性。
 
 ### Step 2：AI 编排能力与业务可用化
@@ -374,5 +374,5 @@
 - 组织 `demo-org` 由后端启动时种子数据创建（`AuthBootstrapData`）。
 - 任意**未触发短信频控**的手机号均可完成短信登录；响应中的 **`devCode` 即为验证码**（本地/联调用；生产应对接真实短信且勿返回 `devCode`）。
 - **助手端**（`/`）默认示例：`demo-org` + `13800138111`。
-- **管理后台**（`/admin/login`）默认示例：`demo-org` + `13900009999`（与 `application-local.yml` 中 `app.auth.bootstrap-admin-mobiles` 列表示例一致，便于首登即为 `ORG_ADMIN`）。
+- **组织管理后台**：以助手端登录 `demo-org` + `13900009999` 后，在“切换组织”菜单选择“管理后台”进入（与 `application-local.yml` 中 `app.auth.bootstrap-admin-mobiles` 列表示例一致，便于首登即为 `ORG_ADMIN`）。
 - 若某手机号已曾注册为 `ORG_USER`，仅改配置不会自动升为管理员，需由现有管理员在 **用户管理** 中改角色，或使用未注册过的 bootstrap 手机号新建用户。

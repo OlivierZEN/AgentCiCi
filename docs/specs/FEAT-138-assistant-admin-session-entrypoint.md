@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-138
 title: 前台会话内置组织管理入口
-status: in_implementation
+status: review
 owner_role: fullstack-agent
 task_ids: TASK-245
 related_decisions: FEAT-136 unified identity; existing organization membership RBAC
 related_issues: none
-updated_at: 2026-07-24T12:56:14Z
+updated_at: 2026-07-24T13:09:40Z
 updated_by: MANAGER-001
 ---
 
