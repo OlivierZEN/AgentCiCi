@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-24T13:42:30Z
+updated_at: 2026-07-24T14:23:00Z
 updated_by: MANAGER-001
-phase: platform-user-directory-ready-for-integration
-active_task: TASK-247
-next_action: "等待 TASK-247 合并；未经用户授权不发布生产。"
+phase: production-and-review
+active_task: TASK-245
+next_action: "等待受权平台账号复核 TASK-247 全量注册用户目录；TASK-245 保持 review。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-247 / FEAT-140：已完成待集成。运营端“注册用户”现从 `user_account` 查询全部个人账户，不再用 `company_member` 排除已加入组织者；账户表是唯一行源，所以一人加入多个组织仍只显示一次。平台鉴权、搜索、分页和响应形状不变，页面说明同步为全平台用户语义。后端定向测试 2/2、前端定向测试 4/4、生产构建和 diff 检查通过；未使用或伪造平台凭据，真实受保护页面验收和生产发布均待后续明确授权。
+- TASK-247 / FEAT-140：已合并 main（`38cb22e`）并发布 `2.8.15`。运营端“注册用户”现从 `user_account` 查询全部个人账户，不再用 `company_member` 排除已加入组织者；账户表是唯一行源，所以一人加入多个组织仍只显示一次。完整后端测试、前端定向测试/构建、Compose 配置和 diff 检查通过；发布前四项备份均非空，六服务健康，版本为 `2.8.15 / 38cb22e3a587`，`agentcici.com`、注册用户路由和 `x` 均通过，匿名平台接口仍为 401。未使用或伪造平台凭据，真实目录内容待受权账号复核。
 
 - TASK-246 / FEAT-139：已合并 `main`（`6cee975`）并发布 `2.8.14`。租户 API 边界会把迁移期 `orgId` 归一为 `companyId`，并在生成/请求详情路由前拒绝无效标识，避免 `/platform/tenants/undefined` 触发 `Validation failure`。合并后 21 项前端定向测试、构建、Compose 配置和 diff 检查通过；发布前四项备份均非空，backend/frontend 健康，版本接口为 `2.8.14 / 6cee975539e4`，Nginx 与公网 `agentcici.com`、`/platform/tenants`、`x` 均通过。未使用平台账号，真实受保护页面交互待受权复核。
 

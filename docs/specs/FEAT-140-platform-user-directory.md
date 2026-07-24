@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-140
 title: 平台全量个人用户目录
-status: verified
+status: released
 owner_role: platform-governance-agent
 task_ids: TASK-247
 related_decisions: none
 related_issues: none
-updated_at: 2026-07-24T13:42:30Z
+updated_at: 2026-07-24T14:23:00Z
 updated_by: MANAGER-001
 ---
 
@@ -33,7 +33,7 @@ updated_by: MANAGER-001
 
 - 不展示组织名称、成员角色、组织数量或跨组织明细。
 - 不修改用户注册、组织邀请、成员关系、权限边界、数据迁移或移动端布局。
-- 不发布生产环境，除非用户后续明确授权。
+- 已按用户明确授权发布生产；不扩展到其他用户或组织治理功能。
 
 ## 用户场景
 
@@ -77,9 +77,10 @@ updated_by: MANAGER-001
 - 已将目录查询改为只读取 `user_account` 的 `searchRegisteredAccounts`，不会联结 `company_member`。
 - 服务、控制器和页面均已切换到全量个人账户语义，接口路径、鉴权、参数与响应字段不变。
 - 后端定向测试、前端定向测试、生产构建与 diff 检查通过。
+- 已合并 `main` 并发布 `2.8.15 / 38cb22e3a587`；发布前完整备份、六服务健康、版本/Nginx 和公网入口检查通过。
 
 ## 交接说明
 
 - 先阅读 `UserAccountRepository`、`PlatformRegisteredUserService` 与 `PlatformRegisteredUsersPage`。
-- 当前无实现阻塞；生产发布不在本任务授权范围内。
+- 当前无实现或发布阻塞。
 - 本地浏览器只能到达平台登录边界，未使用或伪造平台运营凭据，受保护目录的真实桌面会话验收待受权账号完成。

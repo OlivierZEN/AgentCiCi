@@ -4,10 +4,10 @@ Total output lines: 6804
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-24T13:42:30Z
+updated_at: 2026-07-24T14:23:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-24T13:42:30Z
+last_run_at: 2026-07-24T14:23:00Z
 last_run_status: passed
 ---
 
@@ -19,6 +19,8 @@ last_run_status: passed
 - `frontend-focused`：`npm test -- --run src/platform/pages/PlatformRegisteredUsersPage.test.ts src/platform/pages/platformTenantsShared.test.ts` 通过（2 files / 4 tests）；覆盖全平台目录文案与既有租户路由回归。
 - `frontend-build/static`：`npm run build` 与 `git diff --check` 通过；构建仅有既有 Vite chunk-size warning。
 - `browser-limit`：本地路由会按预期进入平台登录边界；本会话没有受权平台账号，未使用或伪造凭据，因此真实受保护目录桌面交互待后续复核。
+- `main-merge/release`：主线合并提交 `38cb22e3a587`，annotated tag `2.8.15` 已推送。合并后 `mvn -q -Dmaven.repo.local=.m2 test`、前端定向测试、`npm run build`、Compose 配置和 `git diff --check` 均通过。
+- `production-2.8.15`：backend/frontend ACR index digest 分别为 `sha256:8e4fc950102a0c1173c8e97c545358b28533d5fea0c98a0aca533ee7c1ffd81d`、`sha256:7e0bf4f0ed12ecd644630ead048953a5428395e32da9abdd1ddd73a55c2ff080`。备份 `/opt/cici/backups/20260724-222041-before-2.8.15-task247` 的 env、PostgreSQL、KB、Qdrant 均非空；仅重建 backend/frontend，六服务健康，health `UP`、版本 `2.8.15 / 38cb22e3a587`、Nginx 有效；`agentcici.com`、`agentcici.com/platform/registered-users` 与 `x.agentcici.com` 均 HTTP 200，匿名平台注册用户接口为预期 401。
 
 ## TASK-245 - 前台会话内置组织管理入口
 
