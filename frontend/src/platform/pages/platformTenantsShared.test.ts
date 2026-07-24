@@ -1,0 +1,73 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { writeAuthPayload } from "../../auth/authStorage";
+import { LS_PLATFORM_TOKEN } from "../../constants";
+import { createTenant, fetchTenantList, isPlatformCompanyId, tenantApplicationsPath } from "./platformTenantsShared";
+
+class MemoryStorage implements Storage {
+  private values = new Map<string, string>();
+
+  get length() {
+    return this.values.size;
+  }
+
+  clear() {
+    this.values.clear();
+  }
+
+  getItem(key: string) {
+    return this.values.get(key) ?? null;
+  }
+
+  key(index: number) {
+    return Array.from(this.values.keys())[index] ?? null;
+  }
+
+  removeItem(key: string) {
+    this.values.delete(key);
+  }
+
+  setItem(key: string, value: string) {
+    this.values.set(key, value);
+  }
+}
+
+const storage = new MemoryStorage();
+const companyId = "org00000000000000001";
+
+beforeEach(() => {
+  Object.defineProperty(globalThis, "localStorage", { value: storage, configurable: true });
+  storage.clear();
+  writeAuthPayload(LS_PLATFORM_TOKEN, { token: "platform-token", companyId });
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe("platform tenant identity compatibility", () => {
+  it("normalizes legacy orgId results before a tenant route is generated", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      success: true,
+      data: [{ orgId: companyId, name: "示例租户", status: "ACTIVE", memberCount: 2 }],
+    }), { status: 200, headers: { "Content-Type": "application/json" } })));
+
+    await expect(fetchTenantList("ignored")).resolves.toMatchObject([{ companyId, name: "示例租户" }]);
+    expect(tenantApplicationsPath(companyId)).toBe(`/platform/tenants/${companyId}`);
+  });
+
+  it("rejects undefined and malformed route parameters before details are requested", () => {
+    expect(isPlatformCompanyId("undefined")).toBe(false);
+    expect(isPlatformCompanyId("")).toBe(false);
+    expect(tenantApplicationsPath("undefined")).toBeNull();
+  });
+
+  it("normalizes a legacy create result before the post-provisioning redirect", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      success: true,
+      data: { orgId: companyId, companyName: "示例租户", status: "ACTIVE", ownerMemberId: "member-1", ownerAccountId: "account-1", reusedExistingAccount: false },
+    }), { status: 200, headers: { "Content-Type": "application/json" } })));
+
+    await expect(createTenant("ignored", { tenantName: "示例租户", ownerMobile: "13800138000" }))
+      .resolves.toMatchObject({ companyId, companyName: "示例租户" });
+  });
+});

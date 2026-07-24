@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-24T05:40:00Z
+updated_at: 2026-07-24T13:35:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,13 +17,13 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-246 - 租户详情路由标识兼容修复
 
-- status: `ready`
+- status: `done`
 - priority: `high`
 - owner_role: `frontend-platform-agent`
 - spec_path: `docs/specs/FEAT-139-tenant-detail-route-id-compatibility.md`
 - task_status_path: `.claw/tasks/TASK-246.md`
 - assignment_path: `.claw/assignments/TASK-246.yaml`
-- next_action: 完成任务级身份门禁后，兼容迁移期 `orgId` 响应，并拦截无效详情路由。
+- next_action: 已完成并通过定向测试、前端构建与 diff 检查，等待合并后发布。
 
 ### TASK-245 - 前台会话内置组织管理入口
 

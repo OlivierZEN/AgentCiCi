@@ -1,7 +1,7 @@
 task_id: TASK-246
 assignee: MANAGER-001
 assigned_by: MANAGER-001
-status: active
+status: completed
 assigned_at: 2026-07-24T13:20:00Z
 expires_at: none
 spec_path: docs/specs/FEAT-139-tenant-detail-route-id-compatibility.md

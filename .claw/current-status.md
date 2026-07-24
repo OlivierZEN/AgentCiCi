@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-24T13:20:00Z
+updated_at: 2026-07-24T13:35:00Z
 updated_by: MANAGER-001
 phase: keycloak-unified-identity-live
-active_task: TASK-246
-next_action: "修复平台租户目录在迁移期 orgId 响应下生成 /platform/tenants/undefined 的详情路由。"
+active_task: TASK-245
+next_action: "继续 TASK-245 的前台会话内置组织管理入口实现；TASK-246 已验证完成，等待合并后发布。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-246 / FEAT-139：用户反馈平台租户详情页无法显示，实际路由为 `/platform/tenants/undefined`。已确认当前前端只读取 `companyId`，而迁移期响应仍可能给出 `orgId`；本任务将在 API 边界归一标识并拦截无效详情地址，不修改后端合同或生产环境。
+- TASK-246 / FEAT-139：用户反馈平台租户详情页无法显示，实际路由为 `/platform/tenants/undefined`。根因是迁移期响应仍给出 `orgId`、而前端只读取 `companyId`。现已在前端 API 边界归一租户与开户结果，并在详情页请求前拦截无效标识、replace 返回目录。`platformTenantsShared.test.ts` 3/3、前端构建及 diff 检查通过；未修改后端合同或生产环境，等待合并后发布。
 
 - TASK-245 / FEAT-138：用户已确认将组织管理端独立登录关闭，入口内置于前台“切换组织”。管理员组织显示轻量“管理后台”命令，跨组织时先切换并复用同一 token；AdminGuard 继续以 `/auth/me` fail closed 复核。该任务不新增后端 API、角色、移动端或生产发布。
 

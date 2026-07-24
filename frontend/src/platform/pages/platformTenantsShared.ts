@@ -122,6 +122,37 @@ export type TenantProvisionResult = {
   reusedExistingAccount: boolean;
 };
 
+type LegacyCompanyIdentity = {
+  companyId?: string | null;
+  orgId?: string | null;
+};
+
+const PLATFORM_COMPANY_ID_PATTERN = /^org[a-z0-9]{17}$/;
+
+function normalizeCompanyIdentity<T extends LegacyCompanyIdentity>(value: T): T & { companyId: string } {
+  const companyId = value.companyId?.trim() || value.orgId?.trim() || "";
+  return value.companyId === companyId ? (value as T & { companyId: string }) : { ...value, companyId };
+}
+
+function normalizeTenant(tenant: Tenant): Tenant {
+  return normalizeCompanyIdentity(tenant);
+}
+
+function normalizeTenantDetail(detail: TenantDetail): TenantDetail {
+  return {
+    ...detail,
+    tenant: normalizeTenant(detail.tenant),
+  };
+}
+
+export function isPlatformCompanyId(companyId: string): boolean {
+  return PLATFORM_COMPANY_ID_PATTERN.test(companyId);
+}
+
+export function tenantApplicationsPath(companyId: string): string | null {
+  return isPlatformCompanyId(companyId) ? `/platform/tenants/${encodeURIComponent(companyId)}` : null;
+}
+
 export function readPlatformToken(): string {
   return readAuthToken(LS_PLATFORM_TOKEN);
 }
@@ -189,7 +220,7 @@ export async function fetchTenantList(token: string): Promise<Tenant[]> {
   if (!response.ok || !body?.success) {
     throw new Error(body?.message ?? `HTTP ${response.status}`);
   }
-  return body.data ?? [];
+  return (body.data ?? []).map(normalizeTenant);
 }
 
 export async function fetchTenantDetail(token: string, companyId: string): Promise<TenantDetail> {
@@ -198,7 +229,7 @@ export async function fetchTenantDetail(token: string, companyId: string): Promi
   if (!response.ok || !body?.success || !body.data) {
     throw new Error(body?.message ?? `HTTP ${response.status}`);
   }
-  return body.data;
+  return normalizeTenantDetail(body.data);
 }
 
 export async function fetchSematticeProvisioning(token: string, companyId: string): Promise<SematticeProvisioning> {
@@ -207,7 +238,7 @@ export async function fetchSematticeProvisioning(token: string, companyId: strin
   if (!response.ok || !body?.success || !body.data) {
     throw new Error(body?.message ?? `HTTP ${response.status}`);
   }
-  return body.data;
+  return normalizeCompanyIdentity(body.data);
 }
 
 export async function createTenant(token: string, payload: TenantProvisionPayload): Promise<TenantProvisionResult> {
@@ -222,5 +253,5 @@ export async function createTenant(token: string, payload: TenantProvisionPayloa
   if (!response.ok || !body?.success || !body.data) {
     throw new Error(body?.message ?? `HTTP ${response.status}`);
   }
-  return body.data;
+  return normalizeCompanyIdentity(body.data);
 }

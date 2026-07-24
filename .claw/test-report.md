@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-24T12:21:15Z
+updated_at: 2026-07-24T13:35:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-24T12:21:15Z
+last_run_at: 2026-07-24T13:35:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-246 - 租户详情路由标识兼容修复
+
+- `identity/assignment`：`dev-login.py .claw --task TASK-246 --branch codex/TASK-246-tenant-detail-route ...` 返回 `allowed`，SSH 身份、分支与四个前端实现/测试文件及任务文档范围均已验证。
+- `frontend-focused`：`npm test -- --run src/platform/pages/platformTenantsShared.test.ts` 通过（3/3），覆盖租户目录和开户结果的旧 `orgId` 归一，以及 `undefined`/空标识不生成详情路由。
+- `frontend-build`：`npm run build` 通过；仅有既有 Vite chunk-size warning。
+- `static`：`git diff --check` 通过。
+- `browser-limit`：本任务未使用或伪造平台运营账号；无效参数的请求前阻断由组件实现与路由标识定向测试覆盖，受登录保护的真实页面交互待合并后以受权账号复验。
 
 ## TASK-244 - OIDC 统一入口 state 修复
 
