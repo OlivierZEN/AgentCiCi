@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-142
 title: 组织简档接口反向代理修复
-status: in_implementation
+status: review
 owner_role: fullstack-agent
 task_ids: TASK-249
 related_decisions: company_id identity terminology; existing admin company profile API
 related_issues: production /admin/company/profile served as SPA HTML
-updated_at: 2026-07-24T14:31:37Z
+updated_at: 2026-07-24T14:35:07Z
 updated_by: MANAGER-001
 ---
 

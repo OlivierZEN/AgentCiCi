@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-249
-status: ready
-updated_at: 2026-07-24T14:31:37Z
+status: review
+updated_at: 2026-07-24T14:35:07Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -14,8 +14,8 @@ spec_path: docs/specs/FEAT-142-admin-company-profile-proxy-route.md
 
 ## Current State
 
-- Status: `ready`
-- Next action: 为生产 Nginx 与本地 Vite 同步加入 `/admin/company/profile` 后端代理，并执行配置与路由回归。
+- Status: `review`
+- Next action: 等待用户授权合并或生产发布；发布后以受权组织管理员会话复核真实组织简档。
 - Blocked: none
 
 ## Evidence
@@ -27,3 +27,9 @@ spec_path: docs/specs/FEAT-142-admin-company-profile-proxy-route.md
 
 - 仅修复路由代理；保留后端 API、角色和数据边界。
 - 未获生产发布授权前不得构建镜像、修改线上 Nginx 或重启容器。
+
+## Verification
+
+- `nginx:1.27-alpine nginx -t` 使用更新后的 HTTP 配置通过。
+- `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml -f deploy/docker-compose.acr.ssl.yml config`、`npm run build` 与 `git diff --check` 通过。
+- 静态检查确认 Vite、HTTP Nginx 与 HTTPS Nginx 均匹配 `/admin/company/profile`；生产仍是旧配置，待授权发布后复核匿名请求不再返回 HTML。

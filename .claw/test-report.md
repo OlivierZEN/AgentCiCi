@@ -4,14 +4,22 @@ Total output lines: 6804
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-24T14:23:00Z
+updated_at: 2026-07-24T14:35:07Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-24T14:23:00Z
+last_run_at: 2026-07-24T14:35:07Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-249 - 组织简档接口反向代理修复
+
+- `production-diagnosis`：生产 `GET https://x.agentcici.com/admin/company/profile` 在修复前返回 `HTTP 200`、`content-type: text/html` 和 SPA `index.html`，证明请求未被转发至后端。生产 V96 的组织简档统计相关表及 `company_id` 字段已只读核实存在，排除该页面统计 SQL 的结构缺失。
+- `routing-static`：Vite、HTTP Nginx 和 HTTPS Nginx 都显式匹配 `admin/company/profile`；旧 `admin/organization/(profile|export-jobs)` 路径仍保留。
+- `nginx-compose`：`docker run --rm -v "$PWD/deploy/nginx.cici.conf:/etc/nginx/conf.d/default.conf:ro" nginx:1.27-alpine nginx -t` 与 `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml -f deploy/docker-compose.acr.ssl.yml config` 通过。
+- `frontend-build/static`：`npm run build` 与 `git diff --check` 通过；构建仅有既有 Vite chunk-size warning。
+- `production-limit`：未获生产发布授权，未修改线上 Nginx、镜像或容器；发布后应确认匿名请求由后端返回 JSON 鉴权响应，并由受权组织管理员复核简档页面。
 
 ## TASK-247 - 平台全量个人用户目录
 
