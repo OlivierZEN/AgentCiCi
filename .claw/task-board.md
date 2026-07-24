@@ -15,6 +15,16 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-246 - 租户详情路由标识兼容修复
+
+- status: `ready`
+- priority: `high`
+- owner_role: `frontend-platform-agent`
+- spec_path: `docs/specs/FEAT-139-tenant-detail-route-id-compatibility.md`
+- task_status_path: `.claw/tasks/TASK-246.md`
+- assignment_path: `.claw/assignments/TASK-246.yaml`
+- next_action: 完成任务级身份门禁后，兼容迁移期 `orgId` 响应，并拦截无效详情路由。
+
 ### TASK-245 - 前台会话内置组织管理入口
 
 - status: `ready`
