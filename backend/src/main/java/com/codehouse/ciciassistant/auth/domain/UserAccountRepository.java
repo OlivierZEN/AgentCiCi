@@ -30,4 +30,15 @@ public interface UserAccountRepository extends JpaRepository<UserAccountEntity, 
             order by account.createdAt desc
             """)
     Page<UserAccountEntity> searchPersonalAccounts(@Param("keyword") String keyword, Pageable pageable);
+
+    @Query("""
+            select account
+            from UserAccountEntity account
+            where :keyword = ''
+               or lower(account.primaryMobile) like lower(concat('%', :keyword, '%'))
+               or lower(coalesce(account.displayName, '')) like lower(concat('%', :keyword, '%'))
+               or lower(coalesce(account.email, '')) like lower(concat('%', :keyword, '%'))
+            order by account.createdAt desc
+            """)
+    Page<UserAccountEntity> searchRegisteredAccounts(@Param("keyword") String keyword, Pageable pageable);
 }

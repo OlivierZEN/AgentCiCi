@@ -28,6 +28,6 @@ public class PlatformRegisteredUserController {
             @RequestParam(name = "q", defaultValue = "") String query,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "50") @Min(1) @Max(100) int pageSize) {
-        return ApiResponse.ok(registeredUserService.listPersonalUsers(query, page, pageSize));
+        return ApiResponse.ok(registeredUserService.listRegisteredUsers(query, page, pageSize));
     }
 }
