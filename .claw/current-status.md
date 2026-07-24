@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-24T14:28:53Z
+updated_at: 2026-07-24T23:56:24Z
 updated_by: MANAGER-001
 phase: production-and-review
-active_task: TASK-249
-next_action: "修复组织简档 API 被 SPA HTML 回退吞掉的问题；未获授权不发布生产。"
+active_task: TASK-250
+next_action: "修复 MCP HTTP 初始化会话复用；未获授权不合并主线或发布生产。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-250 / FEAT-143：用户已在公网确认 `cc-semattic-mcp` 的 `initialize` 响应含 `Mcp-Session-Id`，但 AgentCiCi 的后续 `tools/list` 未正确复用，服务端因严格会话状态返回 `method \"tools/list\" is invalid during session initialization`。本任务只修复 Java `McpClient`：保存初始化响应会话、带相同会话发送 `notifications/initialized`，并保证 `tools/list`/`tools/call` 透传会话 ID、`MCP-Protocol-Version` 和既有动态 Bearer JWT。SSE 初始化分支会在当前代码记录响应头前提前返回，是已定位的客户端缺陷。不会修改 Semattice、数据库、前端、主线或生产环境。
 
 - TASK-249 / FEAT-142：用户报告组织管理端“组织简档”加载失败。已定位为生产 Nginx 和本地 Vite 仍代理旧 `/admin/organization/...`，而当前 `GET /admin/company/profile` 落入 SPA `index.html`：生产匿名请求返回 `200 text/html`，不是后端鉴权 JSON。当前生产 V96 的组织简档统计相关表和 `company_id` 字段已只读核实存在；本任务仅补齐精确 API 代理，不改后端、数据、权限、UI 或生产环境。
 

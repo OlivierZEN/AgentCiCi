@@ -15,6 +15,16 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-250 - MCP HTTP 会话复用修复
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `backend-agent`
+- spec_path: `docs/specs/FEAT-143-mcp-http-session-propagation.md`
+- task_status_path: `.claw/tasks/TASK-250.md`
+- assignment_path: `.claw/assignments/TASK-250.yaml`
+- next_action: 保存 initialize 的 MCP 会话 ID，完成 initialized 通知后对 tools/list/tools/call 透传会话及协议版本并做本地 HTTP 回归。
+
 ### TASK-249 - 组织简档接口反向代理修复
 
 - status: `ready`

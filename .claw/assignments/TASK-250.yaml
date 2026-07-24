@@ -1,0 +1,48 @@
+task_id: TASK-250
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-24T23:56:24Z
+expires_at: none
+spec_path: docs/specs/FEAT-143-mcp-http-session-propagation.md
+task_status_path: .claw/tasks/TASK-250.md
+branch: codex/TASK-250-mcp-session-propagation
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/mcp/**
+  - backend/src/test/java/com/codehouse/ciciassistant/mcp/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/developers/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+scope_files:
+  - backend/src/main/java/com/codehouse/ciciassistant/mcp/service/McpClient.java
+  - backend/src/test/java/com/codehouse/ciciassistant/mcp/service/McpClientTest.java
+  - docs/specs/FEAT-143-mcp-http-session-propagation.md
+  - .claw/tasks/TASK-250.md
+  - .claw/assignments/TASK-250.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+touch_policy: exclusive
+shared_contracts:
+  - MCP Streamable HTTP initialize/notifications/initialized/tools/list/tools/call sequence
+  - Mcp-Session-Id and MCP-Protocol-Version request headers
+  - dynamic Authorization header resolution in McpServerService
+task_boundary:
+  - "修复 AgentCiCi Java MCP 客户端的初始化会话复用与协议版本透传。"
+  - "对 SSE 初始化响应和工具请求头增加定向回归测试。"
+  - "不修改 Semattice、前端、数据库、主线或生产环境。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
+signature: "MANAGER-001; user supplied the verified MCP session propagation root cause on 2026-07-25."
