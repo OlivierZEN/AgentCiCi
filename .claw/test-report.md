@@ -4,14 +4,24 @@ Total output lines: 6804
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-24T14:23:00Z
+updated_at: 2026-07-24T14:34:49Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-24T14:23:00Z
+last_run_at: 2026-07-24T14:34:49Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-248 - 平台注册用户目录展示已加入组织
+
+- `identity/assignment`：MANAGER-001 的 SSH challenge-response、任务分支及代表性后端、前端、测试和状态文件均经 `dev-login.py` 与 `check-assignment.py` 验证为 `allowed`。
+- `backend-focused`：`mvn -q -Dtest=PlatformRegisteredUserServiceTest test` 通过；覆盖账户一行、零/一/多组织、按组织 ID 去重、无效成员关系过滤，以及一次批量成员查询。
+- `backend-compile`：`mvn -q -DskipTests compile` 通过；成员批量读取使用单条 `join fetch` 查询预加载账户与组织，避免组织名称读取产生 N+1 查询。
+- `frontend-focused`：`npm test -- --run src/platform/pages/PlatformRegisteredUsersPage.test.ts` 通过（1 file / 2 tests）；覆盖全量账户目录文案和多组织名称/无组织文案格式化。
+- `frontend-build/static`：`npm run build` 与 `git diff --check` 通过；构建仅有既有 Vite chunk-size warning。
+- `browser-limit`：本地桌面端访问 `/platform/registered-users` 按预期跳转 `/platform/login`，控制台 error 为 0，并保存登录边界截图 `output/playwright/task248-platform-registered-users-auth-boundary.png`。本会话没有受权平台账号，未使用或伪造凭据，因此真实受保护目录内容和列宽待后续受权会话复核。
+- `release`：本任务仅推送功能分支，未合并 `main`，未创建版本或执行生产发布。
 
 ## TASK-247 - 平台全量个人用户目录
 

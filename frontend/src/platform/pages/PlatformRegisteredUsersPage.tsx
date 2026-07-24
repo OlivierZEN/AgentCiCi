@@ -9,6 +9,12 @@ type RegisteredUser = {
   email: string;
   status: string;
   createdAt: string;
+  organizations?: RegisteredUserOrganization[];
+};
+
+type RegisteredUserOrganization = {
+  id: string;
+  name: string;
 };
 
 type RegisteredUserPage = {
@@ -23,7 +29,14 @@ export const registeredUserDirectoryCopy = {
   sectionLabel: "全平台个人用户目录",
   searchAriaLabel: "搜索全平台个人用户",
   emptyMessage: "暂无符合条件的个人用户。",
+  organizationsColumnLabel: "已加入组织",
+  noOrganizationLabel: "未加入组织",
 };
+
+export function formatRegisteredUserOrganizations(organizations?: RegisteredUserOrganization[]) {
+  const names = organizations?.map((organization) => organization.name.trim()).filter(Boolean) ?? [];
+  return names.length > 0 ? names.join("、") : registeredUserDirectoryCopy.noOrganizationLabel;
+}
 
 function readToken(): string {
   const raw = localStorage.getItem(LS_PLATFORM_TOKEN);
@@ -136,6 +149,7 @@ export default function PlatformRegisteredUsersPage() {
                 <th>用户</th>
                 <th>手机号</th>
                 <th>邮箱</th>
+                <th>{registeredUserDirectoryCopy.organizationsColumnLabel}</th>
                 <th>状态</th>
                 <th>注册时间</th>
               </tr>
@@ -149,15 +163,23 @@ export default function PlatformRegisteredUsersPage() {
                   </td>
                   <td>{user.mobile || "-"}</td>
                   <td>{user.email || "-"}</td>
+                  <td>
+                    <span
+                      title={formatRegisteredUserOrganizations(user.organizations)}
+                      aria-label={`${registeredUserDirectoryCopy.organizationsColumnLabel}：${formatRegisteredUserOrganizations(user.organizations)}`}
+                    >
+                      {formatRegisteredUserOrganizations(user.organizations)}
+                    </span>
+                  </td>
                   <td><span className={`registered-users-page__status registered-users-page__status--${user.status.toLowerCase()}`}>{user.status === "ACTIVE" ? "正常" : user.status || "未知"}</span></td>
                   <td>{formatDateTime(user.createdAt)}</td>
                 </tr>
               ))}
               {!loading && result.items.length === 0 ? (
-                <tr><td colSpan={5} className="skills-data-table__summary">{registeredUserDirectoryCopy.emptyMessage}</td></tr>
+                <tr><td colSpan={6} className="skills-data-table__summary">{registeredUserDirectoryCopy.emptyMessage}</td></tr>
               ) : null}
               {loading ? (
-                <tr><td colSpan={5} className="skills-data-table__summary">正在加载注册用户列表。</td></tr>
+                <tr><td colSpan={6} className="skills-data-table__summary">正在加载注册用户列表。</td></tr>
               ) : null}
             </tbody>
           </table>

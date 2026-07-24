@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-24T14:28:53Z
+updated_at: 2026-07-24T14:34:49Z
 updated_by: MANAGER-001
 phase: production-and-review
 active_task: TASK-249
@@ -24,7 +24,7 @@ read_next:
 
 - TASK-249 / FEAT-142：用户报告组织管理端“组织简档”加载失败。已定位为生产 Nginx 和本地 Vite 仍代理旧 `/admin/organization/...`，而当前 `GET /admin/company/profile` 落入 SPA `index.html`：生产匿名请求返回 `200 text/html`，不是后端鉴权 JSON。当前生产 V96 的组织简档统计相关表和 `company_id` 字段已只读核实存在；本任务仅补齐精确 API 代理，不改后端、数据、权限、UI 或生产环境。
 
-- TASK-248 / FEAT-141：已获授权在平台全量注册用户目录中显示每个账户当前已加入的组织。账户分页继续以 `user_account` 为唯一行源，服务层仅批量读取当前有效 `company_member` 后按组织去重，接口新增只读 `organizations`，前端新增“已加入组织”列。任务只允许实现、验证并推送功能分支；未获合并主线或生产发布授权。
+- TASK-248 / FEAT-141：平台全量注册用户目录现已在功能分支完成组织归属展示。账户分页继续以 `user_account` 为唯一行源，服务层通过一条预加载账户/组织的批量有效 `company_member` 查询后按组织去重，接口新增只读 `organizations`，前端新增“已加入组织”列。后端定向测试/编译、前端定向测试/构建及 diff 检查均通过；本地路由正确保持平台登录边界，未使用或伪造凭据。等待用户决定是否合并 main，未获生产发布授权。
 
 - TASK-247 / FEAT-140：已合并 main（`38cb22e`）并发布 `2.8.15`。运营端“注册用户”现从 `user_account` 查询全部个人账户，不再用 `company_member` 排除已加入组织者；账户表是唯一行源，所以一人加入多个组织仍只显示一次。完整后端测试、前端定向测试/构建、Compose 配置和 diff 检查通过；发布前四项备份均非空，六服务健康，版本为 `2.8.15 / 38cb22e3a587`，`agentcici.com`、注册用户路由和 `x` 均通过，匿名平台接口仍为 401。未使用或伪造平台凭据，真实目录内容待受权账号复核。
 

@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-141
 title: 平台注册用户目录的组织归属展示
-status: in_progress
+status: review
 owner_role: platform-governance-agent
 task_ids: TASK-248
 related_decisions: none
 related_issues: none
-updated_at: 2026-07-24T14:28:53Z
+updated_at: 2026-07-24T14:34:49Z
 updated_by: MANAGER-001
 ---
 
@@ -70,4 +70,5 @@ updated_by: MANAGER-001
 ## 交接说明
 
 - 重点路径：`UserRepository`、`PlatformRegisteredUserService`、`PlatformRegisteredUsersPage` 与其定向测试。
+- 已完成实现与定向验证：成员关系以一条带账户和组织预加载的批量查询读取，服务按账户、组织 ID 聚合；前端表格保留账户一行。
 - 本任务仅实现和推送功能分支；合并主线与生产发布须由用户另行明确授权。
