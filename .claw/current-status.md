@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-24T14:23:00Z
+updated_at: 2026-07-24T14:28:53Z
 updated_by: MANAGER-001
 phase: production-and-review
-active_task: TASK-245
-next_action: "等待受权平台账号复核 TASK-247 全量注册用户目录；TASK-245 保持 review。"
+active_task: TASK-248
+next_action: "完成 TASK-248：保持账户一行，批量补充当前有效组织并在平台注册用户目录显示；不合并或发布。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-248 / FEAT-141：已获授权在平台全量注册用户目录中显示每个账户当前已加入的组织。账户分页继续以 `user_account` 为唯一行源，服务层仅批量读取当前有效 `company_member` 后按组织去重，接口新增只读 `organizations`，前端新增“已加入组织”列。任务只允许实现、验证并推送功能分支；未获合并主线或生产发布授权。
 
 - TASK-247 / FEAT-140：已合并 main（`38cb22e`）并发布 `2.8.15`。运营端“注册用户”现从 `user_account` 查询全部个人账户，不再用 `company_member` 排除已加入组织者；账户表是唯一行源，所以一人加入多个组织仍只显示一次。完整后端测试、前端定向测试/构建、Compose 配置和 diff 检查通过；发布前四项备份均非空，六服务健康，版本为 `2.8.15 / 38cb22e3a587`，`agentcici.com`、注册用户路由和 `x` 均通过，匿名平台接口仍为 401。未使用或伪造平台凭据，真实目录内容待受权账号复核。
 
