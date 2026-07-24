@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-24T11:00:00Z
+updated_at: 2026-07-24T11:53:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-24T11:00:00Z
+last_run_at: 2026-07-24T11:53:00Z
 last_run_status: partial
 ---
 
@@ -17,6 +17,7 @@ last_run_status: partial
 - `backend-compile/static`：`mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` 与 `git diff --check` 通过。
 - `frontend`：安装锁定依赖后 `npm run build` 通过；仅保留既有 Vite 大 chunk 警告。
 - `tenant-applications-status`：`SematticeProvisioningServiceTest` 通过；覆盖已持久化 `PROVISIONED` binding 的读取和无 binding 时显式 `NOT_PROVISIONED`。前端生产构建通过，页面会在加载时请求受平台角色保护的状态接口，并将 `RESERVED` 渲染为“开通中”。
+- `production-2.8.12`：`scripts/release-acr.sh --dry-run --version 2.8.12` 和正式发布成功；backend/frontend ACR index digest 分别为 `sha256:5bd8801e66e93bb8628c2e725f56bb8b1f9d1cda2b98df23dff2dc7fb31e9c4b`、`sha256:3126c5115587ef36e9eb82012a014166a8760877695c31b5e9a90c466d31ccea`。生产备份 `/opt/cici/backups/20260724-194153-before-2.8.12-semattice-status-fix` 的 env、PostgreSQL、KB、Qdrant 文件均非空；backend/frontend 均已切换 `2.8.12`，健康检查 `UP`，`/system/version` 返回 `2.8.12 / 6574f168234e`。真实 binding 读取为 `PROVISIONED|93ff0c87-a626-529e-b8cf-195825df2488`；新状态接口匿名访问为预期 `401`，公网首页为 `200`。
 - `shared-environment-limit`：`mvn -q -Dmaven.repo.local=.m2 -Dtest=OfficialAccessTokenServiceTest,AuthFlowIntegrationTest test` 的 17 个 AuthFlow 集成用例未启动，根因是共享测试库已有 Flyway V81 checksum 不一致（已应用 `2112500543`，本地 `379982424`）；TASK-243 未修改 V81、未执行 repair，独立 OACT 单元与编译结果不等同于完整认证集成通过。
 
 ## TASK-242 - 顶层租户 `company_id` 统一

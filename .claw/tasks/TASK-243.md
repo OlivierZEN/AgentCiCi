@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-243
-status: in_progress
-updated_at: 2026-07-24T10:20:00Z
+status: done
+updated_at: 2026-07-24T11:53:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: integration-agent
@@ -31,4 +31,4 @@ spec_path: docs/specs/FEAT-136-keycloak-unified-identity-and-official-access.md
 - 已实现 V96 `account_external_identity`、OIDC Authorization Code + PKCE BFF 回调、服务端一次性 state/completion ticket、加密 refresh-token Redis 存储、RS256 OACT 签发与公开 JWKS。OACT 不是浏览器 API，只供 AgentCiCi 服务内调用。
 - 已确认生产共有 24 个 `user_account`、31 个活跃成员、2 条独立密码凭据；Keycloak 业务 realm 当前 0 用户。已将 `agentcici-bff` callback 精确限制为 `https://x.agentcici.com/auth/oidc/callback`。
 - 已定位并修复租户应用页的 Semattice 状态误报：页面原先只以本页内存状态渲染，刷新后固定回退为 `NOT_PROVISIONED`；新增平台只读状态接口，按 `semattice_provisioning_binding.company_id` 读取真实绑定。无记录时才返回 `NOT_PROVISIONED`，`RESERVED` 映射为页面“开通中”。
-- 下一步：发布前端与 backend 热修复，并在生产以已绑定公司验证页面刷新后显示“已开通”。
+- 已发布生产 `2.8.12 / 6574f168234e`。后端与前端均已切换；真实公司 `org2sva14i4udjmi2t4s` 的 binding 为 `PROVISIONED`，新接口匿名请求为预期 `401`，页面可在具备平台角色的会话中读取并显示“已开通”。

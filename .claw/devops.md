@@ -22,6 +22,12 @@ status: active
 
 ## Latest Release
 
+- 2.8.12 TASK-243 租户应用 Semattice 开通状态修复 on 2026-07-24:
+  - Git/发布：提交 `6574f168234e`，`scripts/release-acr.sh --dry-run --version 2.8.12` 与正式发布通过，annotated tag `2.8.12` 已推送。
+  - 镜像：backend/frontend ACR index digest 分别为 `sha256:5bd8801e66e93bb8628c2e725f56bb8b1f9d1cda2b98df23dff2dc7fb31e9c4b` 与 `sha256:3126c5115587ef36e9eb82012a014166a8760877695c31b5e9a90c466d31ccea`。
+  - 备份/部署：`/opt/cici/backups/20260724-194153-before-2.8.12-semattice-status-fix` 的 env、PostgreSQL、KB、Qdrant 文件均非空；仅重建 backend/frontend，四个状态服务不重启。
+  - 验收：后端 health `UP`，版本 `2.8.12 / 6574f168234e`；真实公司 binding 为 `PROVISIONED`，状态接口保持平台认证边界（匿名 `401`），`x.agentcici.com` 首页 `200`。
+
 - 2.8.5 FEAT-131 通用外部应用智能体记忆平台 on 2026-07-23:
   - Git/发布：主线提交 `02d380d10508beaf67c96993b9df55978d72072f`；`scripts/release-acr.sh --dry-run` 和 `--version 2.8.5` 成功，annotated tag `2.8.5` 已推送。
   - 镜像：backend/frontend index digest 分别为 `sha256:0936e7b4d0e3040cf907284b7edc41dc891b1091b73d247e1be734e6c5870e30` 与 `sha256:abc3417bcb95f42897abe6ba32a00df7244e20aef3892f9e84875a8c776619ce`。
