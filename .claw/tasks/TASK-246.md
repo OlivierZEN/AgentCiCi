@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-246
 status: done
-updated_at: 2026-07-24T13:35:00Z
+updated_at: 2026-07-24T13:31:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: frontend-platform-agent
@@ -15,7 +15,7 @@ spec_path: docs/specs/FEAT-139-tenant-detail-route-id-compatibility.md
 ## Current State
 
 - Status: `done`
-- Next action: 将已验证分支合并后发布前端。
+- Next action: 已合并并发布 `2.8.14`；等待受权平台账号复核真实租户详情页。
 - Blocked: none
 
 ## Progress
@@ -40,8 +40,14 @@ spec_path: docs/specs/FEAT-139-tenant-detail-route-id-compatibility.md
 ## Verification
 
 - Status: `passed`
-- Evidence: `npm test -- --run src/platform/pages/platformTenantsShared.test.ts` 通过 3/3；`npm run build` 通过（仅保留既有 Vite chunk-size warning）；`git diff --check` 通过。
+- Evidence: 合并主线后 `npm test -- --run src/platform/pages/platformTenantsShared.test.ts src/admin/adminSession.test.ts src/admin/adminNavigationGuard.test.ts src/theme/theme.test.ts` 通过（4 files / 21 tests）；`npm run build`、Compose 配置和 `git diff --check` 通过（构建仅保留既有 Vite chunk-size warning）。
+
+## Release
+
+- 已将 `6cee975539e4` 合并并推送至 `main`，annotated tag `2.8.14` 已推送。
+- 发布前备份：`/opt/cici/backups/20260724-212057-before-2.8.14-task246`（env、PostgreSQL、KB、Qdrant 均非空）。
+- 仅重建 backend/frontend；生产版本接口返回 `2.8.14 / 6cee975539e4`，health `UP`，Nginx 配置有效，`agentcici.com`、`/platform/tenants` 与 `x.agentcici.com` 均为 HTTP 200。
 
 ## Handoff
 
-- 仅修改平台租户前端边界和路由保护；未更改后端合同、生产环境或正在进行的 TASK-245。
+- 仅修改平台租户前端边界和路由保护；未更改后端合同或正在进行的 TASK-245。未使用或伪造平台运营账号，受保护详情页的真实交互仍待受权账号复核。

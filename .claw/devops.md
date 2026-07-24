@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-24T06:12:00Z
+updated_at: 2026-07-24T13:31:00Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -21,6 +21,12 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.8.14 TASK-246 租户详情路由标识兼容修复 on 2026-07-24:
+  - Git/发布：主线合并提交 `6cee975539e4`；`scripts/release-acr.sh --dry-run` 和正式发布通过，annotated tag `2.8.14` 已推送。
+  - 镜像：backend/frontend ACR index digest 分别为 `sha256:25e051c4bfb7f6f843bf595fec2163f3fc2c8790630be43474773c0cd7f06a0d`、`sha256:d118476d5b9967ee214336f115a987ca2b7d980fcdb1df28527bfe30ee41964d`。
+  - 备份/部署：`/opt/cici/backups/20260724-212057-before-2.8.14-task246` 的 env、PostgreSQL、KB、Qdrant 均非空；仅 pull/force-recreate backend/frontend，四个状态服务保持运行。
+  - 验收：六服务 healthy，health `UP`，版本 `2.8.14 / 6cee975539e4`，Nginx 有效；`agentcici.com`、`/platform/tenants` 与 `x.agentcici.com` 为 200。未用平台账号，受保护详情页的真实交互待受权复核。
 
 - 2.8.13 TASK-244 OIDC 规范入口 state 修复 on 2026-07-24:
   - Git/发布：提交 `877337078ea8`，`scripts/release-acr.sh --dry-run --version 2.8.13` 与正式发布通过，annotated tag `2.8.13` 已推送。

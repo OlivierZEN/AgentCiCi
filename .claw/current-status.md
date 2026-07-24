@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-24T13:35:00Z
+updated_at: 2026-07-24T13:31:00Z
 updated_by: MANAGER-001
 phase: multi-track-production-and-review
 active_task: TASK-245
-next_action: "执行用户已明确授权的 TASK-246 合并与生产发布；发布后验证租户目录与详情路由。"
+next_action: "等待受权平台账号复核 TASK-246 的真实租户详情页；TASK-245 保持 review。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-246 / FEAT-139：用户反馈平台租户详情页无法显示，实际路由为 `/platform/tenants/undefined`。根因是迁移期响应仍给出 `orgId`、而前端只读取 `companyId`。现已在前端 API 边界归一租户与开户结果，并在详情页请求前拦截无效标识、replace 返回目录。`platformTenantsShared.test.ts` 3/3、前端构建及 diff 检查通过；未修改后端合同或生产环境，等待合并后发布。
+- TASK-246 / FEAT-139：已合并 `main`（`6cee975`）并发布 `2.8.14`。租户 API 边界会把迁移期 `orgId` 归一为 `companyId`，并在生成/请求详情路由前拒绝无效标识，避免 `/platform/tenants/undefined` 触发 `Validation failure`。合并后 21 项前端定向测试、构建、Compose 配置和 diff 检查通过；发布前四项备份均非空，backend/frontend 健康，版本接口为 `2.8.14 / 6cee975539e4`，Nginx 与公网 `agentcici.com`、`/platform/tenants`、`x` 均通过。未使用平台账号，真实受保护页面交互待受权复核。
 
 - TASK-245 / FEAT-138：已完成本地实现并进入 review。组织管理员在前台“切换组织”菜单可从对应组织行点击轻量“管理后台”；跨组织时先调用既有 `/auth/switch-company`，再复用返回 token 进入 `/admin`。`/admin/login` 和无前台管理员会话的后台直达均回 `/app`；后台返回前台仅清除 `cici_admin_token` 镜像。定向前端测试 18/18、生产构建和 `/admin/login` 桌面端重定向检查通过；本会话没有真实管理员凭据，授权菜单交互待用户验收。该任务不新增后端 API、角色、移动端或生产发布。
 

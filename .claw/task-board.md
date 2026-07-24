@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-24T13:35:00Z
+updated_at: 2026-07-24T13:31:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -23,7 +23,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - spec_path: `docs/specs/FEAT-139-tenant-detail-route-id-compatibility.md`
 - task_status_path: `.claw/tasks/TASK-246.md`
 - assignment_path: `.claw/assignments/TASK-246.yaml`
-- next_action: 已完成并通过定向测试、前端构建与 diff 检查，等待合并后发布。
+- next_action: 已合并 main 并发布 `2.8.14`；等待受权平台账号复核真实详情页。
 
 ### TASK-245 - 前台会话内置组织管理入口
 

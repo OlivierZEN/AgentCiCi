@@ -4,10 +4,10 @@ Total output lines: 6804
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-24T13:35:00Z
+updated_at: 2026-07-24T13:31:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-24T13:35:00Z
+last_run_at: 2026-07-24T13:31:00Z
 last_run_status: passed
 ---
 
@@ -29,6 +29,8 @@ last_run_status: passed
 - `frontend-build`：`npm run build` 通过；仅有既有 Vite chunk-size warning。
 - `static`：`git diff --check` 通过。
 - `browser-limit`：本任务未使用或伪造平台运营账号；无效参数的请求前阻断由组件实现与路由标识定向测试覆盖，受登录保护的真实页面交互待合并后以受权账号复验。
+- `main-merge/release`：`6cee975539e4` 已合并并推送 `main`，annotated tag `2.8.14` 已推送。合并后 `npm test -- --run src/platform/pages/platformTenantsShared.test.ts src/admin/adminSession.test.ts src/admin/adminNavigationGuard.test.ts src/theme/theme.test.ts` 通过（4 files / 21 tests）；`npm run build`、`docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config` 与 `git diff --check` 通过。
+- `production-2.8.14`：backend/frontend ACR index digest 分别为 `sha256:25e051c4bfb7f6f843bf595fec2163f3fc2c8790630be43474773c0cd7f06a0d`、`sha256:d118476d5b9967ee214336f115a987ca2b7d980fcdb1df28527bfe30ee41964d`。备份 `/opt/cici/backups/20260724-212057-before-2.8.14-task246` 的 env、PostgreSQL、KB、Qdrant 均非空；仅重建 backend/frontend，六服务 healthy，`/actuator/health` 为 `UP`、`/system/version` 为 `2.8.14 / 6cee975539e4`，Nginx 有效；`agentcici.com`、`agentcici.com/platform/tenants` 和 `x.agentcici.com` 均 HTTP 200。
 
 ## TASK-244 - OIDC 统一入口 state 修复
 
