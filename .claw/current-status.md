@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-24T13:16:55Z
+updated_at: 2026-07-24T13:35:00Z
 updated_by: MANAGER-001
 phase: multi-track-production-and-review
 active_task: TASK-245
-next_action: "等待真实组织管理员会话验收 TASK-245 的同组织、跨组织与后台返回前台流程；未获授权不发布生产。"
+next_action: "执行用户已明确授权的 TASK-246 合并与生产发布；发布后验证租户目录与详情路由。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-246 / FEAT-139：用户反馈平台租户详情页无法显示，实际路由为 `/platform/tenants/undefined`。根因是迁移期响应仍给出 `orgId`、而前端只读取 `companyId`。现已在前端 API 边界归一租户与开户结果，并在详情页请求前拦截无效标识、replace 返回目录。`platformTenantsShared.test.ts` 3/3、前端构建及 diff 检查通过；未修改后端合同或生产环境，等待合并后发布。
 
 - TASK-245 / FEAT-138：已完成本地实现并进入 review。组织管理员在前台“切换组织”菜单可从对应组织行点击轻量“管理后台”；跨组织时先调用既有 `/auth/switch-company`，再复用返回 token 进入 `/admin`。`/admin/login` 和无前台管理员会话的后台直达均回 `/app`；后台返回前台仅清除 `cici_admin_token` 镜像。定向前端测试 18/18、生产构建和 `/admin/login` 桌面端重定向检查通过；本会话没有真实管理员凭据，授权菜单交互待用户验收。该任务不新增后端 API、角色、移动端或生产发布。
 

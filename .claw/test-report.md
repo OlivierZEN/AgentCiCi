@@ -4,10 +4,10 @@ Total output lines: 6804
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-24T13:16:55Z
+updated_at: 2026-07-24T13:35:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-24T13:16:55Z
+last_run_at: 2026-07-24T13:35:00Z
 last_run_status: passed
 ---
 
@@ -21,6 +21,14 @@ last_run_status: passed
 - `browser-desktop`：1280×900 本地浏览器访问 `/admin/login` 直接重定向到 `/app` 的统一登录界面，控制台 error/warning 为 0。
 - `main-merge-frontend`：合并 `origin/main` 后重新执行同一组 18 项定向测试与生产构建，均通过；仅保留既有 Vite 大 chunk 警告。
 - `manual-acceptance-limit`：本会话没有真实组织管理员凭据，未伪造“管理后台”菜单的同组织进入、跨组织 `/auth/switch-company`、普通成员无入口/直达拒绝，以及后台返回后助手会话保留的端到端结果；这些为 review 阶段的真实会话验收项。
+
+## TASK-246 - 租户详情路由标识兼容修复
+
+- `identity/assignment`：`dev-login.py .claw --task TASK-246 --branch codex/TASK-246-tenant-detail-route ...` 返回 `allowed`，SSH 身份、分支与四个前端实现/测试文件及任务文档范围均已验证。
+- `frontend-focused`：`npm test -- --run src/platform/pages/platformTenantsShared.test.ts` 通过（3/3），覆盖租户目录和开户结果的旧 `orgId` 归一，以及 `undefined`/空标识不生成详情路由。
+- `frontend-build`：`npm run build` 通过；仅有既有 Vite chunk-size warning。
+- `static`：`git diff --check` 通过。
+- `browser-limit`：本任务未使用或伪造平台运营账号；无效参数的请求前阻断由组件实现与路由标识定向测试覆盖，受登录保护的真实页面交互待合并后以受权账号复验。
 
 ## TASK-244 - OIDC 统一入口 state 修复
 

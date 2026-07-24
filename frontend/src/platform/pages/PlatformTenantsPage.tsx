@@ -8,6 +8,7 @@ import {
   jobLabel,
   readPlatformToken,
   statusLabel,
+  tenantApplicationsPath,
 } from "./platformTenantsShared";
 
 type ProvisionFormState = {
@@ -71,7 +72,13 @@ export default function PlatformTenantsPage() {
       const created = await createTenant(token, payload);
       setProvisionModalOpen(false);
       setMessage(created.reusedExistingAccount ? "新租户已开通，已复用既有 Owner 账号。" : "新租户已开通。");
-      navigate(`/platform/tenants/${created.companyId}`, { state: { flash: "新租户已开通" } });
+      const detailPath = tenantApplicationsPath(created.companyId);
+      if (detailPath) {
+        navigate(detailPath, { state: { flash: "新租户已开通" } });
+      } else {
+        await loadTenants();
+        setError("新租户已开通，但未收到可用的租户标识。请从目录重新进入详情。");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "开通新租户失败");
     } finally {
@@ -121,15 +128,17 @@ export default function PlatformTenantsPage() {
               </tr>
             </thead>
             <tbody>
-              {tenants.map((tenant) => (
+              {tenants.map((tenant) => {
+                const detailPath = tenantApplicationsPath(tenant.companyId);
+                return (
                 <tr
-                  key={tenant.companyId}
-                  tabIndex={0}
-                  onClick={() => navigate(`/platform/tenants/${tenant.companyId}`)}
+                  key={tenant.companyId || tenant.name}
+                  tabIndex={detailPath ? 0 : -1}
+                  onClick={() => detailPath && navigate(detailPath)}
                   onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
+                    if (detailPath && (event.key === "Enter" || event.key === " ")) {
                       event.preventDefault();
-                      navigate(`/platform/tenants/${tenant.companyId}`);
+                      navigate(detailPath);
                     }
                   }}
                 >
@@ -147,7 +156,8 @@ export default function PlatformTenantsPage() {
                     {tenant.latestJob ? `${jobLabel(tenant.latestJob.status)} · ${tenant.latestJob.totalRows ?? 0} 行` : "尚未生成"}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
               {tenants.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="skills-data-table__summary">当前还没有可管理租户。</td>
@@ -156,12 +166,15 @@ export default function PlatformTenantsPage() {
             </tbody>
           </table>
           <div className="tenant-lifecycle-mobile-list">
-            {tenants.map((tenant) => (
+            {tenants.map((tenant) => {
+              const detailPath = tenantApplicationsPath(tenant.companyId);
+              return (
               <button
-                key={`${tenant.companyId}-mobile`}
+                key={`${tenant.companyId || tenant.name}-mobile`}
                 type="button"
                 className="tenant-lifecycle-mobile-list__row"
-                onClick={() => navigate(`/platform/tenants/${tenant.companyId}`)}
+                onClick={() => detailPath && navigate(detailPath)}
+                disabled={!detailPath}
               >
                 <div className="tenant-lifecycle-mobile-list__head">
                   <div>
@@ -183,7 +196,8 @@ export default function PlatformTenantsPage() {
                   </div>
                 </div>
               </button>
-            ))}
+              );
+            })}
             {tenants.length === 0 ? <p className="skills-data-table__summary">当前还没有可管理租户。</p> : null}
           </div>
         </section>

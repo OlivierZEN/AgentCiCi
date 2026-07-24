@@ -1,0 +1,52 @@
+task_id: TASK-246
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: completed
+assigned_at: 2026-07-24T13:20:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-139-tenant-detail-route-id-compatibility.md
+task_status_path: .claw/tasks/TASK-246.md
+branch: codex/TASK-246-tenant-detail-route
+pr_url: n/a
+scope_mode: exact_files
+allowed_write_roots:
+  - frontend/src/platform/pages/platformTenantsShared.ts
+  - frontend/src/platform/pages/PlatformTenantsPage.tsx
+  - frontend/src/platform/pages/PlatformTenantApplicationsPage.tsx
+  - frontend/src/platform/pages/platformTenantsShared.test.ts
+  - docs/specs/FEAT-139-tenant-detail-route-id-compatibility.md
+  - .claw/tasks/TASK-246.md
+  - .claw/assignments/TASK-246.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/developers/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+scope_files:
+  - frontend/src/platform/pages/platformTenantsShared.ts
+  - frontend/src/platform/pages/PlatformTenantsPage.tsx
+  - frontend/src/platform/pages/PlatformTenantApplicationsPage.tsx
+  - frontend/src/platform/pages/platformTenantsShared.test.ts
+  - docs/specs/FEAT-139-tenant-detail-route-id-compatibility.md
+  - .claw/tasks/TASK-246.md
+  - .claw/assignments/TASK-246.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+touch_policy: exclusive
+shared_contracts:
+  - GET /platform/tenants response identifier compatibility
+  - GET /platform/tenants/{companyId}/retention
+  - GET /platform/tenants/{companyId}/semattice-provisionings
+task_boundary:
+  - "兼容 orgId 到 companyId 的前端租户标识迁移。"
+  - "阻止无效租户标识拼入详情 API URL。"
+  - "不修改后端接口、生产环境或 TASK-245 范围。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
+signature: "MANAGER-001; user reported the tenant detail page route as /platform/tenants/undefined on 2026-07-24."

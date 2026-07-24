@@ -6,6 +6,7 @@ import { safeFetchJson } from "../../utils/http";
 import {
   TenantDetail,
   fetchSematticeProvisioning,
+  isPlatformCompanyId,
   fetchTenantDetail,
   readPlatformToken,
   statusLabel,
@@ -37,14 +38,18 @@ export default function PlatformTenantApplicationsPage() {
   const [sematticeProvisioningState, setSematticeProvisioningState] = useState<SematticeProvisioningState>("NOT_PROVISIONED");
 
   useEffect(() => {
-    if (!token || !companyId) return;
+    if (!isPlatformCompanyId(companyId)) {
+      navigate("/platform/tenants", { replace: true });
+      return;
+    }
+    if (!token) return;
     void Promise.all([fetchTenantDetail(token, companyId), fetchSematticeProvisioning(token, companyId)])
       .then(([tenantDetail, provisioning]) => {
         setDetail(tenantDetail);
         setSematticeProvisioningState(provisioning.state === "RESERVED" ? "PROVISIONING" : provisioning.state);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "加载租户应用失败"));
-  }, [token, companyId]);
+  }, [token, companyId, navigate]);
 
   async function provisionSemattice() {
     if (!companyId || !detail || sematticeProvisioningState === "PROVISIONING") return;
