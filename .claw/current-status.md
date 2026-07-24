@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-24T02:05:00Z
+updated_at: 2026-07-24T09:00:00Z
 updated_by: MANAGER-001
-phase: agent-runtime-mixed-orchestration-p6-implementation
-active_task: TASK-242
-next_action: "为已合并的 AgentCiCi V94 company_id 统一安排维护窗口；备份、停止旧 backend 写入、迁移和新制品启动后完成 AgentCiCi→Semattice smoke。"
+phase: keycloak-unified-identity-implementation
+active_task: TASK-243
+next_action: "在生产 tag 2.8.9/V95 基线上完成 Keycloak 外部身份映射、OIDC BFF 与 OACT；协调 TASK-242 的 V94 维护窗口和 Semattice 专用 migrator 后再进入联合生产发布。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-243 / FEAT-136：用户已确认 Keycloak 为唯一 IdP，AgentCiCi、Semattice 与未来官方应用采用短期 OACT + 本地 JWKS 验签，禁止逐请求 token exchange/IdP 回调。Keycloak 26.7.0 已在 `sso.agentcici.com` 运行；本任务已切换到线上 `2.8.9` / V95 的干净工作树，避免旧 V52 基线误发布。下一步实现 AgentCiCi 外部身份绑定、OIDC BFF、ACS OACT 与受控发布。
 
 - TASK-242 / FEAT-135：用户已确认以 `company_id` 统一 AgentCiCi 与 Semattice 的顶层企业身份，`organization_id` 只为未来公司内部组织架构保留。实现使用 V94 正向迁移将当前 131 个顶层 `org_id` 列和根表/生命周期表物理改名为 `company_id`/`company*`，不重写既有 `org...` ID 值；旧 JSON、旧 Header 与旧 JWT claim 不保留兼容，必须 fail closed。AgentCiCi PR #17（`8e5f505`）和 Semattice 契约 PR #3（`1787b9e`）均已合并 main；fresh PostgreSQL V1→V94、认证旧 JWT 拒绝、生命周期与受控开户回归、后端打包和前端构建通过。此变更要求维护窗口，旧二进制不能连接 V94 schema；尚未为本项发布生产。
 

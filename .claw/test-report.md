@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-24T02:35:00Z
+updated_at: 2026-07-24T10:20:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-24T02:35:00Z
-last_run_status: passed
+last_run_at: 2026-07-24T10:20:00Z
+last_run_status: partial
 ---
 
 # Test Report
+
+## TASK-243 - Keycloak 统一身份与官方应用访问
+
+- `identity/assignment`：`dev-login.py .claw --developer MANAGER-001 --task TASK-243 --branch codex/TASK-243-keycloak-unified-auth ...` 返回 `allowed`；SSH 私钥持有、Git 身份、任务分支和认证/迁移/部署代表路径均已校验。
+- `backend-focused`：`mvn -q -Dmaven.repo.local=.m2 -Dtest=OfficialAccessTokenServiceTest test` 通过（2/2）；覆盖 RS256 OACT 的 issuer/audience/公司/租户/scope/membership claims、JWKS 公钥投影以及无 Keycloak 外部身份绑定时 fail closed。
+- `backend-compile/static`：`mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` 与 `git diff --check` 通过。
+- `frontend`：安装锁定依赖后 `npm run build` 通过；仅保留既有 Vite 大 chunk 警告。
+- `shared-environment-limit`：`mvn -q -Dmaven.repo.local=.m2 -Dtest=OfficialAccessTokenServiceTest,AuthFlowIntegrationTest test` 的 17 个 AuthFlow 集成用例未启动，根因是共享测试库已有 Flyway V81 checksum 不一致（已应用 `2112500543`，本地 `379982424`）；TASK-243 未修改 V81、未执行 repair，独立 OACT 单元与编译结果不等同于完整认证集成通过。
 
 ## TASK-242 - 顶层租户 `company_id` 统一
 

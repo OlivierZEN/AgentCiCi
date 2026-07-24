@@ -1,0 +1,181 @@
+package com.codehouse.ciciassistant.auth.service;
+
+import com.codehouse.ciciassistant.auth.domain.AccountExternalIdentityEntity;
+import com.codehouse.ciciassistant.auth.domain.AccountExternalIdentityRepository;
+import com.codehouse.ciciassistant.auth.domain.SematticeProvisioningBindingEntity;
+import com.codehouse.ciciassistant.auth.domain.SematticeProvisioningBindingRepository;
+import com.codehouse.ciciassistant.auth.domain.UserEntity;
+import com.codehouse.ciciassistant.common.error.ForbiddenException;
+import io.jsonwebtoken.Jwts;
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
+import java.security.MessageDigest;
+import java.security.PrivateKey;
+import java.security.interfaces.RSAPrivateCrtKey;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.time.Instant;
+import java.util.Base64;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+/**
+ * Signs short-lived official application context tokens. This service never exchanges a token per
+ * Semattice request: callers reuse the token until its bounded expiration.
+ */
+@Service
+public class OfficialAccessTokenService {
+
+    public static final String SEMATTICE_AUDIENCE = "semattice-api";
+
+    private final AccountExternalIdentityRepository identityRepository;
+    private final SematticeProvisioningBindingRepository bindingRepository;
+    private final boolean enabled;
+    private final String issuer;
+    private final String keyId;
+    private final PrivateKey privateKey;
+    private final List<String> sematticeScopes;
+    private final long ttlSeconds;
+
+    public OfficialAccessTokenService(AccountExternalIdentityRepository identityRepository,
+                                      SematticeProvisioningBindingRepository bindingRepository,
+                                      @Value("${app.auth.official-access.enabled:false}") boolean enabled,
+                                      @Value("${app.auth.official-access.issuer:}") String issuer,
+                                      @Value("${app.auth.official-access.key-id:}") String keyId,
+                                      @Value("${app.auth.official-access.private-key-pkcs8-base64:}") String privateKeyBase64,
+                                      @Value("${app.auth.official-access.semattice-scopes:}") List<String> sematticeScopes,
+                                      @Value("${app.auth.official-access.ttl-seconds:600}") long ttlSeconds) {
+        this.identityRepository = identityRepository;
+        this.bindingRepository = bindingRepository;
+        this.enabled = enabled;
+        this.issuer = trim(issuer);
+        this.keyId = trim(keyId);
+        this.privateKey = enabled ? parseRsaPrivateKey(privateKeyBase64) : null;
+        this.sematticeScopes = normalizeScopes(sematticeScopes);
+        if (ttlSeconds < 60 || ttlSeconds > 600) {
+            throw new IllegalArgumentException("Official access token TTL must be between 60 and 600 seconds");
+        }
+        this.ttlSeconds = ttlSeconds;
+        if (enabled && (this.issuer.isBlank() || this.keyId.isBlank() || this.sematticeScopes.isEmpty())) {
+            throw new IllegalArgumentException("Official access token issuer, key ID and Semattice scopes are required when enabled");
+        }
+    }
+
+    public IssuedToken issueForSemattice(UserEntity member) {
+        requireEnabled();
+        if (!UserEntity.STATUS_ACTIVE.equals(member.getMemberStatus())
+                || !"ACTIVE".equalsIgnoreCase(member.getCompany().getStatus())) {
+            throw new ForbiddenException("当前成员或公司不可访问数据平台");
+        }
+        AccountExternalIdentityEntity identity = identityRepository.findByAccount_Id(member.getAccountId())
+                .orElseThrow(() -> new ForbiddenException("当前账号尚未绑定统一身份"));
+        SematticeProvisioningBindingEntity binding = bindingRepository.findByCompanyId(member.getCompany().getId())
+                .filter(value -> SematticeProvisioningBindingEntity.PROVISIONED.equals(value.getState()))
+                .filter(value -> hasText(value.getSematticeTenantId()))
+                .orElseThrow(() -> new ForbiddenException("当前公司尚未开通数据平台"));
+
+        Instant now = Instant.now();
+        Instant expiresAt = now.plusSeconds(ttlSeconds);
+        String membershipVersion = membershipVersion(member);
+        String token = Jwts.builder()
+                .header().keyId(keyId).and()
+                .issuer(issuer)
+                .subject(identity.getSubject())
+                .audience().add(SEMATTICE_AUDIENCE).and()
+                .claim("tenant_id", binding.getSematticeTenantId())
+                .claim("company_id", member.getCompany().getId())
+                .claim("member_id", member.getId())
+                .claim("account_id", member.getAccountId())
+                .claim("roles", List.of(member.getRoleCode()))
+                .claim("scope", String.join(" ", sematticeScopes))
+                .claim("actor_type", "user")
+                .claim("authorized_party", "agentcici")
+                .claim("membership_version", membershipVersion)
+                .id(UUID.randomUUID().toString())
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(expiresAt))
+                .signWith(privateKey, Jwts.SIG.RS256)
+                .compact();
+        return new IssuedToken(token, expiresAt, binding.getSematticeTenantId(), member.getCompany().getId(), sematticeScopes);
+    }
+
+    public Map<String, Object> jwks() {
+        requireEnabled();
+        if (!(privateKey instanceof RSAPrivateCrtKey rsaPrivateKey)) {
+            throw new IllegalStateException("Official access signing key is not RSA CRT key");
+        }
+        Map<String, Object> key = new LinkedHashMap<>();
+        key.put("kty", "RSA");
+        key.put("kid", keyId);
+        key.put("use", "sig");
+        key.put("alg", "RS256");
+        key.put("n", base64UrlUnsigned(rsaPrivateKey.getModulus()));
+        key.put("e", base64UrlUnsigned(rsaPrivateKey.getPublicExponent()));
+        return Map.of("keys", List.of(key));
+    }
+
+    private void requireEnabled() {
+        if (!enabled) {
+            throw new ForbiddenException("官方应用访问令牌尚未启用");
+        }
+    }
+
+    private static PrivateKey parseRsaPrivateKey(String encoded) {
+        try {
+            String value = trim(encoded);
+            if (value.isBlank()) {
+                throw new IllegalArgumentException("Official access private key is required when enabled");
+            }
+            byte[] bytes = Base64.getDecoder().decode(value);
+            return KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(bytes));
+        } catch (IllegalArgumentException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new IllegalArgumentException("Official access private key is invalid", ex);
+        }
+    }
+
+    private static List<String> normalizeScopes(List<String> configured) {
+        if (configured == null) {
+            return List.of();
+        }
+        return configured.stream().map(OfficialAccessTokenService::trim).filter(value -> !value.isBlank()).distinct().toList();
+    }
+
+    private static String membershipVersion(UserEntity member) {
+        try {
+            String source = member.getId() + "|" + member.getCompany().getId() + "|" + member.getRoleCode() + "|" + member.getMemberStatus();
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(source.getBytes(StandardCharsets.UTF_8));
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(digest);
+        } catch (Exception ex) {
+            throw new IllegalStateException("Unable to calculate membership version", ex);
+        }
+    }
+
+    private static String base64UrlUnsigned(BigInteger value) {
+        byte[] bytes = value.toByteArray();
+        int first = bytes.length > 1 && bytes[0] == 0 ? 1 : 0;
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(java.util.Arrays.copyOfRange(bytes, first, bytes.length));
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private static String trim(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    public record IssuedToken(String token,
+                              Instant expiresAt,
+                              String tenantId,
+                              String companyId,
+                              List<String> scopes) {
+    }
+
+}

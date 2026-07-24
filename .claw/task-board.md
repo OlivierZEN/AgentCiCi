@@ -15,6 +15,16 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-243 - Keycloak 统一身份与官方应用访问
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `integration-agent`
+- spec_path: `docs/specs/FEAT-136-keycloak-unified-identity-and-official-access.md`
+- task_status_path: `.claw/tasks/TASK-243.md`
+- assignment_path: `.claw/assignments/TASK-243.yaml`
+- next_action: 基于生产 V95 模型实现外部身份映射、OIDC BFF 与 OACT；与 TASK-242 的 V94 维护窗口和 Semattice 专用 migrator 协调生产发布。
+
 ### TASK-242 - 顶层租户 company_id 统一
 
 - status: `in_progress`

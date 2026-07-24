@@ -30,14 +30,27 @@ public class JwtService {
     }
 
     public String issueToken(UserEntity user, List<String> roles) {
+        return issueToken(user, roles, Map.of());
+    }
+
+    public String issueToken(UserEntity user, List<String> roles, Map<String, Object> additionalClaims) {
         Instant now = Instant.now();
         Instant exp = now.plusSeconds(expirationSeconds);
+        Map<String, Object> claims = new java.util.LinkedHashMap<>();
+        claims.put("company_id", user.getCompany().getId());
+        claims.put("member_id", user.getId());
+        claims.put("account_id", user.getAccountId());
+        claims.put("roles", roles == null ? List.of(user.getRoleCode()) : roles);
+        if (additionalClaims != null) {
+            additionalClaims.forEach((key, value) -> {
+                if (key != null && value != null && !claims.containsKey(key)) {
+                    claims.put(key, value);
+                }
+            });
+        }
         return Jwts.builder()
                 .subject(user.getId())
-                .claim("company_id", user.getCompany().getId())
-                .claim("member_id", user.getId())
-                .claim("account_id", user.getAccountId())
-                .claim("roles", roles == null ? List.of(user.getRoleCode()) : roles)
+                .claims(claims)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(exp))
                 .signWith(signingKey)

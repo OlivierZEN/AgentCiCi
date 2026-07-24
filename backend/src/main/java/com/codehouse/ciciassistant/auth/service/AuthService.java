@@ -170,6 +170,24 @@ public class AuthService {
         return issueLoginForMember(user);
     }
 
+    @Transactional(readOnly = true)
+    public Map<String, Object> loginByExternalIdentityAccount(String accountId, String idpSessionId) {
+        if (idpSessionId == null || idpSessionId.isBlank()) {
+            throw new UnauthorizedException("Missing identity provider session");
+        }
+        List<UserEntity> members = userRepository
+                .findByAccount_IdAndMemberStatusOrderByCreatedAtDesc(accountId, UserEntity.STATUS_ACTIVE)
+                .stream()
+                .filter(member -> "ACTIVE".equalsIgnoreCase(member.getCompany().getStatus()))
+                .toList();
+        if (members.isEmpty()) {
+            throw new UnauthorizedException("No active company membership");
+        }
+        // A multi-company user can immediately switch using the existing protected endpoint. The
+        // initial company is deterministic and remains constrained to an active membership.
+        return issueLoginForMember(members.get(0), Map.of("idp_session_id", idpSessionId));
+    }
+
     private Map<String, Object> loginWithoutCompany(UserAccountEntity account) {
         List<UserEntity> members = userRepository
                 .findByAccount_IdAndMemberStatusOrderByCreatedAtDesc(account.getId(), UserEntity.STATUS_ACTIVE)
@@ -218,8 +236,12 @@ public class AuthService {
     }
 
     private Map<String, Object> issueLoginForMember(UserEntity user) {
+        return issueLoginForMember(user, Map.of());
+    }
+
+    private Map<String, Object> issueLoginForMember(UserEntity user, Map<String, Object> additionalClaims) {
         List<String> roles = resolveRoles(user);
-        String token = jwtService.issueToken(user, roles);
+        String token = jwtService.issueToken(user, roles, additionalClaims);
         return Map.of(
                 "token", token,
                 "companyId", user.getCompany().getId(),
@@ -337,6 +359,15 @@ public class AuthService {
         row.put("avatarBase64", user.getAvatarBase64() == null ? "" : user.getAvatarBase64());
         row.put("roles", resolveRoles(user));
         return row;
+    }
+
+    @Transactional(readOnly = true)
+    public OfficialAccessTokenService.IssuedToken issueSematticeOfficialAccess(String companyId,
+                                                                                 String userId,
+                                                                                 OfficialAccessTokenService tokenService) {
+        UserEntity user = userRepository.findByIdAndCompany_Id(userId, companyId)
+                .orElseThrow(() -> new UnauthorizedException("User not found"));
+        return tokenService.issueForSemattice(user);
     }
 
     @Transactional

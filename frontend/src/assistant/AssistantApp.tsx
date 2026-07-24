@@ -2498,6 +2498,40 @@ export default function AssistantApp() {
     void consumeCloudccSsoTicket(ticket);
   }, []);
 
+  const consumeOidcCompletionTicket = async (ticket: string) => {
+    try {
+      setNotice("正在完成统一登录...");
+      const response = await fetch(`/auth/oidc/complete?ticket=${encodeURIComponent(ticket)}`);
+      const { body } = await safeFetchJson<LoginPayload>(response);
+      if (!response.ok || !body?.success || !body.data?.token) {
+        setNotice(`统一登录失败：${body?.message ?? `HTTP ${response.status}`}`);
+        return;
+      }
+      const url = new URL(window.location.href);
+      url.searchParams.delete("oidc_ticket");
+      window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+      await completeLogin(body.data, "统一登录成功。");
+    } catch (error) {
+      setNotice(`统一登录失败：${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  useEffect(() => {
+    const ticket = new URL(window.location.href).searchParams.get("oidc_ticket");
+    if (ticket) {
+      void consumeOidcCompletionTicket(ticket);
+    }
+  }, []);
+
+  const startUnifiedLogin = () => {
+    if (loginSubmitting) {
+      return;
+    }
+    setLoginSubmitting(true);
+    const returnTo = `${window.location.pathname}${window.location.search}`;
+    window.location.assign(`/auth/oidc/login?return_to=${encodeURIComponent(returnTo)}`);
+  };
+
   const login = async () => {
     if (loginSubmitting) {
       return;
@@ -3592,81 +3626,27 @@ export default function AssistantApp() {
   const agentLoginForm = (
     <>
       <div className="boot-login__form">
-        <div className="boot-login__field">
-          <label htmlFor="boot-mobile">电子邮件地址或手机号码</label>
-          <input
-            id="boot-mobile"
-            className="boot-login__input"
-            value={mobile}
-            onChange={(event) => setMobile(event.target.value)}
-            inputMode="email"
-            autoComplete="username"
-            placeholder="电子邮件地址或手机号码"
-          />
-        </div>
-        <div className="boot-login__field">
-          <label htmlFor="boot-password">密码</label>
-          <input
-            id="boot-password"
-            className="boot-login__input"
-            type="password"
-            value={loginPassword}
-            onChange={(event) => setLoginPassword(event.target.value)}
-            autoComplete="off"
-          />
-        </div>
-        {registerMode ? (
-          <div className="boot-login__field">
-            <label htmlFor="boot-company-name">组织名称</label>
-            <input
-              id="boot-company-name"
-              className="boot-login__input"
-              value={companyName}
-              onChange={(event) => setCompanyName(event.target.value)}
-              autoComplete="company"
-              placeholder="如 销售运营团队"
-            />
-          </div>
-        ) : null}
+        <p className="boot-login__notice">使用 AgentCiCi 统一账号登录。账号密码和多因素验证由统一身份中心安全处理。</p>
       </div>
-      {!registerMode && pendingCompanies.length > 0 ? (
-        <div className="boot-login__org-choice" role="group" aria-label="选择组织">
-          <p>选择要进入的组织</p>
-          {pendingCompanies.map((item) => (
-            <button
-              key={item.companyId}
-              type="button"
-              className="boot-login__org-option"
-              onClick={() => loginToCompany(item.companyId)}
-              disabled={loginSubmitting}
-            >
-              <span>{item.companyName}</span>
-              <small>{item.roleCode}</small>
-            </button>
-          ))}
-        </div>
-      ) : null}
-      {pendingCompanies.length === 0 ? (
-        <div className="boot-login__actions boot-login__actions--single">
-          <button
-            type="button"
-            className="boot-login__btn boot-login__btn--primary"
-            onClick={registerMode ? register : login}
-            disabled={!mobile.trim() || !loginPassword.trim() || loginSubmitting || (registerMode && !companyName.trim())}
-          >
-            <span className="boot-phone-icon" aria-hidden>
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none">
-                <path d="M4 12h12" stroke="white" strokeWidth="2.4" strokeLinecap="round" />
-                <path d="M12 5l8 7-8 7" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </span>
-            <span className="sr-only">开始对话</span>
-          </button>
-        </div>
-      ) : null}
+      <div className="boot-login__actions boot-login__actions--single">
+        <button
+          type="button"
+          className="boot-login__btn boot-login__btn--primary"
+          onClick={startUnifiedLogin}
+          disabled={loginSubmitting}
+        >
+          <span className="boot-phone-icon" aria-hidden>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none">
+              <path d="M4 12h12" stroke="white" strokeWidth="2.4" strokeLinecap="round" />
+              <path d="M12 5l8 7-8 7" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+          <span>统一账号登录</span>
+        </button>
+      </div>
       {notice ? <p className="boot-login__notice">{notice}</p> : null}
       <p className="boot-login__footer-link">
-        还没有账户？<a href="https://onechat.agentcici.com/#demo" className="boot-login__link">立即预约</a>
+        还没有账户？请联系管理员开通统一账号。
       </p>
     </>
   );

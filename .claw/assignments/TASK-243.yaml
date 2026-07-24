@@ -1,0 +1,56 @@
+task_id: TASK-243
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-24T09:00:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-136-keycloak-unified-identity-and-official-access.md
+task_status_path: .claw/tasks/TASK-243.md
+branch: codex/TASK-243-keycloak-unified-auth
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/**
+  - backend/src/main/java/com/codehouse/ciciassistant/tenant/**
+  - backend/src/main/java/com/codehouse/ciciassistant/semattice/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/test/java/com/codehouse/ciciassistant/auth/**
+  - backend/src/test/java/com/codehouse/ciciassistant/tenant/**
+  - backend/src/test/java/com/codehouse/ciciassistant/semattice/**
+  - deploy/**
+  - docs/specs/**
+  - docs/production-release-runbook.md
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+protected_paths:
+  - .claw/developers/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+scope_files:
+  - backend/src/main/resources/application.yml
+  - deploy/docker-compose.acr.yml
+  - deploy/docker-compose.acr.ssl.yml
+  - deploy/nginx.cici.conf
+  - deploy/nginx.cici.ssl.conf
+  - docs/production-release-runbook.md
+touch_policy: exclusive
+shared_contracts:
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/service/JwtService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/tenant/TenantContextFilter.java
+  - backend/src/main/java/com/codehouse/ciciassistant/semattice/SematticeProvisioningService.java
+task_boundary:
+  - "按 FEAT-136 接入 Keycloak 作为唯一 IdP，保持 AgentCiCi 的全局账户和公司成员领域授权。"
+  - "签发短期 OACT，供 Semattice 和后续官方应用本地 JWKS 验签；不实施逐请求 token exchange。"
+  - "第三方服务只使用独立 Keycloak service account；不共享官方应用凭据。"
+  - "生产发布必须协调 TASK-242/V94 维护窗口，遵循运行手册的备份、不可变版本、验证与正向迁移规则。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
+signature: "MANAGER-001; user explicitly requested the Keycloak-based cross-application authentication rollout and online deployment on 2026-07-24."

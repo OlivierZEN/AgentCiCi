@@ -1,6 +1,7 @@
 package com.codehouse.ciciassistant.auth.api;
 
 import com.codehouse.ciciassistant.auth.service.AuthService;
+import com.codehouse.ciciassistant.auth.service.KeycloakOidcLoginService;
 import com.codehouse.ciciassistant.auth.RoleCodes;
 import com.codehouse.ciciassistant.auth.service.CloudccSsoService;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
@@ -17,6 +18,12 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
+import java.net.URI;
 
 @Validated
 @RestController
@@ -25,10 +32,14 @@ public class AuthController {
 
     private final AuthService authService;
     private final CloudccSsoService cloudccSsoService;
+    private final KeycloakOidcLoginService keycloakOidcLoginService;
 
-    public AuthController(AuthService authService, CloudccSsoService cloudccSsoService) {
+    public AuthController(AuthService authService,
+                          CloudccSsoService cloudccSsoService,
+                          KeycloakOidcLoginService keycloakOidcLoginService) {
         this.authService = authService;
         this.cloudccSsoService = cloudccSsoService;
+        this.keycloakOidcLoginService = keycloakOidcLoginService;
     }
 
     @PostMapping("/sms/send")
@@ -49,6 +60,45 @@ public class AuthController {
     @PostMapping("/register")
     public ApiResponse<Map<String, Object>> register(@Valid @RequestBody RegisterRequest request) {
         return ApiResponse.ok(authService.register(request.mobile(), request.password(), request.companyName()), "Register success");
+    }
+
+    @GetMapping("/oidc/login")
+    public ResponseEntity<Void> startOidcLogin(@RequestParam(name = "return_to", required = false) String returnTo) {
+        KeycloakOidcLoginService.LoginStart login = keycloakOidcLoginService.start(returnTo);
+        ResponseCookie cookie = ResponseCookie.from(KeycloakOidcLoginService.STATE_COOKIE, login.state())
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Lax")
+                .path("/auth/oidc")
+                .maxAge(300)
+                .build();
+        return ResponseEntity.status(302)
+                .header(HttpHeaders.LOCATION, login.redirectUri().toString())
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .build();
+    }
+
+    @GetMapping("/oidc/callback")
+    public ResponseEntity<Void> oidcCallback(@RequestParam String code,
+                                             @RequestParam String state,
+                                             @CookieValue(name = KeycloakOidcLoginService.STATE_COOKIE, required = false) String stateCookie) {
+        URI location = keycloakOidcLoginService.complete(code, state, stateCookie);
+        ResponseCookie clearCookie = ResponseCookie.from(KeycloakOidcLoginService.STATE_COOKIE, "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Lax")
+                .path("/auth/oidc")
+                .maxAge(0)
+                .build();
+        return ResponseEntity.status(302)
+                .header(HttpHeaders.LOCATION, location.toString())
+                .header(HttpHeaders.SET_COOKIE, clearCookie.toString())
+                .build();
+    }
+
+    @GetMapping("/oidc/complete")
+    public ApiResponse<Map<String, Object>> completeOidcLogin(@RequestParam("ticket") String ticket) {
+        return ApiResponse.ok(keycloakOidcLoginService.consumeCompletion(ticket), "Login success");
     }
 
     @PostMapping("/cloudcc-sso/ticket")
