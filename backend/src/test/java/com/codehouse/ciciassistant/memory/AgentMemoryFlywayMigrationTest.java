@@ -134,5 +134,17 @@ class AgentMemoryFlywayMigrationTest {
             assertThat(principal.getString("principal_type")).isEqualTo("COMPANY");
             assertThat(principal.getString("principal_id")).isEqualTo("org-company-identity-test");
         }
+        try (Connection connection = DriverManager.getConnection(jdbcUrl, username, password);
+             ResultSet profileColumn = connection.createStatement().executeQuery("""
+                     SELECT column_name
+                     FROM information_schema.columns
+                     WHERE table_schema = 'public'
+                       AND table_name = 'company_profile'
+                       AND column_name IN ('organization_size', 'company_size')
+                     """)) {
+            assertThat(profileColumn.next()).isTrue();
+            assertThat(profileColumn.getString("column_name")).isEqualTo("company_size");
+            assertThat(profileColumn.next()).isFalse();
+        }
     }
 }
