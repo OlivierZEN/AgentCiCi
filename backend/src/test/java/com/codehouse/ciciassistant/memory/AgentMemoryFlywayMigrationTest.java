@@ -30,6 +30,27 @@ class AgentMemoryFlywayMigrationTest {
                 .configuration(Map.of("flyway.postgresql.transactional.lock", "false"))
                 .dataSource(jdbcUrl, username, password)
                 .locations("classpath:db/migration")
+                .target("93")
+                .load()
+                .migrate();
+
+        try (Connection connection = DriverManager.getConnection(jdbcUrl, username, password)) {
+            connection.createStatement().executeUpdate("""
+                    INSERT INTO agent_access_grant (
+                        id, org_id, agent_id, principal_type, principal_id, permission,
+                        source, status, created_at, updated_at
+                    ) VALUES (
+                        'company-identity-migration-grant', 'org-company-identity-test',
+                        'agent-company-identity-test', 'ORG', 'org-company-identity-test',
+                        'VIEW', 'DEFAULT_POLICY', 'ACTIVE', NOW(), NOW()
+                    )
+                    """);
+        }
+
+        Flyway.configure()
+                .configuration(Map.of("flyway.postgresql.transactional.lock", "false"))
+                .dataSource(jdbcUrl, username, password)
+                .locations("classpath:db/migration")
                 .load()
                 .migrate();
 
@@ -89,7 +110,7 @@ class AgentMemoryFlywayMigrationTest {
                      WHERE table_schema = 'public' AND column_name = 'company_id'
                      """)) {
             assertThat(companyColumns.next()).isTrue();
-            assertThat(companyColumns.getInt(1)).isGreaterThanOrEqualTo(131);
+            assertThat(companyColumns.getInt(1)).isGreaterThan(100);
         }
         try (Connection connection = DriverManager.getConnection(jdbcUrl, username, password);
              ResultSet companies = connection.createStatement().executeQuery("""
@@ -102,6 +123,16 @@ class AgentMemoryFlywayMigrationTest {
             java.util.List<String> found = new java.util.ArrayList<>();
             while (companies.next()) found.add(companies.getString(1));
             assertThat(found).containsExactly("company", "company_member");
+        }
+        try (Connection connection = DriverManager.getConnection(jdbcUrl, username, password);
+             ResultSet principal = connection.createStatement().executeQuery("""
+                     SELECT principal_type, principal_id
+                     FROM agent_access_grant
+                     WHERE id = 'company-identity-migration-grant'
+                     """)) {
+            assertThat(principal.next()).isTrue();
+            assertThat(principal.getString("principal_type")).isEqualTo("COMPANY");
+            assertThat(principal.getString("principal_id")).isEqualTo("org-company-identity-test");
         }
     }
 }

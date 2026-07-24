@@ -48,7 +48,14 @@ END $$;
 -- ORG denoted the all-members principal of the top-level tenant.  It is not a
 -- future organization-tree principal, so make persisted access grants use the
 -- same company vocabulary as the surrounding identity contract.
+-- The V60 constraint permits the legacy value only, so replace it before
+-- rewriting existing production grants.  This must precede the UPDATE: live
+-- systems can contain the default COMPANY-wide grant seeded by V60.
+ALTER TABLE agent_access_grant DROP CONSTRAINT IF EXISTS ck_agent_access_principal_type;
 UPDATE agent_access_grant SET principal_type = 'COMPANY' WHERE principal_type = 'ORG';
+ALTER TABLE agent_access_grant
+    ADD CONSTRAINT ck_agent_access_principal_type
+    CHECK (principal_type IN ('COMPANY', 'USER', 'SYSTEM_ROLE', 'GROUP', 'CUSTOM_ROLE', 'DEPARTMENT'));
 UPDATE kb_access_grant SET principal_type = 'COMPANY' WHERE principal_type = 'ORG';
 
 -- PostgreSQL keeps dependent indexes and constraints valid when their table or
