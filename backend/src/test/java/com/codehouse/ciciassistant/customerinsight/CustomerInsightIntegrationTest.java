@@ -146,8 +146,8 @@ class CustomerInsightIntegrationTest {
                 .path("traceId")
                 .asText();
 
-        assertThat(traceRepository.findByTraceIdAndOrgId(traceId, "demo-org")).isPresent();
-        assertThat(skillDefinitionRepository.findByOrgIdAndSkillCode("demo-org", "ai-customer-insight-analyst")).isPresent();
+        assertThat(traceRepository.findByTraceIdAndCompanyId(traceId, "demo-org")).isPresent();
+        assertThat(skillDefinitionRepository.findByCompanyIdAndSkillCode("demo-org", "ai-customer-insight-analyst")).isPresent();
 
         mockMvc.perform(get("/ai/customer-insights/projects/{projectId}", projectId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
@@ -156,15 +156,15 @@ class CustomerInsightIntegrationTest {
                 .andExpect(jsonPath("$.data.sources[*].sourceLabel").value(org.hamcrest.Matchers.hasItem(customerName)))
                 .andExpect(jsonPath("$.data.jobs[0].status").value("SUCCESS"));
 
-        assertThat(projectRepository.findByOrgIdAndPublicId("demo-org", projectId)).isPresent();
-        assertThat(sectionRepository.findByProjectIdOrderByIdAsc(projectRepository.findByOrgIdAndPublicId("demo-org", projectId).orElseThrow().getId()))
+        assertThat(projectRepository.findByCompanyIdAndPublicId("demo-org", projectId)).isPresent();
+        assertThat(sectionRepository.findByProjectIdOrderByIdAsc(projectRepository.findByCompanyIdAndPublicId("demo-org", projectId).orElseThrow().getId()))
                 .hasSizeGreaterThanOrEqualTo(26);
     }
 
     private void forceMockChatModel() {
-        jdbcTemplate.update("DELETE FROM org_model_config WHERE org_id = ? AND scene_code = ?", "demo-org", "chat");
+        jdbcTemplate.update("DELETE FROM company_model_config WHERE company_id = ? AND scene_code = ?", "demo-org", "chat");
         jdbcTemplate.update("""
-                INSERT INTO org_model_config(org_id, scene_code, provider, model_name)
+                INSERT INTO company_model_config(company_id, scene_code, provider, model_name)
                 VALUES (?, ?, ?, ?)
                 """, "demo-org", "chat", "mock", "cici-default");
     }
@@ -174,7 +174,7 @@ class CustomerInsightIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "orgId": "demo-org",
+                                  "companyId": "demo-org",
                                   "mobile": "%s",
                                   "password": "szyd1234"
                                 }

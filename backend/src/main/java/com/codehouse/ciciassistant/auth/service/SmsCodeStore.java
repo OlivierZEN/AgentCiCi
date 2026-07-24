@@ -32,27 +32,27 @@ public class SmsCodeStore {
         this.redisTemplate = redisTemplateProvider.getIfAvailable();
     }
 
-    public String createCode(String orgId, String mobile) {
+    public String createCode(String companyId, String mobile) {
         if (isRedisMode()) {
-            return createCodeWithRedis(orgId, mobile);
+            return createCodeWithRedis(companyId, mobile);
         }
-        return createCodeInMemory(orgId, mobile);
+        return createCodeInMemory(companyId, mobile);
     }
 
-    public void verifyCode(String orgId, String mobile, String code) {
+    public void verifyCode(String companyId, String mobile, String code) {
         if (isRedisMode()) {
-            verifyCodeWithRedis(orgId, mobile, code);
+            verifyCodeWithRedis(companyId, mobile, code);
             return;
         }
-        verifyCodeInMemory(orgId, mobile, code);
+        verifyCodeInMemory(companyId, mobile, code);
     }
 
     private boolean isRedisMode() {
         return "redis".equalsIgnoreCase(mode) && redisTemplate != null;
     }
 
-    private String createCodeInMemory(String orgId, String mobile) {
-        String key = key(orgId, mobile);
+    private String createCodeInMemory(String companyId, String mobile) {
+        String key = key(companyId, mobile);
         Instant now = Instant.now();
         if (rateLimitEnabled) {
             RateEntry rate = rates.computeIfAbsent(key, ignored -> new RateEntry(now, 0, Instant.EPOCH));
@@ -74,8 +74,8 @@ public class SmsCodeStore {
         return code;
     }
 
-    private void verifyCodeInMemory(String orgId, String mobile, String code) {
-        String key = key(orgId, mobile);
+    private void verifyCodeInMemory(String companyId, String mobile, String code) {
+        String key = key(companyId, mobile);
         CodeEntry entry = codes.get(key);
         if (entry == null || Instant.now().isAfter(entry.expiresAt)) {
             throw new IllegalArgumentException("Verification code expired or missing");
@@ -86,8 +86,8 @@ public class SmsCodeStore {
         codes.remove(key);
     }
 
-    private String createCodeWithRedis(String orgId, String mobile) {
-        String key = key(orgId, mobile);
+    private String createCodeWithRedis(String companyId, String mobile) {
+        String key = key(companyId, mobile);
         String codeKey = "auth:sms:code:" + key;
         String sendWindowKey = "auth:sms:window:" + key;
         String dailyLimitKey = "auth:sms:daily:" + key + ":" + Instant.now().toString().substring(0, 10);
@@ -114,8 +114,8 @@ public class SmsCodeStore {
         return code;
     }
 
-    private void verifyCodeWithRedis(String orgId, String mobile, String code) {
-        String codeKey = "auth:sms:code:" + key(orgId, mobile);
+    private void verifyCodeWithRedis(String companyId, String mobile, String code) {
+        String codeKey = "auth:sms:code:" + key(companyId, mobile);
         String savedCode = redisTemplate.opsForValue().get(codeKey);
         if (savedCode == null) {
             throw new IllegalArgumentException("Verification code expired or missing");
@@ -126,8 +126,8 @@ public class SmsCodeStore {
         redisTemplate.delete(codeKey);
     }
 
-    private String key(String orgId, String mobile) {
-        return orgId + "::" + mobile;
+    private String key(String companyId, String mobile) {
+        return companyId + "::" + mobile;
     }
 
     private static final class CodeEntry {

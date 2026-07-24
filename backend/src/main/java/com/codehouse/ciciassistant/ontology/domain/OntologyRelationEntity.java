@@ -42,7 +42,7 @@ public class OntologyRelationEntity extends AbstractOntologyWorkspaceEntity {
     }
 
     public OntologyRelationEntity(
-            String orgId,
+            String companyId,
             Long workspaceId,
             String key,
             String name,
@@ -54,7 +54,7 @@ public class OntologyRelationEntity extends AbstractOntologyWorkspaceEntity {
             String reverseLabel,
             boolean queryable,
             boolean enabled) {
-        super(orgId, workspaceId);
+        super(companyId, workspaceId);
         this.key = key;
         this.name = name;
         this.description = description;

@@ -18,7 +18,7 @@ type GrantRow = {
 
 type GrantDraft = {
   key: string;
-  principalType: "ORG" | "USER" | "SYSTEM_ROLE";
+  principalType: "COMPANY" | "USER" | "SYSTEM_ROLE";
   principalId: string;
   permissions: string[];
 };
@@ -47,7 +47,7 @@ function permissionLabel(permission: string) {
 }
 
 function principalTypeLabel(type: GrantDraft["principalType"]) {
-  if (type === "ORG") return "全组织";
+  if (type === "COMPANY") return "全公司";
   if (type === "SYSTEM_ROLE") return "系统角色";
   return "指定成员";
 }
@@ -56,7 +56,7 @@ function groupGrants(rows: GrantRow[]): GrantDraft[] {
   const byPrincipal = new Map<string, GrantDraft>();
   rows.forEach((row) => {
     const principalType = row.principalType as GrantDraft["principalType"];
-    if (!["ORG", "USER", "SYSTEM_ROLE"].includes(principalType)) return;
+    if (!["COMPANY", "USER", "SYSTEM_ROLE"].includes(principalType)) return;
     const principalId = row.principalId ?? "";
     const key = `${principalType}:${principalId}`;
     const current = byPrincipal.get(key) ?? { key, principalType, principalId, permissions: [] };
@@ -69,7 +69,7 @@ function groupGrants(rows: GrantRow[]): GrantDraft[] {
 }
 
 function principalLabel(row: GrantDraft, users: UserRow[]) {
-  if (row.principalType === "ORG") return "全组织成员";
+  if (row.principalType === "COMPANY") return "全体公司成员";
   if (row.principalType === "SYSTEM_ROLE") return row.principalId === "ORG_ADMIN" ? "组织管理员" : "普通成员";
   const user = users.find((item) => item.id === row.principalId);
   return user ? `${user.nickname || user.mobile || user.id} · ${user.mobile || user.id}` : row.principalId;
@@ -84,7 +84,7 @@ export default function AgentAccessManagementDialog({
 }: AgentAccessManagementDialogProps) {
   const [grants, setGrants] = useState<GrantDraft[]>([]);
   const [users, setUsers] = useState<UserRow[]>([]);
-  const [principalType, setPrincipalType] = useState<GrantDraft["principalType"]>("ORG");
+  const [principalType, setPrincipalType] = useState<GrantDraft["principalType"]>("COMPANY");
   const [principalId, setPrincipalId] = useState("");
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>(["VIEW", "RUN"]);
   const [loading, setLoading] = useState(false);
@@ -135,7 +135,7 @@ export default function AgentAccessManagementDialog({
   }, [agentId, open, token]);
 
   useEffect(() => {
-    if (principalType === "ORG") {
+    if (principalType === "COMPANY") {
       setPrincipalId("");
     } else if (principalType === "SYSTEM_ROLE") {
       setPrincipalId("ORG_USER");
@@ -161,15 +161,15 @@ export default function AgentAccessManagementDialog({
       setNotice("至少选择一个权限。");
       return;
     }
-    if (principalType !== "ORG" && !principalId) {
+    if (principalType !== "COMPANY" && !principalId) {
       setNotice("请选择授权对象。");
       return;
     }
-    const key = `${principalType}:${principalType === "ORG" ? "" : principalId}`;
+    const key = `${principalType}:${principalType === "COMPANY" ? "" : principalId}`;
     const next: GrantDraft = {
       key,
       principalType,
-      principalId: principalType === "ORG" ? "" : principalId,
+      principalId: principalType === "COMPANY" ? "" : principalId,
       permissions: selectedPermissions,
     };
     setGrants((current) => [next, ...current.filter((item) => item.key !== key)]);
@@ -189,7 +189,7 @@ export default function AgentAccessManagementDialog({
         body: JSON.stringify({
           grants: grants.map((item) => ({
             principalType: item.principalType,
-            principalId: item.principalType === "ORG" ? null : item.principalId,
+            principalId: item.principalType === "COMPANY" ? null : item.principalId,
             permissions: item.permissions,
           })),
         }),
@@ -245,7 +245,7 @@ export default function AgentAccessManagementDialog({
               <label>
                 <span>授权对象</span>
                 <select value={principalType} onChange={(event) => setPrincipalType(event.target.value as GrantDraft["principalType"])}>
-                  <option value="ORG">全组织</option>
+                  <option value="COMPANY">全公司</option>
                   <option value="USER">指定成员</option>
                   <option value="SYSTEM_ROLE">系统角色</option>
                 </select>

@@ -33,7 +33,7 @@ public class EmbeddingService {
         return localHashEmbedding(text, dimension);
     }
 
-    public List<Float> embed(String orgId, String providerCode, String modelName, Integer requestedDimension, String text) {
+    public List<Float> embed(String companyId, String providerCode, String modelName, Integer requestedDimension, String text) {
         String provider = normalize(providerCode, defaultProvider);
         String model = normalize(modelName, defaultModel);
         int targetDimension = Math.max(4, requestedDimension == null ? dimension : requestedDimension);
@@ -41,17 +41,17 @@ public class EmbeddingService {
             return localHashEmbedding(text, targetDimension);
         }
         if (ModelProviderService.PROVIDER_OLLAMA.equals(provider)) {
-            return embedWithOllama(orgId, model, text);
+            return embedWithOllama(companyId, model, text);
         }
-        return embedWithOpenAiCompatible(orgId, provider, model, targetDimension, text);
+        return embedWithOpenAiCompatible(companyId, provider, model, targetDimension, text);
     }
 
-    private List<Float> embedWithOpenAiCompatible(String orgId,
+    private List<Float> embedWithOpenAiCompatible(String companyId,
                                                   String providerCode,
                                                   String modelName,
                                                   int targetDimension,
                                                   String text) {
-        Map<String, String> credentials = modelProviderService.credentialsForProvider(orgId, providerCode);
+        Map<String, String> credentials = modelProviderService.credentialsForProvider(companyId, providerCode);
         if (!Boolean.parseBoolean(credentials.getOrDefault("enabled", "false"))) {
             throw new IllegalStateException("Embedding provider is disabled: " + providerCode);
         }
@@ -77,8 +77,8 @@ public class EmbeddingService {
         return parseEmbeddingVector(vector, targetDimension, providerCode + "/" + modelName);
     }
 
-    private List<Float> embedWithOllama(String orgId, String modelName, String text) {
-        Map<String, String> credentials = modelProviderService.credentialsForProvider(orgId, ModelProviderService.PROVIDER_OLLAMA);
+    private List<Float> embedWithOllama(String companyId, String modelName, String text) {
+        Map<String, String> credentials = modelProviderService.credentialsForProvider(companyId, ModelProviderService.PROVIDER_OLLAMA);
         if (!Boolean.parseBoolean(credentials.getOrDefault("enabled", "false"))) {
             throw new IllegalStateException("Embedding provider is disabled: " + ModelProviderService.PROVIDER_OLLAMA);
         }

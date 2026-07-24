@@ -6,9 +6,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AgentPublishConfigRepository extends JpaRepository<AgentPublishConfigEntity, Long> {
 
-    List<AgentPublishConfigEntity> findByOrgIdAndAgentIdOrderByChannelIdAsc(String orgId, String agentId);
+    List<AgentPublishConfigEntity> findByCompanyIdAndAgentIdOrderByChannelIdAsc(String companyId, String agentId);
 
-    Optional<AgentPublishConfigEntity> findByOrgIdAndAgentIdAndChannelId(String orgId, String agentId, String channelId);
+    Optional<AgentPublishConfigEntity> findByCompanyIdAndAgentIdAndChannelId(String companyId, String agentId, String channelId);
 
-    void deleteByOrgIdAndAgentId(String orgId, String agentId);
+    void deleteByCompanyIdAndAgentId(String companyId, String agentId);
 }

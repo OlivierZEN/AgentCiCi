@@ -18,8 +18,8 @@ public class SematticeProvisioningBindingEntity {
     @Column(name = "reservation_id", nullable = false, length = 64)
     private String reservationId;
 
-    @Column(name = "org_id", nullable = false, length = 64, unique = true)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64, unique = true)
+    private String companyId;
 
     @Column(name = "idempotency_key", nullable = false, length = 128, unique = true)
     private String idempotencyKey;
@@ -45,9 +45,9 @@ public class SematticeProvisioningBindingEntity {
     protected SematticeProvisioningBindingEntity() {
     }
 
-    public SematticeProvisioningBindingEntity(String reservationId, String orgId, String idempotencyKey) {
+    public SematticeProvisioningBindingEntity(String reservationId, String companyId, String idempotencyKey) {
         this.reservationId = reservationId;
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.idempotencyKey = idempotencyKey;
         this.state = RESERVED;
         this.createdAt = Instant.now();
@@ -55,7 +55,7 @@ public class SematticeProvisioningBindingEntity {
     }
 
     public String getReservationId() { return reservationId; }
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
     public String getIdempotencyKey() { return idempotencyKey; }
     public String getState() { return state; }
     public String getSematticeTenantId() { return nativeTenantId; }

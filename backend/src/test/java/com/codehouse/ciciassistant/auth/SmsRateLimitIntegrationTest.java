@@ -24,7 +24,7 @@ class SmsRateLimitIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "orgId": "demo-org",
+                                  "companyId": "demo-org",
                                   "mobile": "13800138003"
                                 }
                                 """))

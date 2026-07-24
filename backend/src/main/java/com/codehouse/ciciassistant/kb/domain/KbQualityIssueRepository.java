@@ -7,10 +7,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface KbQualityIssueRepository extends JpaRepository<KbQualityIssueEntity, Long> {
 
-    List<KbQualityIssueEntity> findTop100ByOrgIdAndKnowledgeBaseIdAndStatusOrderByCreatedAtDesc(
-            String orgId, Long knowledgeBaseId, String status);
+    List<KbQualityIssueEntity> findTop100ByCompanyIdAndKnowledgeBaseIdAndStatusOrderByCreatedAtDesc(
+            String companyId, Long knowledgeBaseId, String status);
 
-    List<KbQualityIssueEntity> findByIdInAndOrgIdAndKnowledgeBaseId(Collection<Long> ids, String orgId, Long knowledgeBaseId);
+    List<KbQualityIssueEntity> findByIdInAndCompanyIdAndKnowledgeBaseId(Collection<Long> ids, String companyId, Long knowledgeBaseId);
 
-    Optional<KbQualityIssueEntity> findByIdAndOrgId(Long id, String orgId);
+    Optional<KbQualityIssueEntity> findByIdAndCompanyId(Long id, String companyId);
 }

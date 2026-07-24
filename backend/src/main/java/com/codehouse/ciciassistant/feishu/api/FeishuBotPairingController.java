@@ -26,16 +26,16 @@ public class FeishuBotPairingController {
 
     @GetMapping("/me")
     public ApiResponse<Map<String, Object>> me() {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
-        return ApiResponse.ok(feishuBotPairingService.getBindingStatus(orgId, userId));
+        return ApiResponse.ok(feishuBotPairingService.getBindingStatus(companyId, userId));
     }
 
     @PostMapping("/code")
     public ApiResponse<Map<String, Object>> createCode(@Valid @RequestBody CreatePairingCodeRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
-        FeishuPairingCodeStore.PairingCode code = feishuBotPairingService.createPairingCode(orgId, userId, request.agentCode());
+        FeishuPairingCodeStore.PairingCode code = feishuBotPairingService.createPairingCode(companyId, userId, request.agentCode());
         return ApiResponse.ok(Map.of(
                 "code", code.code(),
                 "agentCode", code.agentCode(),
@@ -46,9 +46,9 @@ public class FeishuBotPairingController {
 
     @DeleteMapping("/me")
     public ApiResponse<Void> unbind() {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
-        feishuBotPairingService.unbindCurrentUser(orgId, userId);
+        feishuBotPairingService.unbindCurrentUser(companyId, userId);
         return ApiResponse.okMessage("已解除当前飞书绑定");
     }
 

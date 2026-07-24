@@ -33,9 +33,9 @@ public class UserWorkflowController {
 
     @GetMapping
     public ApiResponse<Map<String, Object>> get(@PathVariable String agentId) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = currentUser();
-        UserWorkflowService.WorkflowBundle bundle = userWorkflowService.getBundle(orgId, userId, agentId);
+        UserWorkflowService.WorkflowBundle bundle = userWorkflowService.getBundle(companyId, userId, agentId);
         Map<String, Object> payload = new LinkedHashMap<>();
         Map<String, Object> agentPayload = new LinkedHashMap<>();
         agentPayload.put("agentId", bundle.agent().agentId());
@@ -57,10 +57,10 @@ public class UserWorkflowController {
     @PutMapping("/profile")
     public ApiResponse<Map<String, Object>> updateProfile(@PathVariable String agentId,
                                                           @Valid @RequestBody UpdateProfileRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = currentUser();
         UserAgentProfileEntity updated = userWorkflowService.updateProfile(
-                orgId,
+                companyId,
                 userId,
                 agentId,
                 new UserWorkflowService.UpdateProfileCommand(
@@ -77,19 +77,19 @@ public class UserWorkflowController {
     @PutMapping("/spec")
     public ApiResponse<Map<String, Object>> updateSpec(@PathVariable String agentId,
                                                        @Valid @RequestBody UpdateSpecRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = currentUser();
-        UserWorkflowSpecEntity updated = userWorkflowService.updateSpec(orgId, userId, agentId, request.sourceText());
+        UserWorkflowSpecEntity updated = userWorkflowService.updateSpec(companyId, userId, agentId, request.sourceText());
         return ApiResponse.ok(toSpecPayload(updated));
     }
 
     @PostMapping("/compile")
     public ApiResponse<Map<String, Object>> compile(@PathVariable String agentId,
                                                     @Valid @RequestBody UpdateSpecRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = currentUser();
         UserWorkflowService.CompileResult result = userWorkflowService.compile(
-                orgId,
+                companyId,
                 userId,
                 agentId,
                 new UserWorkflowService.CompileCommand(request.sourceText())
@@ -114,25 +114,25 @@ public class UserWorkflowController {
 
     @GetMapping("/versions")
     public ApiResponse<List<Map<String, Object>>> versions(@PathVariable String agentId) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = currentUser();
-        return ApiResponse.ok(userWorkflowService.listVersions(orgId, userId, agentId).stream().map(this::toVersionPayload).toList());
+        return ApiResponse.ok(userWorkflowService.listVersions(companyId, userId, agentId).stream().map(this::toVersionPayload).toList());
     }
 
     @GetMapping("/quick-commands")
     public ApiResponse<List<Map<String, Object>>> quickCommands(@PathVariable String agentId) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = currentUser();
-        return ApiResponse.ok(userWorkflowService.listQuickCommands(orgId, userId, agentId).stream().map(this::toQuickCommandPayload).toList());
+        return ApiResponse.ok(userWorkflowService.listQuickCommands(companyId, userId, agentId).stream().map(this::toQuickCommandPayload).toList());
     }
 
     @PostMapping("/quick-commands")
     public ApiResponse<Map<String, Object>> createQuickCommand(@PathVariable String agentId,
                                                                @Valid @RequestBody CreateQuickCommandRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = currentUser();
         return ApiResponse.ok(toQuickCommandPayload(userWorkflowService.createQuickCommand(
-                orgId,
+                companyId,
                 userId,
                 agentId,
                 new UserWorkflowService.CreateQuickCommandCommand(request.title(), request.promptText())
@@ -142,34 +142,34 @@ public class UserWorkflowController {
     @PostMapping("/publish")
     public ApiResponse<Map<String, Object>> publish(@PathVariable String agentId,
                                                     @Valid @RequestBody VersionActionRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = currentUser();
-        return ApiResponse.ok(toVersionPayload(userWorkflowService.publish(orgId, userId, agentId, request.versionNo())));
+        return ApiResponse.ok(toVersionPayload(userWorkflowService.publish(companyId, userId, agentId, request.versionNo())));
     }
 
     @PostMapping("/rollback")
     public ApiResponse<Map<String, Object>> rollback(@PathVariable String agentId,
                                                      @Valid @RequestBody VersionActionRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = currentUser();
-        return ApiResponse.ok(toVersionPayload(userWorkflowService.rollback(orgId, userId, agentId, request.versionNo())));
+        return ApiResponse.ok(toVersionPayload(userWorkflowService.rollback(companyId, userId, agentId, request.versionNo())));
     }
 
     @GetMapping("/triggers")
     public ApiResponse<List<Map<String, Object>>> triggers(@PathVariable String agentId) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = currentUser();
-        return ApiResponse.ok(userWorkflowService.listTriggers(orgId, userId, agentId).stream().map(this::toTriggerPayload).toList());
+        return ApiResponse.ok(userWorkflowService.listTriggers(companyId, userId, agentId).stream().map(this::toTriggerPayload).toList());
     }
 
     @PutMapping("/triggers/{triggerId}")
     public ApiResponse<Map<String, Object>> updateTrigger(@PathVariable String agentId,
                                                           @PathVariable Long triggerId,
                                                           @Valid @RequestBody UpdateTriggerRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = currentUser();
         return ApiResponse.ok(toTriggerPayload(userWorkflowService.updateTrigger(
-                orgId,
+                companyId,
                 userId,
                 agentId,
                 triggerId,
@@ -180,31 +180,31 @@ public class UserWorkflowController {
     @PostMapping("/debug")
     public ApiResponse<Map<String, Object>> debug(@PathVariable String agentId,
                                                   @Valid @RequestBody RunNowRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = currentUser();
-        return ApiResponse.ok(toExecutionPayload(userWorkflowService.runNow(orgId, userId, agentId, request.routineKey())));
+        return ApiResponse.ok(toExecutionPayload(userWorkflowService.runNow(companyId, userId, agentId, request.routineKey())));
     }
 
     @PostMapping("/run-now")
     public ApiResponse<Map<String, Object>> runNow(@PathVariable String agentId,
                                                    @Valid @RequestBody RunNowRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = currentUser();
-        return ApiResponse.ok(toExecutionPayload(userWorkflowService.runNow(orgId, userId, agentId, request.routineKey())));
+        return ApiResponse.ok(toExecutionPayload(userWorkflowService.runNow(companyId, userId, agentId, request.routineKey())));
     }
 
     @GetMapping("/executions")
     public ApiResponse<List<Map<String, Object>>> executions(@PathVariable String agentId) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = currentUser();
-        return ApiResponse.ok(userWorkflowService.listExecutions(orgId, userId, agentId).stream().map(this::toExecutionPayload).toList());
+        return ApiResponse.ok(userWorkflowService.listExecutions(companyId, userId, agentId).stream().map(this::toExecutionPayload).toList());
     }
 
     @GetMapping("/executions/{executionId}")
     public ApiResponse<Map<String, Object>> execution(@PathVariable String agentId, @PathVariable Long executionId) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = currentUser();
-        return ApiResponse.ok(toExecutionPayload(userWorkflowService.getExecution(orgId, userId, agentId, executionId)));
+        return ApiResponse.ok(toExecutionPayload(userWorkflowService.getExecution(companyId, userId, agentId, executionId)));
     }
 
     private String currentUser() {

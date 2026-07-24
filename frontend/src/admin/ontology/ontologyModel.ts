@@ -51,8 +51,8 @@ export function shouldConfirmOntologyDraftDiscard(
   return dirty || revisionLocked || mappingDirty;
 }
 
-export function createOntologyAuthScopeKey(orgId: string, token: string): string {
-  return JSON.stringify([orgId.trim(), token.trim()]);
+export function createOntologyAuthScopeKey(companyId: string, token: string): string {
+  return JSON.stringify([companyId.trim(), token.trim()]);
 }
 
 export function isOntologyAsyncScopeCurrent(

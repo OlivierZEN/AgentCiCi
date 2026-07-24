@@ -76,7 +76,7 @@ export class OntologyApiError extends Error {
   }
 }
 
-/** Workspace creation could not be confirmed against the current organization's authoritative list. */
+/** Workspace creation could not be confirmed against the current company's authoritative list. */
 export class OntologyWorkspaceCreateUnconfirmedError extends Error {
   constructor() {
     super("创建结果尚未确认");

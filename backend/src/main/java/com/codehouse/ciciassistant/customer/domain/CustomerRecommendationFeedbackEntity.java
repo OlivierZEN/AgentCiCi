@@ -16,8 +16,8 @@ public class CustomerRecommendationFeedbackEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "user_id", nullable = false, length = 64)
     private String userId;
@@ -39,9 +39,9 @@ public class CustomerRecommendationFeedbackEntity {
 
     protected CustomerRecommendationFeedbackEntity() {}
 
-    public CustomerRecommendationFeedbackEntity(String orgId, String userId, String recommendationId,
+    public CustomerRecommendationFeedbackEntity(String companyId, String userId, String recommendationId,
                                                  String rating, String commentText) {
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.userId = userId;
         this.recommendationId = recommendationId;
         update(rating, commentText);

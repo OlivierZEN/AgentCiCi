@@ -7,7 +7,7 @@ import java.time.Instant;
 @Table(name = "memory_vector_fragment")
 public class MemoryVectorFragmentEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
-    @Column(name = "org_id", nullable = false) private String orgId;
+    @Column(name = "company_id", nullable = false) private String companyId;
     @Column(name = "memory_record_id", nullable = false, unique = true) private Long memoryRecordId;
     @Column(name = "vector_id", nullable = false) private String vectorId;
     @Column(name = "redacted_text", nullable = false, columnDefinition = "TEXT") private String redactedText;
@@ -15,7 +15,7 @@ public class MemoryVectorFragmentEntity {
     @Column(name = "indexed_at", nullable = false) private Instant indexedAt;
     @Column(name = "deleted_at") private Instant deletedAt;
     protected MemoryVectorFragmentEntity() {}
-    public MemoryVectorFragmentEntity(String orgId, Long memoryRecordId, String vectorId, String redactedText) { this.orgId=orgId; this.memoryRecordId=memoryRecordId; this.vectorId=vectorId; this.redactedText=redactedText; this.status="ACTIVE"; this.indexedAt=Instant.now(); }
+    public MemoryVectorFragmentEntity(String companyId, Long memoryRecordId, String vectorId, String redactedText) { this.companyId=companyId; this.memoryRecordId=memoryRecordId; this.vectorId=vectorId; this.redactedText=redactedText; this.status="ACTIVE"; this.indexedAt=Instant.now(); }
     public void markDeleted() { this.status = "DELETED"; this.deletedAt = Instant.now(); }
     public String getVectorId(){return vectorId;}
     public Long getMemoryRecordId(){return memoryRecordId;}

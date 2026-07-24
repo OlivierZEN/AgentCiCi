@@ -28,8 +28,8 @@ public class AgentEvalCaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "agent_id", nullable = false, length = 64)
     private String agentId;
@@ -109,7 +109,7 @@ public class AgentEvalCaseEntity {
     protected AgentEvalCaseEntity() {
     }
 
-    public AgentEvalCaseEntity(String orgId,
+    public AgentEvalCaseEntity(String companyId,
                                String agentId,
                                Long suiteId,
                                String name,
@@ -122,7 +122,7 @@ public class AgentEvalCaseEntity {
                                String forbiddenToolName,
                                String priority) {
         Instant now = Instant.now();
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.agentId = agentId;
         this.suiteId = suiteId;
         this.name = name;
@@ -143,7 +143,7 @@ public class AgentEvalCaseEntity {
         this.updatedAt = now;
     }
 
-    public AgentEvalCaseEntity(String orgId,
+    public AgentEvalCaseEntity(String companyId,
                                String agentId,
                                Long suiteId,
                                String name,
@@ -166,7 +166,7 @@ public class AgentEvalCaseEntity {
                                boolean hiddenCase,
                                String reviewStatus,
                                String redactionStatus) {
-        this(orgId, agentId, suiteId, name, inputText, assertionType, expectedText, forbiddenText,
+        this(companyId, agentId, suiteId, name, inputText, assertionType, expectedText, forbiddenText,
                 expectedStatus, requiredToolName, forbiddenToolName, priority);
         this.caseKey = caseKey;
         this.category = category == null || category.isBlank() ? "ANSWER_QUALITY" : category;
@@ -186,7 +186,7 @@ public class AgentEvalCaseEntity {
 
     public Long getId() { return id; }
 
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
 
     public String getAgentId() { return agentId; }
 

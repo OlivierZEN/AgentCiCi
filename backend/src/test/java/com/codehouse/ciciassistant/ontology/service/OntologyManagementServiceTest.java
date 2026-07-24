@@ -62,7 +62,7 @@ class OntologyManagementServiceTest {
 
     @BeforeEach
     void setUp() {
-        TenantContext.setOrgId("org-a");
+        TenantContext.setCompanyId("org-a");
     }
 
     @AfterEach

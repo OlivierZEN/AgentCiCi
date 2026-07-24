@@ -12,15 +12,15 @@ import java.time.Instant;
 @Entity
 @Table(name = "memory_subject", uniqueConstraints = @UniqueConstraint(
         name = "uq_memory_subject_identity",
-        columnNames = {"org_id", "application_code", "subject_type", "external_ref"}))
+        columnNames = {"company_id", "application_code", "subject_type", "external_ref"}))
 public class MemorySubjectEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "application_code", nullable = false, length = 96)
     private String applicationCode;
@@ -43,9 +43,9 @@ public class MemorySubjectEntity {
     protected MemorySubjectEntity() {
     }
 
-    public MemorySubjectEntity(String orgId, String applicationCode, String subjectType,
+    public MemorySubjectEntity(String companyId, String applicationCode, String subjectType,
                                String externalRef, String identityLevel) {
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.applicationCode = applicationCode;
         this.subjectType = subjectType;
         this.externalRef = externalRef;
@@ -55,7 +55,7 @@ public class MemorySubjectEntity {
     }
 
     public Long getId() { return id; }
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
     public String getApplicationCode() { return applicationCode; }
     public String getSubjectType() { return subjectType; }
     public String getExternalRef() { return externalRef; }

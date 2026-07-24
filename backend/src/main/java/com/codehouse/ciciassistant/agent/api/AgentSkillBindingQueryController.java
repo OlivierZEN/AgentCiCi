@@ -26,11 +26,11 @@ public class AgentSkillBindingQueryController {
 
     @GetMapping("/{agentId}/skills")
     public ApiResponse<Map<String, Object>> listMyAgentSkillBindings(@PathVariable String agentId) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
-        accessControlService.require(orgId, userId, TenantContext.getRoles(), agentId, AgentPermission.RUN);
+        accessControlService.require(companyId, userId, TenantContext.getRoles(), agentId, AgentPermission.RUN);
         return ApiResponse.ok(Map.of(
-                "bindings", agentSkillBindingService.listBindings(orgId, agentId)
+                "bindings", agentSkillBindingService.listBindings(companyId, agentId)
         ));
     }
 }

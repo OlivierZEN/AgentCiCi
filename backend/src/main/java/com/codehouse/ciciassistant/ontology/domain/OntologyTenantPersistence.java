@@ -17,10 +17,10 @@ public class OntologyTenantPersistence {
     @Transactional
     public <T extends OntologyTenantEntity> T saveForCurrentOrg(T entity) {
         Objects.requireNonNull(entity, "entity");
-        String currentOrgId = TenantContext.requireOrgId();
-        if (!currentOrgId.equals(entity.getOrgId())) {
+        String currentCompanyId = TenantContext.requireCompanyId();
+        if (!currentCompanyId.equals(entity.getCompanyId())) {
             throw new ForbiddenException(
-                    "Ontology entity organization does not match the current organization");
+                    "Ontology entity company does not match the current company");
         }
 
         if (entity.getId() == null) {
@@ -31,21 +31,21 @@ public class OntologyTenantPersistence {
     }
 
     @Transactional
-    public void flushForCurrentOrg(String orgId) {
-        String currentOrgId = TenantContext.requireOrgId();
-        if (!currentOrgId.equals(orgId)) {
+    public void flushForCurrentOrg(String companyId) {
+        String currentCompanyId = TenantContext.requireCompanyId();
+        if (!currentCompanyId.equals(companyId)) {
             throw new ForbiddenException(
-                    "Ontology organization does not match the current organization");
+                    "Ontology company does not match the current company");
         }
         entityManager.flush();
     }
 
     @Transactional
-    public void deleteForCurrentOrg(String orgId, Runnable scopedDelete) {
-        String currentOrgId = TenantContext.requireOrgId();
-        if (!currentOrgId.equals(orgId)) {
+    public void deleteForCurrentOrg(String companyId, Runnable scopedDelete) {
+        String currentCompanyId = TenantContext.requireCompanyId();
+        if (!currentCompanyId.equals(companyId)) {
             throw new ForbiddenException(
-                    "Ontology organization does not match the current organization");
+                    "Ontology company does not match the current company");
         }
         Objects.requireNonNull(scopedDelete, "scopedDelete").run();
     }

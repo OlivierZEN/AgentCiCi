@@ -89,13 +89,13 @@ public class SkillPackageService {
         this.objectMapper = objectMapper;
     }
 
-    public ExportJob exportSkill(String orgId, Long skillId, ExportCommand command) {
-        SkillDefinitionEntity skill = skillDefinitionService.getSkill(orgId, skillId);
+    public ExportJob exportSkill(String companyId, Long skillId, ExportCommand command) {
+        SkillDefinitionEntity skill = skillDefinitionService.getSkill(companyId, skillId);
         if (skill.getSourceType() != SkillSourceType.TENANT_CUSTOM || skill.getEditPolicy() != SkillEditPolicy.EDITABLE) {
             throw new IllegalArgumentException("Only tenant custom editable skills can be exported");
         }
-        SkillVersionEntity version = resolveExportVersion(orgId, skill, command == null || !Boolean.TRUE.equals(command.allowDraft()));
-        StandardizedPackage standardized = standardizePackage(orgId, skill, version, command == null ? "system" : command.actorUserId());
+        SkillVersionEntity version = resolveExportVersion(companyId, skill, command == null || !Boolean.TRUE.equals(command.allowDraft()));
+        StandardizedPackage standardized = standardizePackage(companyId, skill, version, command == null ? "system" : command.actorUserId());
         try {
             validateExportPackage(standardized.files());
         } catch (Exception ex) {
@@ -124,7 +124,7 @@ public class SkillPackageService {
         return artifact;
     }
 
-    public ImportPreview importPackage(String orgId, MultipartFile file) {
+    public ImportPreview importPackage(String companyId, MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("Import file is required");
         }
@@ -133,7 +133,7 @@ public class SkillPackageService {
         }
         try {
             Map<String, String> files = unzip(file.getBytes());
-            ImportedDraftResolveResult resolved = mapImportedDraft(orgId, files);
+            ImportedDraftResolveResult resolved = mapImportedDraft(companyId, files);
             String importId = UUID.randomUUID().toString();
             ImportPreview preview = new ImportPreview(
                     importId,
@@ -151,13 +151,13 @@ public class SkillPackageService {
     }
 
     @Transactional
-    public SkillDefinitionEntity createImportedSkill(String orgId, String importId, String actorUserId, ImportCreateCommand command) {
+    public SkillDefinitionEntity createImportedSkill(String companyId, String importId, String actorUserId, ImportCreateCommand command) {
         ImportJob job = importJobs.get(importId);
         if (job == null) {
             throw new IllegalArgumentException("Import not found");
         }
-        ImportedDraft draft = resolveCreateDraft(orgId, job.preview().draft(), command == null ? null : command.draftOverride());
-        return skillDefinitionService.createSkill(orgId, new SkillDefinitionService.UpsertCommand(
+        ImportedDraft draft = resolveCreateDraft(companyId, job.preview().draft(), command == null ? null : command.draftOverride());
+        return skillDefinitionService.createSkill(companyId, new SkillDefinitionService.UpsertCommand(
                 draft.skillCode(),
                 draft.name(),
                 draft.description(),
@@ -178,10 +178,10 @@ public class SkillPackageService {
         ));
     }
 
-    private SkillVersionEntity resolveExportVersion(String orgId, SkillDefinitionEntity skill, boolean requirePublished) {
+    private SkillVersionEntity resolveExportVersion(String companyId, SkillDefinitionEntity skill, boolean requirePublished) {
         if (skill.getCurrentPublishedVersionId() != null) {
             return skillVersionRepository.findById(skill.getCurrentPublishedVersionId())
-                    .filter(item -> orgId.equals(item.getOrgId()) && skill.getId().equals(item.getSkillId()))
+                    .filter(item -> companyId.equals(item.getCompanyId()) && skill.getId().equals(item.getSkillId()))
                     .orElseThrow(() -> new IllegalArgumentException("Published skill version not found"));
         }
         if (requirePublished) {
@@ -189,24 +189,24 @@ public class SkillPackageService {
         }
         if (skill.getLatestDraftVersionId() != null) {
             return skillVersionRepository.findById(skill.getLatestDraftVersionId())
-                    .filter(item -> orgId.equals(item.getOrgId()) && skill.getId().equals(item.getSkillId()))
+                    .filter(item -> companyId.equals(item.getCompanyId()) && skill.getId().equals(item.getSkillId()))
                     .orElseThrow(() -> new IllegalArgumentException("Draft skill version not found"));
         }
-        return skillVersionRepository.findTopByOrgIdAndSkillIdOrderByVersionNoDesc(orgId, skill.getId())
+        return skillVersionRepository.findTopByCompanyIdAndSkillIdOrderByVersionNoDesc(companyId, skill.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Skill has no exportable version"));
     }
 
-    private StandardizedPackage standardizePackage(String orgId, SkillDefinitionEntity skill, SkillVersionEntity version, String exportedBy) {
-        StandardizedPackage modelPackage = tryStandardizeByModel(orgId, skill, version, exportedBy);
+    private StandardizedPackage standardizePackage(String companyId, SkillDefinitionEntity skill, SkillVersionEntity version, String exportedBy) {
+        StandardizedPackage modelPackage = tryStandardizeByModel(companyId, skill, version, exportedBy);
         StandardizedPackage standardized = modelPackage == null
                 ? buildDeterministicPackage(skill, version, exportedBy)
                 : modelPackage;
         return withPortableOptimizationSpec(standardized, skill);
     }
 
-    private StandardizedPackage tryStandardizeByModel(String orgId, SkillDefinitionEntity skill, SkillVersionEntity version, String exportedBy) {
+    private StandardizedPackage tryStandardizeByModel(String companyId, SkillDefinitionEntity skill, SkillVersionEntity version, String exportedBy) {
         try {
-            Map<String, String> route = modelRouterService.route(orgId, "skill-authoring");
+            Map<String, String> route = modelRouterService.route(companyId, "skill-authoring");
             String provider = trimToNull(route.get("provider"));
             String modelName = trimToNull(route.get("modelName"));
             if (modelName == null || "cici-default".equalsIgnoreCase(modelName) || "mock".equalsIgnoreCase(provider)) {
@@ -429,13 +429,13 @@ public class SkillPackageService {
 
                 ## Re-import Contract
 
-                After optimization, zip these files at the package root and import the zip into Cici Assistant. Cici Assistant will map tools and knowledge bases by name in the importing organization. Missing resources must be resolved inside Cici Assistant after import.
+                After optimization, zip these files at the package root and import the zip into Cici Assistant. Cici Assistant will map tools and knowledge bases by name in the importing company. Missing resources must be resolved inside Cici Assistant after import.
 
                 优化完成后，请把这些文件重新打包在 zip 根目录，再导入 Cici Assistant。工具和知识库会在导入组织内按名称映射，缺失资源需在系统内处理。
                 """;
     }
 
-    private ImportedDraftResolveResult mapImportedDraft(String orgId, Map<String, String> files) throws Exception {
+    private ImportedDraftResolveResult mapImportedDraft(String companyId, Map<String, String> files) throws Exception {
         JsonNode manifest = parseJson(files.get("manifest.json"));
         JsonNode contract = parseJson(files.get("contract.json"));
         JsonNode resources = parseJson(files.get("resources.json"));
@@ -463,7 +463,7 @@ public class SkillPackageService {
             }
         });
 
-        ResourceMapping mapping = mapImportedResources(orgId, requestedTools, requestedKbs);
+        ResourceMapping mapping = mapImportedResources(companyId, requestedTools, requestedKbs);
         List<String> warnings = new ArrayList<>();
         warnings.add("已从通用技能包映射为租户自定义技能草稿。");
         warnings.addAll(buildResourceMappingWarnings(mapping));
@@ -483,11 +483,11 @@ public class SkillPackageService {
         return new ImportedDraftResolveResult(draft, List.copyOf(warnings), mapping);
     }
 
-    private ResourceMapping mapImportedResources(String orgId, List<String> requestedTools, List<String> requestedKnowledgeBases) {
-        Set<String> enabledToolNames = loadEnabledToolNames(orgId);
+    private ResourceMapping mapImportedResources(String companyId, List<String> requestedTools, List<String> requestedKnowledgeBases) {
+        Set<String> enabledToolNames = loadEnabledToolNames(companyId);
         Map<String, String> kbNameToId = new LinkedHashMap<>();
         Set<String> kbIds = new LinkedHashSet<>();
-        for (KnowledgeBaseEntity item : knowledgeBaseRepository.findByOrgIdAndStatusNotOrderByIdDesc(orgId, "DELETED")) {
+        for (KnowledgeBaseEntity item : knowledgeBaseRepository.findByCompanyIdAndStatusNotOrderByIdDesc(companyId, "DELETED")) {
             String id = String.valueOf(item.getId());
             kbIds.add(id);
             kbNameToId.put(item.getName().toLowerCase(Locale.ROOT), id);
@@ -542,15 +542,15 @@ public class SkillPackageService {
         );
     }
 
-    private Set<String> loadEnabledToolNames(String orgId) {
+    private Set<String> loadEnabledToolNames(String companyId) {
         LinkedHashSet<String> names = new LinkedHashSet<>();
-        for (ToolCatalogItem item : platformGovernanceService.listEffectiveBuiltinTools(orgId)) {
+        for (ToolCatalogItem item : platformGovernanceService.listEffectiveBuiltinTools(companyId)) {
             String canonical = ToolNameNormalizer.canonicalize(item.toolName());
             if (canonical != null && !canonical.isBlank()) {
                 names.add(canonical);
             }
         }
-        for (ToolDefinitionEntity item : toolDefinitionRepository.findByOrgIdAndEnabledTrue(orgId)) {
+        for (ToolDefinitionEntity item : toolDefinitionRepository.findByCompanyIdAndEnabledTrue(companyId)) {
             String canonical = ToolNameNormalizer.canonicalize(item.getToolName());
             if (canonical != null && !canonical.isBlank()) {
                 names.add(canonical);
@@ -573,12 +573,12 @@ public class SkillPackageService {
         return warnings;
     }
 
-    private ImportedDraft resolveCreateDraft(String orgId, ImportedDraft baseDraft, ImportedDraftOverride overrideDraft) {
+    private ImportedDraft resolveCreateDraft(String companyId, ImportedDraft baseDraft, ImportedDraftOverride overrideDraft) {
         if (overrideDraft == null) {
             return baseDraft;
         }
         ResourceMapping overrideMapping = mapImportedResources(
-                orgId,
+                companyId,
                 overrideDraft.toolWhitelist() == null ? List.of() : overrideDraft.toolWhitelist(),
                 overrideDraft.kbWhitelist() == null ? List.of() : overrideDraft.kbWhitelist()
         );

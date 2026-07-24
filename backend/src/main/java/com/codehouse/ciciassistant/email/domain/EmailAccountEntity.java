@@ -16,8 +16,8 @@ public class EmailAccountEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "user_id", nullable = false, length = 64)
     private String userId;
@@ -83,7 +83,7 @@ public class EmailAccountEntity {
     }
 
     public EmailAccountEntity(
-            String orgId,
+            String companyId,
             String userId,
             String providerCode,
             String displayName,
@@ -100,7 +100,7 @@ public class EmailAccountEntity {
             String smtpSslMode,
             boolean requireSendConfirm,
             boolean enabled) {
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.userId = userId;
         this.providerCode = providerCode;
         this.displayName = displayName;
@@ -169,8 +169,8 @@ public class EmailAccountEntity {
         return id;
     }
 
-    public String getOrgId() {
-        return orgId;
+    public String getCompanyId() {
+        return companyId;
     }
 
     public String getUserId() {

@@ -42,7 +42,7 @@ public class AgentWorkflowExecutionLogService {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void append(
-            String orgId,
+            String companyId,
             String agentId,
             Long workflowVersionId,
             Integer versionNo,
@@ -54,7 +54,7 @@ public class AgentWorkflowExecutionLogService {
         String safeSummary = truncate(summary == null ? "" : summary, 1024);
         String safeHint = errorHint == null || errorHint.isBlank() ? null : truncate(errorHint, 512);
         repository.save(new AgentWorkflowExecutionLogEntity(
-                orgId,
+                companyId,
                 agentId,
                 workflowVersionId,
                 versionNo,
@@ -68,7 +68,7 @@ public class AgentWorkflowExecutionLogService {
 
     @Transactional
     public void appendFromChat(
-            String orgId,
+            String companyId,
             String agentId,
             Long workflowVersionId,
             String executionStatus,
@@ -77,13 +77,13 @@ public class AgentWorkflowExecutionLogService {
         Integer versionNo = null;
         if (workflowVersionId != null) {
             versionNo = workflowVersionRepository.findById(workflowVersionId)
-                    .filter(v -> orgId.equals(v.getOrgId()) && agentId.equals(v.getAgentId()))
+                    .filter(v -> companyId.equals(v.getCompanyId()) && agentId.equals(v.getAgentId()))
                     .map(v -> v.getVersionNo())
                     .orElse(null);
         }
         String summary = "CHANNEL chat · status=" + executionStatus + " · " + truncate(output == null ? "" : output, 400);
         self.append(
-                orgId,
+                companyId,
                 agentId,
                 workflowVersionId,
                 versionNo,
@@ -94,12 +94,12 @@ public class AgentWorkflowExecutionLogService {
                 null);
     }
 
-    public List<Map<String, Object>> list(String orgId, String agentId, Integer versionNo, int limit) {
+    public List<Map<String, Object>> list(String companyId, String agentId, Integer versionNo, int limit) {
         int cap = Math.min(Math.max(limit, 1), 100);
         var page = PageRequest.of(0, cap);
         List<AgentWorkflowExecutionLogEntity> rows = versionNo == null
-                ? repository.findByOrgIdAndAgentIdOrderByCreatedAtDesc(orgId, agentId, page)
-                : repository.findByOrgIdAndAgentIdAndVersionNoOrderByCreatedAtDesc(orgId, agentId, versionNo, page);
+                ? repository.findByCompanyIdAndAgentIdOrderByCreatedAtDesc(companyId, agentId, page)
+                : repository.findByCompanyIdAndAgentIdAndVersionNoOrderByCreatedAtDesc(companyId, agentId, versionNo, page);
         return rows.stream().map(this::toRow).toList();
     }
 

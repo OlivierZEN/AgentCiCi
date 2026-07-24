@@ -37,7 +37,7 @@ public class OntologyDataSourceEntity extends AbstractOntologyWorkspaceEntity {
     }
 
     public OntologyDataSourceEntity(
-            String orgId,
+            String companyId,
             Long workspaceId,
             String key,
             String name,
@@ -45,7 +45,7 @@ public class OntologyDataSourceEntity extends AbstractOntologyWorkspaceEntity {
             String configJson,
             String sampleDataJson,
             String createdBy) {
-        super(orgId, workspaceId);
+        super(companyId, workspaceId);
         this.key = key;
         this.name = name;
         this.sourceType = sourceType;

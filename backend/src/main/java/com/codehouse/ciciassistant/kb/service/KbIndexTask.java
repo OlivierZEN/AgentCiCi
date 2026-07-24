@@ -1,7 +1,7 @@
 package com.codehouse.ciciassistant.kb.service;
 
 public record KbIndexTask(
-        String orgId,
+        String companyId,
         Long documentId
 ) {
 }

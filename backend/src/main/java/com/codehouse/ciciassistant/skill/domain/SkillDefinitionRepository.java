@@ -6,17 +6,17 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface SkillDefinitionRepository extends JpaRepository<SkillDefinitionEntity, Long> {
 
-    Optional<SkillDefinitionEntity> findByOrgIdAndSkillCode(String orgId, String skillCode);
+    Optional<SkillDefinitionEntity> findByCompanyIdAndSkillCode(String companyId, String skillCode);
 
-    List<SkillDefinitionEntity> findByOrgIdAndEnabledTrueOrderByBuiltinDescNameAsc(String orgId);
+    List<SkillDefinitionEntity> findByCompanyIdAndEnabledTrueOrderByBuiltinDescNameAsc(String companyId);
 
-    List<SkillDefinitionEntity> findByOrgIdOrderByBuiltinDescNameAsc(String orgId);
+    List<SkillDefinitionEntity> findByCompanyIdOrderByBuiltinDescNameAsc(String companyId);
 
-    List<SkillDefinitionEntity> findByOrgIdAndIdInAndEnabledTrue(String orgId, List<Long> ids);
+    List<SkillDefinitionEntity> findByCompanyIdAndIdInAndEnabledTrue(String companyId, List<Long> ids);
 
-    Optional<SkillDefinitionEntity> findByIdAndOrgId(Long id, String orgId);
+    Optional<SkillDefinitionEntity> findByIdAndCompanyId(Long id, String companyId);
 
-    boolean existsByOrgIdAndSkillCode(String orgId, String skillCode);
+    boolean existsByCompanyIdAndSkillCode(String companyId, String skillCode);
 
-    boolean existsByOrgIdAndSkillCodeAndIdNot(String orgId, String skillCode, Long id);
+    boolean existsByCompanyIdAndSkillCodeAndIdNot(String companyId, String skillCode, Long id);
 }

@@ -47,46 +47,46 @@ public class AgentWorkflowSkillRefService {
     }
 
     @Transactional
-    public void ensureWorkflowSkillRefs(String orgId, String agentId, AgentWorkflowVersionEntity workflowVersion) {
+    public void ensureWorkflowSkillRefs(String companyId, String agentId, AgentWorkflowVersionEntity workflowVersion) {
         if (workflowVersion == null || workflowVersion.getId() == null) {
             return;
         }
-        if (agentWorkflowSkillRefRepository.existsByOrgIdAndWorkflowVersionId(orgId, workflowVersion.getId())) {
+        if (agentWorkflowSkillRefRepository.existsByCompanyIdAndWorkflowVersionId(companyId, workflowVersion.getId())) {
             return;
         }
-        List<SnapshotCandidate> candidates = resolveSnapshotCandidates(orgId, agentId, workflowVersion);
+        List<SnapshotCandidate> candidates = resolveSnapshotCandidates(companyId, agentId, workflowVersion);
         if (candidates.isEmpty()) {
             return;
         }
-        Map<Long, String> referenceModeBySkillId = loadReferenceModes(orgId, agentId);
+        Map<Long, String> referenceModeBySkillId = loadReferenceModes(companyId, agentId);
         for (SnapshotCandidate candidate : candidates) {
             SkillDefinitionEntity skill = candidate.skill();
-            Optional<SkillVersionEntity> pinnedVersion = resolvePinnedSkillVersion(orgId, skill, candidate.explicitVersionNo());
+            Optional<SkillVersionEntity> pinnedVersion = resolvePinnedSkillVersion(companyId, skill, candidate.explicitVersionNo());
             agentWorkflowSkillRefRepository.save(new AgentWorkflowSkillRefEntity(
-                    orgId,
+                    companyId,
                     workflowVersion.getId(),
                     skill.getId(),
                     pinnedVersion.map(SkillVersionEntity::getId).orElse(null),
                     trimToNull(skill.getTemplateCode()),
-                    resolveTemplateVersionNo(orgId, skill, pinnedVersion.orElse(null)),
+                    resolveTemplateVersionNo(companyId, skill, pinnedVersion.orElse(null)),
                     normalizeReferenceMode(referenceModeBySkillId.get(skill.getId()))
             ));
         }
     }
 
-    public List<RuntimeSkillRef> listRuntimeSkillRefs(String orgId, Long workflowVersionId) {
+    public List<RuntimeSkillRef> listRuntimeSkillRefs(String companyId, Long workflowVersionId) {
         if (workflowVersionId == null) {
             return List.of();
         }
         List<AgentWorkflowSkillRefEntity> refs = agentWorkflowSkillRefRepository
-                .findByOrgIdAndWorkflowVersionIdOrderByIdAsc(orgId, workflowVersionId);
+                .findByCompanyIdAndWorkflowVersionIdOrderByIdAsc(companyId, workflowVersionId);
         if (refs.isEmpty()) {
             return List.of();
         }
         List<RuntimeSkillRef> result = new ArrayList<>();
         for (AgentWorkflowSkillRefEntity ref : refs) {
-            SkillDefinitionEntity skill = skillDefinitionRepository.findByIdAndOrgId(ref.getSkillId(), orgId).orElse(null);
-            SkillVersionEntity version = resolveSkillVersion(orgId, ref.getSkillId(), ref.getSkillVersionId()).orElse(null);
+            SkillDefinitionEntity skill = skillDefinitionRepository.findByIdAndCompanyId(ref.getSkillId(), companyId).orElse(null);
+            SkillVersionEntity version = resolveSkillVersion(companyId, ref.getSkillId(), ref.getSkillVersionId()).orElse(null);
             String skillCode = skill == null ? ("skill-" + ref.getSkillId()) : skill.getSkillCode();
             String skillName = skill == null ? skillCode : skill.getName();
             boolean pinnedVersionAvailable = version != null;
@@ -110,23 +110,23 @@ public class AgentWorkflowSkillRefService {
         return List.copyOf(result);
     }
 
-    private Map<Long, String> loadReferenceModes(String orgId, String agentId) {
+    private Map<Long, String> loadReferenceModes(String companyId, String agentId) {
         Map<Long, String> result = new LinkedHashMap<>();
         if (agentId == null || agentId.isBlank()) {
             return result;
         }
         for (AgentSkillBindingEntity binding : agentSkillBindingRepository
-                .findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(orgId, agentId)) {
+                .findByCompanyIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(companyId, agentId)) {
             result.putIfAbsent(binding.getSkillId(), binding.getActivationMode());
         }
         return result;
     }
 
-    private List<SnapshotCandidate> resolveSnapshotCandidates(String orgId,
+    private List<SnapshotCandidate> resolveSnapshotCandidates(String companyId,
                                                               String agentId,
                                                               AgentWorkflowVersionEntity workflowVersion) {
         LinkedHashMap<Long, SnapshotCandidate> bySkillId = new LinkedHashMap<>();
-        parseManifestCandidates(orgId, workflowVersion).forEach(candidate -> bySkillId.putIfAbsent(
+        parseManifestCandidates(companyId, workflowVersion).forEach(candidate -> bySkillId.putIfAbsent(
                 candidate.skill().getId(), candidate));
         if (!bySkillId.isEmpty()) {
             return List.copyOf(bySkillId.values());
@@ -135,14 +135,14 @@ public class AgentWorkflowSkillRefService {
             return List.of();
         }
         for (AgentSkillBindingEntity binding : agentSkillBindingRepository
-                .findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(orgId, agentId)) {
-            skillDefinitionRepository.findByIdAndOrgId(binding.getSkillId(), orgId)
+                .findByCompanyIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(companyId, agentId)) {
+            skillDefinitionRepository.findByIdAndCompanyId(binding.getSkillId(), companyId)
                     .ifPresent(skill -> bySkillId.putIfAbsent(skill.getId(), new SnapshotCandidate(skill, null)));
         }
         return List.copyOf(bySkillId.values());
     }
 
-    private List<SnapshotCandidate> parseManifestCandidates(String orgId, AgentWorkflowVersionEntity workflowVersion) {
+    private List<SnapshotCandidate> parseManifestCandidates(String companyId, AgentWorkflowVersionEntity workflowVersion) {
         if (workflowVersion.getWorkflowManifest() == null || workflowVersion.getWorkflowManifest().isBlank()) {
             return List.of();
         }
@@ -154,7 +154,7 @@ public class AgentWorkflowSkillRefService {
             Object resolvedRefsRaw = generatedFrom.get("resolvedSkillRefs");
             if (resolvedRefsRaw instanceof List<?> resolvedRefs) {
                 for (Object item : resolvedRefs) {
-                    resolveManifestSkillRef(orgId, item).ifPresent(candidate -> result.putIfAbsent(
+                    resolveManifestSkillRef(companyId, item).ifPresent(candidate -> result.putIfAbsent(
                             candidate.skill().getId(), candidate));
                 }
             }
@@ -163,7 +163,7 @@ public class AgentWorkflowSkillRefService {
             }
             Map<String, Object> dependencies = getMap(manifest.get("dependencies"));
             for (String skillCode : toStringList(dependencies.get("skills"))) {
-                skillDefinitionRepository.findByOrgIdAndSkillCode(orgId, skillCode)
+                skillDefinitionRepository.findByCompanyIdAndSkillCode(companyId, skillCode)
                         .ifPresent(skill -> result.putIfAbsent(skill.getId(), new SnapshotCandidate(skill, null)));
             }
             return List.copyOf(result.values());
@@ -172,7 +172,7 @@ public class AgentWorkflowSkillRefService {
         }
     }
 
-    private Optional<SnapshotCandidate> resolveManifestSkillRef(String orgId, Object raw) {
+    private Optional<SnapshotCandidate> resolveManifestSkillRef(String companyId, Object raw) {
         if (!(raw instanceof Map<?, ?> map)) {
             return Optional.empty();
         }
@@ -183,7 +183,7 @@ public class AgentWorkflowSkillRefService {
         Integer versionNo = toInteger(map.get("versionNo"));
         Long skillId = toLong(map.get("skillId"));
         if (skillId != null) {
-            Optional<SkillDefinitionEntity> byId = skillDefinitionRepository.findByIdAndOrgId(skillId, orgId);
+            Optional<SkillDefinitionEntity> byId = skillDefinitionRepository.findByIdAndCompanyId(skillId, companyId);
             if (byId.isPresent()) {
                 return Optional.of(new SnapshotCandidate(byId.get(), versionNo));
             }
@@ -192,46 +192,46 @@ public class AgentWorkflowSkillRefService {
         if (skillCode == null) {
             return Optional.empty();
         }
-        return skillDefinitionRepository.findByOrgIdAndSkillCode(orgId, skillCode)
+        return skillDefinitionRepository.findByCompanyIdAndSkillCode(companyId, skillCode)
                 .map(skill -> new SnapshotCandidate(skill, versionNo));
     }
 
-    private Optional<SkillVersionEntity> resolvePinnedSkillVersion(String orgId,
+    private Optional<SkillVersionEntity> resolvePinnedSkillVersion(String companyId,
                                                                    SkillDefinitionEntity skill,
                                                                    Integer explicitVersionNo) {
         if (explicitVersionNo != null) {
-            return skillVersionRepository.findByOrgIdAndSkillIdAndVersionNo(
-                    orgId, skill.getId(), explicitVersionNo);
+            return skillVersionRepository.findByCompanyIdAndSkillIdAndVersionNo(
+                    companyId, skill.getId(), explicitVersionNo);
         }
         if (skill.getCurrentPublishedVersionId() != null) {
             Optional<SkillVersionEntity> currentPublished = resolveSkillVersion(
-                    orgId, skill.getId(), skill.getCurrentPublishedVersionId());
+                    companyId, skill.getId(), skill.getCurrentPublishedVersionId());
             if (currentPublished.isPresent()) {
                 return currentPublished;
             }
         }
         Optional<SkillVersionEntity> published = skillVersionRepository
-                .findTopByOrgIdAndSkillIdAndPublishStatusOrderByVersionNoDesc(orgId, skill.getId(), "PUBLISHED");
+                .findTopByCompanyIdAndSkillIdAndPublishStatusOrderByVersionNoDesc(companyId, skill.getId(), "PUBLISHED");
         if (published.isPresent()) {
             return published;
         }
-        return skillVersionRepository.findTopByOrgIdAndSkillIdOrderByVersionNoDesc(orgId, skill.getId());
+        return skillVersionRepository.findTopByCompanyIdAndSkillIdOrderByVersionNoDesc(companyId, skill.getId());
     }
 
-    private Optional<SkillVersionEntity> resolveSkillVersion(String orgId, Long skillId, Long skillVersionId) {
+    private Optional<SkillVersionEntity> resolveSkillVersion(String companyId, Long skillId, Long skillVersionId) {
         if (skillVersionId == null) {
             return Optional.empty();
         }
-        return skillVersionRepository.findByIdAndOrgId(skillVersionId, orgId)
+        return skillVersionRepository.findByIdAndCompanyId(skillVersionId, companyId)
                 .filter(version -> Objects.equals(skillId, version.getSkillId()));
     }
 
-    private Integer resolveTemplateVersionNo(String orgId,
+    private Integer resolveTemplateVersionNo(String companyId,
                                              SkillDefinitionEntity skill,
                                              SkillVersionEntity pinnedVersion) {
         String templateCode = trimToNull(skill.getTemplateCode());
         if (templateCode != null) {
-            Integer currentTemplateVersionNo = platformSkillTemplateRepository.findByOrgIdAndTemplateCode(orgId, templateCode)
+            Integer currentTemplateVersionNo = platformSkillTemplateRepository.findByCompanyIdAndTemplateCode(companyId, templateCode)
                     .map(item -> item.getCurrentVersionNo())
                     .orElse(null);
             if (currentTemplateVersionNo != null) {

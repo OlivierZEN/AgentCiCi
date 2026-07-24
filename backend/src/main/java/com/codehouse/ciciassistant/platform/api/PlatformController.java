@@ -47,18 +47,18 @@ public class PlatformController {
 
     @GetMapping("/bootstrap")
     public ApiResponse<Map<String, Object>> bootstrap() {
-        String orgId = platformScopeId();
-        platformGovernanceService.ensurePlatformAssets(orgId);
-        List<PlatformGovernanceService.PlatformSkillView> platformSkills = platformGovernanceService.listPlatformSkills(orgId);
-        List<PlatformGovernanceService.PlatformToolView> platformTools = platformGovernanceService.listPlatformTools(orgId);
+        String companyId = platformScopeId();
+        platformGovernanceService.ensurePlatformAssets(companyId);
+        List<PlatformGovernanceService.PlatformSkillView> platformSkills = platformGovernanceService.listPlatformSkills(companyId);
+        List<PlatformGovernanceService.PlatformToolView> platformTools = platformGovernanceService.listPlatformTools(companyId);
         PlatformGovernanceService.PlatformPolicyBundleView corePolicyBundle =
-                platformGovernanceService.getCorePolicyBundleSummary(orgId);
+                platformGovernanceService.getCorePolicyBundleSummary(companyId);
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("roles", TenantContext.getRoles());
         payload.put("skillCount", platformSkills.size());
         payload.put("hiddenSkillCount", platformSkills.stream().filter(item -> "HIDDEN".equals(item.visibility())).count());
         payload.put("builtinToolCount", platformTools.size());
-        payload.put("recentAuditCount", platformAuditService.latest(orgId).size());
+        payload.put("recentAuditCount", platformAuditService.latest(companyId).size());
         payload.put("policyBundleCode", corePolicyBundle.bundleCode());
         payload.put("policyBundleVersionNo", corePolicyBundle.versionNo());
         payload.put("policyBundleLivePublishedAgentCount", corePolicyBundle.livePublishedAgentCount());
@@ -67,15 +67,15 @@ public class PlatformController {
 
     @GetMapping("/skills")
     public ApiResponse<List<PlatformGovernanceService.PlatformSkillView>> listPlatformSkills() {
-        String orgId = platformScopeId();
-        return ApiResponse.ok(platformGovernanceService.listPlatformSkills(orgId));
+        String companyId = platformScopeId();
+        return ApiResponse.ok(platformGovernanceService.listPlatformSkills(companyId));
     }
 
     @GetMapping("/skills/{id}/versions")
     public ApiResponse<List<PlatformGovernanceService.PlatformSkillVersionView>> listPlatformSkillVersions(
             @PathVariable Long id) {
-        String orgId = platformScopeId();
-        return ApiResponse.ok(platformGovernanceService.listPlatformSkillVersions(orgId, id));
+        String companyId = platformScopeId();
+        return ApiResponse.ok(platformGovernanceService.listPlatformSkillVersions(companyId, id));
     }
 
     @GetMapping("/skills/{id}/dependency-graph")
@@ -85,22 +85,22 @@ public class PlatformController {
 
     @GetMapping("/policies/core")
     public ApiResponse<PlatformGovernanceService.PlatformPolicyBundleView> getCorePolicyBundle() {
-        String orgId = platformScopeId();
-        return ApiResponse.ok(platformGovernanceService.getCorePolicyBundleSummary(orgId));
+        String companyId = platformScopeId();
+        return ApiResponse.ok(platformGovernanceService.getCorePolicyBundleSummary(companyId));
     }
 
     @GetMapping("/policies/core/versions")
     public ApiResponse<List<PlatformGovernanceService.PlatformPolicyBundleVersionView>> listCorePolicyBundleVersions() {
-        String orgId = platformScopeId();
-        return ApiResponse.ok(platformGovernanceService.listCorePolicyBundleVersions(orgId));
+        String companyId = platformScopeId();
+        return ApiResponse.ok(platformGovernanceService.listCorePolicyBundleVersions(companyId));
     }
 
     @PostMapping("/policies/core/versions")
     @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<PlatformGovernanceService.PlatformPolicyBundleView> createCorePolicyBundleDraft(
             @Valid @RequestBody PolicyBundleDraftRequest request) {
-        String orgId = platformScopeId();
-        return ApiResponse.ok(platformGovernanceService.saveCorePolicyBundleDraft(orgId,
+        String companyId = platformScopeId();
+        return ApiResponse.ok(platformGovernanceService.saveCorePolicyBundleDraft(companyId,
                 new PlatformGovernanceService.PolicyBundleDraftCommand(
                         request.name(),
                         request.description(),
@@ -114,16 +114,16 @@ public class PlatformController {
     @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<PlatformGovernanceService.PlatformPolicyBundleView> publishCorePolicyBundle(
             @Valid @RequestBody PolicyBundlePublishRequest request) {
-        String orgId = platformScopeId();
-        return ApiResponse.ok(platformGovernanceService.publishCorePolicyBundleVersion(orgId, request.versionNo()));
+        String companyId = platformScopeId();
+        return ApiResponse.ok(platformGovernanceService.publishCorePolicyBundleVersion(companyId, request.versionNo()));
     }
 
     @PostMapping("/policies/core/rollback")
     @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<PlatformGovernanceService.PlatformPolicyBundleView> rollbackCorePolicyBundle(
             @Valid @RequestBody PolicyBundlePublishRequest request) {
-        String orgId = platformScopeId();
-        return ApiResponse.ok(platformGovernanceService.rollbackCorePolicyBundleVersion(orgId, request.versionNo()));
+        String companyId = platformScopeId();
+        return ApiResponse.ok(platformGovernanceService.rollbackCorePolicyBundleVersion(companyId, request.versionNo()));
     }
 
     @PostMapping("/skills/{id}/versions")
@@ -131,8 +131,8 @@ public class PlatformController {
     public ApiResponse<PlatformGovernanceService.PlatformSkillView> createPlatformSkillDraft(
             @PathVariable Long id,
             @Valid @RequestBody PlatformSkillDraftRequest request) {
-        String orgId = platformScopeId();
-        return ApiResponse.ok(platformGovernanceService.savePlatformSkillDraft(orgId, id,
+        String companyId = platformScopeId();
+        return ApiResponse.ok(platformGovernanceService.savePlatformSkillDraft(companyId, id,
                 new PlatformGovernanceService.SkillTemplateDraftCommand(
                         request.name(),
                         request.description(),
@@ -151,8 +151,8 @@ public class PlatformController {
     public ApiResponse<PlatformGovernanceService.PlatformSkillView> publishPlatformSkillVersion(
             @PathVariable Long id,
             @Valid @RequestBody PlatformSkillPublishRequest request) {
-        String orgId = platformScopeId();
-        return ApiResponse.ok(platformGovernanceService.publishPlatformSkillVersion(orgId, id, request.versionNo(),
+        String companyId = platformScopeId();
+        return ApiResponse.ok(platformGovernanceService.publishPlatformSkillVersion(companyId, id, request.versionNo(),
                 new PlatformGovernanceService.SkillGovernanceCommand(
                         request.enabled(),
                         request.visibility(),
@@ -165,8 +165,8 @@ public class PlatformController {
     public ApiResponse<PlatformGovernanceService.PlatformSkillView> rollbackPlatformSkillVersion(
             @PathVariable Long id,
             @Valid @RequestBody PlatformSkillPublishRequest request) {
-        String orgId = platformScopeId();
-        return ApiResponse.ok(platformGovernanceService.rollbackPlatformSkillVersion(orgId, id, request.versionNo(),
+        String companyId = platformScopeId();
+        return ApiResponse.ok(platformGovernanceService.rollbackPlatformSkillVersion(companyId, id, request.versionNo(),
                 new PlatformGovernanceService.SkillGovernanceCommand(
                         request.enabled(),
                         request.visibility(),
@@ -176,8 +176,8 @@ public class PlatformController {
 
     @GetMapping("/tools")
     public ApiResponse<List<PlatformGovernanceService.PlatformToolView>> listBuiltinTools() {
-        String orgId = platformScopeId();
-        return ApiResponse.ok(platformGovernanceService.listPlatformTools(orgId));
+        String companyId = platformScopeId();
+        return ApiResponse.ok(platformGovernanceService.listPlatformTools(companyId));
     }
 
     @PutMapping("/tools/{toolName}")
@@ -185,8 +185,8 @@ public class PlatformController {
     public ApiResponse<PlatformGovernanceService.PlatformToolView> updateBuiltinTool(
             @PathVariable String toolName,
             @Valid @RequestBody PlatformToolUpdateRequest request) {
-        String orgId = platformScopeId();
-        return ApiResponse.ok(platformGovernanceService.updatePlatformTool(orgId, toolName,
+        String companyId = platformScopeId();
+        return ApiResponse.ok(platformGovernanceService.updatePlatformTool(companyId, toolName,
                 new PlatformGovernanceService.ToolGovernanceCommand(
                         request.displayName(),
                         request.description(),
@@ -204,8 +204,8 @@ public class PlatformController {
             @RequestParam(name = "resourceType", required = false) String resourceType,
             @RequestParam(name = "q", required = false) String q,
             @RequestParam(name = "limit", defaultValue = "100") int limit) {
-        String orgId = platformScopeId();
-        return ApiResponse.ok(platformAuditService.query(orgId, new PlatformAuditService.PlatformAuditLogQuery(
+        String companyId = platformScopeId();
+        return ApiResponse.ok(platformAuditService.query(companyId, new PlatformAuditService.PlatformAuditLogQuery(
                 parseInstant(from),
                 parseInstant(to),
                 blankToNull(eventType),
@@ -216,7 +216,7 @@ public class PlatformController {
     }
 
     private String platformScopeId() {
-        String configured = platformAccountProperties.getGovernanceOrgId();
+        String configured = platformAccountProperties.getGovernanceCompanyId();
         return configured == null || configured.isBlank() ? "demo-org" : configured.trim();
     }
 

@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PlatformSkillTemplateRepository extends JpaRepository<PlatformSkillTemplateEntity, Long> {
 
-    Optional<PlatformSkillTemplateEntity> findByOrgIdAndTemplateCode(String orgId, String templateCode);
+    Optional<PlatformSkillTemplateEntity> findByCompanyIdAndTemplateCode(String companyId, String templateCode);
 
-    List<PlatformSkillTemplateEntity> findByOrgIdOrderByNameAsc(String orgId);
+    List<PlatformSkillTemplateEntity> findByCompanyIdOrderByNameAsc(String companyId);
 }

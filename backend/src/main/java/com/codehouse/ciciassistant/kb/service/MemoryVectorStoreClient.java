@@ -19,7 +19,7 @@ public class MemoryVectorStoreClient implements VectorStoreClient {
         String vectorId = UUID.randomUUID().toString();
         store.put(vectorId, new Entry(
                 vectorId,
-                command.orgId(),
+                command.companyId(),
                 command.knowledgeBaseId(),
                 command.documentId(),
                 command.chunkId(),
@@ -35,7 +35,7 @@ public class MemoryVectorStoreClient implements VectorStoreClient {
             return List.of();
         }
         return store.values().stream()
-                .filter(entry -> query.orgId().equals(entry.orgId()))
+                .filter(entry -> query.companyId().equals(entry.companyId()))
                 .filter(entry -> query.knowledgeBaseIds().contains(entry.knowledgeBaseId()))
                 .map(entry -> new Scored(entry, cosine(query.queryEmbedding(), entry.embedding())))
                 .sorted(Comparator.comparingDouble(Scored::score).reversed())
@@ -52,14 +52,14 @@ public class MemoryVectorStoreClient implements VectorStoreClient {
     }
 
     @Override
-    public VectorDeleteResult deleteByVectorIds(String orgId, List<String> vectorIds) {
+    public VectorDeleteResult deleteByVectorIds(String companyId, List<String> vectorIds) {
         if (vectorIds == null || vectorIds.isEmpty()) {
             return VectorDeleteResult.success(0, 0);
         }
         int deleted = 0;
         for (String vectorId : vectorIds) {
             Entry existing = store.get(vectorId);
-            if (existing != null && orgId.equals(existing.orgId())) {
+            if (existing != null && companyId.equals(existing.companyId())) {
                 store.remove(vectorId);
                 deleted++;
             }
@@ -68,39 +68,39 @@ public class MemoryVectorStoreClient implements VectorStoreClient {
     }
 
     @Override
-    public VectorDeleteResult deleteByDocument(String orgId, String knowledgeBaseId, Long documentId) {
+    public VectorDeleteResult deleteByDocument(String companyId, String knowledgeBaseId, Long documentId) {
         if (documentId == null) {
             return VectorDeleteResult.success(0, 0);
         }
         List<String> ids = store.values().stream()
-                .filter(entry -> orgId.equals(entry.orgId()))
+                .filter(entry -> companyId.equals(entry.companyId()))
                 .filter(entry -> knowledgeBaseId.equals(entry.knowledgeBaseId()))
                 .filter(entry -> documentId.equals(entry.documentId()))
                 .map(Entry::vectorId)
                 .toList();
-        return deleteByVectorIds(orgId, ids);
+        return deleteByVectorIds(companyId, ids);
     }
 
     @Override
-    public VectorDeleteResult deleteByKnowledgeBase(String orgId, String knowledgeBaseId) {
+    public VectorDeleteResult deleteByKnowledgeBase(String companyId, String knowledgeBaseId) {
         List<String> ids = store.values().stream()
-                .filter(entry -> orgId.equals(entry.orgId()))
+                .filter(entry -> companyId.equals(entry.companyId()))
                 .filter(entry -> knowledgeBaseId.equals(entry.knowledgeBaseId()))
                 .map(Entry::vectorId)
                 .toList();
-        return deleteByVectorIds(orgId, ids);
+        return deleteByVectorIds(companyId, ids);
     }
 
     @Override
-    public VectorStoreAuditResult auditOrgVectors(String orgId, List<String> registeredVectorIds) {
+    public VectorStoreAuditResult auditOrgVectors(String companyId, List<String> registeredVectorIds) {
         List<String> registered = registeredVectorIds == null ? List.of() : registeredVectorIds;
         List<String> orphanIds = store.values().stream()
-                .filter(entry -> orgId.equals(entry.orgId()))
+                .filter(entry -> companyId.equals(entry.companyId()))
                 .map(Entry::vectorId)
                 .filter(vectorId -> !registered.contains(vectorId))
                 .toList();
         int scanned = (int) store.values().stream()
-                .filter(entry -> orgId.equals(entry.orgId()))
+                .filter(entry -> companyId.equals(entry.companyId()))
                 .count();
         return VectorStoreAuditResult.success(scanned, registered.size(), orphanIds.size(), orphanIds.stream().limit(50).toList());
     }
@@ -122,7 +122,7 @@ public class MemoryVectorStoreClient implements VectorStoreClient {
     }
 
     private record Entry(String vectorId,
-                         String orgId,
+                         String companyId,
                          String knowledgeBaseId,
                          Long documentId,
                          Long chunkId,

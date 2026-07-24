@@ -8,15 +8,15 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "org_model_config")
-public class OrgModelConfigEntity {
+@Table(name = "company_model_config")
+public class CompanyModelConfigEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "scene_code", nullable = false, length = 32)
     private String sceneCode;
@@ -27,18 +27,18 @@ public class OrgModelConfigEntity {
     @Column(name = "model_name", nullable = false, length = 64)
     private String modelName;
 
-    protected OrgModelConfigEntity() {
+    protected CompanyModelConfigEntity() {
     }
 
-    public OrgModelConfigEntity(String orgId, String sceneCode, String provider, String modelName) {
-        this.orgId = orgId;
+    public CompanyModelConfigEntity(String companyId, String sceneCode, String provider, String modelName) {
+        this.companyId = companyId;
         this.sceneCode = sceneCode;
         this.provider = provider;
         this.modelName = modelName;
     }
 
-    public String getOrgId() {
-        return orgId;
+    public String getCompanyId() {
+        return companyId;
     }
 
     public String getSceneCode() {

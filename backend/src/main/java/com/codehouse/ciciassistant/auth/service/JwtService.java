@@ -34,7 +34,7 @@ public class JwtService {
         Instant exp = now.plusSeconds(expirationSeconds);
         return Jwts.builder()
                 .subject(user.getId())
-                .claim("org_id", user.getOrg().getId())
+                .claim("company_id", user.getCompany().getId())
                 .claim("member_id", user.getId())
                 .claim("account_id", user.getAccountId())
                 .claim("roles", roles == null ? List.of(user.getRoleCode()) : roles)

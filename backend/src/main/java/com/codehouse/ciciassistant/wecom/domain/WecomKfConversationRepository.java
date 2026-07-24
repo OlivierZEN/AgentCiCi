@@ -5,8 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface WecomKfConversationRepository extends JpaRepository<WecomKfConversationEntity, Long> {
 
-    Optional<WecomKfConversationEntity> findByOrgIdAndCorpIdAndOpenKfIdAndExternalUserId(
-            String orgId,
+    Optional<WecomKfConversationEntity> findByCompanyIdAndCorpIdAndOpenKfIdAndExternalUserId(
+            String companyId,
             String corpId,
             String openKfId,
             String externalUserId);

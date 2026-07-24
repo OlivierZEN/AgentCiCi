@@ -64,8 +64,8 @@ public class AgentProductionReadinessService {
         this.agentEvaluationService = agentEvaluationService;
     }
 
-    public ReadinessResult check(String orgId, String agentId, Integer versionNo) {
-        Optional<AgentDefinitionEntity> definitionOpt = agentDefinitionRepository.findByOrgIdAndAgentId(orgId, agentId);
+    public ReadinessResult check(String companyId, String agentId, Integer versionNo) {
+        Optional<AgentDefinitionEntity> definitionOpt = agentDefinitionRepository.findByCompanyIdAndAgentId(companyId, agentId);
         ArrayList<ReadinessCheck> checks = new ArrayList<>();
         if (definitionOpt.isEmpty()) {
             checks.add(blocker("agent_exists", "Agent 不存在，无法发布。"));
@@ -76,7 +76,7 @@ public class AgentProductionReadinessService {
                 ? pass("agent_enabled", "Agent 已启用。")
                 : blocker("agent_enabled", "Agent 已停用，不能发布到生产。"));
 
-        AgentWorkflowVersionEntity targetVersion = resolveVersion(orgId, agentId, versionNo).orElse(null);
+        AgentWorkflowVersionEntity targetVersion = resolveVersion(companyId, agentId, versionNo).orElse(null);
         if (targetVersion == null) {
             checks.add(blocker("compiled_version", "目标编译版本不存在。"));
         } else {
@@ -88,25 +88,25 @@ public class AgentProductionReadinessService {
                     : blocker("compiled_artifacts", "目标版本缺少 workflow code、manifest 或 preview graph。"));
         }
 
-        Map<String, String> modelRoute = resolveModelRoute(orgId, definition, checks);
+        Map<String, String> modelRoute = resolveModelRoute(companyId, definition, checks);
         List<AgentKnowledgeBindingEntity> knowledgeBindings =
-                agentKnowledgeBindingRepository.findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(orgId, agentId);
-        checkKnowledgeBindings(orgId, knowledgeBindings, checks);
+                agentKnowledgeBindingRepository.findByCompanyIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(companyId, agentId);
+        checkKnowledgeBindings(companyId, knowledgeBindings, checks);
 
         List<AgentToolBindingEntity> toolBindings =
-                agentToolBindingRepository.findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(orgId, agentId);
+                agentToolBindingRepository.findByCompanyIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(companyId, agentId);
         checks.add(toolBindings.isEmpty()
                 ? warn("tool_scope", "未绑定直接工具；如果该 Agent 只做纯问答或 Skill 驱动，可继续。")
                 : pass("tool_scope", "已绑定 " + toolBindings.size() + " 个直接工具。"));
 
         List<AgentChannelBindingEntity> channels =
-                agentChannelBindingRepository.findByOrgIdAndAgentIdAndEnabledTrueOrderByIdAsc(orgId, agentId);
+                agentChannelBindingRepository.findByCompanyIdAndAgentIdAndEnabledTrueOrderByIdAsc(companyId, agentId);
         List<AgentRuntimeScheduleTriggerEntity> schedules =
-                scheduleTriggerRepository.findByOrgIdAndAgentIdAndActiveTrueOrderByIdAsc(orgId, agentId);
-        long activeApiKeys = activeApiKeyCount(orgId, agentId);
+                scheduleTriggerRepository.findByCompanyIdAndAgentIdAndActiveTrueOrderByIdAsc(companyId, agentId);
+        long activeApiKeys = activeApiKeyCount(companyId, agentId);
         checkRuntimeEntries(channels, schedules, activeApiKeys, checks);
         AgentEvaluationService.EvaluationGateSummary evaluationGate = agentEvaluationService.latestGateSummary(
-                orgId,
+                companyId,
                 agentId,
                 targetVersion == null ? versionNo : targetVersion.getVersionNo());
         checkEvaluationGate(evaluationGate, checks);
@@ -123,8 +123,8 @@ public class AgentProductionReadinessService {
         return result(agentId, targetVersion == null ? null : targetVersion.getVersionNo(), checks, summary);
     }
 
-    public ReadinessResult requirePublishReady(String orgId, String agentId, Integer versionNo) {
-        ReadinessResult readiness = check(orgId, agentId, versionNo);
+    public ReadinessResult requirePublishReady(String companyId, String agentId, Integer versionNo) {
+        ReadinessResult readiness = check(companyId, agentId, versionNo);
         if (readiness.blocked()) {
             String reason = readiness.checks().stream()
                     .filter(item -> "blocker".equals(item.severity()) && !"passed".equals(item.status()))
@@ -136,19 +136,19 @@ public class AgentProductionReadinessService {
         return readiness;
     }
 
-    private Optional<AgentWorkflowVersionEntity> resolveVersion(String orgId, String agentId, Integer versionNo) {
+    private Optional<AgentWorkflowVersionEntity> resolveVersion(String companyId, String agentId, Integer versionNo) {
         if (versionNo == null) {
             return Optional.empty();
         }
-        return agentWorkflowVersionRepository.findByOrgIdAndAgentIdAndVersionNo(orgId, agentId, versionNo);
+        return agentWorkflowVersionRepository.findByCompanyIdAndAgentIdAndVersionNo(companyId, agentId, versionNo);
     }
 
-    private Map<String, String> resolveModelRoute(String orgId,
+    private Map<String, String> resolveModelRoute(String companyId,
                                                   AgentDefinitionEntity definition,
                                                   ArrayList<ReadinessCheck> checks) {
         try {
             Map<String, String> route = modelProviderService.resolveRuntimeModelRoute(
-                    orgId,
+                    companyId,
                     "chat",
                     definition.getModel());
             checks.add(pass("model_route", "聊天场景模型路由可用：" + route.getOrDefault("modelName", "")));
@@ -159,7 +159,7 @@ public class AgentProductionReadinessService {
         }
     }
 
-    private void checkKnowledgeBindings(String orgId,
+    private void checkKnowledgeBindings(String companyId,
                                         List<AgentKnowledgeBindingEntity> bindings,
                                         ArrayList<ReadinessCheck> checks) {
         if (bindings.isEmpty()) {
@@ -168,7 +168,7 @@ public class AgentProductionReadinessService {
         }
         List<Long> ids = bindings.stream().map(AgentKnowledgeBindingEntity::getKnowledgeBaseId).toList();
         Map<Long, KnowledgeBaseEntity> kbById = new LinkedHashMap<>();
-        knowledgeBaseRepository.findByOrgIdAndIdIn(orgId, ids).forEach(item -> kbById.put(item.getId(), item));
+        knowledgeBaseRepository.findByCompanyIdAndIdIn(companyId, ids).forEach(item -> kbById.put(item.getId(), item));
         ArrayList<Long> invalid = new ArrayList<>();
         for (Long id : ids) {
             KnowledgeBaseEntity kb = kbById.get(id);
@@ -224,9 +224,9 @@ public class AgentProductionReadinessService {
         checks.add(pass("evaluation_gate", "当前版本评测门禁已通过。"));
     }
 
-    private long activeApiKeyCount(String orgId, String agentId) {
+    private long activeApiKeyCount(String companyId, String agentId) {
         Instant now = Instant.now();
-        return apiCredentialRepository.findByOrgIdAndAgentIdOrderByCreatedAtDesc(orgId, agentId).stream()
+        return apiCredentialRepository.findByCompanyIdAndAgentIdOrderByCreatedAtDesc(companyId, agentId).stream()
                 .filter(item -> AgentApiCredentialEntity.STATUS_ACTIVE.equals(item.getStatus()))
                 .filter(item -> item.getExpiresAt() == null || item.getExpiresAt().isAfter(now))
                 .count();

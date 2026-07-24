@@ -33,7 +33,7 @@ class ExternalMemoryContextServiceTest {
     @Test
     void resolvesTheSameExternalReferenceIndependentlyPerApplication() {
         ExternalMemoryContextService.ExternalMemoryContext context = context("app-alpha", "subject-7");
-        when(subjectRepository.findByOrgIdAndApplicationCodeAndSubjectTypeAndExternalRef(
+        when(subjectRepository.findByCompanyIdAndApplicationCodeAndSubjectTypeAndExternalRef(
                 "org-a", "app-alpha", "EXTERNAL_USER", "subject-7")).thenReturn(Optional.empty());
         when(subjectRepository.save(any(MemorySubjectEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -41,17 +41,17 @@ class ExternalMemoryContextServiceTest {
 
         assertThat(created.getApplicationCode()).isEqualTo("app-alpha");
         assertThat(created.getExternalRef()).isEqualTo("subject-7");
-        verify(subjectRepository).findByOrgIdAndApplicationCodeAndSubjectTypeAndExternalRef(
+        verify(subjectRepository).findByCompanyIdAndApplicationCodeAndSubjectTypeAndExternalRef(
                 "org-a", "app-alpha", "EXTERNAL_USER", "subject-7");
     }
 
     @Test
     void loadsOnlyCurrentAndAuthorizedScopesForTheExternalContext() throws Exception {
         MemorySubjectEntity subject = subject(7L, "app-alpha", "subject-7");
-        when(subjectRepository.findByOrgIdAndApplicationCodeAndSubjectTypeAndExternalRef(
+        when(subjectRepository.findByCompanyIdAndApplicationCodeAndSubjectTypeAndExternalRef(
                 "org-a", "app-alpha", "EXTERNAL_USER", "subject-7")).thenReturn(Optional.of(subject));
         Instant now = Instant.parse("2026-07-22T03:45:00Z");
-        when(recordRepository.findByOrgIdAndSubjectIdAndStatusInOrderByUpdatedAtDesc(
+        when(recordRepository.findByCompanyIdAndSubjectIdAndStatusInOrderByUpdatedAtDesc(
                 "org-a", 7L, List.of("ACTIVE", "VERIFIED"))).thenReturn(List.of(
                 record(7L, "SUBJECT_SHARED", null, now.plusSeconds(3600)),
                 record(7L, "CONVERSATION", "conversation-1", now.plusSeconds(3600)),
@@ -61,7 +61,7 @@ class ExternalMemoryContextServiceTest {
                 record(7L, "CONVERSATION", "conversation-2", now.plusSeconds(3600)),
                 record(7L, "SUBJECT_SHARED", null, now.plusSeconds(3600), "SENSITIVE"),
                 record(7L, "SUBJECT_SHARED", null, now.minusSeconds(1))));
-        when(snapshotRepository.findByOrgIdAndApplicationCodeAndConversationRef(
+        when(snapshotRepository.findByCompanyIdAndApplicationCodeAndConversationRef(
                 "org-a", "app-alpha", "conversation-1")).thenReturn(Optional.empty());
 
         ExternalMemoryContextService.MemoryContext result = service.loadContext(
@@ -75,7 +75,7 @@ class ExternalMemoryContextServiceTest {
 
     @Test
     void rejectsUnregisteredExternalSubjectsInsteadOfCreatingThemDuringRead() {
-        when(subjectRepository.findByOrgIdAndApplicationCodeAndSubjectTypeAndExternalRef(
+        when(subjectRepository.findByCompanyIdAndApplicationCodeAndSubjectTypeAndExternalRef(
                 "org-a", "app-alpha", "EXTERNAL_USER", "subject-7")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.loadContext(context("app-alpha", "subject-7"), "agent-a", Set.of(), Instant.now()))

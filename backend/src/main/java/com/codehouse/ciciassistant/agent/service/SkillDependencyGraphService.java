@@ -75,15 +75,15 @@ public class SkillDependencyGraphService {
         this.objectMapper = objectMapper;
     }
 
-    public GraphView getAgentGraph(String orgId, String agentId, Integer versionNo) {
-        AgentDefinitionEntity agent = agentDefinitionRepository.findByOrgIdAndAgentId(orgId, agentId)
+    public GraphView getAgentGraph(String companyId, String agentId, Integer versionNo) {
+        AgentDefinitionEntity agent = agentDefinitionRepository.findByCompanyIdAndAgentId(companyId, agentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Agent not found"));
-        AgentWorkflowVersionEntity workflowVersion = selectWorkflowVersion(orgId, agent, versionNo);
+        AgentWorkflowVersionEntity workflowVersion = selectWorkflowVersion(companyId, agent, versionNo);
 
         GraphBuilder graph = new GraphBuilder();
         graph.addNode(agentNode(agent));
         if (workflowVersion == null) {
-            addCurrentBindings(orgId, agent, graph);
+            addCurrentBindings(companyId, agent, graph);
             return graph.build(new GraphScope(
                             "AGENT_BINDINGS",
                             agent.getAgentId(),
@@ -101,9 +101,9 @@ public class SkillDependencyGraphService {
                 "编译为"));
 
         List<AgentWorkflowSkillRefEntity> references = workflowSkillRefRepository
-                .findByOrgIdAndWorkflowVersionIdOrderByIdAsc(orgId, workflowVersion.getId());
+                .findByCompanyIdAndWorkflowVersionIdOrderByIdAsc(companyId, workflowVersion.getId());
         for (AgentWorkflowSkillRefEntity reference : references) {
-            addPinnedSkill(orgId, workflowVersion, reference, graph);
+            addPinnedSkill(companyId, workflowVersion, reference, graph);
         }
 
         return graph.build(new GraphScope(
@@ -116,14 +116,14 @@ public class SkillDependencyGraphService {
                 "PINNED_WORKFLOW_VERSION");
     }
 
-    public GraphView getSkillImpactGraph(String orgId, Long skillId) {
-        SkillDefinitionEntity skill = skillDefinitionRepository.findByIdAndOrgId(skillId, orgId)
+    public GraphView getSkillImpactGraph(String companyId, Long skillId) {
+        SkillDefinitionEntity skill = skillDefinitionRepository.findByIdAndCompanyId(skillId, companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Skill not found"));
         GraphBuilder graph = new GraphBuilder();
         graph.addNode(impactSkillNode(skill));
 
         List<AgentWorkflowSkillRefEntity> fetchedReferences = workflowSkillRefRepository
-                .findTop1001ByOrgIdAndSkillIdOrderBySkillVersionIdAscWorkflowVersionIdAsc(orgId, skillId);
+                .findTop1001ByCompanyIdAndSkillIdOrderBySkillVersionIdAscWorkflowVersionIdAsc(companyId, skillId);
         List<AgentWorkflowSkillRefEntity> references;
         if (fetchedReferences.size() > MAX_IMPACT_REFERENCES) {
             references = fetchedReferences.subList(0, MAX_IMPACT_REFERENCES);
@@ -139,7 +139,7 @@ public class SkillDependencyGraphService {
                 .toList();
         Map<Long, AgentWorkflowVersionEntity> workflowVersions = workflowVersionIds.isEmpty()
                 ? Map.of()
-                : workflowVersionRepository.findByOrgIdAndIdIn(orgId, workflowVersionIds).stream()
+                : workflowVersionRepository.findByCompanyIdAndIdIn(companyId, workflowVersionIds).stream()
                 .collect(Collectors.toMap(AgentWorkflowVersionEntity::getId, Function.identity()));
         List<Long> skillVersionIds = references.stream()
                 .map(AgentWorkflowSkillRefEntity::getSkillVersionId)
@@ -149,12 +149,12 @@ public class SkillDependencyGraphService {
                 .toList();
         Map<Long, SkillVersionEntity> skillVersions = skillVersionIds.isEmpty()
                 ? Map.of()
-                : skillVersionRepository.findByOrgIdAndIdIn(orgId, skillVersionIds).stream()
+                : skillVersionRepository.findByCompanyIdAndIdIn(companyId, skillVersionIds).stream()
                 .collect(Collectors.toMap(SkillVersionEntity::getId, Function.identity()));
 
         List<com.codehouse.ciciassistant.skill.domain.AgentSkillBindingEntity> fetchedBindings =
-                agentSkillBindingRepository.findTop1001ByOrgIdAndSkillIdAndEnabledTrueOrderByAgentIdAscPriorityAsc(
-                        orgId, skillId);
+                agentSkillBindingRepository.findTop1001ByCompanyIdAndSkillIdAndEnabledTrueOrderByAgentIdAscPriorityAsc(
+                        companyId, skillId);
         List<com.codehouse.ciciassistant.skill.domain.AgentSkillBindingEntity> bindings;
         if (fetchedBindings.size() > MAX_IMPACT_REFERENCES) {
             bindings = fetchedBindings.subList(0, MAX_IMPACT_REFERENCES);
@@ -175,7 +175,7 @@ public class SkillDependencyGraphService {
         List<String> sortedAgentIds = relatedAgentIds.stream().sorted().toList();
         Map<String, AgentDefinitionEntity> agents = sortedAgentIds.isEmpty()
                 ? Map.of()
-                : agentDefinitionRepository.findByOrgIdAndAgentIdIn(orgId, sortedAgentIds).stream()
+                : agentDefinitionRepository.findByCompanyIdAndAgentIdIn(companyId, sortedAgentIds).stream()
                 .collect(Collectors.toMap(AgentDefinitionEntity::getAgentId, Function.identity()));
 
         for (AgentWorkflowSkillRefEntity reference : references) {
@@ -286,16 +286,16 @@ public class SkillDependencyGraphService {
                 "归属 Agent"));
     }
 
-    private AgentWorkflowVersionEntity selectWorkflowVersion(String orgId,
+    private AgentWorkflowVersionEntity selectWorkflowVersion(String companyId,
                                                              AgentDefinitionEntity agent,
                                                              Integer versionNo) {
         if (versionNo != null) {
-            return workflowVersionRepository.findByOrgIdAndAgentIdAndVersionNo(
-                            orgId, agent.getAgentId(), versionNo)
+            return workflowVersionRepository.findByCompanyIdAndAgentIdAndVersionNo(
+                            companyId, agent.getAgentId(), versionNo)
                     .orElseThrow(() -> new ResourceNotFoundException("Workflow version not found"));
         }
         List<AgentWorkflowVersionEntity> versions = workflowVersionRepository
-                .findByOrgIdAndAgentIdOrderByVersionNoDesc(orgId, agent.getAgentId());
+                .findByCompanyIdAndAgentIdOrderByVersionNoDesc(companyId, agent.getAgentId());
         if (agent.getPublishedVersionId() != null) {
             for (AgentWorkflowVersionEntity candidate : versions) {
                 if (agent.getPublishedVersionId().equals(candidate.getId())) {
@@ -306,14 +306,14 @@ public class SkillDependencyGraphService {
         return versions.stream().findFirst().orElse(null);
     }
 
-    private void addCurrentBindings(String orgId,
+    private void addCurrentBindings(String companyId,
                                     AgentDefinitionEntity agent,
                                     GraphBuilder graph) {
         agentSkillBindingRepository
-                .findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(orgId, agent.getAgentId())
+                .findByCompanyIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(companyId, agent.getAgentId())
                 .forEach(binding -> {
                     SkillDefinitionEntity skill = skillDefinitionRepository
-                            .findByIdAndOrgId(binding.getSkillId(), orgId)
+                            .findByIdAndCompanyId(binding.getSkillId(), companyId)
                             .orElse(null);
                     String skillNodeId = "skill:" + binding.getSkillId();
                     if (skill == null) {
@@ -338,7 +338,7 @@ public class SkillDependencyGraphService {
                         return;
                     }
 
-                    SkillVersionEntity version = resolveCurrentSkillVersion(orgId, skill, graph);
+                    SkillVersionEntity version = resolveCurrentSkillVersion(companyId, skill, graph);
                     if (version == null) {
                         graph.addWarning("Skill " + skill.getSkillCode() + " 没有可展示的当前版本。");
                         return;
@@ -349,16 +349,16 @@ public class SkillDependencyGraphService {
                             "activationMode", safe(binding.getActivationMode()),
                             "priority", binding.getPriority())));
                     graph.addEdge(edge(skillNodeId, versionNodeId, "CURRENT_SKILL_VERSION", "当前版本"));
-                    addResources(orgId, version, versionNodeId, graph);
+                    addResources(companyId, version, versionNodeId, graph);
                 });
     }
 
-    private SkillVersionEntity resolveCurrentSkillVersion(String orgId,
+    private SkillVersionEntity resolveCurrentSkillVersion(String companyId,
                                                           SkillDefinitionEntity skill,
                                                           GraphBuilder graph) {
         if (skill.getCurrentPublishedVersionId() != null) {
             SkillVersionEntity current = skillVersionRepository
-                    .findByIdAndOrgId(skill.getCurrentPublishedVersionId(), orgId)
+                    .findByIdAndCompanyId(skill.getCurrentPublishedVersionId(), companyId)
                     .orElse(null);
             if (current != null && Objects.equals(current.getSkillId(), skill.getId())) {
                 return current;
@@ -372,16 +372,16 @@ public class SkillDependencyGraphService {
             }
         }
         return skillVersionRepository
-                .findTopByOrgIdAndSkillIdAndPublishStatusOrderByVersionNoDesc(orgId, skill.getId(), "PUBLISHED")
-                .or(() -> skillVersionRepository.findTopByOrgIdAndSkillIdOrderByVersionNoDesc(orgId, skill.getId()))
+                .findTopByCompanyIdAndSkillIdAndPublishStatusOrderByVersionNoDesc(companyId, skill.getId(), "PUBLISHED")
+                .or(() -> skillVersionRepository.findTopByCompanyIdAndSkillIdOrderByVersionNoDesc(companyId, skill.getId()))
                 .orElse(null);
     }
 
-    private void addPinnedSkill(String orgId,
+    private void addPinnedSkill(String companyId,
                                 AgentWorkflowVersionEntity workflowVersion,
                                 AgentWorkflowSkillRefEntity reference,
                                 GraphBuilder graph) {
-        SkillDefinitionEntity skill = skillDefinitionRepository.findByIdAndOrgId(reference.getSkillId(), orgId)
+        SkillDefinitionEntity skill = skillDefinitionRepository.findByIdAndCompanyId(reference.getSkillId(), companyId)
                 .orElse(null);
         String skillNodeId = "skill:" + reference.getSkillId();
         if (skill == null) {
@@ -409,7 +409,7 @@ public class SkillDependencyGraphService {
         }
 
         SkillVersionEntity skillVersion = skillVersionRepository
-                .findByIdAndOrgId(reference.getSkillVersionId(), orgId)
+                .findByIdAndCompanyId(reference.getSkillVersionId(), companyId)
                 .orElse(null);
         String versionNodeId = "skill-version:" + reference.getSkillVersionId();
         if (skillVersion == null) {
@@ -437,7 +437,7 @@ public class SkillDependencyGraphService {
                 referenceMetadata.put("templateVersionNo", reference.getTemplateVersionNo());
             }
             graph.addNode(skillVersionNode(skillVersion, referenceMetadata));
-            addResources(orgId, skillVersion, versionNodeId, graph);
+            addResources(companyId, skillVersion, versionNodeId, graph);
         }
         graph.addEdge(edge(
                 "workflow-version:" + workflowVersion.getId(),
@@ -447,7 +447,7 @@ public class SkillDependencyGraphService {
         graph.addEdge(edge(versionNodeId, skillNodeId, "VERSION_OF", "归属 Skill"));
     }
 
-    private void addResources(String orgId,
+    private void addResources(String companyId,
                               SkillVersionEntity skillVersion,
                               String versionNodeId,
                               GraphBuilder graph) {
@@ -455,7 +455,7 @@ public class SkillDependencyGraphService {
                 skillVersion.getEffectiveToolWhitelist(),
                 "Skill v" + skillVersion.getVersionNo() + " 工具边界",
                 graph)) {
-            ToolDefinitionEntity tool = toolDefinitionRepository.findByOrgIdAndToolName(orgId, toolName).orElse(null);
+            ToolDefinitionEntity tool = toolDefinitionRepository.findByCompanyIdAndToolName(companyId, toolName).orElse(null);
             graph.addNode(new GraphNode(
                     "tool:" + toolName,
                     "TOOL",
@@ -476,7 +476,7 @@ public class SkillDependencyGraphService {
             Long knowledgeBaseId = parseLong(rawId);
             KnowledgeBaseEntity knowledgeBase = knowledgeBaseId == null
                     ? null
-                    : knowledgeBaseRepository.findByIdAndOrgId(knowledgeBaseId, orgId).orElse(null);
+                    : knowledgeBaseRepository.findByIdAndCompanyId(knowledgeBaseId, companyId).orElse(null);
             String nodeId = "knowledge-base:" + rawId;
             graph.addNode(new GraphNode(
                     nodeId,

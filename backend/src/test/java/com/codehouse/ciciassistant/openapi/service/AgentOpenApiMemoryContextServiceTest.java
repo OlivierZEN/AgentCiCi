@@ -18,7 +18,7 @@ class AgentOpenApiMemoryContextServiceTest {
         AgentApiMemoryBindingRepository bindings=mock(AgentApiMemoryBindingRepository.class);
         TrustedMemoryRuntimeContextService runtime=mock(TrustedMemoryRuntimeContextService.class);
         AgentApiCredentialEntity credential=mock(AgentApiCredentialEntity.class);
-        when(credential.getId()).thenReturn(9L); when(credential.getOrgId()).thenReturn("org-a"); when(credential.getAgentId()).thenReturn("agent-a");
+        when(credential.getId()).thenReturn(9L); when(credential.getCompanyId()).thenReturn("org-a"); when(credential.getAgentId()).thenReturn("agent-a");
         AgentOpenApiAuthService.AuthenticatedCredential auth=new AgentOpenApiAuthService.AuthenticatedCredential(credential, mock(AgentDefinitionEntity.class), "127.0.0.1", null);
         AgentApiMemoryBindingEntity binding=new AgentApiMemoryBindingEntity(9L, "app-a", "EXTERNAL_USER", "VERIFIED", "[\"ns-a\"]");
         when(bindings.findByCredentialIdAndEnabledTrue(9L)).thenReturn(Optional.of(binding));
@@ -38,7 +38,7 @@ class AgentOpenApiMemoryContextServiceTest {
         AgentApiMemoryBindingRepository bindings=mock(AgentApiMemoryBindingRepository.class);
         TrustedMemoryRuntimeContextService runtime=mock(TrustedMemoryRuntimeContextService.class);
         AgentApiCredentialEntity credential=mock(AgentApiCredentialEntity.class);
-        when(credential.getId()).thenReturn(9L); when(credential.getOrgId()).thenReturn("org-a"); when(credential.getAgentId()).thenReturn("agent-a");
+        when(credential.getId()).thenReturn(9L); when(credential.getCompanyId()).thenReturn("org-a"); when(credential.getAgentId()).thenReturn("agent-a");
         AgentOpenApiAuthService.AuthenticatedCredential auth=new AgentOpenApiAuthService.AuthenticatedCredential(credential, mock(AgentDefinitionEntity.class), "127.0.0.1", null);
         when(bindings.findByCredentialIdAndEnabledTrue(9L)).thenReturn(Optional.empty());
         AgentOpenApiMemoryContextService service=new AgentOpenApiMemoryContextService(bindings, runtime, new ObjectMapper());
@@ -51,7 +51,7 @@ class AgentOpenApiMemoryContextServiceTest {
         AgentApiMemoryBindingRepository bindings=mock(AgentApiMemoryBindingRepository.class);
         TrustedMemoryRuntimeContextService runtime=mock(TrustedMemoryRuntimeContextService.class);
         AgentApiCredentialEntity credential=mock(AgentApiCredentialEntity.class);
-        when(credential.getId()).thenReturn(9L); when(credential.getOrgId()).thenReturn("org-a"); when(credential.getAgentId()).thenReturn("agent-a");
+        when(credential.getId()).thenReturn(9L); when(credential.getCompanyId()).thenReturn("org-a"); when(credential.getAgentId()).thenReturn("agent-a");
         AgentOpenApiAuthService.AuthenticatedCredential auth=new AgentOpenApiAuthService.AuthenticatedCredential(credential, mock(AgentDefinitionEntity.class), "127.0.0.1", null);
         when(bindings.findByCredentialIdAndEnabledTrue(9L)).thenReturn(Optional.empty());
         AgentOpenApiMemoryContextService service=new AgentOpenApiMemoryContextService(bindings, runtime, new ObjectMapper());

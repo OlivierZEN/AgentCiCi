@@ -110,11 +110,11 @@ public class CustomerInteractionIngestionService {
     }
 
     @Transactional
-    public Map<String, Object> createBatch(String orgId, String userId, String accountId,
+    public Map<String, Object> createBatch(String companyId, String userId, String accountId,
                                            String sourceType, String occurredAt, String subject,
                                            String narrationText, String pastedText,
                                            List<MultipartFile> files) {
-        workbenchService.accountDetail(orgId, userId, accountId);
+        workbenchService.accountDetail(companyId, userId, accountId);
         String source = normalizeSource(sourceType);
         Instant occurred = parseInstant(occurredAt);
         String safeSubject = clip(blank(subject), 256);
@@ -125,8 +125,8 @@ public class CustomerInteractionIngestionService {
 
         String batchPublicId = "cib_" + UUID.randomUUID().toString().replace("-", "");
         CustomerInteractionBatchEntity batch = batchRepository.save(new CustomerInteractionBatchEntity(
-                batchPublicId, orgId, accountId, userId, source, occurred, safeSubject, narration, pasted));
-        Path batchDir = storageRoot.resolve(safeSegment(orgId)).resolve(safeSegment(accountId)).resolve(batchPublicId).normalize();
+                batchPublicId, companyId, accountId, userId, source, occurred, safeSubject, narration, pasted));
+        Path batchDir = storageRoot.resolve(safeSegment(companyId)).resolve(safeSegment(accountId)).resolve(batchPublicId).normalize();
         ensureUnderStorage(batchDir);
         try {
             Files.createDirectories(batchDir);
@@ -143,7 +143,7 @@ public class CustomerInteractionIngestionService {
                 ensureUnderStorage(path);
                 Files.write(path, bytes);
                 assetRepository.save(new CustomerInteractionAssetEntity(
-                        assetPublicId, batch.getId(), orgId, inputType,
+                        assetPublicId, batch.getId(), companyId, inputType,
                         safeFilename(upload.getOriginalFilename(), assetPublicId),
                         clip(blank(upload.getContentType()), 128), bytes.length, hash, path.toString(), order++));
             }
@@ -156,22 +156,22 @@ public class CustomerInteractionIngestionService {
         return batchView(batch, assetRepository.findByBatchIdOrderBySortOrderAsc(batch.getId()));
     }
 
-    public List<Map<String, Object>> listBatches(String orgId, String userId, String accountId) {
-        workbenchService.accountDetail(orgId, userId, accountId);
-        return batchRepository.findTop20ByOrgIdAndCrmAccountIdOrderByCreatedAtDesc(orgId, accountId).stream()
+    public List<Map<String, Object>> listBatches(String companyId, String userId, String accountId) {
+        workbenchService.accountDetail(companyId, userId, accountId);
+        return batchRepository.findTop20ByCompanyIdAndCrmAccountIdOrderByCreatedAtDesc(companyId, accountId).stream()
                 .filter(batch -> batch.getCreatedBy().equals(userId))
                 .map(batch -> batchView(batch, assetRepository.findByBatchIdOrderBySortOrderAsc(batch.getId())))
                 .toList();
     }
 
-    public Map<String, Object> getBatch(String orgId, String userId, String publicId) {
-        CustomerInteractionBatchEntity batch = requireOwnedBatch(orgId, userId, publicId);
+    public Map<String, Object> getBatch(String companyId, String userId, String publicId) {
+        CustomerInteractionBatchEntity batch = requireOwnedBatch(companyId, userId, publicId);
         return batchView(batch, assetRepository.findByBatchIdOrderBySortOrderAsc(batch.getId()));
     }
 
-    public AssetDownload asset(String orgId, String userId, String batchPublicId, String assetPublicId) {
-        CustomerInteractionBatchEntity batch = requireVisibleBatch(orgId, userId, batchPublicId);
-        CustomerInteractionAssetEntity asset = assetRepository.findByOrgIdAndPublicId(orgId, assetPublicId)
+    public AssetDownload asset(String companyId, String userId, String batchPublicId, String assetPublicId) {
+        CustomerInteractionBatchEntity batch = requireVisibleBatch(companyId, userId, batchPublicId);
+        CustomerInteractionAssetEntity asset = assetRepository.findByCompanyIdAndPublicId(companyId, assetPublicId)
                 .filter(item -> item.getBatchId().equals(batch.getId()))
                 .orElseThrow(() -> new IllegalArgumentException("原始材料不存在"));
         Path path = Path.of(asset.getStoragePath()).toAbsolutePath().normalize();
@@ -181,8 +181,8 @@ public class CustomerInteractionIngestionService {
     }
 
     @Transactional
-    public Map<String, Object> retry(String orgId, String userId, String publicId) {
-        CustomerInteractionBatchEntity batch = requireOwnedBatch(orgId, userId, publicId);
+    public Map<String, Object> retry(String companyId, String userId, String publicId) {
+        CustomerInteractionBatchEntity batch = requireOwnedBatch(companyId, userId, publicId);
         if (CustomerInteractionBatchEntity.STATUS_CONFIRMED.equals(batch.getStatus())) {
             throw new IllegalArgumentException("已归集批次不能重试");
         }
@@ -196,8 +196,8 @@ public class CustomerInteractionIngestionService {
     }
 
     @Transactional
-    public Map<String, Object> confirm(String orgId, String userId, String publicId, ConfirmationCommand command) {
-        CustomerInteractionBatchEntity batch = requireOwnedBatch(orgId, userId, publicId);
+    public Map<String, Object> confirm(String companyId, String userId, String publicId, ConfirmationCommand command) {
+        CustomerInteractionBatchEntity batch = requireOwnedBatch(companyId, userId, publicId);
         if (CustomerInteractionBatchEntity.STATUS_CONFIRMED.equals(batch.getStatus())) {
             Map<String, Object> existing = new LinkedHashMap<>(batchView(batch, assetRepository.findByBatchIdOrderBySortOrderAsc(batch.getId())));
             existing.put("deduplicated", true);
@@ -213,18 +213,18 @@ public class CustomerInteractionIngestionService {
         String source = normalizeSource(command == null || blank(command.sourceType()).isBlank() ? batch.getSourceType() : command.sourceType());
         String subject = command == null || blank(command.subject()).isBlank() ? batch.getSubject() : command.subject();
         String occurredAt = command == null || blank(command.occurredAt()).isBlank() ? batch.getOccurredAt().toString() : command.occurredAt();
-        Map<String, Object> saved = workbenchService.saveInteraction(orgId, userId, batch.getCrmAccountId(),
+        Map<String, Object> saved = workbenchService.saveInteraction(companyId, userId, batch.getCrmAccountId(),
                 new CustomerWorkbenchService.InteractionCommand(source, subject, content, occurredAt));
         String eventId = String.valueOf(saved.getOrDefault("eventId", ""));
         List<CustomerInteractionAssetEntity> assets = assetRepository.findByBatchIdOrderBySortOrderAsc(batch.getId());
-        workbenchService.attachInteractionArchive(orgId, userId, eventId, batch.getPublicId(),
+        workbenchService.attachInteractionArchive(companyId, userId, eventId, batch.getPublicId(),
                 batch.getAnalysisJson(), assets.size());
-        customerMemoryService.replaceForEvent(orgId, batch.getCrmAccountId(), eventId, batch.getPublicId(),
+        customerMemoryService.replaceForEvent(companyId, batch.getCrmAccountId(), eventId, batch.getPublicId(),
                 batch.getOccurredAt(), batch.getAnalysisJson(), assets.stream().map(CustomerInteractionAssetEntity::getPublicId).toList());
-        dynamicScoringService.recordAnalysis(orgId, batch.getCrmAccountId(), eventId, batch.getPublicId(),
+        dynamicScoringService.recordAnalysis(companyId, batch.getCrmAccountId(), eventId, batch.getPublicId(),
                 source, batch.getOccurredAt(), batch.getAnalysisJson());
         Map<String, Object> actionResult = interactionActionService.recordActions(
-                orgId, batch.getCrmAccountId(), eventId, batch.getPublicId(), batch.getOccurredAt(), batch.getAnalysisJson());
+                companyId, batch.getCrmAccountId(), eventId, batch.getPublicId(), batch.getOccurredAt(), batch.getAnalysisJson());
         batch.markConfirmed(eventId);
         batchRepository.save(batch);
         Map<String, Object> result = new LinkedHashMap<>(batchView(batch, assets));
@@ -234,18 +234,18 @@ public class CustomerInteractionIngestionService {
         return result;
     }
 
-    public List<Map<String, Object>> interactionArchive(String orgId, String userId, String accountId) {
-        workbenchService.accountDetail(orgId, userId, accountId);
-        return eventRepository.findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc(orgId, accountId).stream()
+    public List<Map<String, Object>> interactionArchive(String companyId, String userId, String accountId) {
+        workbenchService.accountDetail(companyId, userId, accountId);
+        return eventRepository.findByCompanyIdAndCrmAccountIdOrderByOccurredAtDesc(companyId, accountId).stream()
                 .filter(item -> item.getSourceBatchId() != null && !item.getSourceBatchId().isBlank())
                 .map(this::archiveSummary).toList();
     }
 
-    public Map<String, Object> interactionArchiveDetail(String orgId, String userId, String eventId) {
-        CustomerInteractionEventEntity event = eventRepository.findByOrgIdAndPublicId(orgId, eventId)
+    public Map<String, Object> interactionArchiveDetail(String companyId, String userId, String eventId) {
+        CustomerInteractionEventEntity event = eventRepository.findByCompanyIdAndPublicId(companyId, eventId)
                 .orElseThrow(() -> new IllegalArgumentException("互动档案不存在"));
-        workbenchService.accountDetail(orgId, userId, event.getCrmAccountId());
-        CustomerInteractionBatchEntity batch = batchRepository.findByOrgIdAndPublicId(orgId, event.getSourceBatchId())
+        workbenchService.accountDetail(companyId, userId, event.getCrmAccountId());
+        CustomerInteractionBatchEntity batch = batchRepository.findByCompanyIdAndPublicId(companyId, event.getSourceBatchId())
                 .orElseThrow(() -> new IllegalArgumentException("互动档案缺少来源批次"));
         List<CustomerInteractionAssetEntity> assets = assetRepository.findByBatchIdOrderBySortOrderAsc(batch.getId());
         Map<String, Object> view = new LinkedHashMap<>(archiveSummary(event));
@@ -253,7 +253,7 @@ public class CustomerInteractionIngestionService {
         view.put("combinedText", batch.getCombinedText());
         view.put("analysis", parseAnalysis(event.getAnalysisJson()));
         view.put("assets", assets.stream().map(this::assetView).toList());
-        view.put("memory", customerMemoryService.activeMemory(orgId, event.getCrmAccountId()).stream()
+        view.put("memory", customerMemoryService.activeMemory(companyId, event.getCrmAccountId()).stream()
                 .filter(item -> eventId.equals(String.valueOf(item.get("sourceEventId")))).toList());
         return view;
     }
@@ -271,7 +271,7 @@ public class CustomerInteractionIngestionService {
                 try {
                     asset.markProcessing();
                     assetRepository.save(asset);
-                    String extracted = extract(batch.getOrgId(), asset);
+                    String extracted = extract(batch.getCompanyId(), asset);
                     if (extracted.isBlank()) throw new IllegalArgumentException("未提取到有效内容");
                     asset.markReady(clip(extracted, MAX_COMBINED_TEXT));
                 } catch (Exception ex) {
@@ -287,7 +287,7 @@ public class CustomerInteractionIngestionService {
                 batchRepository.save(batch);
                 return;
             }
-            AnalysisResult analysis = analyze(batch.getOrgId(), combined, customerContext(batch));
+            AnalysisResult analysis = analyze(batch.getCompanyId(), combined, customerContext(batch));
             boolean partial = !errors.isEmpty() || analysis.degraded();
             String errorMessage = String.join("；", errors);
             if (analysis.degraded()) errorMessage = joinError(errorMessage, analysis.message());
@@ -329,13 +329,13 @@ public class CustomerInteractionIngestionService {
         stalled.stream().map(CustomerInteractionBatchEntity::getPublicId).distinct().forEach(this::schedule);
     }
 
-    private String extract(String orgId, CustomerInteractionAssetEntity asset) throws Exception {
+    private String extract(String companyId, CustomerInteractionAssetEntity asset) throws Exception {
         Path path = Path.of(asset.getStoragePath()).toAbsolutePath().normalize();
         ensureUnderStorage(path);
         byte[] bytes = Files.readAllBytes(path);
         return switch (asset.getInputType()) {
             case "AUDIO" -> transcribeAudio(bytes, asset);
-            case "IMAGE" -> ocrImage(orgId, bytes, asset.getContentType());
+            case "IMAGE" -> ocrImage(companyId, bytes, asset.getContentType());
             case "DOCUMENT" -> readDocument(bytes, extension(asset.getOriginalName()));
             default -> throw new IllegalArgumentException("不支持的材料类型");
         };
@@ -352,9 +352,9 @@ public class CustomerInteractionIngestionService {
         return transcript.toString().trim();
     }
 
-    private String ocrImage(String orgId, byte[] bytes, String contentType) {
+    private String ocrImage(String companyId, byte[] bytes, String contentType) {
         if (bytes.length > MAX_IMAGE_BYTES) throw new IllegalArgumentException("单张截图不能超过 10MB");
-        Map<String, String> credentials = modelProviderService.credentialsForProvider(orgId, ModelProviderService.PROVIDER_ALIYUN);
+        Map<String, String> credentials = modelProviderService.credentialsForProvider(companyId, ModelProviderService.PROVIDER_ALIYUN);
         if (!Boolean.parseBoolean(credentials.getOrDefault("enabled", "false"))) {
             throw new IllegalArgumentException("图片 OCR 所需的阿里云视觉模型未启用");
         }
@@ -423,7 +423,7 @@ public class CustomerInteractionIngestionService {
         }
     }
 
-    private AnalysisResult analyze(String orgId, String combined, Map<String, Object> customerContext) {
+    private AnalysisResult analyze(String companyId, String combined, Map<String, Object> customerContext) {
         String crmContext = json(customerContext);
         String prompt = """
                 请分析下面的客户原始沟通材料，并且只输出一个 JSON 对象，不要输出 Markdown 或代码围栏。
@@ -478,8 +478,8 @@ public class CustomerInteractionIngestionService {
                 原始材料：
                 %s
                 """.formatted(clip(crmContext, 12_000), clip(combined, 60_000));
-        Map<String, String> route = modelRouterService.route(orgId, "customer-insight");
-        Map<String, String> credentials = modelProviderService.credentialsForProvider(orgId, route.get("provider"));
+        Map<String, String> route = modelRouterService.route(companyId, "customer-insight");
+        Map<String, String> credentials = modelProviderService.credentialsForProvider(companyId, route.get("provider"));
         if (!Boolean.parseBoolean(credentials.getOrDefault("enabled", "false"))) {
             return fallbackAnalysis(combined, "客户洞察模型未启用，已保留统一草稿");
         }
@@ -585,7 +585,7 @@ public class CustomerInteractionIngestionService {
     private Map<String, Object> customerContext(CustomerInteractionBatchEntity batch) {
         try {
             Map<String, Object> detail = workbenchService.accountDetail(
-                    batch.getOrgId(), batch.getCreatedBy(), batch.getCrmAccountId());
+                    batch.getCompanyId(), batch.getCreatedBy(), batch.getCrmAccountId());
             Map<String, Object> context = new LinkedHashMap<>();
             context.put("accountId", batch.getCrmAccountId());
             context.put("name", detail.getOrDefault("name", ""));
@@ -693,16 +693,16 @@ public class CustomerInteractionIngestionService {
         catch (Exception ex) { return Map.of(); }
     }
 
-    private CustomerInteractionBatchEntity requireOwnedBatch(String orgId, String userId, String publicId) {
-        return batchRepository.findByOrgIdAndPublicId(orgId, publicId)
+    private CustomerInteractionBatchEntity requireOwnedBatch(String companyId, String userId, String publicId) {
+        return batchRepository.findByCompanyIdAndPublicId(companyId, publicId)
                 .filter(batch -> batch.getCreatedBy().equals(userId))
                 .orElseThrow(() -> new IllegalArgumentException("互动采集批次不存在或无权访问"));
     }
 
-    private CustomerInteractionBatchEntity requireVisibleBatch(String orgId, String userId, String publicId) {
-        CustomerInteractionBatchEntity batch = batchRepository.findByOrgIdAndPublicId(orgId, publicId)
+    private CustomerInteractionBatchEntity requireVisibleBatch(String companyId, String userId, String publicId) {
+        CustomerInteractionBatchEntity batch = batchRepository.findByCompanyIdAndPublicId(companyId, publicId)
                 .orElseThrow(() -> new IllegalArgumentException("互动采集批次不存在或无权访问"));
-        workbenchService.accountDetail(orgId, userId, batch.getCrmAccountId());
+        workbenchService.accountDetail(companyId, userId, batch.getCrmAccountId());
         return batch;
     }
 

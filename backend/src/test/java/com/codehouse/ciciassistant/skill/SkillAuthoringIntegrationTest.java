@@ -392,7 +392,7 @@ class SkillAuthoringIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "orgId": "demo-org",
+                                  "companyId": "demo-org",
                                   "mobile": "%s",
                                   "password": "szyd1234"
                                 }

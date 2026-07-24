@@ -207,7 +207,7 @@ class CustomerInteractionIngestionServiceTest {
     void confirmationWritesCrmOnceAndSubsequentRequestIsIdempotent() {
         CustomerInteractionBatchEntity batch = batch("batch-2");
         batch.markProcessed("客户确认下周二评审方案。", "{}", false, "");
-        when(batchRepository.findByOrgIdAndPublicId("org-1", "batch-2")).thenReturn(Optional.of(batch));
+        when(batchRepository.findByCompanyIdAndPublicId("org-1", "batch-2")).thenReturn(Optional.of(batch));
         when(workbenchService.saveInteraction(anyString(), anyString(), anyString(), any()))
                 .thenReturn(Map.of("eventId", "event-1", "deduplicated", false));
         when(interactionActionService.recordActions(anyString(), anyString(), anyString(), anyString(), any(), anyString()))

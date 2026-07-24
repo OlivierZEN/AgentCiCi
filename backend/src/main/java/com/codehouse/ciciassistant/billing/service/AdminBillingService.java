@@ -62,12 +62,12 @@ public class AdminBillingService {
     }
 
     @Transactional
-    public AdminBillingOverviewView overview(String orgId) {
-        BillingSubscriptionEntity subscription = ensureBillingState(orgId);
+    public AdminBillingOverviewView overview(String companyId) {
+        BillingSubscriptionEntity subscription = ensureBillingState(companyId);
         BillingEditionEntity edition = editionRepository.findByEditionCode(subscription.getEditionCode())
                 .orElseThrow();
-        List<UsageMeterEventEntity> events = usageMeterEventRepository.findTop100ByOrgIdOrderByOccurredAtDesc(orgId);
-        List<BillingCreditLedgerEntity> ledger = creditLedgerRepository.findTop50ByOrgIdOrderByIdDesc(orgId);
+        List<UsageMeterEventEntity> events = usageMeterEventRepository.findTop100ByCompanyIdOrderByOccurredAtDesc(companyId);
+        List<BillingCreditLedgerEntity> ledger = creditLedgerRepository.findTop50ByCompanyIdOrderByIdDesc(companyId);
         return new AdminBillingOverviewView(
                 toSubscriptionView(subscription, edition),
                 toCreditSummary(subscription),
@@ -79,48 +79,48 @@ public class AdminBillingService {
     }
 
     @Transactional
-    public AdminSubscriptionView subscription(String orgId) {
-        BillingSubscriptionEntity subscription = ensureBillingState(orgId);
+    public AdminSubscriptionView subscription(String companyId) {
+        BillingSubscriptionEntity subscription = ensureBillingState(companyId);
         BillingEditionEntity edition = editionRepository.findByEditionCode(subscription.getEditionCode())
                 .orElseThrow();
         return toSubscriptionView(subscription, edition);
     }
 
     @Transactional
-    public List<UsageEventView> usageEvents(String orgId) {
-        ensureBillingState(orgId);
-        return usageMeterEventRepository.findTop100ByOrgIdOrderByOccurredAtDesc(orgId).stream()
+    public List<UsageEventView> usageEvents(String companyId) {
+        ensureBillingState(companyId);
+        return usageMeterEventRepository.findTop100ByCompanyIdOrderByOccurredAtDesc(companyId).stream()
                 .map(this::toUsageEventView)
                 .toList();
     }
 
     @Transactional
-    public List<LedgerEntryView> ledger(String orgId) {
-        ensureBillingState(orgId);
-        return creditLedgerRepository.findTop50ByOrgIdOrderByIdDesc(orgId).stream()
+    public List<LedgerEntryView> ledger(String companyId) {
+        ensureBillingState(companyId);
+        return creditLedgerRepository.findTop50ByCompanyIdOrderByIdDesc(companyId).stream()
                 .map(this::toLedgerView)
                 .toList();
     }
 
     @Transactional
-    public List<QuotaWarningView> quota(String orgId) {
-        BillingSubscriptionEntity subscription = ensureBillingState(orgId);
+    public List<QuotaWarningView> quota(String companyId) {
+        BillingSubscriptionEntity subscription = ensureBillingState(companyId);
         BillingEditionEntity edition = editionRepository.findByEditionCode(subscription.getEditionCode())
                 .orElseThrow();
         return quotaWarnings(subscription, edition);
     }
 
-    BillingSubscriptionEntity ensureBillingState(String orgId) {
-        return usageMeteringService.ensureBillingState(orgId);
+    BillingSubscriptionEntity ensureBillingState(String companyId) {
+        return usageMeteringService.ensureBillingState(companyId);
     }
 
-    private BillingSubscriptionEntity createDefaultSubscription(String orgId) {
+    private BillingSubscriptionEntity createDefaultSubscription(String companyId) {
         String deploymentMode = billingModeProperties.toView().deploymentMode();
         BillingEditionEntity edition = editionRepository.findFirstByDeploymentModeAndEnabledTrueOrderBySortOrderAscEditionCodeAsc(deploymentMode)
                 .orElseGet(() -> editionRepository.findFirstByDeploymentModeAndEnabledTrueOrderBySortOrderAscEditionCodeAsc("private_deployment")
                         .orElseThrow());
         Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
-        BillingSubscriptionEntity subscription = new BillingSubscriptionEntity(orgId, edition.getDeploymentMode(), edition.getEditionCode(),
+        BillingSubscriptionEntity subscription = new BillingSubscriptionEntity(companyId, edition.getDeploymentMode(), edition.getEditionCode(),
                 now.minus(7, ChronoUnit.DAYS), now.plus(358, ChronoUnit.DAYS));
         BigDecimal included = effectiveIncludedCredits(edition);
         subscription.setIncludedCredits(included);
@@ -136,7 +136,7 @@ public class AdminBillingService {
         Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
         BigDecimal balance = subscription.getIncludedCredits();
         creditLedgerRepository.save(new BillingCreditLedgerEntity(
-                subscription.getOrgId(),
+                subscription.getCompanyId(),
                 "included_grant",
                 subscription.getIncludedCredits(),
                 balance,
@@ -159,7 +159,7 @@ public class AdminBillingService {
         for (UsageMeterEventEntity event : usageMeterEventRepository.saveAll(events)) {
             balance = balance.subtract(event.getWorkCreditQuantity()).setScale(2, RoundingMode.HALF_UP);
             creditLedgerRepository.save(new BillingCreditLedgerEntity(
-                    subscription.getOrgId(),
+                    subscription.getCompanyId(),
                     "usage_debit",
                     event.getWorkCreditQuantity().negate(),
                     balance,
@@ -180,7 +180,7 @@ public class AdminBillingService {
                                         Instant occurredAt,
                                         Map<String, Object> metadata) {
         return new UsageMeterEventEntity(
-                subscription.getOrgId(),
+                subscription.getCompanyId(),
                 "system",
                 agentId,
                 domain,
@@ -191,13 +191,13 @@ public class AdminBillingService {
                 credits,
                 billingType,
                 "seed",
-                subscription.getOrgId() + ":" + domain + ":" + itemCode,
+                subscription.getCompanyId() + ":" + domain + ":" + itemCode,
                 occurredAt,
                 writeJson(metadata));
     }
 
     BillingSubscriptionEntity refreshSubscriptionBalance(BillingSubscriptionEntity subscription) {
-        BigDecimal consumed = creditLedgerRepository.findByOrgIdOrderByOccurredAtAsc(subscription.getOrgId()).stream()
+        BigDecimal consumed = creditLedgerRepository.findByCompanyIdOrderByOccurredAtAsc(subscription.getCompanyId()).stream()
                 .filter(item -> "usage_debit".equals(item.getEntryType()))
                 .map(BillingCreditLedgerEntity::getCreditsDelta)
                 .map(BigDecimal::abs)
@@ -222,7 +222,7 @@ public class AdminBillingService {
                 .map(code -> packageRepository.findByPackageCode(code).map(BillingPackageEntity::getDisplayName).orElse(code))
                 .toList();
         return new AdminSubscriptionView(
-                subscription.getOrgId(),
+                subscription.getCompanyId(),
                 subscription.getDeploymentMode(),
                 deploymentLabel(subscription.getDeploymentMode()),
                 subscription.getEditionCode(),
@@ -410,7 +410,7 @@ public class AdminBillingService {
     }
 
     public record AdminSubscriptionView(
-            String orgId,
+            String companyId,
             String deploymentMode,
             String deploymentModeLabel,
             String editionCode,

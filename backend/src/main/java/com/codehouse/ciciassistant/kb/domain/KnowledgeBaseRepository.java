@@ -6,13 +6,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface KnowledgeBaseRepository extends JpaRepository<KnowledgeBaseEntity, Long> {
 
-    List<KnowledgeBaseEntity> findByOrgIdOrderByIdDesc(String orgId);
+    List<KnowledgeBaseEntity> findByCompanyIdOrderByIdDesc(String companyId);
 
-    List<KnowledgeBaseEntity> findByOrgIdAndStatusNotOrderByIdDesc(String orgId, String status);
+    List<KnowledgeBaseEntity> findByCompanyIdAndStatusNotOrderByIdDesc(String companyId, String status);
 
-    List<KnowledgeBaseEntity> findByOrgIdAndIdIn(String orgId, List<Long> ids);
+    List<KnowledgeBaseEntity> findByCompanyIdAndIdIn(String companyId, List<Long> ids);
 
-    Optional<KnowledgeBaseEntity> findByIdAndOrgId(Long id, String orgId);
+    Optional<KnowledgeBaseEntity> findByIdAndCompanyId(Long id, String companyId);
 
-    void deleteByIdAndOrgId(Long id, String orgId);
+    void deleteByIdAndCompanyId(Long id, String companyId);
 }

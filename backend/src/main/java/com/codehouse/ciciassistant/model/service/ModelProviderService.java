@@ -3,8 +3,8 @@ package com.codehouse.ciciassistant.model.service;
 import com.codehouse.ciciassistant.auth.config.PlatformAccountProperties;
 import com.codehouse.ciciassistant.model.domain.ModelProviderConfigEntity;
 import com.codehouse.ciciassistant.model.domain.ModelProviderConfigRepository;
-import com.codehouse.ciciassistant.model.domain.OrgModelConfigEntity;
-import com.codehouse.ciciassistant.model.domain.OrgModelConfigRepository;
+import com.codehouse.ciciassistant.model.domain.CompanyModelConfigEntity;
+import com.codehouse.ciciassistant.model.domain.CompanyModelConfigRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -49,7 +49,7 @@ public class ModelProviderService {
     );
 
     private final ModelProviderConfigRepository providerRepository;
-    private final OrgModelConfigRepository modelConfigRepository;
+    private final CompanyModelConfigRepository modelConfigRepository;
     private final PlatformAccountProperties platformAccountProperties;
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
@@ -131,7 +131,7 @@ public class ModelProviderService {
     );
 
     public ModelProviderService(ModelProviderConfigRepository providerRepository,
-                                OrgModelConfigRepository modelConfigRepository,
+                                CompanyModelConfigRepository modelConfigRepository,
                                 PlatformAccountProperties platformAccountProperties,
                                 ObjectMapper objectMapper,
                                 @Value("${app.model.aliyun.base-url:https://dashscope.aliyuncs.com/compatible-mode/v1}") String aliyunDefaultBaseUrl,
@@ -149,9 +149,9 @@ public class ModelProviderService {
     }
 
     @Transactional
-    public List<Map<String, Object>> listProviders(String orgId) {
-        ensureBuiltinRows(orgId);
-        return providerRepository.findByOrgIdOrderByIdAsc(orgId).stream()
+    public List<Map<String, Object>> listProviders(String companyId) {
+        ensureBuiltinRows(companyId);
+        return providerRepository.findByCompanyIdOrderByIdAsc(companyId).stream()
                 .map(this::toView)
                 .toList();
     }
@@ -162,13 +162,13 @@ public class ModelProviderService {
     }
 
     @Transactional
-    public Map<String, Object> updateProvider(String orgId,
+    public Map<String, Object> updateProvider(String companyId,
                                               String providerCode,
                                               Boolean enabled,
                                               String apiBaseUrl,
                                               String apiKey) {
         ProviderDef def = requireDef(providerCode);
-        ModelProviderConfigEntity entity = requireProviderEntity(orgId, providerCode);
+        ModelProviderConfigEntity entity = requireProviderEntity(companyId, providerCode);
 
         if (enabled != null) {
             entity.setEnabled(enabled);
@@ -186,18 +186,18 @@ public class ModelProviderService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, Object> providerModels(String orgId, String providerCode) {
+    public Map<String, Object> providerModels(String companyId, String providerCode) {
         ProviderDef def = requireDef(providerCode);
-        ModelProviderConfigEntity entity = requireProviderEntity(orgId, providerCode);
+        ModelProviderConfigEntity entity = requireProviderEntity(companyId, providerCode);
 
-        List<Map<String, Object>> configured = modelConfigRepository.findByOrgIdAndProvider(orgId, providerCode).stream()
+        List<Map<String, Object>> configured = modelConfigRepository.findByCompanyIdAndProvider(companyId, providerCode).stream()
                 .map(m -> Map.<String, Object>of(
                         "sceneCode", m.getSceneCode(),
                         "modelName", m.getModelName()
                 ))
                 .toList();
 
-        List<String> selected = configuredModelsForProvider(entity, orgId);
+        List<String> selected = configuredModelsForProvider(entity, companyId);
 
         return Map.of(
                 "providerCode", providerCode,
@@ -244,11 +244,11 @@ public class ModelProviderService {
     }
 
     @Transactional
-    public List<Map<String, Object>> agentBaseModels(String orgId) {
+    public List<Map<String, Object>> agentBaseModels(String companyId) {
         String scopeId = platformScopeId();
         ensureBuiltinRows(scopeId);
         List<Map<String, Object>> out = new ArrayList<>();
-        for (ModelProviderConfigEntity entity : providerRepository.findByOrgIdOrderByIdAsc(scopeId)) {
+        for (ModelProviderConfigEntity entity : providerRepository.findByCompanyIdOrderByIdAsc(scopeId)) {
             if (!entity.isEnabled()) {
                 continue;
             }
@@ -283,8 +283,8 @@ public class ModelProviderService {
         SceneRouteDef scene = requireSceneRoute(sceneCode);
         ModelChoice choice = requirePlatformModelChoice(providerCode, modelName);
         String scopeId = platformScopeId();
-        OrgModelConfigEntity entity = modelConfigRepository.findByOrgIdAndSceneCode(scopeId, scene.sceneCode())
-                .orElse(new OrgModelConfigEntity(scopeId, scene.sceneCode(), choice.providerCode(), choice.modelName()));
+        CompanyModelConfigEntity entity = modelConfigRepository.findByCompanyIdAndSceneCode(scopeId, scene.sceneCode())
+                .orElse(new CompanyModelConfigEntity(scopeId, scene.sceneCode(), choice.providerCode(), choice.modelName()));
         entity.update(choice.providerCode(), choice.modelName());
         modelConfigRepository.save(entity);
         return routeView(scene, agentBaseModels(scopeId));
@@ -293,13 +293,13 @@ public class ModelProviderService {
     @Transactional
     public Map<String, Object> deletePlatformModelRoute(String sceneCode) {
         SceneRouteDef scene = requireSceneRoute(sceneCode);
-        modelConfigRepository.deleteByOrgIdAndSceneCode(platformScopeId(), scene.sceneCode());
+        modelConfigRepository.deleteByCompanyIdAndSceneCode(platformScopeId(), scene.sceneCode());
         return routeView(scene, agentBaseModels(platformScopeId()));
     }
 
     @Transactional
-    public Map<String, String> resolveRuntimeModelRoute(String orgId, String sceneCode, String preferredModelName) {
-        List<ModelChoice> candidates = agentBaseModels(orgId).stream()
+    public Map<String, String> resolveRuntimeModelRoute(String companyId, String sceneCode, String preferredModelName) {
+        List<ModelChoice> candidates = agentBaseModels(companyId).stream()
                 .map(this::toModelChoice)
                 .filter(choice -> choice != null)
                 .toList();
@@ -307,8 +307,8 @@ public class ModelProviderService {
             throw new IllegalStateException("暂无平台可用模型，请联系平台运营启用模型厂商。");
         }
 
-        OrgModelConfigEntity configured = modelConfigRepository
-                .findByOrgIdAndSceneCode(platformScopeId(), normalizeSceneCode(sceneCode))
+        CompanyModelConfigEntity configured = modelConfigRepository
+                .findByCompanyIdAndSceneCode(platformScopeId(), normalizeSceneCode(sceneCode))
                 .orElse(null);
         ModelChoice sceneChoice = configured == null
                 ? null
@@ -326,11 +326,11 @@ public class ModelProviderService {
     }
 
     @Transactional
-    public List<Map<String, Object>> embeddingModelOptions(String orgId) {
+    public List<Map<String, Object>> embeddingModelOptions(String companyId) {
         String scopeId = platformScopeId();
         ensureBuiltinRows(scopeId);
         List<Map<String, Object>> out = new ArrayList<>();
-        for (ModelProviderConfigEntity entity : providerRepository.findByOrgIdOrderByIdAsc(scopeId)) {
+        for (ModelProviderConfigEntity entity : providerRepository.findByCompanyIdOrderByIdAsc(scopeId)) {
             if (!entity.isEnabled()) {
                 continue;
             }
@@ -361,10 +361,10 @@ public class ModelProviderService {
     }
 
     @Transactional
-    public Map<String, Object> updateSelectedModels(String orgId, String providerCode, List<String> selectedModels) {
+    public Map<String, Object> updateSelectedModels(String companyId, String providerCode, List<String> selectedModels) {
         ProviderDef def = requireDef(providerCode);
-        ensureBuiltinRows(orgId);
-        ModelProviderConfigEntity entity = requireProviderEntity(orgId, providerCode);
+        ensureBuiltinRows(companyId);
+        ModelProviderConfigEntity entity = requireProviderEntity(companyId, providerCode);
         Map<String, Object> config = new LinkedHashMap<>(readJsonToMap(entity.getConfigJson()));
         List<String> normalized = selectedModels == null ? List.of() : selectedModels.stream()
                 .filter(v -> v != null && !v.isBlank())
@@ -383,12 +383,12 @@ public class ModelProviderService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, Object> checkProvider(String orgId, String providerCode) {
+    public Map<String, Object> checkProvider(String companyId, String providerCode) {
         ProviderDef def = requireDef(providerCode);
         if (PROVIDER_ONEKEYTOKEN.equals(providerCode)) {
-            return checkOneKeyTokenProvider(requireProviderEntity(orgId, providerCode), null, null, null);
+            return checkOneKeyTokenProvider(requireProviderEntity(companyId, providerCode), null, null, null);
         }
-        List<String> models = fetchRemoteModels(orgId, providerCode);
+        List<String> models = fetchRemoteModels(companyId, providerCode);
         return Map.of(
                 "providerCode", providerCode,
                 "ok", true,
@@ -416,9 +416,9 @@ public class ModelProviderService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, Object> fetchProviderModels(String orgId, String providerCode) {
+    public Map<String, Object> fetchProviderModels(String companyId, String providerCode) {
         ProviderDef def = requireDef(providerCode);
-        List<ModelDetail> details = fetchRemoteModelDetails(orgId, providerCode);
+        List<ModelDetail> details = fetchRemoteModelDetails(companyId, providerCode);
         List<String> models = details.stream().map(ModelDetail::modelName).toList();
         return Map.of(
                 "providerCode", providerCode,
@@ -431,7 +431,7 @@ public class ModelProviderService {
     }
 
     @Transactional
-    public Map<String, String> credentialsForProvider(String orgId, String providerCode) {
+    public Map<String, String> credentialsForProvider(String companyId, String providerCode) {
         String scopeId = platformScopeId();
         ensureBuiltinRows(scopeId);
         ModelProviderConfigEntity e = requireProviderEntity(scopeId, providerCode);
@@ -444,15 +444,15 @@ public class ModelProviderService {
         );
     }
 
-    private List<String> fetchRemoteModels(String orgId, String providerCode) {
-        return fetchRemoteModelDetails(orgId, providerCode).stream()
+    private List<String> fetchRemoteModels(String companyId, String providerCode) {
+        return fetchRemoteModelDetails(companyId, providerCode).stream()
                 .map(ModelDetail::modelName)
                 .toList();
     }
 
-    private List<ModelDetail> fetchRemoteModelDetails(String orgId, String providerCode) {
+    private List<ModelDetail> fetchRemoteModelDetails(String companyId, String providerCode) {
         ProviderDef def = requireDef(providerCode);
-        ModelProviderConfigEntity entity = requireProviderEntity(orgId, providerCode);
+        ModelProviderConfigEntity entity = requireProviderEntity(companyId, providerCode);
 
         if (!entity.isEnabled()) {
             throw new IllegalArgumentException("当前厂商已停用，请先启用后再检测/获取模型列表");
@@ -748,7 +748,7 @@ public class ModelProviderService {
         return text.length() <= 180 ? text : text.substring(0, 180) + "...";
     }
 
-    private List<String> configuredModelsForProvider(ModelProviderConfigEntity entity, String orgId) {
+    private List<String> configuredModelsForProvider(ModelProviderConfigEntity entity, String companyId) {
         Map<String, Object> config = readJsonToMap(entity.getConfigJson());
         Object raw = config.get("selectedModels");
         List<String> fromConfig = new ArrayList<>();
@@ -766,7 +766,7 @@ public class ModelProviderService {
         if (!fromConfig.isEmpty()) {
             return fromConfig;
         }
-        List<String> configured = modelConfigRepository.findByOrgIdAndProvider(orgId, entity.getProviderCode()).stream()
+        List<String> configured = modelConfigRepository.findByCompanyIdAndProvider(companyId, entity.getProviderCode()).stream()
                 .map(m -> m.getModelName() == null ? "" : m.getModelName().trim())
                 .filter(v -> !v.isBlank())
                 .distinct()
@@ -836,14 +836,14 @@ public class ModelProviderService {
         }
     }
 
-    private void ensureBuiltinRows(String orgId) {
+    private void ensureBuiltinRows(String companyId) {
         for (ProviderDef def : sortedDefs()) {
-            boolean exists = providerRepository.findByOrgIdAndProviderCode(orgId, def.providerCode()).isPresent();
+            boolean exists = providerRepository.findByCompanyIdAndProviderCode(companyId, def.providerCode()).isPresent();
             if (!exists) {
                 String defaultKey = PROVIDER_ALIYUN.equals(def.providerCode()) ? nullableToBlank(aliyunDefaultApiKey) : "";
                 String defaultUrl = PROVIDER_ALIYUN.equals(def.providerCode()) ? nullableToBlank(aliyunDefaultBaseUrl) : def.defaultBaseUrl();
                 providerRepository.save(new ModelProviderConfigEntity(
-                        orgId,
+                        companyId,
                         def.providerCode(),
                         def.providerName(),
                         true,
@@ -868,14 +868,14 @@ public class ModelProviderService {
     }
 
     private String platformScopeId() {
-        String configured = platformAccountProperties.getGovernanceOrgId();
+        String configured = platformAccountProperties.getGovernanceCompanyId();
         return configured == null || configured.isBlank() ? "demo-org" : configured.trim();
     }
 
     private Map<String, Object> routeView(SceneRouteDef scene, List<Map<String, Object>> candidates) {
         List<ModelChoice> choices = candidates.stream().map(this::toModelChoice).filter(choice -> choice != null).toList();
-        OrgModelConfigEntity configured = modelConfigRepository
-                .findByOrgIdAndSceneCode(platformScopeId(), scene.sceneCode())
+        CompanyModelConfigEntity configured = modelConfigRepository
+                .findByCompanyIdAndSceneCode(platformScopeId(), scene.sceneCode())
                 .orElse(null);
         ModelChoice choice = configured == null
                 ? null
@@ -995,8 +995,8 @@ public class ModelProviderService {
         return def;
     }
 
-    private ModelProviderConfigEntity requireProviderEntity(String orgId, String providerCode) {
-        return providerRepository.findByOrgIdAndProviderCode(orgId, providerCode)
+    private ModelProviderConfigEntity requireProviderEntity(String companyId, String providerCode) {
+        return providerRepository.findByCompanyIdAndProviderCode(companyId, providerCode)
                 .orElseThrow(() -> new IllegalArgumentException("模型厂商配置不存在: " + providerCode));
     }
 

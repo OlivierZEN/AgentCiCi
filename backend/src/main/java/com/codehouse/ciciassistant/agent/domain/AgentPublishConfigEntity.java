@@ -16,8 +16,8 @@ public class AgentPublishConfigEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "agent_id", nullable = false, length = 64)
     private String agentId;
@@ -37,8 +37,8 @@ public class AgentPublishConfigEntity {
     protected AgentPublishConfigEntity() {
     }
 
-    public AgentPublishConfigEntity(String orgId, String agentId, String channelId, String configJson) {
-        this.orgId = orgId;
+    public AgentPublishConfigEntity(String companyId, String agentId, String channelId, String configJson) {
+        this.companyId = companyId;
         this.agentId = agentId;
         this.channelId = channelId;
         this.configJson = configJson;

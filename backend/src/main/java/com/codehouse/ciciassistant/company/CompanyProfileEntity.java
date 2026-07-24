@@ -1,4 +1,4 @@
-package com.codehouse.ciciassistant.organization;
+package com.codehouse.ciciassistant.company;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -7,12 +7,12 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 
 @Entity
-@Table(name = "organization_profile")
-public class OrganizationProfileEntity {
+@Table(name = "company_profile")
+public class CompanyProfileEntity {
 
     @Id
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "short_name", length = 64)
     private String shortName;
@@ -32,8 +32,8 @@ public class OrganizationProfileEntity {
     @Column(name = "industry", length = 128)
     private String industry;
 
-    @Column(name = "organization_size", length = 64)
-    private String organizationSize;
+    @Column(name = "company_size", length = 64)
+    private String companySize;
 
     @Column(name = "timezone", length = 64)
     private String timezone;
@@ -50,34 +50,34 @@ public class OrganizationProfileEntity {
     @Column(name = "updated_by", length = 64)
     private String updatedBy;
 
-    protected OrganizationProfileEntity() {
+    protected CompanyProfileEntity() {
     }
 
-    public OrganizationProfileEntity(String orgId, String updatedBy) {
+    public CompanyProfileEntity(String companyId, String updatedBy) {
         Instant now = Instant.now();
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.timezone = "Asia/Shanghai";
         this.createdAt = now;
         this.updatedAt = now;
         this.updatedBy = normalize(updatedBy, 64);
     }
 
-    public void update(AdminOrganizationProfileService.ProfileUpdateCommand command, String actorId) {
+    public void update(AdminCompanyProfileService.ProfileUpdateCommand command, String actorId) {
         this.shortName = normalize(command.shortName(), 64);
         this.contactName = normalize(command.contactName(), 128);
         this.contactPhone = normalize(command.contactPhone(), 64);
         this.contactEmail = normalize(command.contactEmail(), 256);
         this.website = normalize(command.website(), 256);
         this.industry = normalize(command.industry(), 128);
-        this.organizationSize = normalize(command.organizationSize(), 64);
+        this.companySize = normalize(command.companySize(), 64);
         this.timezone = normalize(command.timezone(), 64);
         this.notes = normalize(command.notes(), 4000);
         this.updatedBy = normalize(actorId, 64);
         this.updatedAt = Instant.now();
     }
 
-    public String getOrgId() {
-        return orgId;
+    public String getCompanyId() {
+        return companyId;
     }
 
     public String getShortName() {
@@ -104,8 +104,8 @@ public class OrganizationProfileEntity {
         return industry;
     }
 
-    public String getOrganizationSize() {
-        return organizationSize;
+    public String getCompanySize() {
+        return companySize;
     }
 
     public String getTimezone() {

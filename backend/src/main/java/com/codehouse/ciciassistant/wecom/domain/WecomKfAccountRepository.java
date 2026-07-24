@@ -8,11 +8,11 @@ public interface WecomKfAccountRepository extends JpaRepository<WecomKfAccountEn
 
     List<WecomKfAccountEntity> findByEnabledTrue();
 
-    List<WecomKfAccountEntity> findByOrgIdOrderByUpdatedAtDescIdDesc(String orgId);
+    List<WecomKfAccountEntity> findByCompanyIdOrderByUpdatedAtDescIdDesc(String companyId);
 
-    Optional<WecomKfAccountEntity> findByIdAndOrgId(Long id, String orgId);
+    Optional<WecomKfAccountEntity> findByIdAndCompanyId(Long id, String companyId);
 
-    Optional<WecomKfAccountEntity> findByOrgIdAndOpenKfId(String orgId, String openKfId);
+    Optional<WecomKfAccountEntity> findByCompanyIdAndOpenKfId(String companyId, String openKfId);
 
-    Optional<WecomKfAccountEntity> findByOrgIdAndOpenKfIdAndEnabledTrue(String orgId, String openKfId);
+    Optional<WecomKfAccountEntity> findByCompanyIdAndOpenKfIdAndEnabledTrue(String companyId, String openKfId);
 }

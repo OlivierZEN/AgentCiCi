@@ -28,23 +28,23 @@ public class FeishuPairingCodeStore {
         this.objectMapper = objectMapper;
     }
 
-    public PairingCode createCode(String orgId, String userId, String agentCode) {
+    public PairingCode createCode(String companyId, String userId, String agentCode) {
         for (int i = 0; i < 10; i++) {
             String code = String.format("%06d", random.nextInt(1_000_000));
             PairCodePayload payload = new PairCodePayload(userId, normalizeAgentCode(agentCode), Instant.now().plus(PAIRING_TTL));
-            if (saveCode(orgId, code, payload)) {
+            if (saveCode(companyId, code, payload)) {
                 return new PairingCode(code, (int) PAIRING_TTL.toSeconds(), payload.agentCode());
             }
         }
         throw new IllegalArgumentException("生成飞书配对码失败，请稍后重试");
     }
 
-    public PairCodePayload consumeCode(String orgId, String code) {
+    public PairCodePayload consumeCode(String companyId, String code) {
         if (code == null || code.isBlank()) {
             throw new IllegalArgumentException("配对码不能为空");
         }
         if (redisTemplate != null) {
-            String key = pairingKey(orgId, code);
+            String key = pairingKey(companyId, code);
             String value = redisTemplate.opsForValue().get(key);
             if (value == null) {
                 throw new IllegalArgumentException("配对码不存在或已过期");
@@ -52,7 +52,7 @@ public class FeishuPairingCodeStore {
             redisTemplate.delete(key);
             return readPayload(value);
         }
-        PairCodePayload payload = inMemoryCodes.remove(pairingKey(orgId, code));
+        PairCodePayload payload = inMemoryCodes.remove(pairingKey(companyId, code));
         if (payload == null || Instant.now().isAfter(payload.expiresAt())) {
             throw new IllegalArgumentException("配对码不存在或已过期");
         }
@@ -72,13 +72,13 @@ public class FeishuPairingCodeStore {
         return inMemoryMessageDedupe.putIfAbsent(messageKey(messageId), now) == null;
     }
 
-    private boolean saveCode(String orgId, String code, PairCodePayload payload) {
+    private boolean saveCode(String companyId, String code, PairCodePayload payload) {
         if (redisTemplate != null) {
             Boolean saved = redisTemplate.opsForValue()
-                    .setIfAbsent(pairingKey(orgId, code), writePayload(payload), PAIRING_TTL);
+                    .setIfAbsent(pairingKey(companyId, code), writePayload(payload), PAIRING_TTL);
             return Boolean.TRUE.equals(saved);
         }
-        String key = pairingKey(orgId, code);
+        String key = pairingKey(companyId, code);
         inMemoryCodes.entrySet().removeIf(entry -> Instant.now().isAfter(entry.getValue().expiresAt()));
         return inMemoryCodes.putIfAbsent(key, payload) == null;
     }
@@ -87,8 +87,8 @@ public class FeishuPairingCodeStore {
         return agentCode == null || agentCode.isBlank() ? "cici" : agentCode.trim();
     }
 
-    private String pairingKey(String orgId, String code) {
-        return "feishu:pair:code:" + orgId + ":" + code;
+    private String pairingKey(String companyId, String code) {
+        return "feishu:pair:code:" + companyId + ":" + code;
     }
 
     private String messageKey(String messageId) {

@@ -5,6 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AgentEvalPublishReferenceRepository extends JpaRepository<AgentEvalPublishReferenceEntity, Long> {
 
-    List<AgentEvalPublishReferenceEntity> findByOrgIdAndAgentIdAndVersionNoOrderByPublishedAtDesc(
-            String orgId, String agentId, Integer versionNo);
+    List<AgentEvalPublishReferenceEntity> findByCompanyIdAndAgentIdAndVersionNoOrderByPublishedAtDesc(
+            String companyId, String agentId, Integer versionNo);
 }

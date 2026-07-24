@@ -27,7 +27,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class AgentAccessControlServiceTest {
 
-    private static final String ORG_ID = "demo-org";
+    private static final String COMPANY_ID = "demo-org";
     private static final String AGENT_ID = "access-agent";
     private static final String USER_ID = "member-1";
 
@@ -60,7 +60,7 @@ class AgentAccessControlServiceTest {
         givenAgent(null);
         givenMember(RoleCodes.ORG_USER);
 
-        boolean allowed = service.can(ORG_ID, USER_ID, List.of(RoleCodes.ORG_ADMIN), AGENT_ID, AgentPermission.MANAGE);
+        boolean allowed = service.can(COMPANY_ID, USER_ID, List.of(RoleCodes.ORG_ADMIN), AGENT_ID, AgentPermission.MANAGE);
 
         assertThat(allowed).isTrue();
     }
@@ -70,7 +70,7 @@ class AgentAccessControlServiceTest {
         givenAgent(USER_ID);
         givenMember(RoleCodes.ORG_USER);
 
-        boolean allowed = service.can(ORG_ID, USER_ID, List.of(RoleCodes.ORG_USER), AGENT_ID, AgentPermission.PUBLISH);
+        boolean allowed = service.can(COMPANY_ID, USER_ID, List.of(RoleCodes.ORG_USER), AGENT_ID, AgentPermission.PUBLISH);
 
         assertThat(allowed).isTrue();
     }
@@ -79,9 +79,9 @@ class AgentAccessControlServiceTest {
     void shouldAllowExplicitUserGrant() {
         givenAgent(null);
         givenMember(RoleCodes.ORG_USER);
-        when(grantRepository.findByOrgIdAndAgentIdAndStatus(ORG_ID, AGENT_ID, AgentAccessGrantEntity.STATUS_ACTIVE))
+        when(grantRepository.findByCompanyIdAndAgentIdAndStatus(COMPANY_ID, AGENT_ID, AgentAccessGrantEntity.STATUS_ACTIVE))
                 .thenReturn(List.of(new AgentAccessGrantEntity(
-                        ORG_ID,
+                        COMPANY_ID,
                         AGENT_ID,
                         "USER",
                         USER_ID,
@@ -90,7 +90,7 @@ class AgentAccessControlServiceTest {
                         "admin-1",
                         null)));
 
-        boolean allowed = service.can(ORG_ID, USER_ID, List.of(RoleCodes.ORG_USER), AGENT_ID, AgentPermission.RUN);
+        boolean allowed = service.can(COMPANY_ID, USER_ID, List.of(RoleCodes.ORG_USER), AGENT_ID, AgentPermission.RUN);
 
         assertThat(allowed).isTrue();
     }
@@ -99,9 +99,9 @@ class AgentAccessControlServiceTest {
     void shouldIgnoreExpiredGrant() {
         givenAgent(null);
         givenMember(RoleCodes.ORG_USER);
-        when(grantRepository.findByOrgIdAndAgentIdAndStatus(ORG_ID, AGENT_ID, AgentAccessGrantEntity.STATUS_ACTIVE))
+        when(grantRepository.findByCompanyIdAndAgentIdAndStatus(COMPANY_ID, AGENT_ID, AgentAccessGrantEntity.STATUS_ACTIVE))
                 .thenReturn(List.of(new AgentAccessGrantEntity(
-                        ORG_ID,
+                        COMPANY_ID,
                         AGENT_ID,
                         "USER",
                         USER_ID,
@@ -110,14 +110,14 @@ class AgentAccessControlServiceTest {
                         "admin-1",
                         Instant.now().minusSeconds(60))));
 
-        boolean allowed = service.can(ORG_ID, USER_ID, List.of(RoleCodes.ORG_USER), AGENT_ID, AgentPermission.RUN);
+        boolean allowed = service.can(COMPANY_ID, USER_ID, List.of(RoleCodes.ORG_USER), AGENT_ID, AgentPermission.RUN);
 
         assertThat(allowed).isFalse();
     }
 
     private void givenAgent(String ownerUserId) {
         AgentDefinitionEntity agent = new AgentDefinitionEntity(
-                ORG_ID,
+                COMPANY_ID,
                 AGENT_ID,
                 "Access Agent",
                 "",
@@ -132,13 +132,13 @@ class AgentAccessControlServiceTest {
                 ownerUserId,
                 false,
                 true);
-        when(agentDefinitionRepository.findByOrgIdAndAgentIdAndEnabledTrue(ORG_ID, AGENT_ID))
+        when(agentDefinitionRepository.findByCompanyIdAndAgentIdAndEnabledTrue(COMPANY_ID, AGENT_ID))
                 .thenReturn(Optional.of(agent));
     }
 
     private void givenMember(String roleCode) {
         UserEntity member = mock(UserEntity.class);
         when(member.getMemberStatus()).thenReturn(UserEntity.STATUS_ACTIVE);
-        when(userRepository.findByIdAndOrg_Id(USER_ID, ORG_ID)).thenReturn(Optional.of(member));
+        when(userRepository.findByIdAndCompany_Id(USER_ID, COMPANY_ID)).thenReturn(Optional.of(member));
     }
 }

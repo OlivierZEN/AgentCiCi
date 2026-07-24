@@ -8,8 +8,8 @@ import com.codehouse.ciciassistant.auth.domain.AccountLoginIdentifierEntity;
 import com.codehouse.ciciassistant.auth.domain.AccountLoginIdentifierRepository;
 import com.codehouse.ciciassistant.auth.domain.AuthPasswordEntity;
 import com.codehouse.ciciassistant.auth.domain.AuthPasswordRepository;
-import com.codehouse.ciciassistant.auth.domain.OrgEntity;
-import com.codehouse.ciciassistant.auth.domain.OrgRepository;
+import com.codehouse.ciciassistant.auth.domain.CompanyEntity;
+import com.codehouse.ciciassistant.auth.domain.CompanyRepository;
 import com.codehouse.ciciassistant.auth.domain.UserAccountEntity;
 import com.codehouse.ciciassistant.auth.domain.UserAccountRepository;
 import com.codehouse.ciciassistant.auth.domain.UserEntity;
@@ -36,35 +36,35 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AuthService {
 
-    private final OrgRepository orgRepository;
+    private final CompanyRepository companyRepository;
     private final UserAccountRepository userAccountRepository;
     private final AccountAuthCredentialRepository accountAuthCredentialRepository;
     private final AccountLoginIdentifierRepository accountLoginIdentifierRepository;
     private final UserRepository userRepository;
     private final AuthPasswordRepository authPasswordRepository;
     private final JwtService jwtService;
-    private final OrganizationProvisioningService organizationProvisioningService;
+    private final CompanyProvisioningService companyProvisioningService;
     private final PasswordHashService passwordHashService;
     private final Set<String> bootstrapAdminMobiles;
 
-    public AuthService(OrgRepository orgRepository,
+    public AuthService(CompanyRepository companyRepository,
                        UserAccountRepository userAccountRepository,
                        AccountAuthCredentialRepository accountAuthCredentialRepository,
                        AccountLoginIdentifierRepository accountLoginIdentifierRepository,
                        UserRepository userRepository,
                        AuthPasswordRepository authPasswordRepository,
                        JwtService jwtService,
-                       OrganizationProvisioningService organizationProvisioningService,
+                       CompanyProvisioningService companyProvisioningService,
                        PasswordHashService passwordHashService,
                        @Value("${app.auth.bootstrap-admin-mobiles:}") String bootstrapAdminMobilesRaw) {
-        this.orgRepository = orgRepository;
+        this.companyRepository = companyRepository;
         this.userAccountRepository = userAccountRepository;
         this.accountAuthCredentialRepository = accountAuthCredentialRepository;
         this.accountLoginIdentifierRepository = accountLoginIdentifierRepository;
         this.userRepository = userRepository;
         this.authPasswordRepository = authPasswordRepository;
         this.jwtService = jwtService;
-        this.organizationProvisioningService = organizationProvisioningService;
+        this.companyProvisioningService = companyProvisioningService;
         this.passwordHashService = passwordHashService;
         this.bootstrapAdminMobiles = parseMobileSet(bootstrapAdminMobilesRaw);
     }
@@ -79,17 +79,17 @@ public class AuthService {
                 .collect(Collectors.toSet());
     }
 
-    public Map<String, Object> sendSmsCode(String orgId, String mobile) {
+    public Map<String, Object> sendSmsCode(String companyId, String mobile) {
         throw new IllegalArgumentException("SMS verification login is disabled");
     }
 
     @Transactional
-    public Map<String, Object> loginBySms(String orgId, String mobile, String code) {
+    public Map<String, Object> loginBySms(String companyId, String mobile, String code) {
         throw new IllegalArgumentException("SMS verification login is disabled");
     }
 
     @Transactional
-    public Map<String, Object> loginByPassword(String orgId, String identifier, String password) {
+    public Map<String, Object> loginByPassword(String companyId, String identifier, String password) {
         LoginIdentifier loginIdentifier = normalizeLoginIdentifier(identifier);
         if (loginIdentifier.value().isBlank()) {
             throw new UnauthorizedException("Invalid mobile or password");
@@ -103,112 +103,112 @@ public class AuthService {
             }
             verifyFixedPassword(password);
         }
-        if (orgId == null || orgId.isBlank()) {
+        if (companyId == null || companyId.isBlank()) {
             if (existingAccount == null) {
                 throw new UnauthorizedException("Invalid mobile or password");
             }
-            return loginWithoutOrganization(existingAccount);
+            return loginWithoutCompany(existingAccount);
         }
-        OrgEntity org = requireOrg(orgId);
+        CompanyEntity org = requireCompany(companyId);
         return issueLogin(org, loginIdentifier, existingAccount);
     }
 
     @Transactional
-    public Map<String, Object> register(String mobile, String password, String organizationName) {
+    public Map<String, Object> register(String mobile, String password, String companyName) {
         verifyFixedPassword(password);
         String mobileNorm = normalizeMobile(mobile);
         if (mobileNorm.isBlank()) {
             throw new IllegalArgumentException("手机号不能为空");
         }
-        if (organizationProvisioningService.findMobileAccount(mobileNorm).isPresent()) {
+        if (companyProvisioningService.findMobileAccount(mobileNorm).isPresent()) {
             throw new IllegalArgumentException("该手机号已注册，请登录后创建或切换组织");
         }
-        UserAccountEntity account = organizationProvisioningService.createMobileAccount(mobileNorm, null, null);
-        OrgEntity org = organizationProvisioningService.createOrganization(organizationName);
-        UserEntity owner = organizationProvisioningService.createOwnerMembership(org, account, null);
+        UserAccountEntity account = companyProvisioningService.createMobileAccount(mobileNorm, null, null);
+        CompanyEntity org = companyProvisioningService.createCompany(companyName);
+        UserEntity owner = companyProvisioningService.createOwnerMembership(org, account, null);
         return issueLoginForMember(owner);
     }
 
-    public Map<String, Object> organizations(String currentOrgId, String currentUserId) {
-        UserEntity current = userRepository.findByIdAndOrg_Id(currentUserId, currentOrgId)
+    public Map<String, Object> companies(String currentCompanyId, String currentUserId) {
+        UserEntity current = userRepository.findByIdAndCompany_Id(currentUserId, currentCompanyId)
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
-        List<Map<String, Object>> organizations = organizationRows(current.getAccountId(), currentOrgId);
+        List<Map<String, Object>> companies = companyRows(current.getAccountId(), currentCompanyId);
         return Map.of(
                 "accountId", current.getAccountId(),
-                "currentOrgId", currentOrgId,
-                "organizations", organizations
+                "currentCompanyId", currentCompanyId,
+                "companies", companies
         );
     }
 
     @Transactional
-    public Map<String, Object> switchOrganization(String currentUserId, String targetOrgId) {
+    public Map<String, Object> switchCompany(String currentUserId, String targetCompanyId) {
         UserEntity current = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
-        OrgEntity org = requireOrg(targetOrgId);
+        CompanyEntity org = requireCompany(targetCompanyId);
         UserEntity target = userRepository
-                .findByOrg_IdAndAccount_IdAndMemberStatus(org.getId(), current.getAccountId(), UserEntity.STATUS_ACTIVE)
+                .findByCompany_IdAndAccount_IdAndMemberStatus(org.getId(), current.getAccountId(), UserEntity.STATUS_ACTIVE)
                 .orElseThrow(() -> new ForbiddenException("当前账号不属于该组织"));
         return issueLoginForMember(target);
     }
 
     @Transactional
-    public Map<String, Object> createOrganization(String currentUserId, String organizationName) {
+    public Map<String, Object> createCompany(String currentUserId, String companyName) {
         UserEntity current = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
-        OrgEntity org = organizationProvisioningService.createOrganization(organizationName);
-        UserEntity owner = organizationProvisioningService.createOwnerMembership(org, current.getAccount(), null);
+        CompanyEntity org = companyProvisioningService.createCompany(companyName);
+        UserEntity owner = companyProvisioningService.createOwnerMembership(org, current.getAccount(), null);
         return issueLoginForMember(owner);
     }
 
     @Transactional
-    public Map<String, Object> loginAsMember(String orgId, String userId) {
-        UserEntity user = userRepository.findByIdAndOrg_Id(userId, orgId)
-                .orElseThrow(() -> new UnauthorizedException("No active organization membership"));
+    public Map<String, Object> loginAsMember(String companyId, String userId) {
+        UserEntity user = userRepository.findByIdAndCompany_Id(userId, companyId)
+                .orElseThrow(() -> new UnauthorizedException("No active company membership"));
         if (!UserEntity.STATUS_ACTIVE.equals(user.getMemberStatus())) {
-            throw new UnauthorizedException("No active organization membership");
+            throw new UnauthorizedException("No active company membership");
         }
         return issueLoginForMember(user);
     }
 
-    private Map<String, Object> loginWithoutOrganization(UserAccountEntity account) {
+    private Map<String, Object> loginWithoutCompany(UserAccountEntity account) {
         List<UserEntity> members = userRepository
                 .findByAccount_IdAndMemberStatusOrderByCreatedAtDesc(account.getId(), UserEntity.STATUS_ACTIVE)
                 .stream()
-                .filter(member -> "ACTIVE".equalsIgnoreCase(member.getOrg().getStatus()))
+                .filter(member -> "ACTIVE".equalsIgnoreCase(member.getCompany().getStatus()))
                 .toList();
         if (members.isEmpty()) {
-            throw new UnauthorizedException("No active organization membership");
+            throw new UnauthorizedException("No active company membership");
         }
         if (members.size() == 1) {
             return issueLoginForMember(members.get(0));
         }
         return Map.of(
-                "requiresOrganizationSelection", true,
+                "requiresCompanySelection", true,
                 "accountId", account.getId(),
-                "organizations", members.stream().map(member -> organizationRow(member, "")).toList()
+                "companies", members.stream().map(member -> companyRow(member, "")).toList()
         );
     }
 
-    private Map<String, Object> issueLogin(OrgEntity org, LoginIdentifier loginIdentifier, UserAccountEntity existingAccount) {
+    private Map<String, Object> issueLogin(CompanyEntity org, LoginIdentifier loginIdentifier, UserAccountEntity existingAccount) {
         String mobileNorm = loginIdentifier.isMobile() ? loginIdentifier.value() : "";
         if (loginIdentifier.isEmail()) {
             if (existingAccount == null) {
                 throw new UnauthorizedException("Invalid account or password");
             }
-            UserEntity user = userRepository.findByOrg_IdAndAccount_Id(org.getId(), existingAccount.getId())
-                    .orElseThrow(() -> new UnauthorizedException("No active organization membership"));
+            UserEntity user = userRepository.findByCompany_IdAndAccount_Id(org.getId(), existingAccount.getId())
+                    .orElseThrow(() -> new UnauthorizedException("No active company membership"));
             if (!UserEntity.STATUS_ACTIVE.equals(user.getMemberStatus())) {
-                throw new UnauthorizedException("No active organization membership");
+                throw new UnauthorizedException("No active company membership");
             }
             return issueLoginForMember(user);
         }
         boolean bootstrapAdmin = bootstrapAdminMobiles.contains(mobileNorm);
         String initialRole = bootstrapAdmin ? RoleCodes.ORG_ADMIN : RoleCodes.ORG_USER;
         UserAccountEntity account = existingAccount == null ? findOrCreateMobileAccount(mobileNorm) : ensureMobileIdentifier(existingAccount, mobileNorm);
-        UserEntity user = userRepository.findByOrg_IdAndAccount_Id(org.getId(), account.getId())
+        UserEntity user = userRepository.findByCompany_IdAndAccount_Id(org.getId(), account.getId())
                 .orElseGet(() -> userRepository.save(new UserEntity(org, account, initialRole)));
         if (!UserEntity.STATUS_ACTIVE.equals(user.getMemberStatus())) {
-            throw new UnauthorizedException("No active organization membership");
+            throw new UnauthorizedException("No active company membership");
         }
         if (bootstrapAdmin && RoleCodes.ORG_USER.equals(user.getRoleCode())) {
             user.setRoleCode(RoleCodes.ORG_ADMIN);
@@ -222,8 +222,8 @@ public class AuthService {
         String token = jwtService.issueToken(user, roles);
         return Map.of(
                 "token", token,
-                "orgId", user.getOrg().getId(),
-                "orgName", user.getOrg().getName(),
+                "companyId", user.getCompany().getId(),
+                "companyName", user.getCompany().getName(),
                 "userId", user.getId(),
                 "memberId", user.getId(),
                 "accountId", user.getAccountId(),
@@ -308,22 +308,22 @@ public class AuthService {
         }
     }
 
-    public Map<String, Object> currentUser(String orgId, String userId) {
+    public Map<String, Object> currentUser(String companyId, String userId) {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
-        if (!user.getOrg().getId().equals(orgId)) {
+        if (!user.getCompany().getId().equals(companyId)) {
             throw new UnauthorizedException("Tenant mismatch");
         }
         if (!UserEntity.STATUS_ACTIVE.equals(user.getMemberStatus())) {
-            throw new UnauthorizedException("No active organization membership");
+            throw new UnauthorizedException("No active company membership");
         }
         UserAccountEntity account = user.getAccount();
         String displayName = account.getDisplayName() == null || account.getDisplayName().isBlank()
                 ? (user.getNickname() == null ? "" : user.getNickname())
                 : account.getDisplayName();
         Map<String, Object> row = new LinkedHashMap<>();
-        row.put("orgId", orgId);
-        row.put("orgName", user.getOrg().getName());
+        row.put("companyId", companyId);
+        row.put("companyName", user.getCompany().getName());
         row.put("userId", user.getId());
         row.put("memberId", user.getId());
         row.put("accountId", user.getAccountId());
@@ -340,34 +340,34 @@ public class AuthService {
     }
 
     @Transactional
-    public Map<String, Object> updateCurrentUserAvatar(String orgId, String userId, String avatarBase64) {
-        UserEntity user = userRepository.findByIdAndOrg_Id(userId, orgId)
+    public Map<String, Object> updateCurrentUserAvatar(String companyId, String userId, String avatarBase64) {
+        UserEntity user = userRepository.findByIdAndCompany_Id(userId, companyId)
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
         String normalizedAvatar = AvatarDataUrlValidator.normalizeNullableDataUrl(avatarBase64, "avatarBase64");
         user.setAvatarBase64(normalizedAvatar);
         userRepository.save(user);
-        return currentUser(orgId, userId);
+        return currentUser(companyId, userId);
     }
 
     @Transactional
-    public Map<String, Object> updateCurrentUserTheme(String orgId, String userId, String themeCode) {
-        UserEntity user = userRepository.findByIdAndOrg_Id(userId, orgId)
+    public Map<String, Object> updateCurrentUserTheme(String companyId, String userId, String themeCode) {
+        UserEntity user = userRepository.findByIdAndCompany_Id(userId, companyId)
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
         UserAccountEntity account = user.getAccount();
         account.setThemeCode(ProductThemeCodes.requireAllowed(themeCode));
         userAccountRepository.save(account);
-        return currentUser(orgId, userId);
+        return currentUser(companyId, userId);
     }
 
     @Transactional
-    public Map<String, Object> updateCurrentUserProfile(String orgId,
+    public Map<String, Object> updateCurrentUserProfile(String companyId,
                                                         String userId,
                                                         String firstName,
                                                         String lastName,
                                                         String displayName,
                                                         String mobile,
                                                         String email) {
-        UserEntity user = userRepository.findByIdAndOrg_Id(userId, orgId)
+        UserEntity user = userRepository.findByIdAndCompany_Id(userId, companyId)
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
         UserAccountEntity account = user.getAccount();
         String mobileValue = normalizeMobile(mobile);
@@ -406,12 +406,12 @@ public class AuthService {
         user.setNickname(displayValue);
         userRepository.save(user);
         userAccountRepository.save(account);
-        return currentUser(orgId, userId);
+        return currentUser(companyId, userId);
     }
 
     @Transactional
-    public Map<String, Object> changeCurrentUserPassword(String orgId, String userId, String currentPassword, String newPassword) {
-        UserEntity user = userRepository.findByIdAndOrg_Id(userId, orgId)
+    public Map<String, Object> changeCurrentUserPassword(String companyId, String userId, String currentPassword, String newPassword) {
+        UserEntity user = userRepository.findByIdAndCompany_Id(userId, companyId)
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
         verifyAccountPassword(user.getAccount(), currentPassword);
         String nextPassword = newPassword == null ? "" : newPassword.trim();
@@ -434,34 +434,34 @@ public class AuthService {
         return List.of(user.getRoleCode());
     }
 
-    private OrgEntity requireOrg(String orgId) {
-        if (orgId == null || orgId.isBlank()) {
-            throw new IllegalArgumentException("Organization not found");
+    private CompanyEntity requireCompany(String companyId) {
+        if (companyId == null || companyId.isBlank()) {
+            throw new IllegalArgumentException("Company not found");
         }
-        OrgEntity org = orgRepository.findById(orgId)
-                .orElseThrow(() -> new IllegalArgumentException("Organization not found"));
+        CompanyEntity org = companyRepository.findById(companyId)
+                .orElseThrow(() -> new IllegalArgumentException("Company not found"));
         if (!"ACTIVE".equalsIgnoreCase(org.getStatus())) {
-            throw new IllegalArgumentException("Organization is disabled");
+            throw new IllegalArgumentException("Company is disabled");
         }
         return org;
     }
 
-    private List<Map<String, Object>> organizationRows(String accountId, String currentOrgId) {
+    private List<Map<String, Object>> companyRows(String accountId, String currentCompanyId) {
         return userRepository
                 .findByAccount_IdAndMemberStatusOrderByCreatedAtDesc(accountId, UserEntity.STATUS_ACTIVE)
                 .stream()
-                .filter(member -> "ACTIVE".equalsIgnoreCase(member.getOrg().getStatus()))
-                .map(member -> organizationRow(member, currentOrgId))
+                .filter(member -> "ACTIVE".equalsIgnoreCase(member.getCompany().getStatus()))
+                .map(member -> companyRow(member, currentCompanyId))
                 .toList();
     }
 
-    private Map<String, Object> organizationRow(UserEntity member, String currentOrgId) {
+    private Map<String, Object> companyRow(UserEntity member, String currentCompanyId) {
         return Map.of(
-                "orgId", member.getOrg().getId(),
-                "orgName", member.getOrg().getName(),
+                "companyId", member.getCompany().getId(),
+                "companyName", member.getCompany().getName(),
                 "memberId", member.getId(),
                 "roleCode", member.getRoleCode(),
-                "current", member.getOrg().getId().equals(currentOrgId == null ? "" : currentOrgId)
+                "current", member.getCompany().getId().equals(currentCompanyId == null ? "" : currentCompanyId)
         );
     }
 

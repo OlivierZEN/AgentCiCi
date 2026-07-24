@@ -6,9 +6,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface McpServerRepository extends JpaRepository<McpServerEntity, Long> {
 
-    List<McpServerEntity> findByOrgIdAndEnabledTrue(String orgId);
+    List<McpServerEntity> findByCompanyIdAndEnabledTrue(String companyId);
 
-    List<McpServerEntity> findByOrgIdOrderByIdDesc(String orgId);
+    List<McpServerEntity> findByCompanyIdOrderByIdDesc(String companyId);
 
-    Optional<McpServerEntity> findByIdAndOrgId(Long id, String orgId);
+    Optional<McpServerEntity> findByIdAndCompanyId(Long id, String companyId);
 }

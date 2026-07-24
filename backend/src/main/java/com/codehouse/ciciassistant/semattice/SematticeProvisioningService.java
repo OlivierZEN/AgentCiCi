@@ -1,7 +1,7 @@
 package com.codehouse.ciciassistant.semattice;
 
-import com.codehouse.ciciassistant.auth.domain.OrgEntity;
-import com.codehouse.ciciassistant.auth.domain.OrgRepository;
+import com.codehouse.ciciassistant.auth.domain.CompanyEntity;
+import com.codehouse.ciciassistant.auth.domain.CompanyRepository;
 import com.codehouse.ciciassistant.auth.domain.SematticeProvisioningBindingEntity;
 import com.codehouse.ciciassistant.auth.domain.SematticeProvisioningBindingRepository;
 import com.codehouse.ciciassistant.platform.service.PlatformAuditService;
@@ -19,50 +19,50 @@ public class SematticeProvisioningService {
     private static final Pattern COMPANY_ID_PATTERN = Pattern.compile("^org[a-z0-9]{17}$");
     private static final Pattern IDEMPOTENCY_KEY_PATTERN = Pattern.compile("^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$");
 
-    private final OrgRepository orgRepository;
+    private final CompanyRepository companyRepository;
     private final SematticeProvisioningBindingRepository bindingRepository;
     private final PlatformAuditService platformAuditService;
 
-    public SematticeProvisioningService(OrgRepository orgRepository,
+    public SematticeProvisioningService(CompanyRepository companyRepository,
                                         SematticeProvisioningBindingRepository bindingRepository,
                                         PlatformAuditService platformAuditService) {
-        this.orgRepository = orgRepository;
+        this.companyRepository = companyRepository;
         this.bindingRepository = bindingRepository;
         this.platformAuditService = platformAuditService;
     }
 
     @Transactional
     public BindingView reserve(String companyId, String idempotencyKey) {
-        String orgId = required(companyId, "company_id");
+        String normalizedCompanyId = required(companyId, "company_id");
         String key = required(idempotencyKey, "idempotency_key");
-        if (!COMPANY_ID_PATTERN.matcher(orgId).matches() || !IDEMPOTENCY_KEY_PATTERN.matcher(key).matches()) {
+        if (!COMPANY_ID_PATTERN.matcher(normalizedCompanyId).matches() || !IDEMPOTENCY_KEY_PATTERN.matcher(key).matches()) {
             throw invalid();
         }
         SematticeProvisioningBindingEntity replay = bindingRepository.findByIdempotencyKey(key).orElse(null);
         if (replay != null) {
-            if (!replay.getOrgId().equals(orgId)) {
+            if (!replay.getCompanyId().equals(normalizedCompanyId)) {
                 throw conflict();
             }
             return view(replay);
         }
-        OrgEntity org = orgRepository.findById(orgId).orElseThrow(this::notFound);
+        CompanyEntity org = companyRepository.findById(normalizedCompanyId).orElseThrow(this::notFound);
         if (!"ACTIVE".equals(org.getStatus())) {
             throw unavailable();
         }
-        SematticeProvisioningBindingEntity existing = bindingRepository.findByOrgId(orgId).orElse(null);
+        SematticeProvisioningBindingEntity existing = bindingRepository.findByCompanyId(normalizedCompanyId).orElse(null);
         if (existing != null) {
             throw conflict();
         }
         try {
             SematticeProvisioningBindingEntity created = bindingRepository.saveAndFlush(
-                    new SematticeProvisioningBindingEntity(UUID.randomUUID().toString(), orgId, key));
-            audit(orgId, "reserve", created.getReservationId());
+                    new SematticeProvisioningBindingEntity(UUID.randomUUID().toString(), normalizedCompanyId, key));
+            audit(normalizedCompanyId, "reserve", created.getReservationId());
             return view(created);
         } catch (DataIntegrityViolationException exception) {
             SematticeProvisioningBindingEntity resolved = bindingRepository.findByIdempotencyKey(key)
-                    .or(() -> bindingRepository.findByOrgId(orgId))
+                    .or(() -> bindingRepository.findByCompanyId(normalizedCompanyId))
                     .orElseThrow(this::conflict);
-            if (!resolved.getOrgId().equals(orgId) || !resolved.getIdempotencyKey().equals(key)) {
+            if (!resolved.getCompanyId().equals(normalizedCompanyId) || !resolved.getIdempotencyKey().equals(key)) {
                 throw conflict();
             }
             return view(resolved);
@@ -78,7 +78,7 @@ public class SematticeProvisioningService {
         boolean success = succeeded;
         SematticeProvisioningBindingEntity binding = bindingRepository.findById(required(reservationId, "reservation_id"))
                 .orElseThrow(this::notFound);
-        if (!binding.getOrgId().equals(required(companyId, "company_id"))) {
+        if (!binding.getCompanyId().equals(required(companyId, "company_id"))) {
             throw conflict();
         }
         if (SematticeProvisioningBindingEntity.PROVISIONED.equals(binding.getState())) {
@@ -102,17 +102,17 @@ public class SematticeProvisioningService {
         }
         binding.complete(normalizedTenantId, normalizedOperationId, success, normalizedFailureCode);
         SematticeProvisioningBindingEntity saved = bindingRepository.save(binding);
-        audit(saved.getOrgId(), success ? "provisioned" : "failed", saved.getReservationId());
+        audit(saved.getCompanyId(), success ? "provisioned" : "failed", saved.getReservationId());
         return view(saved);
     }
 
     private BindingView view(SematticeProvisioningBindingEntity binding) {
-        return new BindingView(binding.getReservationId(), binding.getOrgId(), binding.getState(),
+        return new BindingView(binding.getReservationId(), binding.getCompanyId(), binding.getState(),
                 binding.getSematticeTenantId(), binding.getSematticeOperationId(), binding.getFailureCode());
     }
 
-    private void audit(String orgId, String action, String reservationId) {
-        platformAuditService.log(orgId, "semattice", "INTERNAL_SERVICE", "platform.native_provisioning." + action,
+    private void audit(String companyId, String action, String reservationId) {
+        platformAuditService.log(companyId, "semattice", "INTERNAL_SERVICE", "platform.native_provisioning." + action,
                 "semattice_provisioning", reservationId, "Semattice provisioning state changed");
     }
 

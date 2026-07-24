@@ -16,8 +16,8 @@ public class IntegrationAppEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "app_code", nullable = false, length = 64)
     private String appCode;
@@ -43,8 +43,8 @@ public class IntegrationAppEntity {
     protected IntegrationAppEntity() {
     }
 
-    public IntegrationAppEntity(String orgId, String appCode, String appName, String description, boolean enabled, String configJson) {
-        this.orgId = orgId;
+    public IntegrationAppEntity(String companyId, String appCode, String appName, String description, boolean enabled, String configJson) {
+        this.companyId = companyId;
         this.appCode = appCode;
         this.appName = appName;
         this.description = description;
@@ -53,7 +53,7 @@ public class IntegrationAppEntity {
     }
 
     public Long getId() { return id; }
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
     public String getAppCode() { return appCode; }
     public String getAppName() { return appName; }
     public String getDescription() { return description; }

@@ -20,7 +20,7 @@ public class DataInsightController {
 
     @GetMapping("/dashboard")
     public ApiResponse<Map<String, Object>> dashboard() {
-        return ApiResponse.ok(dataInsightService.dashboard(TenantContext.requireOrgId()));
+        return ApiResponse.ok(dataInsightService.dashboard(TenantContext.requireCompanyId()));
     }
 }
 

@@ -27,7 +27,7 @@ public class CrmProductSalesAnalysisToolService {
         this.objectMapper = objectMapper;
     }
 
-    public String dispatch(String orgId, String userId, String argumentsJson) {
+    public String dispatch(String companyId, String userId, String argumentsJson) {
         try {
             JsonNode root = argumentsJson == null || argumentsJson.isBlank()
                     ? objectMapper.createObjectNode()
@@ -54,7 +54,7 @@ public class CrmProductSalesAnalysisToolService {
                     ? root.path("comparePrevious").asBoolean()
                     : null;
             CrmProductSalesAnalysisService.SalesRankResult result = analysisService.analyze(
-                    orgId,
+                    companyId,
                     userId,
                     new CrmProductSalesAnalysisService.SalesRankRequest(
                             metric, startDate, endDate, topN, comparePrevious)

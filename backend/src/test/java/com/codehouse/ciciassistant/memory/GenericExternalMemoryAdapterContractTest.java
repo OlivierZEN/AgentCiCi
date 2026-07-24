@@ -58,7 +58,7 @@ class GenericExternalMemoryAdapterContractTest {
 
     private static AgentOpenApiAuthService.AuthenticatedCredential auth(Long credentialId, String agentId) {
         AgentApiCredentialEntity credential=mock(AgentApiCredentialEntity.class);
-        when(credential.getId()).thenReturn(credentialId); when(credential.getOrgId()).thenReturn("org-a"); when(credential.getAgentId()).thenReturn(agentId);
+        when(credential.getId()).thenReturn(credentialId); when(credential.getCompanyId()).thenReturn("org-a"); when(credential.getAgentId()).thenReturn(agentId);
         return new AgentOpenApiAuthService.AuthenticatedCredential(credential, mock(AgentDefinitionEntity.class), "127.0.0.1", null);
     }
 }

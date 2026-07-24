@@ -39,7 +39,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 @ExtendWith(MockitoExtension.class)
 class SkillDependencyGraphServiceTest {
 
-    private static final String ORG_ID = "demo-org";
+    private static final String COMPANY_ID = "demo-org";
     private static final String AGENT_ID = "sales-agent";
     private static final long WORKFLOW_VERSION_ID = 101L;
     private static final long SKILL_ID = 201L;
@@ -86,7 +86,7 @@ class SkillDependencyGraphServiceTest {
         SkillDefinitionEntity skill = skill();
         SkillVersionEntity skillVersion = skillVersion();
         AgentWorkflowSkillRefEntity reference = new AgentWorkflowSkillRefEntity(
-                ORG_ID,
+                COMPANY_ID,
                 WORKFLOW_VERSION_ID,
                 SKILL_ID,
                 SKILL_VERSION_ID,
@@ -94,23 +94,23 @@ class SkillDependencyGraphServiceTest {
                 1,
                 "PINNED_VERSION");
         ToolDefinitionEntity tool = new ToolDefinitionEntity(
-                ORG_ID, "crm.lookup", "查询 CRM 客户", "LOW", true);
+                COMPANY_ID, "crm.lookup", "查询 CRM 客户", "LOW", true);
         KnowledgeBaseEntity knowledgeBase = new KnowledgeBaseEntity(
-                ORG_ID, "销售知识库", "销售问答资料");
+                COMPANY_ID, "销售知识库", "销售问答资料");
         ReflectionTestUtils.setField(knowledgeBase, "id", KNOWLEDGE_BASE_ID);
 
-        when(agentDefinitionRepository.findByOrgIdAndAgentId(ORG_ID, AGENT_ID)).thenReturn(Optional.of(agent));
-        when(workflowVersionRepository.findByOrgIdAndAgentIdAndVersionNo(ORG_ID, AGENT_ID, 1))
+        when(agentDefinitionRepository.findByCompanyIdAndAgentId(COMPANY_ID, AGENT_ID)).thenReturn(Optional.of(agent));
+        when(workflowVersionRepository.findByCompanyIdAndAgentIdAndVersionNo(COMPANY_ID, AGENT_ID, 1))
                 .thenReturn(Optional.of(workflowVersion));
-        when(workflowSkillRefRepository.findByOrgIdAndWorkflowVersionIdOrderByIdAsc(ORG_ID, WORKFLOW_VERSION_ID))
+        when(workflowSkillRefRepository.findByCompanyIdAndWorkflowVersionIdOrderByIdAsc(COMPANY_ID, WORKFLOW_VERSION_ID))
                 .thenReturn(List.of(reference));
-        when(skillDefinitionRepository.findByIdAndOrgId(SKILL_ID, ORG_ID)).thenReturn(Optional.of(skill));
-        when(skillVersionRepository.findByIdAndOrgId(SKILL_VERSION_ID, ORG_ID)).thenReturn(Optional.of(skillVersion));
-        when(toolDefinitionRepository.findByOrgIdAndToolName(ORG_ID, "crm.lookup")).thenReturn(Optional.of(tool));
-        when(knowledgeBaseRepository.findByIdAndOrgId(KNOWLEDGE_BASE_ID, ORG_ID))
+        when(skillDefinitionRepository.findByIdAndCompanyId(SKILL_ID, COMPANY_ID)).thenReturn(Optional.of(skill));
+        when(skillVersionRepository.findByIdAndCompanyId(SKILL_VERSION_ID, COMPANY_ID)).thenReturn(Optional.of(skillVersion));
+        when(toolDefinitionRepository.findByCompanyIdAndToolName(COMPANY_ID, "crm.lookup")).thenReturn(Optional.of(tool));
+        when(knowledgeBaseRepository.findByIdAndCompanyId(KNOWLEDGE_BASE_ID, COMPANY_ID))
                 .thenReturn(Optional.of(knowledgeBase));
 
-        SkillDependencyGraphService.GraphView graph = service.getAgentGraph(ORG_ID, AGENT_ID, 1);
+        SkillDependencyGraphService.GraphView graph = service.getAgentGraph(COMPANY_ID, AGENT_ID, 1);
 
         assertThat(graph.sourceMode()).isEqualTo("PINNED_WORKFLOW_VERSION");
         assertThat(graph.nodes()).extracting(SkillDependencyGraphService.GraphNode::id)
@@ -155,13 +155,13 @@ class SkillDependencyGraphServiceTest {
         AgentWorkflowVersionEntity published = workflowVersion(WORKFLOW_VERSION_ID, 1, "PUBLISHED");
         AgentWorkflowVersionEntity newerDraft = workflowVersion(102L, 2, "DRAFT");
 
-        when(agentDefinitionRepository.findByOrgIdAndAgentId(ORG_ID, AGENT_ID)).thenReturn(Optional.of(agent));
-        when(workflowVersionRepository.findByOrgIdAndAgentIdOrderByVersionNoDesc(ORG_ID, AGENT_ID))
+        when(agentDefinitionRepository.findByCompanyIdAndAgentId(COMPANY_ID, AGENT_ID)).thenReturn(Optional.of(agent));
+        when(workflowVersionRepository.findByCompanyIdAndAgentIdOrderByVersionNoDesc(COMPANY_ID, AGENT_ID))
                 .thenReturn(List.of(newerDraft, published));
-        when(workflowSkillRefRepository.findByOrgIdAndWorkflowVersionIdOrderByIdAsc(ORG_ID, WORKFLOW_VERSION_ID))
+        when(workflowSkillRefRepository.findByCompanyIdAndWorkflowVersionIdOrderByIdAsc(COMPANY_ID, WORKFLOW_VERSION_ID))
                 .thenReturn(List.of());
 
-        SkillDependencyGraphService.GraphView graph = service.getAgentGraph(ORG_ID, AGENT_ID, null);
+        SkillDependencyGraphService.GraphView graph = service.getAgentGraph(COMPANY_ID, AGENT_ID, null);
 
         assertThat(graph.scope().workflowVersionId()).isEqualTo(WORKFLOW_VERSION_ID);
         assertThat(graph.scope().versionNo()).isEqualTo(1);
@@ -178,7 +178,7 @@ class SkillDependencyGraphServiceTest {
         ReflectionTestUtils.setField(skill, "lifecycleStatus", "PUBLISHED");
         SkillVersionEntity skillVersion = skillVersion();
         AgentSkillBindingEntity binding = new AgentSkillBindingEntity(
-                ORG_ID,
+                COMPANY_ID,
                 AGENT_ID,
                 SKILL_ID,
                 "ALWAYS",
@@ -186,19 +186,19 @@ class SkillDependencyGraphServiceTest {
                 10,
                 true);
 
-        when(agentDefinitionRepository.findByOrgIdAndAgentId(ORG_ID, AGENT_ID)).thenReturn(Optional.of(agent));
-        when(workflowVersionRepository.findByOrgIdAndAgentIdOrderByVersionNoDesc(ORG_ID, AGENT_ID))
+        when(agentDefinitionRepository.findByCompanyIdAndAgentId(COMPANY_ID, AGENT_ID)).thenReturn(Optional.of(agent));
+        when(workflowVersionRepository.findByCompanyIdAndAgentIdOrderByVersionNoDesc(COMPANY_ID, AGENT_ID))
                 .thenReturn(List.of());
-        when(agentSkillBindingRepository.findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(ORG_ID, AGENT_ID))
+        when(agentSkillBindingRepository.findByCompanyIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(COMPANY_ID, AGENT_ID))
                 .thenReturn(List.of(binding));
-        when(skillDefinitionRepository.findByIdAndOrgId(SKILL_ID, ORG_ID)).thenReturn(Optional.of(skill));
-        when(skillVersionRepository.findByIdAndOrgId(SKILL_VERSION_ID, ORG_ID)).thenReturn(Optional.of(skillVersion));
-        when(toolDefinitionRepository.findByOrgIdAndToolName(ORG_ID, "crm.lookup"))
+        when(skillDefinitionRepository.findByIdAndCompanyId(SKILL_ID, COMPANY_ID)).thenReturn(Optional.of(skill));
+        when(skillVersionRepository.findByIdAndCompanyId(SKILL_VERSION_ID, COMPANY_ID)).thenReturn(Optional.of(skillVersion));
+        when(toolDefinitionRepository.findByCompanyIdAndToolName(COMPANY_ID, "crm.lookup"))
                 .thenReturn(Optional.empty());
-        when(knowledgeBaseRepository.findByIdAndOrgId(KNOWLEDGE_BASE_ID, ORG_ID))
+        when(knowledgeBaseRepository.findByIdAndCompanyId(KNOWLEDGE_BASE_ID, COMPANY_ID))
                 .thenReturn(Optional.empty());
 
-        SkillDependencyGraphService.GraphView graph = service.getAgentGraph(ORG_ID, AGENT_ID, null);
+        SkillDependencyGraphService.GraphView graph = service.getAgentGraph(COMPANY_ID, AGENT_ID, null);
 
         assertThat(graph.sourceMode()).isEqualTo("CURRENT_BINDINGS");
         assertThat(graph.scope().workflowVersionId()).isNull();
@@ -228,25 +228,25 @@ class SkillDependencyGraphServiceTest {
         SkillVersionEntity fallbackVersion = skillVersion();
         ReflectionTestUtils.setField(fallbackVersion, "id", 302L);
         AgentSkillBindingEntity binding = new AgentSkillBindingEntity(
-                ORG_ID, AGENT_ID, SKILL_ID, "ALWAYS", "", 10, true);
+                COMPANY_ID, AGENT_ID, SKILL_ID, "ALWAYS", "", 10, true);
 
-        when(agentDefinitionRepository.findByOrgIdAndAgentId(ORG_ID, AGENT_ID)).thenReturn(Optional.of(agent));
-        when(workflowVersionRepository.findByOrgIdAndAgentIdOrderByVersionNoDesc(ORG_ID, AGENT_ID))
+        when(agentDefinitionRepository.findByCompanyIdAndAgentId(COMPANY_ID, AGENT_ID)).thenReturn(Optional.of(agent));
+        when(workflowVersionRepository.findByCompanyIdAndAgentIdOrderByVersionNoDesc(COMPANY_ID, AGENT_ID))
                 .thenReturn(List.of());
-        when(agentSkillBindingRepository.findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(ORG_ID, AGENT_ID))
+        when(agentSkillBindingRepository.findByCompanyIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(COMPANY_ID, AGENT_ID))
                 .thenReturn(List.of(binding));
-        when(skillDefinitionRepository.findByIdAndOrgId(SKILL_ID, ORG_ID)).thenReturn(Optional.of(skill));
-        when(skillVersionRepository.findByIdAndOrgId(SKILL_VERSION_ID, ORG_ID))
+        when(skillDefinitionRepository.findByIdAndCompanyId(SKILL_ID, COMPANY_ID)).thenReturn(Optional.of(skill));
+        when(skillVersionRepository.findByIdAndCompanyId(SKILL_VERSION_ID, COMPANY_ID))
                 .thenReturn(Optional.of(mismatchedVersion));
-        when(skillVersionRepository.findTopByOrgIdAndSkillIdAndPublishStatusOrderByVersionNoDesc(
-                ORG_ID, SKILL_ID, "PUBLISHED"))
+        when(skillVersionRepository.findTopByCompanyIdAndSkillIdAndPublishStatusOrderByVersionNoDesc(
+                COMPANY_ID, SKILL_ID, "PUBLISHED"))
                 .thenReturn(Optional.of(fallbackVersion));
-        when(toolDefinitionRepository.findByOrgIdAndToolName(ORG_ID, "crm.lookup"))
+        when(toolDefinitionRepository.findByCompanyIdAndToolName(COMPANY_ID, "crm.lookup"))
                 .thenReturn(Optional.empty());
-        when(knowledgeBaseRepository.findByIdAndOrgId(KNOWLEDGE_BASE_ID, ORG_ID))
+        when(knowledgeBaseRepository.findByIdAndCompanyId(KNOWLEDGE_BASE_ID, COMPANY_ID))
                 .thenReturn(Optional.empty());
 
-        SkillDependencyGraphService.GraphView graph = service.getAgentGraph(ORG_ID, AGENT_ID, null);
+        SkillDependencyGraphService.GraphView graph = service.getAgentGraph(COMPANY_ID, AGENT_ID, null);
 
         assertThat(graph.nodes()).extracting(SkillDependencyGraphService.GraphNode::id)
                 .contains("skill-version:302")
@@ -261,7 +261,7 @@ class SkillDependencyGraphServiceTest {
         SkillVersionEntity skillVersion = skillVersion();
         AgentWorkflowVersionEntity workflowVersion = workflowVersion();
         AgentWorkflowSkillRefEntity reference = new AgentWorkflowSkillRefEntity(
-                ORG_ID,
+                COMPANY_ID,
                 WORKFLOW_VERSION_ID,
                 SKILL_ID,
                 SKILL_VERSION_ID,
@@ -269,7 +269,7 @@ class SkillDependencyGraphServiceTest {
                 1,
                 "PINNED_VERSION");
         AgentSkillBindingEntity currentBinding = new AgentSkillBindingEntity(
-                ORG_ID,
+                COMPANY_ID,
                 "draft-agent",
                 SKILL_ID,
                 "INTENT",
@@ -278,20 +278,20 @@ class SkillDependencyGraphServiceTest {
                 true);
         AgentDefinitionEntity draftAgent = agent("draft-agent", "草稿助手");
 
-        when(skillDefinitionRepository.findByIdAndOrgId(SKILL_ID, ORG_ID)).thenReturn(Optional.of(skill));
-        when(workflowSkillRefRepository.findTop1001ByOrgIdAndSkillIdOrderBySkillVersionIdAscWorkflowVersionIdAsc(
-                ORG_ID, SKILL_ID)).thenReturn(List.of(reference));
-        when(workflowVersionRepository.findByOrgIdAndIdIn(ORG_ID, List.of(WORKFLOW_VERSION_ID)))
+        when(skillDefinitionRepository.findByIdAndCompanyId(SKILL_ID, COMPANY_ID)).thenReturn(Optional.of(skill));
+        when(workflowSkillRefRepository.findTop1001ByCompanyIdAndSkillIdOrderBySkillVersionIdAscWorkflowVersionIdAsc(
+                COMPANY_ID, SKILL_ID)).thenReturn(List.of(reference));
+        when(workflowVersionRepository.findByCompanyIdAndIdIn(COMPANY_ID, List.of(WORKFLOW_VERSION_ID)))
                 .thenReturn(List.of(workflowVersion));
-        when(skillVersionRepository.findByOrgIdAndIdIn(ORG_ID, List.of(SKILL_VERSION_ID)))
+        when(skillVersionRepository.findByCompanyIdAndIdIn(COMPANY_ID, List.of(SKILL_VERSION_ID)))
                 .thenReturn(List.of(skillVersion));
-        when(agentSkillBindingRepository.findTop1001ByOrgIdAndSkillIdAndEnabledTrueOrderByAgentIdAscPriorityAsc(
-                ORG_ID, SKILL_ID)).thenReturn(List.of(currentBinding));
-        when(agentDefinitionRepository.findByOrgIdAndAgentIdIn(
-                ORG_ID, List.of("draft-agent", AGENT_ID)))
+        when(agentSkillBindingRepository.findTop1001ByCompanyIdAndSkillIdAndEnabledTrueOrderByAgentIdAscPriorityAsc(
+                COMPANY_ID, SKILL_ID)).thenReturn(List.of(currentBinding));
+        when(agentDefinitionRepository.findByCompanyIdAndAgentIdIn(
+                COMPANY_ID, List.of("draft-agent", AGENT_ID)))
                 .thenReturn(List.of(draftAgent, agent()));
 
-        SkillDependencyGraphService.GraphView graph = service.getSkillImpactGraph(ORG_ID, SKILL_ID);
+        SkillDependencyGraphService.GraphView graph = service.getSkillImpactGraph(COMPANY_ID, SKILL_ID);
 
         assertThat(graph.scope().type()).isEqualTo("SKILL_IMPACT");
         assertThat(graph.sourceMode()).isEqualTo("SKILL_IMPACT");
@@ -323,7 +323,7 @@ class SkillDependencyGraphServiceTest {
     void shouldCapCurrentAgentBindingsInSkillImpactGraph() {
         List<AgentSkillBindingEntity> bindings = IntStream.rangeClosed(0, 1000)
                 .mapToObj(priority -> new AgentSkillBindingEntity(
-                        ORG_ID,
+                        COMPANY_ID,
                         "draft-agent",
                         SKILL_ID,
                         "INTENT",
@@ -332,13 +332,13 @@ class SkillDependencyGraphServiceTest {
                         true))
                 .toList();
 
-        when(skillDefinitionRepository.findByIdAndOrgId(SKILL_ID, ORG_ID)).thenReturn(Optional.of(skill()));
-        when(agentSkillBindingRepository.findTop1001ByOrgIdAndSkillIdAndEnabledTrueOrderByAgentIdAscPriorityAsc(
-                ORG_ID, SKILL_ID)).thenReturn(bindings);
-        when(agentDefinitionRepository.findByOrgIdAndAgentIdIn(ORG_ID, List.of("draft-agent")))
+        when(skillDefinitionRepository.findByIdAndCompanyId(SKILL_ID, COMPANY_ID)).thenReturn(Optional.of(skill()));
+        when(agentSkillBindingRepository.findTop1001ByCompanyIdAndSkillIdAndEnabledTrueOrderByAgentIdAscPriorityAsc(
+                COMPANY_ID, SKILL_ID)).thenReturn(bindings);
+        when(agentDefinitionRepository.findByCompanyIdAndAgentIdIn(COMPANY_ID, List.of("draft-agent")))
                 .thenReturn(List.of(agent("draft-agent", "草稿助手")));
 
-        SkillDependencyGraphService.GraphView graph = service.getSkillImpactGraph(ORG_ID, SKILL_ID);
+        SkillDependencyGraphService.GraphView graph = service.getSkillImpactGraph(COMPANY_ID, SKILL_ID);
 
         assertThat(graph.warnings()).contains("Agent 当前绑定超过 1000 条，仅展示前 1000 条。");
         assertThat(graph.edges()).filteredOn(edge -> "BINDS_SKILL".equals(edge.type())).hasSize(1);
@@ -347,7 +347,7 @@ class SkillDependencyGraphServiceTest {
     @Test
     void shouldKeepWorkflowAndAgentImpactWhenPinnedVersionIsMissing() {
         AgentWorkflowSkillRefEntity reference = new AgentWorkflowSkillRefEntity(
-                ORG_ID,
+                COMPANY_ID,
                 WORKFLOW_VERSION_ID,
                 SKILL_ID,
                 SKILL_VERSION_ID,
@@ -355,18 +355,18 @@ class SkillDependencyGraphServiceTest {
                 1,
                 "PINNED_VERSION");
 
-        when(skillDefinitionRepository.findByIdAndOrgId(SKILL_ID, ORG_ID)).thenReturn(Optional.of(skill()));
-        when(workflowSkillRefRepository.findTop1001ByOrgIdAndSkillIdOrderBySkillVersionIdAscWorkflowVersionIdAsc(
-                ORG_ID, SKILL_ID)).thenReturn(List.of(reference));
-        when(workflowVersionRepository.findByOrgIdAndIdIn(ORG_ID, List.of(WORKFLOW_VERSION_ID)))
+        when(skillDefinitionRepository.findByIdAndCompanyId(SKILL_ID, COMPANY_ID)).thenReturn(Optional.of(skill()));
+        when(workflowSkillRefRepository.findTop1001ByCompanyIdAndSkillIdOrderBySkillVersionIdAscWorkflowVersionIdAsc(
+                COMPANY_ID, SKILL_ID)).thenReturn(List.of(reference));
+        when(workflowVersionRepository.findByCompanyIdAndIdIn(COMPANY_ID, List.of(WORKFLOW_VERSION_ID)))
                 .thenReturn(List.of(workflowVersion()));
-        when(skillVersionRepository.findByOrgIdAndIdIn(ORG_ID, List.of(SKILL_VERSION_ID))).thenReturn(List.of());
-        when(agentSkillBindingRepository.findTop1001ByOrgIdAndSkillIdAndEnabledTrueOrderByAgentIdAscPriorityAsc(
-                ORG_ID, SKILL_ID)).thenReturn(List.of());
-        when(agentDefinitionRepository.findByOrgIdAndAgentIdIn(ORG_ID, List.of(AGENT_ID)))
+        when(skillVersionRepository.findByCompanyIdAndIdIn(COMPANY_ID, List.of(SKILL_VERSION_ID))).thenReturn(List.of());
+        when(agentSkillBindingRepository.findTop1001ByCompanyIdAndSkillIdAndEnabledTrueOrderByAgentIdAscPriorityAsc(
+                COMPANY_ID, SKILL_ID)).thenReturn(List.of());
+        when(agentDefinitionRepository.findByCompanyIdAndAgentIdIn(COMPANY_ID, List.of(AGENT_ID)))
                 .thenReturn(List.of(agent()));
 
-        SkillDependencyGraphService.GraphView graph = service.getSkillImpactGraph(ORG_ID, SKILL_ID);
+        SkillDependencyGraphService.GraphView graph = service.getSkillImpactGraph(COMPANY_ID, SKILL_ID);
 
         assertThat(graph.nodes()).extracting(SkillDependencyGraphService.GraphNode::id)
                 .containsExactly(
@@ -383,7 +383,7 @@ class SkillDependencyGraphServiceTest {
     @Test
     void shouldKeepWorkflowAndAgentImpactWhenReferenceHasNoPinnedVersion() {
         AgentWorkflowSkillRefEntity reference = new AgentWorkflowSkillRefEntity(
-                ORG_ID,
+                COMPANY_ID,
                 WORKFLOW_VERSION_ID,
                 SKILL_ID,
                 null,
@@ -391,17 +391,17 @@ class SkillDependencyGraphServiceTest {
                 1,
                 "PINNED_VERSION");
 
-        when(skillDefinitionRepository.findByIdAndOrgId(SKILL_ID, ORG_ID)).thenReturn(Optional.of(skill()));
-        when(workflowSkillRefRepository.findTop1001ByOrgIdAndSkillIdOrderBySkillVersionIdAscWorkflowVersionIdAsc(
-                ORG_ID, SKILL_ID)).thenReturn(List.of(reference));
-        when(workflowVersionRepository.findByOrgIdAndIdIn(ORG_ID, List.of(WORKFLOW_VERSION_ID)))
+        when(skillDefinitionRepository.findByIdAndCompanyId(SKILL_ID, COMPANY_ID)).thenReturn(Optional.of(skill()));
+        when(workflowSkillRefRepository.findTop1001ByCompanyIdAndSkillIdOrderBySkillVersionIdAscWorkflowVersionIdAsc(
+                COMPANY_ID, SKILL_ID)).thenReturn(List.of(reference));
+        when(workflowVersionRepository.findByCompanyIdAndIdIn(COMPANY_ID, List.of(WORKFLOW_VERSION_ID)))
                 .thenReturn(List.of(workflowVersion()));
-        when(agentSkillBindingRepository.findTop1001ByOrgIdAndSkillIdAndEnabledTrueOrderByAgentIdAscPriorityAsc(
-                ORG_ID, SKILL_ID)).thenReturn(List.of());
-        when(agentDefinitionRepository.findByOrgIdAndAgentIdIn(ORG_ID, List.of(AGENT_ID)))
+        when(agentSkillBindingRepository.findTop1001ByCompanyIdAndSkillIdAndEnabledTrueOrderByAgentIdAscPriorityAsc(
+                COMPANY_ID, SKILL_ID)).thenReturn(List.of());
+        when(agentDefinitionRepository.findByCompanyIdAndAgentIdIn(COMPANY_ID, List.of(AGENT_ID)))
                 .thenReturn(List.of(agent()));
 
-        SkillDependencyGraphService.GraphView graph = service.getSkillImpactGraph(ORG_ID, SKILL_ID);
+        SkillDependencyGraphService.GraphView graph = service.getSkillImpactGraph(COMPANY_ID, SKILL_ID);
 
         assertThat(graph.nodes()).extracting(SkillDependencyGraphService.GraphNode::id)
                 .containsExactly("skill:201", "workflow-version:101", "agent:sales-agent");
@@ -414,7 +414,7 @@ class SkillDependencyGraphServiceTest {
     @Test
     void shouldIgnorePinnedVersionThatBelongsToAnotherSkill() {
         AgentWorkflowSkillRefEntity reference = new AgentWorkflowSkillRefEntity(
-                ORG_ID,
+                COMPANY_ID,
                 WORKFLOW_VERSION_ID,
                 SKILL_ID,
                 SKILL_VERSION_ID,
@@ -424,16 +424,16 @@ class SkillDependencyGraphServiceTest {
         SkillVersionEntity mismatchedVersion = skillVersion();
         ReflectionTestUtils.setField(mismatchedVersion, "skillId", 999L);
 
-        when(agentDefinitionRepository.findByOrgIdAndAgentId(ORG_ID, AGENT_ID)).thenReturn(Optional.of(agent()));
-        when(workflowVersionRepository.findByOrgIdAndAgentIdAndVersionNo(ORG_ID, AGENT_ID, 1))
+        when(agentDefinitionRepository.findByCompanyIdAndAgentId(COMPANY_ID, AGENT_ID)).thenReturn(Optional.of(agent()));
+        when(workflowVersionRepository.findByCompanyIdAndAgentIdAndVersionNo(COMPANY_ID, AGENT_ID, 1))
                 .thenReturn(Optional.of(workflowVersion()));
-        when(workflowSkillRefRepository.findByOrgIdAndWorkflowVersionIdOrderByIdAsc(ORG_ID, WORKFLOW_VERSION_ID))
+        when(workflowSkillRefRepository.findByCompanyIdAndWorkflowVersionIdOrderByIdAsc(COMPANY_ID, WORKFLOW_VERSION_ID))
                 .thenReturn(List.of(reference));
-        when(skillDefinitionRepository.findByIdAndOrgId(SKILL_ID, ORG_ID)).thenReturn(Optional.of(skill()));
-        when(skillVersionRepository.findByIdAndOrgId(SKILL_VERSION_ID, ORG_ID))
+        when(skillDefinitionRepository.findByIdAndCompanyId(SKILL_ID, COMPANY_ID)).thenReturn(Optional.of(skill()));
+        when(skillVersionRepository.findByIdAndCompanyId(SKILL_VERSION_ID, COMPANY_ID))
                 .thenReturn(Optional.of(mismatchedVersion));
 
-        SkillDependencyGraphService.GraphView graph = service.getAgentGraph(ORG_ID, AGENT_ID, 1);
+        SkillDependencyGraphService.GraphView graph = service.getAgentGraph(COMPANY_ID, AGENT_ID, 1);
 
         assertThat(graph.nodes()).extracting(SkillDependencyGraphService.GraphNode::id)
                 .containsExactly("agent:sales-agent", "workflow-version:101", "skill:201");
@@ -449,7 +449,7 @@ class SkillDependencyGraphServiceTest {
 
     private AgentDefinitionEntity agent(String agentId, String name) {
         AgentDefinitionEntity entity = new AgentDefinitionEntity(
-                ORG_ID,
+                COMPANY_ID,
                 agentId,
                 name,
                 "",
@@ -473,7 +473,7 @@ class SkillDependencyGraphServiceTest {
 
     private AgentWorkflowVersionEntity workflowVersion(long id, int versionNo, String publishStatus) {
         AgentWorkflowVersionEntity entity = new AgentWorkflowVersionEntity(
-                ORG_ID,
+                COMPANY_ID,
                 AGENT_ID,
                 versionNo,
                 "v" + versionNo,
@@ -493,7 +493,7 @@ class SkillDependencyGraphServiceTest {
 
     private SkillDefinitionEntity skill() {
         SkillDefinitionEntity entity = new SkillDefinitionEntity(
-                ORG_ID,
+                COMPANY_ID,
                 "crm-analysis",
                 "CRM 经营分析",
                 "分析销售数据",
@@ -519,7 +519,7 @@ class SkillDependencyGraphServiceTest {
 
     private SkillVersionEntity skillVersion() {
         SkillVersionEntity entity = new SkillVersionEntity(
-                ORG_ID,
+                COMPANY_ID,
                 SKILL_ID,
                 1,
                 "spec",

@@ -60,7 +60,7 @@ public class AgentDefinitionService {
 
     /**
      * Aligns persisted agents with runtime / skill defaults ({@code cici-system}, {@code sales-agent},
-     * {@code approval-agent}). Idempotent per organization.
+     * {@code approval-agent}). Idempotent per company.
      */
     private static final List<BuiltinAgentSeed> BUILTIN_AGENTS = List.of(
             new BuiltinAgentSeed(
@@ -201,17 +201,17 @@ public class AgentDefinitionService {
     /**
      * Idempotently creates built-in agent rows for the org (matches runtime agent ids such as {@code cici-system}).
      */
-    public void warmupBuiltinAgents(String orgId) {
-        ensureBuiltinAgents(orgId);
+    public void warmupBuiltinAgents(String companyId) {
+        ensureBuiltinAgents(companyId);
     }
 
-    public List<AgentDefinitionEntity> list(String orgId) {
-        ensureBuiltinAgents(orgId);
-        return agentDefinitionRepository.findByOrgIdAndEnabledTrueOrderByBuiltinDescUpdatedAtDesc(orgId);
+    public List<AgentDefinitionEntity> list(String companyId) {
+        ensureBuiltinAgents(companyId);
+        return agentDefinitionRepository.findByCompanyIdAndEnabledTrueOrderByBuiltinDescUpdatedAtDesc(companyId);
     }
 
-    public List<AgentListItem> listWithChannels(String orgId) {
-        List<AgentDefinitionEntity> definitions = list(orgId);
+    public List<AgentListItem> listWithChannels(String companyId) {
+        List<AgentDefinitionEntity> definitions = list(companyId);
         if (definitions.isEmpty()) {
             return List.of();
         }
@@ -220,7 +220,7 @@ public class AgentDefinitionService {
             channelsByAgentId.put(definition.getAgentId(), new ArrayList<>());
         }
         agentChannelBindingRepository
-                .findByOrgIdAndAgentIdInAndEnabledTrueOrderByIdAsc(orgId, new ArrayList<>(channelsByAgentId.keySet()))
+                .findByCompanyIdAndAgentIdInAndEnabledTrueOrderByIdAsc(companyId, new ArrayList<>(channelsByAgentId.keySet()))
                 .forEach(binding -> {
                     List<String> channels = channelsByAgentId.get(binding.getAgentId());
                     if (channels != null) {
@@ -232,40 +232,40 @@ public class AgentDefinitionService {
                 .toList();
     }
 
-    public AgentDetail get(String orgId, String agentId) {
-        ensureBuiltinAgents(orgId);
-        AgentDefinitionEntity definition = getDefinition(orgId, normalizeAgentId(agentId));
+    public AgentDetail get(String companyId, String agentId) {
+        ensureBuiltinAgents(companyId);
+        AgentDefinitionEntity definition = getDefinition(companyId, normalizeAgentId(agentId));
         String normalizedAgentId = definition.getAgentId();
-        String specText = agentSpecRepository.findByOrgIdAndAgentId(orgId, normalizedAgentId)
+        String specText = agentSpecRepository.findByCompanyIdAndAgentId(companyId, normalizedAgentId)
                 .map(AgentSpecEntity::getSpecText)
                 .orElse("");
         List<Long> knowledgeBaseIds = agentKnowledgeBindingRepository
-                .findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(orgId, normalizedAgentId)
+                .findByCompanyIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(companyId, normalizedAgentId)
                 .stream()
                 .map(AgentKnowledgeBindingEntity::getKnowledgeBaseId)
                 .toList();
         List<String> toolIds = agentToolBindingRepository
-                .findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(orgId, normalizedAgentId)
+                .findByCompanyIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(companyId, normalizedAgentId)
                 .stream()
                 .map(AgentToolBindingEntity::getToolId)
                 .toList();
         List<String> channels = agentChannelBindingRepository
-                .findByOrgIdAndAgentIdAndEnabledTrueOrderByIdAsc(orgId, normalizedAgentId)
+                .findByCompanyIdAndAgentIdAndEnabledTrueOrderByIdAsc(companyId, normalizedAgentId)
                 .stream()
                 .map(AgentChannelBindingEntity::getChannelId)
                 .toList();
-        Map<String, Object> publishConfigs = loadPublishConfigs(orgId, normalizedAgentId);
+        Map<String, Object> publishConfigs = loadPublishConfigs(companyId, normalizedAgentId);
         return new AgentDetail(definition, specText, knowledgeBaseIds, toolIds, channels, publishConfigs);
     }
 
     @Transactional
-    public AgentDetail create(String orgId, CreateCommand command) {
+    public AgentDetail create(String companyId, CreateCommand command) {
         String agentId = normalizeAgentId(command.agentId());
-        if (agentDefinitionRepository.existsByOrgIdAndAgentId(orgId, agentId)) {
+        if (agentDefinitionRepository.existsByCompanyIdAndAgentId(companyId, agentId)) {
             throw new IllegalArgumentException("Agent already exists: " + agentId);
         }
         AgentDefinitionEntity created = new AgentDefinitionEntity(
-                orgId,
+                companyId,
                 agentId,
                 requireText(command.name(), "name"),
                 trimToNull(command.summary()),
@@ -284,21 +284,21 @@ public class AgentDefinitionService {
         agentDefinitionRepository.save(created);
 
         String specText = trimToNull(command.specText());
-        agentSpecRepository.save(new AgentSpecEntity(orgId, agentId, specText == null ? "" : specText));
+        agentSpecRepository.save(new AgentSpecEntity(companyId, agentId, specText == null ? "" : specText));
 
-        replaceBindings(orgId, agentId, new ReplaceBindingsCommand(
+        replaceBindings(companyId, agentId, new ReplaceBindingsCommand(
                 command.knowledgeBaseIds(),
                 command.toolIds(),
                 command.channels()
         ));
-        replacePublishConfigs(orgId, agentId, command.publishConfigs());
-        return get(orgId, agentId);
+        replacePublishConfigs(companyId, agentId, command.publishConfigs());
+        return get(companyId, agentId);
     }
 
     @Transactional
-    public AgentDefinitionEntity updateDefinition(String orgId, String requestedAgentId, UpsertDefinitionCommand command) {
-        ensureBuiltinAgents(orgId);
-        AgentDefinitionEntity definition = getDefinition(orgId, normalizeAgentId(requestedAgentId));
+    public AgentDefinitionEntity updateDefinition(String companyId, String requestedAgentId, UpsertDefinitionCommand command) {
+        ensureBuiltinAgents(companyId);
+        AgentDefinitionEntity definition = getDefinition(companyId, normalizeAgentId(requestedAgentId));
         AvatarPatch avatarPatch = resolveAvatarPatch(command.avatarBase64());
         definition.update(
                 requireText(command.name(), "name"),
@@ -318,10 +318,10 @@ public class AgentDefinitionService {
     }
 
     @Transactional
-    public AgentDeleteResult deleteCustomAgent(String orgId, String requestedAgentId) {
-        ensureBuiltinAgents(orgId);
+    public AgentDeleteResult deleteCustomAgent(String companyId, String requestedAgentId) {
+        ensureBuiltinAgents(companyId);
         String agentId = normalizeAgentId(requestedAgentId);
-        AgentDefinitionEntity definition = agentDefinitionRepository.findByOrgIdAndAgentId(orgId, agentId)
+        AgentDefinitionEntity definition = agentDefinitionRepository.findByCompanyIdAndAgentId(companyId, agentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Agent not found: " + agentId));
         if (!definition.isEnabled()) {
             throw new ResourceNotFoundException("Agent not found: " + agentId);
@@ -337,101 +337,101 @@ public class AgentDefinitionService {
     }
 
     @Transactional
-    public AgentSpecEntity updateSpec(String orgId, String requestedAgentId, String specText) {
-        ensureBuiltinAgents(orgId);
+    public AgentSpecEntity updateSpec(String companyId, String requestedAgentId, String specText) {
+        ensureBuiltinAgents(companyId);
         String agentId = normalizeAgentId(requestedAgentId);
-        getDefinition(orgId, agentId);
-        Optional<AgentSpecEntity> found = agentSpecRepository.findByOrgIdAndAgentId(orgId, agentId);
+        getDefinition(companyId, agentId);
+        Optional<AgentSpecEntity> found = agentSpecRepository.findByCompanyIdAndAgentId(companyId, agentId);
         if (found.isPresent()) {
             AgentSpecEntity entity = found.get();
             entity.updateSpecText(specText == null ? "" : specText.trim());
             return entity;
         }
-        return agentSpecRepository.save(new AgentSpecEntity(orgId, agentId, specText == null ? "" : specText.trim()));
+        return agentSpecRepository.save(new AgentSpecEntity(companyId, agentId, specText == null ? "" : specText.trim()));
     }
 
     @Transactional
-    public AgentBindings replaceBindings(String orgId, String requestedAgentId, ReplaceBindingsCommand command) {
-        ensureBuiltinAgents(orgId);
+    public AgentBindings replaceBindings(String companyId, String requestedAgentId, ReplaceBindingsCommand command) {
+        ensureBuiltinAgents(companyId);
         String agentId = normalizeAgentId(requestedAgentId);
-        getDefinition(orgId, agentId);
+        getDefinition(companyId, agentId);
 
-        agentKnowledgeBindingRepository.deleteByOrgIdAndAgentId(orgId, agentId);
+        agentKnowledgeBindingRepository.deleteByCompanyIdAndAgentId(companyId, agentId);
         agentKnowledgeBindingRepository.flush();
-        agentToolBindingRepository.deleteByOrgIdAndAgentId(orgId, agentId);
+        agentToolBindingRepository.deleteByCompanyIdAndAgentId(companyId, agentId);
         agentToolBindingRepository.flush();
-        agentChannelBindingRepository.deleteByOrgIdAndAgentId(orgId, agentId);
+        agentChannelBindingRepository.deleteByCompanyIdAndAgentId(companyId, agentId);
         agentChannelBindingRepository.flush();
 
         List<Long> knowledgeBaseIds = distinctLongs(command.knowledgeBaseIds());
         for (int i = 0; i < knowledgeBaseIds.size(); i++) {
-            agentKnowledgeBindingRepository.save(new AgentKnowledgeBindingEntity(orgId, agentId, knowledgeBaseIds.get(i), i + 1, true));
+            agentKnowledgeBindingRepository.save(new AgentKnowledgeBindingEntity(companyId, agentId, knowledgeBaseIds.get(i), i + 1, true));
         }
 
         List<String> toolIds = ToolNameNormalizer.canonicalizeAll(distinctStrings(command.toolIds()));
         for (int i = 0; i < toolIds.size(); i++) {
-            agentToolBindingRepository.save(new AgentToolBindingEntity(orgId, agentId, toolIds.get(i), i + 1, true));
+            agentToolBindingRepository.save(new AgentToolBindingEntity(companyId, agentId, toolIds.get(i), i + 1, true));
         }
 
         List<String> channels = distinctStrings(command.channels()).stream()
                 .map(this::normalizeChannel)
                 .toList();
         for (String channel : channels) {
-            agentChannelBindingRepository.save(new AgentChannelBindingEntity(orgId, agentId, channel, true));
+            agentChannelBindingRepository.save(new AgentChannelBindingEntity(companyId, agentId, channel, true));
         }
 
         return new AgentBindings(knowledgeBaseIds, toolIds, channels);
     }
 
     @Transactional
-    public Map<String, Object> replacePublishConfigs(String orgId, String requestedAgentId, Map<String, Object> publishConfigs) {
-        ensureBuiltinAgents(orgId);
+    public Map<String, Object> replacePublishConfigs(String companyId, String requestedAgentId, Map<String, Object> publishConfigs) {
+        ensureBuiltinAgents(companyId);
         String agentId = normalizeAgentId(requestedAgentId);
-        getDefinition(orgId, agentId);
+        getDefinition(companyId, agentId);
 
         List<String> channels = distinctStrings(new ArrayList<>(publishConfigs == null ? List.of() : publishConfigs.keySet()));
         for (String channel : channels) {
             String normalizedChannel = normalizeChannel(channel);
             Object configValue = publishConfigs.get(channel);
             String configJson = toJson(configValue == null ? Map.of() : configValue);
-            Optional<AgentPublishConfigEntity> found = agentPublishConfigRepository.findByOrgIdAndAgentIdAndChannelId(
-                    orgId,
+            Optional<AgentPublishConfigEntity> found = agentPublishConfigRepository.findByCompanyIdAndAgentIdAndChannelId(
+                    companyId,
                     agentId,
                     normalizedChannel
             );
             if (found.isPresent()) {
                 found.get().updateConfigJson(configJson);
             } else {
-                agentPublishConfigRepository.save(new AgentPublishConfigEntity(orgId, agentId, normalizedChannel, configJson));
+                agentPublishConfigRepository.save(new AgentPublishConfigEntity(companyId, agentId, normalizedChannel, configJson));
             }
         }
-        return loadPublishConfigs(orgId, agentId);
+        return loadPublishConfigs(companyId, agentId);
     }
 
-    public List<AgentWorkflowVersionEntity> listVersions(String orgId, String requestedAgentId) {
-        ensureBuiltinAgents(orgId);
+    public List<AgentWorkflowVersionEntity> listVersions(String companyId, String requestedAgentId) {
+        ensureBuiltinAgents(companyId);
         String agentId = normalizeAgentId(requestedAgentId);
-        getDefinition(orgId, agentId);
-        return agentWorkflowVersionRepository.findByOrgIdAndAgentIdOrderByVersionNoDesc(orgId, agentId);
+        getDefinition(companyId, agentId);
+        return agentWorkflowVersionRepository.findByCompanyIdAndAgentIdOrderByVersionNoDesc(companyId, agentId);
     }
 
     @Transactional
-    public AgentWorkflowVersionEntity publishVersion(String orgId, String requestedAgentId, Integer versionNo) {
-        ensureBuiltinAgents(orgId);
+    public AgentWorkflowVersionEntity publishVersion(String companyId, String requestedAgentId, Integer versionNo) {
+        ensureBuiltinAgents(companyId);
         String agentId = normalizeAgentId(requestedAgentId);
-        AgentDefinitionEntity definition = getDefinition(orgId, agentId);
-        productionReadinessService.requirePublishReady(orgId, agentId, versionNo);
-        AgentWorkflowVersionEntity target = agentWorkflowVersionRepository.findByOrgIdAndAgentIdAndVersionNo(orgId, agentId, versionNo)
+        AgentDefinitionEntity definition = getDefinition(companyId, agentId);
+        productionReadinessService.requirePublishReady(companyId, agentId, versionNo);
+        AgentWorkflowVersionEntity target = agentWorkflowVersionRepository.findByCompanyIdAndAgentIdAndVersionNo(companyId, agentId, versionNo)
                 .orElseThrow(() -> new IllegalArgumentException("Agent version not found: " + versionNo));
 
-        agentWorkflowVersionRepository.findByOrgIdAndAgentIdAndPublishStatus(orgId, agentId, "PUBLISHED")
+        agentWorkflowVersionRepository.findByCompanyIdAndAgentIdAndPublishStatus(companyId, agentId, "PUBLISHED")
                 .ifPresent(previous -> previous.setPublishStatus("ARCHIVED"));
         target.setPublishStatus("PUBLISHED");
         definition.setPublishedVersionId(target.getId());
-        agentWorkflowSkillRefService.ensureWorkflowSkillRefs(orgId, agentId, target);
+        agentWorkflowSkillRefService.ensureWorkflowSkillRefs(companyId, agentId, target);
         try {
             workflowExecutionLogService.append(
-                    orgId,
+                    companyId,
                     agentId,
                     target.getId(),
                     target.getVersionNo(),
@@ -443,9 +443,9 @@ public class AgentDefinitionService {
         } catch (RuntimeException ignored) {
             // observability must not block publish
         }
-        if (shouldAutoSyncSchedulesOnPublish(orgId, agentId)) {
+        if (shouldAutoSyncSchedulesOnPublish(companyId, agentId)) {
             try {
-                runtimeScheduleSyncService.syncFromCompiledVersion(orgId, agentId, target.getId());
+                runtimeScheduleSyncService.syncFromCompiledVersion(companyId, agentId, target.getId());
             } catch (RuntimeException ignored) {
                 // schedule sync must not block publish
             }
@@ -454,12 +454,12 @@ public class AgentDefinitionService {
     }
 
     @Transactional
-    public AgentWorkflowVersionEntity rollbackVersion(String orgId, String requestedAgentId, Integer versionNo) {
-        return publishVersion(orgId, requestedAgentId, versionNo);
+    public AgentWorkflowVersionEntity rollbackVersion(String companyId, String requestedAgentId, Integer versionNo) {
+        return publishVersion(companyId, requestedAgentId, versionNo);
     }
 
-    private boolean shouldAutoSyncSchedulesOnPublish(String orgId, String agentId) {
-        return agentPublishConfigRepository.findByOrgIdAndAgentIdAndChannelId(orgId, agentId, "feishu")
+    private boolean shouldAutoSyncSchedulesOnPublish(String companyId, String agentId) {
+        return agentPublishConfigRepository.findByCompanyIdAndAgentIdAndChannelId(companyId, agentId, "feishu")
                 .map(AgentPublishConfigEntity::getConfigJson)
                 .map(this::fromJsonObject)
                 .map(raw -> raw.get("autoSyncSchedulesOnPublish"))
@@ -467,13 +467,13 @@ public class AgentDefinitionService {
                 .orElse(true);
     }
 
-    private void ensureBuiltinAgents(String orgId) {
+    private void ensureBuiltinAgents(String companyId) {
         for (BuiltinAgentSeed seed : BUILTIN_AGENTS) {
-            if (agentDefinitionRepository.existsByOrgIdAndAgentId(orgId, seed.agentId())) {
+            if (agentDefinitionRepository.existsByCompanyIdAndAgentId(companyId, seed.agentId())) {
                 continue;
             }
             create(
-                    orgId,
+                    companyId,
                     new CreateCommand(
                             seed.agentId(),
                             seed.name(),
@@ -494,24 +494,24 @@ public class AgentDefinitionService {
                             seed.toolIds(),
                             seed.channels(),
                             DEFAULT_PUBLISH_CONFIGS));
-            ensureOrgDefaultRunGrants(orgId, seed.agentId());
+            ensureOrgDefaultRunGrants(companyId, seed.agentId());
         }
     }
 
-    private void ensureOrgDefaultRunGrants(String orgId, String agentId) {
-        List<AgentAccessGrantEntity> existing = agentAccessGrantRepository.findByOrgIdAndAgentIdAndStatus(
-                orgId,
+    private void ensureOrgDefaultRunGrants(String companyId, String agentId) {
+        List<AgentAccessGrantEntity> existing = agentAccessGrantRepository.findByCompanyIdAndAgentIdAndStatus(
+                companyId,
                 agentId,
                 AgentAccessGrantEntity.STATUS_ACTIVE);
         for (String permission : List.of("VIEW", "RUN")) {
             boolean present = existing.stream().anyMatch(item ->
-                    "ORG".equals(item.getPrincipalType()) && permission.equals(item.getPermission()));
+                    "COMPANY".equals(item.getPrincipalType()) && permission.equals(item.getPermission()));
             if (!present) {
                 agentAccessGrantRepository.save(new AgentAccessGrantEntity(
-                        orgId,
+                        companyId,
                         agentId,
-                        "ORG",
-                        orgId,
+                        "COMPANY",
+                        companyId,
                         permission,
                         "DEFAULT_POLICY",
                         null,
@@ -520,14 +520,14 @@ public class AgentDefinitionService {
         }
     }
 
-    private AgentDefinitionEntity getDefinition(String orgId, String agentId) {
-        return agentDefinitionRepository.findByOrgIdAndAgentIdAndEnabledTrue(orgId, agentId)
+    private AgentDefinitionEntity getDefinition(String companyId, String agentId) {
+        return agentDefinitionRepository.findByCompanyIdAndAgentIdAndEnabledTrue(companyId, agentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Agent not found: " + agentId));
     }
 
-    private Map<String, Object> loadPublishConfigs(String orgId, String agentId) {
+    private Map<String, Object> loadPublishConfigs(String companyId, String agentId) {
         Map<String, Object> result = new LinkedHashMap<>();
-        agentPublishConfigRepository.findByOrgIdAndAgentIdOrderByChannelIdAsc(orgId, agentId)
+        agentPublishConfigRepository.findByCompanyIdAndAgentIdOrderByChannelIdAsc(companyId, agentId)
                 .forEach(item -> result.put(item.getChannelId(), fromJsonObject(item.getConfigJson())));
         return result;
     }

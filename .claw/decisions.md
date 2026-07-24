@@ -8,6 +8,18 @@ status: active
 
 # Decisions
 
+## DEC-054 Top-level company identity
+
+- Status: accepted
+- Date: 2026-07-24T01:35:00Z
+- Decision: use `company_id` as the sole cross-product identity for the top-level enterprise tenant. Reserve `organization_id` exclusively for a future internal organizational hierarchy.
+- Why this won:
+  - Semattice controlled provisioning already uses `company_id`; one canonical name removes translation and prevents duplicate-account ambiguity.
+  - A future department/team tree must not reuse the identifier that scopes the company itself.
+  - This is a new-product breaking change: old `org_id` contracts, JWT claims, headers, tables and aliases are removed rather than supported in parallel.
+- Data rule: preserve the existing immutable ID values (including the historical `org...` prefix). Rename schema and contracts only; do not rekey company records.
+- Operational rule: deploy V94 during a maintenance window. Old binaries cannot run against the migrated schema; recovery is database-backup restoration, not a mixed-schema rollback.
+
 ## DEC-001 Repository Bootstrap Shape
 
 - Status: accepted

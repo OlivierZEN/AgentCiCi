@@ -5,10 +5,10 @@ import java.util.Optional;
 import org.springframework.data.repository.Repository;
 
 public interface OntologyPhysicalFieldRepository extends Repository<OntologyPhysicalFieldEntity, Long> {
-    List<OntologyPhysicalFieldEntity> findByWorkspaceIdAndOrgIdOrderByIdAsc(Long workspaceId, String orgId);
-    List<OntologyPhysicalFieldEntity> findByPhysicalObjectIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
-            Long physicalObjectId, Long workspaceId, String orgId);
-    Optional<OntologyPhysicalFieldEntity> findByIdAndWorkspaceIdAndOrgId(Long id, Long workspaceId, String orgId);
-    long deleteByIdAndWorkspaceIdAndOrgId(Long id, Long workspaceId, String orgId);
-    long deleteByWorkspaceIdAndOrgId(Long workspaceId, String orgId);
+    List<OntologyPhysicalFieldEntity> findByWorkspaceIdAndCompanyIdOrderByIdAsc(Long workspaceId, String companyId);
+    List<OntologyPhysicalFieldEntity> findByPhysicalObjectIdAndWorkspaceIdAndCompanyIdOrderByIdAsc(
+            Long physicalObjectId, Long workspaceId, String companyId);
+    Optional<OntologyPhysicalFieldEntity> findByIdAndWorkspaceIdAndCompanyId(Long id, Long workspaceId, String companyId);
+    long deleteByIdAndWorkspaceIdAndCompanyId(Long id, Long workspaceId, String companyId);
+    long deleteByWorkspaceIdAndCompanyId(Long workspaceId, String companyId);
 }

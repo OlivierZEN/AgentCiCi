@@ -32,8 +32,8 @@ public class AgentEvalSuiteEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "agent_id", nullable = false, length = 64)
     private String agentId;
@@ -95,14 +95,14 @@ public class AgentEvalSuiteEntity {
     protected AgentEvalSuiteEntity() {
     }
 
-    public AgentEvalSuiteEntity(String orgId,
+    public AgentEvalSuiteEntity(String companyId,
                                 String agentId,
                                 String name,
                                 String description,
                                 String gateMode,
                                 Double minPassRate) {
         Instant now = Instant.now();
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.agentId = agentId;
         this.name = name;
         this.description = description;
@@ -119,7 +119,7 @@ public class AgentEvalSuiteEntity {
         this.updatedAt = now;
     }
 
-    public AgentEvalSuiteEntity(String orgId,
+    public AgentEvalSuiteEntity(String companyId,
                                 String agentId,
                                 String name,
                                 String description,
@@ -135,7 +135,7 @@ public class AgentEvalSuiteEntity {
                                 boolean hiddenResults,
                                 boolean mandatory,
                                 String createdBy) {
-        this(orgId, agentId, name, description, gateMode, minPassRate);
+        this(companyId, agentId, name, description, gateMode, minPassRate);
         this.scopeType = scopeType;
         this.visibility = visibility;
         this.releaseStatus = releaseStatus;
@@ -151,7 +151,7 @@ public class AgentEvalSuiteEntity {
 
     public Long getId() { return id; }
 
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
 
     public String getAgentId() { return agentId; }
 

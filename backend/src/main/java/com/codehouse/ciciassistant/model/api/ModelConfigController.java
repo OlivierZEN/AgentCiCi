@@ -4,8 +4,8 @@ import com.codehouse.ciciassistant.auth.RequireOrgAdmin;
 import com.codehouse.ciciassistant.ai.service.ChatThinkingConfigService;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
-import com.codehouse.ciciassistant.model.domain.OrgModelConfigEntity;
-import com.codehouse.ciciassistant.model.domain.OrgModelConfigRepository;
+import com.codehouse.ciciassistant.model.domain.CompanyModelConfigEntity;
+import com.codehouse.ciciassistant.model.domain.CompanyModelConfigRepository;
 import com.codehouse.ciciassistant.model.service.ModelProviderService;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import jakarta.validation.Valid;
@@ -27,11 +27,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequireOrgAdmin
 public class ModelConfigController {
 
-    private final OrgModelConfigRepository repository;
+    private final CompanyModelConfigRepository repository;
     private final ChatThinkingConfigService chatThinkingConfigService;
     private final ModelProviderService modelProviderService;
 
-    public ModelConfigController(OrgModelConfigRepository repository,
+    public ModelConfigController(CompanyModelConfigRepository repository,
                                  ChatThinkingConfigService chatThinkingConfigService,
                                  ModelProviderService modelProviderService) {
         this.repository = repository;
@@ -41,11 +41,11 @@ public class ModelConfigController {
 
     @GetMapping
     public ApiResponse<List<Map<String, String>>> list() {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(repository.findByOrgId(orgId).stream()
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(repository.findByCompanyId(companyId).stream()
                 .filter(item -> !ChatThinkingConfigService.SCENE_CODE.equals(item.getSceneCode()))
                 .map(item -> Map.of(
-                        "orgId", item.getOrgId(),
+                        "companyId", item.getCompanyId(),
                         "sceneCode", item.getSceneCode(),
                         "provider", item.getProvider(),
                         "modelName", item.getModelName()
@@ -65,23 +65,23 @@ public class ModelConfigController {
 
     @GetMapping("/settings/thinking")
     public ApiResponse<Map<String, Object>> getThinkingSetting() {
-        String orgId = TenantContext.requireOrgId();
-        boolean enabled = chatThinkingConfigService.isEnabled(orgId);
-        return ApiResponse.ok(Map.of("orgId", orgId, "enabled", enabled));
+        String companyId = TenantContext.requireCompanyId();
+        boolean enabled = chatThinkingConfigService.isEnabled(companyId);
+        return ApiResponse.ok(Map.of("companyId", companyId, "enabled", enabled));
     }
 
     @PostMapping("/settings/thinking")
     public ApiResponse<Map<String, Object>> setThinkingSetting(@Valid @RequestBody ThinkingSettingRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        OrgModelConfigEntity entity = repository.findByOrgIdAndSceneCode(orgId, ChatThinkingConfigService.SCENE_CODE)
-                .orElse(new OrgModelConfigEntity(
-                        orgId,
+        String companyId = TenantContext.requireCompanyId();
+        CompanyModelConfigEntity entity = repository.findByCompanyIdAndSceneCode(companyId, ChatThinkingConfigService.SCENE_CODE)
+                .orElse(new CompanyModelConfigEntity(
+                        companyId,
                         ChatThinkingConfigService.SCENE_CODE,
                         "system",
                         request.enabled() ? "true" : "false"));
         entity.update("system", request.enabled() ? "true" : "false");
         repository.save(entity);
-        return ApiResponse.ok(Map.of("orgId", orgId, "enabled", request.enabled()));
+        return ApiResponse.ok(Map.of("companyId", companyId, "enabled", request.enabled()));
     }
 
     // ----- Provider level config (阿里云百炼 / Ollama / Anthropic / OpenAI) -----
@@ -122,8 +122,8 @@ public class ModelConfigController {
 
     @GetMapping("/agent/base-models")
     public ApiResponse<List<Map<String, Object>>> listAgentBaseModels() {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(modelProviderService.agentBaseModels(orgId));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(modelProviderService.agentBaseModels(companyId));
     }
 
     public record UpsertModelRequest(

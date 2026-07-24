@@ -36,7 +36,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 @ExtendWith(MockitoExtension.class)
 class AgentCompileSkillDagTest {
 
-    private static final String ORG_ID = "demo-org";
+    private static final String COMPANY_ID = "demo-org";
     private static final String AGENT_ID = "sales-agent";
 
     @Mock
@@ -87,11 +87,11 @@ class AgentCompileSkillDagTest {
         when(skill.getId()).thenReturn(16L);
         when(skill.getSkillCode()).thenReturn("crm-business-analysis");
         when(skillVersion.getVersionNo()).thenReturn(3);
-        when(skillDefinitionRepository.findByOrgIdAndSkillCode(ORG_ID, "crm-business-analysis"))
+        when(skillDefinitionRepository.findByCompanyIdAndSkillCode(COMPANY_ID, "crm-business-analysis"))
                 .thenReturn(Optional.of(skill));
-        when(skillVersionRepository.findTopByOrgIdAndSkillIdOrderByVersionNoDesc(ORG_ID, 16L))
+        when(skillVersionRepository.findTopByCompanyIdAndSkillIdOrderByVersionNoDesc(COMPANY_ID, 16L))
                 .thenReturn(Optional.of(skillVersion));
-        when(capabilityResolverService.resolve(ORG_ID, AGENT_ID, List.of("crm-business-analysis")))
+        when(capabilityResolverService.resolve(COMPANY_ID, AGENT_ID, List.of("crm-business-analysis")))
                 .thenReturn(new AgentCapabilityResolverService.AgentCapabilityResolution(
                         AGENT_ID,
                         List.of("crm-business-analysis"),
@@ -107,9 +107,9 @@ class AgentCompileSkillDagTest {
                         List.of(),
                         List.of(),
                         List.of()));
-        when(agentDefinitionRepository.findByOrgIdAndAgentId(ORG_ID, AGENT_ID)).thenReturn(Optional.of(agent));
+        when(agentDefinitionRepository.findByCompanyIdAndAgentId(COMPANY_ID, AGENT_ID)).thenReturn(Optional.of(agent));
         AtomicReference<AgentWorkflowVersionEntity> storedVersion = new AtomicReference<>();
-        when(workflowVersionRepository.findTopByOrgIdAndAgentIdOrderByVersionNoDesc(ORG_ID, AGENT_ID))
+        when(workflowVersionRepository.findTopByCompanyIdAndAgentIdOrderByVersionNoDesc(COMPANY_ID, AGENT_ID))
                 .thenAnswer(invocation -> Optional.ofNullable(storedVersion.get()));
         when(workflowVersionRepository.save(any(AgentWorkflowVersionEntity.class))).thenAnswer(invocation -> {
             AgentWorkflowVersionEntity saved = invocation.getArgument(0);
@@ -118,15 +118,15 @@ class AgentCompileSkillDagTest {
             return saved;
         });
 
-        AgentCompileService.CompileResult result = service.compile(ORG_ID, command());
-        AgentCompileService.CompileResult unchanged = service.compile(ORG_ID, command());
+        AgentCompileService.CompileResult result = service.compile(COMPANY_ID, command());
+        AgentCompileService.CompileResult unchanged = service.compile(COMPANY_ID, command());
 
         assertThat(result.draftVersionNo()).isEqualTo(1);
         assertThat(unchanged.draftVersionNo()).isEqualTo(1);
         assertThat(unchanged.changed()).isFalse();
         ArgumentCaptor<AgentWorkflowVersionEntity> versionCaptor = ArgumentCaptor.forClass(AgentWorkflowVersionEntity.class);
         verify(workflowSkillRefService, org.mockito.Mockito.times(2)).ensureWorkflowSkillRefs(
-                org.mockito.ArgumentMatchers.eq(ORG_ID),
+                org.mockito.ArgumentMatchers.eq(COMPANY_ID),
                 org.mockito.ArgumentMatchers.eq(AGENT_ID),
                 versionCaptor.capture());
         assertThat(versionCaptor.getAllValues())
@@ -146,11 +146,11 @@ class AgentCompileSkillDagTest {
         when(skill.getSkillCode()).thenReturn("crm-business-analysis");
         when(versionThree.getVersionNo()).thenReturn(3);
         when(versionFour.getVersionNo()).thenReturn(4);
-        when(skillDefinitionRepository.findByOrgIdAndSkillCode(ORG_ID, "crm-business-analysis"))
+        when(skillDefinitionRepository.findByCompanyIdAndSkillCode(COMPANY_ID, "crm-business-analysis"))
                 .thenReturn(Optional.of(skill));
-        when(skillVersionRepository.findTopByOrgIdAndSkillIdOrderByVersionNoDesc(ORG_ID, 16L))
+        when(skillVersionRepository.findTopByCompanyIdAndSkillIdOrderByVersionNoDesc(COMPANY_ID, 16L))
                 .thenReturn(Optional.of(versionThree), Optional.of(versionFour));
-        when(capabilityResolverService.resolve(ORG_ID, AGENT_ID, List.of("crm-business-analysis")))
+        when(capabilityResolverService.resolve(COMPANY_ID, AGENT_ID, List.of("crm-business-analysis")))
                 .thenReturn(new AgentCapabilityResolverService.AgentCapabilityResolution(
                         AGENT_ID,
                         List.of("crm-business-analysis"),
@@ -166,9 +166,9 @@ class AgentCompileSkillDagTest {
                         List.of(),
                         List.of(),
                         List.of()));
-        when(agentDefinitionRepository.findByOrgIdAndAgentId(ORG_ID, AGENT_ID)).thenReturn(Optional.of(agent));
+        when(agentDefinitionRepository.findByCompanyIdAndAgentId(COMPANY_ID, AGENT_ID)).thenReturn(Optional.of(agent));
         AtomicReference<AgentWorkflowVersionEntity> storedVersion = new AtomicReference<>();
-        when(workflowVersionRepository.findTopByOrgIdAndAgentIdOrderByVersionNoDesc(ORG_ID, AGENT_ID))
+        when(workflowVersionRepository.findTopByCompanyIdAndAgentIdOrderByVersionNoDesc(COMPANY_ID, AGENT_ID))
                 .thenAnswer(invocation -> Optional.ofNullable(storedVersion.get()));
         when(workflowVersionRepository.save(any(AgentWorkflowVersionEntity.class))).thenAnswer(invocation -> {
             AgentWorkflowVersionEntity saved = invocation.getArgument(0);
@@ -177,8 +177,8 @@ class AgentCompileSkillDagTest {
             return saved;
         });
 
-        AgentCompileService.CompileResult first = service.compile(ORG_ID, command());
-        AgentCompileService.CompileResult afterSkillPublish = service.compile(ORG_ID, command());
+        AgentCompileService.CompileResult first = service.compile(COMPANY_ID, command());
+        AgentCompileService.CompileResult afterSkillPublish = service.compile(COMPANY_ID, command());
 
         assertThat(first.draftVersionNo()).isEqualTo(1);
         assertThat(afterSkillPublish.draftVersionNo()).isEqualTo(2);

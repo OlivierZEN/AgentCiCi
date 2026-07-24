@@ -58,24 +58,24 @@ public class McpServerService {
 
     // ── CRUD ──
 
-    public List<McpServerEntity> list(String orgId) {
-        return repository.findByOrgIdOrderByIdDesc(orgId);
+    public List<McpServerEntity> list(String companyId) {
+        return repository.findByCompanyIdOrderByIdDesc(companyId);
     }
 
     @Transactional
-    public McpServerEntity create(String orgId, String name, String description,
+    public McpServerEntity create(String companyId, String name, String description,
                                   String transportType, String url, String headers,
                                   int timeoutSeconds) {
-        McpServerEntity entity = new McpServerEntity(orgId, name, description,
+        McpServerEntity entity = new McpServerEntity(companyId, name, description,
                 transportType, url, headers, timeoutSeconds);
         return repository.save(entity);
     }
 
     @Transactional
-    public McpServerEntity update(String orgId, Long id, String name, String description,
+    public McpServerEntity update(String companyId, Long id, String name, String description,
                                   String transportType, String url, String headers,
                                   int timeoutSeconds, boolean enabled) {
-        McpServerEntity entity = repository.findByIdAndOrgId(id, orgId)
+        McpServerEntity entity = repository.findByIdAndCompanyId(id, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("MCP Server not found"));
         entity.setName(name);
         entity.setDescription(description);
@@ -91,8 +91,8 @@ public class McpServerService {
     }
 
     @Transactional
-    public void delete(String orgId, Long id) {
-        McpServerEntity entity = repository.findByIdAndOrgId(id, orgId)
+    public void delete(String companyId, Long id) {
+        McpServerEntity entity = repository.findByIdAndCompanyId(id, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("MCP Server not found"));
         invalidateCache(id);
         repository.delete(entity);
@@ -104,42 +104,42 @@ public class McpServerService {
      * Connect to the MCP server, initialize, and fetch tool definitions.
      * Results are cached until invalidated.
      */
-    public List<McpTool> discoverTools(String orgId, Long serverId) throws Exception {
-        return refreshToolCache(orgId, serverId).tools();
+    public List<McpTool> discoverTools(String companyId, Long serverId) throws Exception {
+        return refreshToolCache(companyId, serverId).tools();
     }
 
     /**
      * Get cached tools for a server, or discover if not cached.
      */
-    public List<McpTool> getTools(String orgId, Long serverId) {
+    public List<McpTool> getTools(String companyId, Long serverId) {
         List<McpTool> cached = toolCache.get(serverId);
         if (cached != null) return cached;
-        Optional<List<McpTool>> databaseCache = loadToolsFromDatabaseCache(orgId, serverId);
+        Optional<List<McpTool>> databaseCache = loadToolsFromDatabaseCache(companyId, serverId);
         if (databaseCache.isPresent()) {
             return databaseCache.get();
         }
         try {
-            return refreshToolCache(orgId, serverId).tools();
+            return refreshToolCache(companyId, serverId).tools();
         } catch (Exception e) {
             log.warn("Failed to auto-discover MCP tools for server {}: {}", serverId, e.getMessage());
             return Collections.emptyList();
         }
     }
 
-    public ToolCacheSnapshot getToolCacheSnapshot(String orgId, Long serverId) {
-        McpServerEntity server = repository.findByIdAndOrgId(serverId, orgId)
+    public ToolCacheSnapshot getToolCacheSnapshot(String companyId, Long serverId) {
+        McpServerEntity server = repository.findByIdAndCompanyId(serverId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("MCP Server not found"));
-        List<McpTool> tools = getTools(orgId, serverId);
+        List<McpTool> tools = getTools(companyId, serverId);
         return snapshotOf(server, tools);
     }
 
     @Transactional
-    public ToolCacheSnapshot refreshToolCache(String orgId, Long serverId) throws Exception {
-        McpServerEntity server = repository.findByIdAndOrgId(serverId, orgId)
+    public ToolCacheSnapshot refreshToolCache(String companyId, Long serverId) throws Exception {
+        McpServerEntity server = repository.findByIdAndCompanyId(serverId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("MCP Server not found"));
         ReentrantLock lock = refreshLocks.computeIfAbsent(serverId, ignored -> new ReentrantLock());
         if (!lock.tryLock()) {
-            ToolCacheSnapshot current = getToolCacheSnapshot(orgId, serverId);
+            ToolCacheSnapshot current = getToolCacheSnapshot(companyId, serverId);
             return new ToolCacheSnapshot(
                     current.serverId(),
                     current.cacheCount(),
@@ -157,7 +157,7 @@ public class McpServerService {
             server.touch();
             repository.save(server);
 
-            Map<String, String> extraHeaders = resolveDynamicHeaders(server, orgId, null);
+            Map<String, String> extraHeaders = resolveDynamicHeaders(server, companyId, null);
             mcpClient.initialize(server, extraHeaders);
             List<McpTool> tools = mcpClient.listTools(server, extraHeaders);
 
@@ -191,11 +191,11 @@ public class McpServerService {
      * Get ALL tools from all enabled MCP servers for an org.
      * Each tool name is prefixed with serverId to avoid collisions.
      */
-    public List<ResolvedTool> getAllToolsForOrg(String orgId) {
-        List<McpServerEntity> servers = repository.findByOrgIdAndEnabledTrue(orgId);
+    public List<ResolvedTool> getAllToolsForOrg(String companyId) {
+        List<McpServerEntity> servers = repository.findByCompanyIdAndEnabledTrue(companyId);
         List<ResolvedTool> allTools = new ArrayList<>();
         for (McpServerEntity server : servers) {
-            List<McpTool> tools = getTools(orgId, server.getId());
+            List<McpTool> tools = getTools(companyId, server.getId());
             for (McpTool tool : tools) {
                 allTools.add(new ResolvedTool(
                         server.getId(),
@@ -214,18 +214,18 @@ public class McpServerService {
     /**
      * Execute a tool by name on the appropriate MCP server.
      */
-    public String executeTool(String orgId, String userId, String toolName, String argumentsJson) {
-        List<McpServerEntity> servers = repository.findByOrgIdAndEnabledTrue(orgId);
+    public String executeTool(String companyId, String userId, String toolName, String argumentsJson) {
+        List<McpServerEntity> servers = repository.findByCompanyIdAndEnabledTrue(companyId);
         for (McpServerEntity server : servers) {
-            List<McpTool> tools = getTools(orgId, server.getId());
+            List<McpTool> tools = getTools(companyId, server.getId());
             for (McpTool tool : tools) {
                 if (tool.name().equals(toolName)) {
                     try {
-                        Map<String, String> extraHeaders = resolveDynamicHeaders(server, orgId, userId);
+                        Map<String, String> extraHeaders = resolveDynamicHeaders(server, companyId, userId);
                         String args = argumentsJson;
                         if (isCloudccRelatedServer(server)) {
                             Optional<CloudccSessionContext> ctx =
-                                    cloudccAccessTokenService.getSessionContext(orgId, userId);
+                                    cloudccAccessTokenService.getSessionContext(companyId, userId);
                             if (ctx.isEmpty()) {
                                 return "CloudCC 调用失败：无法获取访问令牌。请在「集成应用」中启用并配置 CloudCC CRM，"
                                         + "并在用户资料中绑定 CloudCC 用户名与安全码后再试。";
@@ -239,7 +239,7 @@ public class McpServerService {
                         String result = mcpClient.callTool(server, toolName, args, extraHeaders);
                         result = rewriteKnownToolFailure(toolName, result);
                         if (isCloudccRelatedServer(server) && isCloudccAuthFailure(result)) {
-                            String refreshed = retryCloudccToolOnce(orgId, userId, server, toolName, argumentsJson, tool.inputSchema());
+                            String refreshed = retryCloudccToolOnce(companyId, userId, server, toolName, argumentsJson, tool.inputSchema());
                             if (refreshed != null) {
                                 return refreshed;
                             }
@@ -247,7 +247,7 @@ public class McpServerService {
                         return result;
                     } catch (Exception e) {
                         if (isCloudccRelatedServer(server) && isCloudccAuthFailure(e.getMessage())) {
-                            String refreshed = retryCloudccToolOnce(orgId, userId, server, toolName, argumentsJson, tool.inputSchema());
+                            String refreshed = retryCloudccToolOnce(companyId, userId, server, toolName, argumentsJson, tool.inputSchema());
                             if (refreshed != null) {
                                 return refreshed;
                             }
@@ -264,10 +264,10 @@ public class McpServerService {
 
     // ── Health Check ──
 
-    public Map<String, Object> healthCheck(String orgId, Long serverId) throws Exception {
-        McpServerEntity server = repository.findByIdAndOrgId(serverId, orgId)
+    public Map<String, Object> healthCheck(String companyId, Long serverId) throws Exception {
+        McpServerEntity server = repository.findByIdAndCompanyId(serverId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("MCP Server not found"));
-        Map<String, String> extraHeaders = resolveDynamicHeaders(server, orgId, null);
+        Map<String, String> extraHeaders = resolveDynamicHeaders(server, companyId, null);
         return mcpClient.healthCheck(server, extraHeaders);
     }
 
@@ -297,8 +297,8 @@ public class McpServerService {
         }
     }
 
-    private Optional<List<McpTool>> loadToolsFromDatabaseCache(String orgId, Long serverId) {
-        McpServerEntity server = repository.findByIdAndOrgId(serverId, orgId)
+    private Optional<List<McpTool>> loadToolsFromDatabaseCache(String companyId, Long serverId) {
+        McpServerEntity server = repository.findByIdAndCompanyId(serverId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("MCP Server not found"));
         if (!server.hasToolCache()) {
             return Optional.empty();
@@ -379,7 +379,7 @@ public class McpServerService {
         return serverId + "::" + toolName;
     }
 
-    private Map<String, String> resolveDynamicHeaders(McpServerEntity server, String orgId, String userId) {
+    private Map<String, String> resolveDynamicHeaders(McpServerEntity server, String companyId, String userId) {
         if (!isCloudccRelatedServer(server)) {
             return Map.of();
         }
@@ -390,7 +390,7 @@ public class McpServerService {
         if (uid.isBlank()) {
             return Map.of();
         }
-        Optional<CloudccSessionContext> ctx = cloudccAccessTokenService.getSessionContext(orgId, uid);
+        Optional<CloudccSessionContext> ctx = cloudccAccessTokenService.getSessionContext(companyId, uid);
         if (ctx.isEmpty()) {
             return Map.of();
         }
@@ -541,11 +541,11 @@ public class McpServerService {
     }
 
     private String retryCloudccToolOnce(
-            String orgId, String userId, McpServerEntity server, String toolName, String originalArgsJson,
+            String companyId, String userId, McpServerEntity server, String toolName, String originalArgsJson,
             JsonNode inputSchema) {
         try {
-            cloudccAccessTokenService.invalidateSessionContext(orgId, userId);
-            Optional<CloudccSessionContext> fresh = cloudccAccessTokenService.getSessionContext(orgId, userId);
+            cloudccAccessTokenService.invalidateSessionContext(companyId, userId);
+            Optional<CloudccSessionContext> fresh = cloudccAccessTokenService.getSessionContext(companyId, userId);
             if (fresh.isEmpty()) {
                 return "CloudCC 调用失败：令牌已失效且刷新失败，请检查 CloudCC 账号绑定信息后重试。";
             }

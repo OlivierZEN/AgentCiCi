@@ -9,7 +9,7 @@ public interface MeetingSessionRepository extends JpaRepository<MeetingSessionEn
 
     Optional<MeetingSessionEntity> findByTokenNonce(String tokenNonce);
 
-    Optional<MeetingSessionEntity> findByIdAndOrgId(String id, String orgId);
+    Optional<MeetingSessionEntity> findByIdAndCompanyId(String id, String companyId);
 
-    List<MeetingSessionEntity> findByOrgIdAndAppCodeOrderByUpdatedAtDesc(String orgId, String appCode, Pageable pageable);
+    List<MeetingSessionEntity> findByCompanyIdAndAppCodeOrderByUpdatedAtDesc(String companyId, String appCode, Pageable pageable);
 }

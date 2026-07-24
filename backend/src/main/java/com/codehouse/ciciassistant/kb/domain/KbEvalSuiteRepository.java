@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface KbEvalSuiteRepository extends JpaRepository<KbEvalSuiteEntity, Long> {
 
-    List<KbEvalSuiteEntity> findByOrgIdAndKnowledgeBaseIdAndStatusOrderByIdDesc(String orgId, Long knowledgeBaseId, String status);
+    List<KbEvalSuiteEntity> findByCompanyIdAndKnowledgeBaseIdAndStatusOrderByIdDesc(String companyId, Long knowledgeBaseId, String status);
 
-    Optional<KbEvalSuiteEntity> findByIdAndOrgId(Long id, String orgId);
+    Optional<KbEvalSuiteEntity> findByIdAndCompanyId(Long id, String companyId);
 }

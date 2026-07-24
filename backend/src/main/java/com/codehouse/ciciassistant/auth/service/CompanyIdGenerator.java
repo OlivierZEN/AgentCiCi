@@ -4,7 +4,7 @@ import java.security.SecureRandom;
 import org.springframework.stereotype.Component;
 
 @Component
-public class OrganizationIdGenerator {
+public class CompanyIdGenerator {
 
     public static final String PREFIX = "org";
     public static final int TOTAL_LENGTH = 20;

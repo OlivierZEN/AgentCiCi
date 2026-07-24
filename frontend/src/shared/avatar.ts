@@ -6,7 +6,7 @@ export function getDisplayInitial(value: string, fallback = "?") {
   return text.slice(0, 2);
 }
 
-export function getOrganizationMonogram(value: string) {
+export function getCompanyMonogram(value: string) {
   const first = (value ?? "").trim().slice(0, 1);
   if (!first) return "组";
   return /^[a-z]$/i.test(first) ? first.toUpperCase() : first;

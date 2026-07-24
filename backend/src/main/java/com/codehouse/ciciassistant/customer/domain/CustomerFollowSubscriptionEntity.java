@@ -14,8 +14,8 @@ public class CustomerFollowSubscriptionEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
     @Column(name = "user_id", nullable = false, length = 64)
     private String userId;
     @Column(name = "crm_account_id", nullable = false, length = 128)
@@ -29,8 +29,8 @@ public class CustomerFollowSubscriptionEntity {
 
     protected CustomerFollowSubscriptionEntity() {}
 
-    public CustomerFollowSubscriptionEntity(String orgId, String userId, String crmAccountId, String notificationPolicy) {
-        this.orgId = orgId;
+    public CustomerFollowSubscriptionEntity(String companyId, String userId, String crmAccountId, String notificationPolicy) {
+        this.companyId = companyId;
         this.userId = userId;
         this.crmAccountId = crmAccountId;
         this.notificationPolicy = notificationPolicy;

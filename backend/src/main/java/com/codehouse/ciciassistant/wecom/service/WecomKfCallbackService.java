@@ -33,10 +33,10 @@ public class WecomKfCallbackService {
                             String timestamp,
                             String nonce,
                             String echostr,
-                            String orgId,
+                            String companyId,
                             String openKfId) {
         String encrypted = blank(echostr);
-        Match match = matchAccount(msgSignature, timestamp, nonce, encrypted, orgId, openKfId)
+        Match match = matchAccount(msgSignature, timestamp, nonce, encrypted, companyId, openKfId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid WeCom callback signature"));
         return cryptoService.decrypt(match.account().encodingAesKey(), encrypted);
     }
@@ -45,13 +45,13 @@ public class WecomKfCallbackService {
                                String timestamp,
                                String nonce,
                                String body,
-                               String orgId,
+                               String companyId,
                                String openKfId) {
         String encrypted = cryptoService.extractEncrypt(body);
         if (encrypted.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing WeCom Encrypt payload");
         }
-        Match match = matchAccount(msgSignature, timestamp, nonce, encrypted, orgId, openKfId)
+        Match match = matchAccount(msgSignature, timestamp, nonce, encrypted, companyId, openKfId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid WeCom callback signature"));
         String decryptedXml = cryptoService.decrypt(match.account().encodingAesKey(), encrypted);
         CompletableFuture.runAsync(() -> processDecryptedCallback(match.account(), decryptedXml));
@@ -65,8 +65,8 @@ public class WecomKfCallbackService {
             }
             String token = cryptoService.text(xml, "Token");
             if (token.isBlank()) {
-                log.warn("Ignore WeCom kf callback without sync token, orgId={}, openKfId={}",
-                        account.account().getOrgId(), account.account().getOpenKfId());
+                log.warn("Ignore WeCom kf callback without sync token, companyId={}, openKfId={}",
+                        account.account().getCompanyId(), account.account().getOpenKfId());
                 return;
             }
             String cursor = account.account().getSyncCursor();
@@ -82,8 +82,8 @@ public class WecomKfCallbackService {
                 hasMore = result.hasMore();
             } while (hasMore);
         } catch (Exception ex) {
-            log.error("Failed to process WeCom kf callback, orgId={}, openKfId={}",
-                    account.account().getOrgId(), account.account().getOpenKfId(), ex);
+            log.error("Failed to process WeCom kf callback, companyId={}, openKfId={}",
+                    account.account().getCompanyId(), account.account().getOpenKfId(), ex);
         }
     }
 
@@ -91,18 +91,18 @@ public class WecomKfCallbackService {
                                          String timestamp,
                                          String nonce,
                                          String encrypted,
-                                         String orgId,
+                                         String companyId,
                                          String openKfId) {
-        List<WecomKfConfigService.ResolvedAccount> candidates = candidates(orgId, openKfId);
+        List<WecomKfConfigService.ResolvedAccount> candidates = candidates(companyId, openKfId);
         return candidates.stream()
                 .filter(account -> cryptoService.matches(account.account().getToken(), timestamp, nonce, encrypted, msgSignature))
                 .findFirst()
                 .map(Match::new);
     }
 
-    private List<WecomKfConfigService.ResolvedAccount> candidates(String orgId, String openKfId) {
-        if (orgId != null && !orgId.isBlank() && openKfId != null && !openKfId.isBlank()) {
-            return configService.findEnabled(orgId, openKfId).stream().toList();
+    private List<WecomKfConfigService.ResolvedAccount> candidates(String companyId, String openKfId) {
+        if (companyId != null && !companyId.isBlank() && openKfId != null && !openKfId.isBlank()) {
+            return configService.findEnabled(companyId, openKfId).stream().toList();
         }
         return configService.enabledAccounts();
     }

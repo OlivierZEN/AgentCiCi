@@ -43,7 +43,7 @@ public class CustomerInteractionActionService {
     }
 
     @Transactional
-    public Map<String, Object> recordActions(String orgId, String accountId, String eventId, String batchId,
+    public Map<String, Object> recordActions(String companyId, String accountId, String eventId, String batchId,
                                              Instant occurredAt, String analysisJson) {
         List<Map<String, Object>> candidates = mapList(parse(analysisJson).get("actionCandidates"));
         int generated = 0;
@@ -57,8 +57,8 @@ public class CustomerInteractionActionService {
                 continue;
             }
             List<CustomerWorkbenchRecommendationEntity> sameKey = recommendationRepository
-                    .findByOrgIdAndCrmAccountIdAndRecommendationTypeAndActionKeyOrderByUpdatedAtDesc(
-                            orgId, accountId, action.actionType(), action.actionKey());
+                    .findByCompanyIdAndCrmAccountIdAndRecommendationTypeAndActionKeyOrderByUpdatedAtDesc(
+                            companyId, accountId, action.actionType(), action.actionKey());
             CustomerWorkbenchRecommendationEntity open = sameKey.stream()
                     .filter(item -> OPEN_STATUSES.contains(item.getStatus())).findFirst().orElse(null);
             if (open != null) {
@@ -83,10 +83,10 @@ public class CustomerInteractionActionService {
                 skipped++;
                 continue;
             }
-            String publicId = "cwr_" + sha256(orgId + "|" + accountId + "|" + eventId + "|"
+            String publicId = "cwr_" + sha256(companyId + "|" + accountId + "|" + eventId + "|"
                     + action.actionType() + "|" + action.actionKey()).substring(0, 40);
             CustomerWorkbenchRecommendationEntity entity = new CustomerWorkbenchRecommendationEntity(
-                    publicId, orgId, accountId, action.actionType(), action.title(), action.rationale(),
+                    publicId, companyId, accountId, action.actionType(), action.title(), action.rationale(),
                     action.confidence(), action.crmPayload());
             entity.configureTarget(action.targetObject(), action.targetRecordId(),
                     evidenceJson(eventId, batchId, occurredAt, action));

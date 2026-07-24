@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface KbMetadataFieldRepository extends JpaRepository<KbMetadataFieldEntity, Long> {
 
-    List<KbMetadataFieldEntity> findByOrgIdAndKnowledgeBaseIdOrderByIdAsc(String orgId, Long knowledgeBaseId);
+    List<KbMetadataFieldEntity> findByCompanyIdAndKnowledgeBaseIdOrderByIdAsc(String companyId, Long knowledgeBaseId);
 
-    Optional<KbMetadataFieldEntity> findByOrgIdAndKnowledgeBaseIdAndFieldKey(String orgId, Long knowledgeBaseId, String fieldKey);
+    Optional<KbMetadataFieldEntity> findByCompanyIdAndKnowledgeBaseIdAndFieldKey(String companyId, Long knowledgeBaseId, String fieldKey);
 }

@@ -467,7 +467,7 @@ const COPY: Record<Locale, SiteCopy> = {
       runtimeTitle: "Enterprise agents need governed runtime, not one-off generation.",
       runtimeIntro: "The platform manages agents, skills, workflows, tools, Open API, evaluation, releases, audit, and workload metering.",
       runtimeItems: [
-        { title: "Controlled execution", copy: "Configure boundaries by organization, role, run-as user, channel, and high-risk action." },
+        { title: "Controlled execution", copy: "Configure boundaries by company, role, run-as user, channel, and high-risk action." },
         { title: "Traceable runtime", copy: "Capture traces, tool calls, knowledge hits, human handoff, failure reasons, and cost attribution." },
         { title: "Reusable skills", copy: "Import, export, review, version, and distribute skill packages across the enterprise." },
         { title: "Operational metering", copy: "Use Work Credits to explain workload, budgets, quotas, overage, and pricing." },
@@ -490,7 +490,7 @@ const COPY: Record<Locale, SiteCopy> = {
       workflow: [
         { title: "Package", copy: "Capture skills, description, input, output, examples, and risk boundaries." },
         { title: "Review", copy: "Check permissions, dependencies, action risk, and version notes." },
-        { title: "Distribute", copy: "Publish to a private skill library by organization, scenario, or agent." },
+        { title: "Distribute", copy: "Publish to a private skill library by company, scenario, or agent." },
         { title: "Reuse", copy: "Reuse inside new agents, workflows, Open API, and business solutions." },
       ],
     },
@@ -597,8 +597,8 @@ const COPY: Record<Locale, SiteCopy> = {
       title: "Docs help teams move from pilot to governed rollout.",
       lead: "Start with the first agent workflow, then move into admin setup, skill reuse, Open API, and private deployment.",
       sections: [
-        { title: "Quick start", copy: "Create an organization, choose a Solution, connect knowledge, and run the first agent.", links: ["First agent", "Knowledge connection", "Invite teammates"] },
-        { title: "Admin setup", copy: "Models, tools, users, permissions, channels, audit, and organization policy.", links: ["Models", "Tool governance", "Permissions and audit"] },
+        { title: "Quick start", copy: "Create an company, choose a Solution, connect knowledge, and run the first agent.", links: ["First agent", "Knowledge connection", "Invite teammates"] },
+        { title: "Admin setup", copy: "Models, tools, users, permissions, channels, audit, and company policy.", links: ["Models", "Tool governance", "Permissions and audit"] },
         { title: "SkillsHub", copy: "Import, export, review, version, and distribute enterprise skill packages.", links: ["Package format", "Import export", "Review and rollback"] },
         { title: "Open API and integrations", copy: "Embed AgentCiCi into portals, CRM, ticketing, and custom systems.", links: ["API Key", "Chat Messages", "Webhook"] },
         { title: "Private deployment", copy: "Deployment mode, model resource responsibility, retention, backup, and upgrade governance.", links: ["Readiness", "Local models", "Upgrade policy"] },
@@ -1093,7 +1093,7 @@ function DemoSection({
       <form className="acw-demo__form" onSubmit={onSubmit}>
         <label>
           <span>{copy.shared.demoFields.company}</span>
-          <input name="company" autoComplete="organization" required />
+          <input name="company" autoComplete="company" required />
         </label>
         <label>
           <span>{copy.shared.demoFields.contact}</span>

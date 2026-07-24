@@ -16,7 +16,7 @@ import { useAuthStorageSync } from "../auth/useAuthStorageSync";
 import { LS_ASSISTANT_TOKEN } from "../constants";
 import { MeetingMinutesPanel } from "../meeting/MeetingMinutesPanel";
 import AppVersionBadge from "../shared/AppVersionBadge";
-import { getDisplayInitial, getOrganizationMonogram, getThemeSeriesClass } from "../shared/avatar";
+import { getDisplayInitial, getCompanyMonogram, getThemeSeriesClass } from "../shared/avatar";
 import { useAsrVoiceInput } from "../shared/useAsrVoiceInput";
 import { safeFetchJson } from "../utils/http";
 import MyEmailAccountsModal from "./MyEmailAccountsModal";
@@ -44,14 +44,14 @@ const FRONT_LOGIN_MODE_CONFIG: FrontLoginMode = "login_mode2";
 const FRONT_LOGIN_USER_MODE_CONFIG: LoginMode = "agent";
 const CHAT_LOADING_STALE_TIMEOUT_MS = 180000;
 
-type OrganizationOption = { orgId: string; orgName: string; memberId: string; roleCode: string; current?: boolean };
-type AuthPayload = { token: string; orgId: string; orgName?: string; userId: string; memberId?: string; accountId?: string; roles: string[] };
-type LoginPayload = AuthPayload & { requiresOrganizationSelection?: boolean; organizations?: OrganizationOption[] };
+type CompanyOption = { companyId: string; companyName: string; memberId: string; roleCode: string; current?: boolean };
+type AuthPayload = { token: string; companyId: string; companyName?: string; userId: string; memberId?: string; accountId?: string; roles: string[] };
+type LoginPayload = AuthPayload & { requiresCompanySelection?: boolean; companies?: CompanyOption[] };
 type ChatBubble = { role: "user" | "assistant"; content: string; time?: string; modelName?: string };
 type KnowledgeBase = { id: number; name: string; description: string; status: string };
 type MeProfile = {
-  orgId?: string;
-  orgName?: string;
+  companyId?: string;
+  companyName?: string;
   nickname?: string;
   mobile?: string;
   firstName?: string;
@@ -1256,11 +1256,11 @@ export default function AssistantApp() {
   const initialCustomerWorkbenchEmbedded = isCustomerWorkbenchEmbedLocation();
   const [mobile, setMobile] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
-  const [organizationName, setOrganizationName] = useState("");
+  const [companyName, setCompanyName] = useState("");
   const [registerMode, setRegisterMode] = useState(false);
-  const [pendingOrganizations, setPendingOrganizations] = useState<OrganizationOption[]>([]);
-  const [organizations, setOrganizations] = useState<OrganizationOption[]>([]);
-  const [organizationMenuOpen, setOrganizationMenuOpen] = useState(false);
+  const [pendingCompanies, setPendingCompanies] = useState<CompanyOption[]>([]);
+  const [companies, setCompanies] = useState<CompanyOption[]>([]);
+  const [companyMenuOpen, setCompanyMenuOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const [auth, setAuth] = useState<AuthPayload | null>(() => {
     return readAuthPayload<AuthPayload>(LS_ASSISTANT_TOKEN);
@@ -1333,8 +1333,8 @@ export default function AssistantApp() {
   const meetingSpeakerEditInputRef = useRef<HTMLInputElement | null>(null);
   const skillPickerRef = useRef<HTMLDivElement | null>(null);
   const quickCommandMenuRef = useRef<HTMLDivElement | null>(null);
-  const organizationMenuRef = useRef<HTMLDivElement | null>(null);
-  const organizationMenuCloseTimerRef = useRef<number | null>(null);
+  const companyMenuRef = useRef<HTMLDivElement | null>(null);
+  const companyMenuCloseTimerRef = useRef<number | null>(null);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const composerInputRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
   const chatLoadingStaleTimerRef = useRef<number | null>(null);
@@ -1395,23 +1395,23 @@ export default function AssistantApp() {
     composerInputRef.current = element;
   };
 
-  const cancelOrganizationMenuClose = () => {
-    if (organizationMenuCloseTimerRef.current !== null) {
-      window.clearTimeout(organizationMenuCloseTimerRef.current);
-      organizationMenuCloseTimerRef.current = null;
+  const cancelCompanyMenuClose = () => {
+    if (companyMenuCloseTimerRef.current !== null) {
+      window.clearTimeout(companyMenuCloseTimerRef.current);
+      companyMenuCloseTimerRef.current = null;
     }
   };
 
-  const openOrganizationMenu = () => {
-    cancelOrganizationMenuClose();
-    setOrganizationMenuOpen(true);
+  const openCompanyMenu = () => {
+    cancelCompanyMenuClose();
+    setCompanyMenuOpen(true);
   };
 
-  const scheduleOrganizationMenuClose = () => {
-    cancelOrganizationMenuClose();
-    organizationMenuCloseTimerRef.current = window.setTimeout(() => {
-      setOrganizationMenuOpen(false);
-      organizationMenuCloseTimerRef.current = null;
+  const scheduleCompanyMenuClose = () => {
+    cancelCompanyMenuClose();
+    companyMenuCloseTimerRef.current = window.setTimeout(() => {
+      setCompanyMenuOpen(false);
+      companyMenuCloseTimerRef.current = null;
     }, 120);
   };
 
@@ -1435,22 +1435,22 @@ export default function AssistantApp() {
     return false;
   };
 
-  const loadOrganizations = async (tokenOverride?: string) => {
+  const loadCompanies = async (tokenOverride?: string) => {
     const token = tokenOverride ?? auth?.token;
     if (!token) {
-      setOrganizations([]);
+      setCompanies([]);
       return;
     }
     try {
-      const response = await authFetch(LS_ASSISTANT_TOKEN, "/auth/organizations", {}, {
+      const response = await authFetch(LS_ASSISTANT_TOKEN, "/auth/companies", {}, {
         onUnauthorized: () => persistAuth(null),
       });
-      const { body } = await safeFetchJson<{ organizations?: OrganizationOption[] }>(response);
+      const { body } = await safeFetchJson<{ companies?: CompanyOption[] }>(response);
       if (response.ok && body?.success) {
-        setOrganizations(body.data?.organizations ?? []);
+        setCompanies(body.data?.companies ?? []);
       }
     } catch {
-      setOrganizations([]);
+      setCompanies([]);
     }
   };
 
@@ -1934,8 +1934,8 @@ export default function AssistantApp() {
       if (quickCommandMenuRef.current && !quickCommandMenuRef.current.contains(event.target as Node)) {
         setQuickCommandMenuOpen(false);
       }
-      if (organizationMenuRef.current && !organizationMenuRef.current.contains(event.target as Node)) {
-        setOrganizationMenuOpen(false);
+      if (companyMenuRef.current && !companyMenuRef.current.contains(event.target as Node)) {
+        setCompanyMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handler);
@@ -1943,7 +1943,7 @@ export default function AssistantApp() {
   }, []);
 
   useEffect(() => {
-    return () => cancelOrganizationMenuClose();
+    return () => cancelCompanyMenuClose();
   }, []);
 
   useEffect(() => {
@@ -1981,11 +1981,11 @@ export default function AssistantApp() {
   useEffect(() => {
     if (auth) {
       if (authStatus === "authenticated") {
-        void loadOrganizations();
+        void loadCompanies();
       }
     } else {
-      setOrganizations([]);
-      setOrganizationMenuOpen(false);
+      setCompanies([]);
+      setCompanyMenuOpen(false);
     }
   }, [auth?.token, authStatus]);
 
@@ -2001,7 +2001,7 @@ export default function AssistantApp() {
       if (cancelled) return;
       if (valid) {
         setAuthStatus("authenticated");
-        void loadOrganizations();
+        void loadCompanies();
         return;
       }
       localStorage.removeItem(LS_ASSISTANT_TOKEN);
@@ -2009,8 +2009,8 @@ export default function AssistantApp() {
       setMe(null);
       setAuthStatus("guest");
       setNotice("登录状态已过期，请重新登录。");
-      setOrganizations([]);
-      setOrganizationMenuOpen(false);
+      setCompanies([]);
+      setCompanyMenuOpen(false);
     })();
     return () => {
       cancelled = true;
@@ -2283,14 +2283,14 @@ export default function AssistantApp() {
   }, [activeWorkbenchAgentId, auth?.token, authStatus, quickCommandMenuOpen, quickCommandsByAgent, workspaceTab]);
   const activeKbNames = kbs.filter((kb) => selectedKbIds.includes(kb.id)).map((kb) => kb.name).join(", ") || "未选择";
   const userInitial = getDisplayInitial(me?.displayName || me?.nickname || me?.mobile || "我", "我");
-  const currentOrgName = me?.orgName || auth?.orgName || auth?.orgId || "当前组织";
-  const organizationOptions = auth
-    ? organizations.length
-      ? organizations
+  const currentCompanyName = me?.companyName || auth?.companyName || auth?.companyId || "当前组织";
+  const companyOptions = auth
+    ? companies.length
+      ? companies
       : [
           {
-            orgId: auth.orgId,
-            orgName: currentOrgName,
+            companyId: auth.companyId,
+            companyName: currentCompanyName,
             memberId: auth.memberId ?? auth.userId,
             roleCode: Array.isArray(auth.roles) ? (auth.roles[0] ?? "") : "",
             current: true,
@@ -2446,12 +2446,12 @@ export default function AssistantApp() {
   }, [openWorkbenchSessionMenuId]);
 
   const completeLogin = async (payload: AuthPayload, message = "登录成功。") => {
-    setPendingOrganizations([]);
+    setPendingCompanies([]);
     setRegisterMode(false);
-    setOrganizationMenuOpen(false);
+    setCompanyMenuOpen(false);
     persistAuth(payload);
     await loadMe(payload.token);
-    await loadOrganizations(payload.token);
+    await loadCompanies(payload.token);
     setNotice(message);
   };
 
@@ -2515,8 +2515,8 @@ export default function AssistantApp() {
         setNotice(`登录失败：${body?.message ?? `HTTP ${response.status}`}`);
         return;
       }
-      if (body.data?.requiresOrganizationSelection) {
-        setPendingOrganizations(body.data.organizations ?? []);
+      if (body.data?.requiresCompanySelection) {
+        setPendingCompanies(body.data.companies ?? []);
         setNotice("请选择要进入的组织。");
         return;
       }
@@ -2541,7 +2541,7 @@ export default function AssistantApp() {
     }
   };
 
-  const loginToOrganization = async (targetOrgId: string) => {
+  const loginToCompany = async (targetCompanyId: string) => {
     if (loginSubmitting) {
       return;
     }
@@ -2551,7 +2551,7 @@ export default function AssistantApp() {
       const response = await fetch("/auth/password/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orgId: targetOrgId, identifier: mobile, password: loginPassword }),
+        body: JSON.stringify({ companyId: targetCompanyId, identifier: mobile, password: loginPassword }),
       });
       const { body } = await safeFetchJson<AuthPayload>(response);
       if (!response.ok || !body?.success || !body.data?.token) {
@@ -2576,7 +2576,7 @@ export default function AssistantApp() {
       const response = await fetch("/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mobile, password: loginPassword, organizationName }),
+        body: JSON.stringify({ mobile, password: loginPassword, companyName }),
       });
       const { body } = await safeFetchJson<AuthPayload>(response);
       if (!response.ok || !body?.success || !body.data?.token) {
@@ -2591,17 +2591,17 @@ export default function AssistantApp() {
     }
   };
 
-  const switchOrganization = async (targetOrgId: string) => {
-    if (!auth?.token || targetOrgId === auth.orgId) {
-      setOrganizationMenuOpen(false);
+  const switchCompany = async (targetCompanyId: string) => {
+    if (!auth?.token || targetCompanyId === auth.companyId) {
+      setCompanyMenuOpen(false);
       return;
     }
     try {
       setNotice("正在切换组织...");
-      const response = await authFetch(LS_ASSISTANT_TOKEN, "/auth/switch-organization", {
+      const response = await authFetch(LS_ASSISTANT_TOKEN, "/auth/switch-company", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orgId: targetOrgId }),
+        body: JSON.stringify({ companyId: targetCompanyId }),
       }, {
         onUnauthorized: () => persistAuth(null),
       });
@@ -3515,10 +3515,10 @@ export default function AssistantApp() {
     setActiveConversationId("");
     setWorkspaceTab("workbench");
     setLoginPassword("");
-    setOrganizationName("");
-    setPendingOrganizations([]);
-    setOrganizations([]);
-    setOrganizationMenuOpen(false);
+    setCompanyName("");
+    setPendingCompanies([]);
+    setCompanies([]);
+    setCompanyMenuOpen(false);
     setRegisterMode(false);
     setNotice("已退出。");
   };
@@ -3617,42 +3617,42 @@ export default function AssistantApp() {
         </div>
         {registerMode ? (
           <div className="boot-login__field">
-            <label htmlFor="boot-organization-name">组织名称</label>
+            <label htmlFor="boot-company-name">组织名称</label>
             <input
-              id="boot-organization-name"
+              id="boot-company-name"
               className="boot-login__input"
-              value={organizationName}
-              onChange={(event) => setOrganizationName(event.target.value)}
-              autoComplete="organization"
+              value={companyName}
+              onChange={(event) => setCompanyName(event.target.value)}
+              autoComplete="company"
               placeholder="如 销售运营团队"
             />
           </div>
         ) : null}
       </div>
-      {!registerMode && pendingOrganizations.length > 0 ? (
+      {!registerMode && pendingCompanies.length > 0 ? (
         <div className="boot-login__org-choice" role="group" aria-label="选择组织">
           <p>选择要进入的组织</p>
-          {pendingOrganizations.map((item) => (
+          {pendingCompanies.map((item) => (
             <button
-              key={item.orgId}
+              key={item.companyId}
               type="button"
               className="boot-login__org-option"
-              onClick={() => loginToOrganization(item.orgId)}
+              onClick={() => loginToCompany(item.companyId)}
               disabled={loginSubmitting}
             >
-              <span>{item.orgName}</span>
+              <span>{item.companyName}</span>
               <small>{item.roleCode}</small>
             </button>
           ))}
         </div>
       ) : null}
-      {pendingOrganizations.length === 0 ? (
+      {pendingCompanies.length === 0 ? (
         <div className="boot-login__actions boot-login__actions--single">
           <button
             type="button"
             className="boot-login__btn boot-login__btn--primary"
             onClick={registerMode ? register : login}
-            disabled={!mobile.trim() || !loginPassword.trim() || loginSubmitting || (registerMode && !organizationName.trim())}
+            disabled={!mobile.trim() || !loginPassword.trim() || loginSubmitting || (registerMode && !companyName.trim())}
           >
             <span className="boot-phone-icon" aria-hidden>
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none">
@@ -3859,46 +3859,46 @@ export default function AssistantApp() {
           </button>
           <button
             type="button"
-            className={`cici-rail__logo${organizationMenuOpen ? " is-active" : ""}`}
-            onMouseEnter={openOrganizationMenu}
-            onMouseLeave={scheduleOrganizationMenuClose}
-            onFocus={openOrganizationMenu}
+            className={`cici-rail__logo${companyMenuOpen ? " is-active" : ""}`}
+            onMouseEnter={openCompanyMenu}
+            onMouseLeave={scheduleCompanyMenuClose}
+            onFocus={openCompanyMenu}
             onClick={() => {
-              cancelOrganizationMenuClose();
-              setOrganizationMenuOpen((open) => !open);
+              cancelCompanyMenuClose();
+              setCompanyMenuOpen((open) => !open);
             }}
-            aria-label={`切换组织，当前组织：${currentOrgName}`}
-            aria-expanded={organizationMenuOpen}
+            aria-label={`切换组织，当前组织：${currentCompanyName}`}
+            aria-expanded={companyMenuOpen}
           >
-            <div className="cici-rail__logo-icon">{getOrganizationMonogram(currentOrgName)}</div>
+            <div className="cici-rail__logo-icon">{getCompanyMonogram(currentCompanyName)}</div>
           </button>
           <AppVersionBadge compact />
         </div>
       </nav>
-      {organizationMenuOpen && auth?.token ? (
+      {companyMenuOpen && auth?.token ? (
         <div
           className="cici-org-menu"
-          ref={organizationMenuRef}
+          ref={companyMenuRef}
           role="dialog"
           aria-label="组织切换"
-          onMouseEnter={openOrganizationMenu}
-          onMouseLeave={scheduleOrganizationMenuClose}
+          onMouseEnter={openCompanyMenu}
+          onMouseLeave={scheduleCompanyMenuClose}
         >
           <div className="cici-org-menu__head">
             <span>切换组织</span>
           </div>
           <div className="cici-org-menu__list">
-            {organizationOptions.map((item) => {
-              const isCurrent = item.orgId === auth.orgId || item.current;
+            {companyOptions.map((item) => {
+              const isCurrent = item.companyId === auth.companyId || item.current;
               return (
                 <button
-                  key={item.orgId}
+                  key={item.companyId}
                   type="button"
                   className={`cici-org-menu__item${isCurrent ? " is-current" : ""}`}
-                  onClick={() => switchOrganization(item.orgId)}
+                  onClick={() => switchCompany(item.companyId)}
                   aria-current={isCurrent ? "true" : undefined}
                 >
-                  <span>{item.orgName}</span>
+                  <span>{item.companyName}</span>
                   {isCurrent ? <small>当前</small> : null}
                 </button>
               );
@@ -4390,7 +4390,7 @@ export default function AssistantApp() {
           </div>
         </main>
       ) : workspaceTab === "settings" ? (
-        <MyEmailAccountsModal open={Boolean(auth?.token)} token={auth?.token ?? ""} variant="page" surface="settings" title={currentOrgName} />
+        <MyEmailAccountsModal open={Boolean(auth?.token)} token={auth?.token ?? ""} variant="page" surface="settings" title={currentCompanyName} />
       ) : workspaceTab === "profile" ? (
         <MyEmailAccountsModal open={Boolean(auth?.token)} token={auth?.token ?? ""} variant="page" surface="profile" title="个人简档" />
       ) : workspaceTab === "monitor" ? (

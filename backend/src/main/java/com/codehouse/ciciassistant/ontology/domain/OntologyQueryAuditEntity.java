@@ -45,7 +45,7 @@ public class OntologyQueryAuditEntity extends AbstractOntologyWorkspaceEntity {
     }
 
     public OntologyQueryAuditEntity(
-            String orgId,
+            String companyId,
             Long workspaceId,
             Long versionId,
             Long dataSourceId,
@@ -57,7 +57,7 @@ public class OntologyQueryAuditEntity extends AbstractOntologyWorkspaceEntity {
             String status,
             String evidenceJson,
             String errorCode) {
-        super(orgId, workspaceId);
+        super(companyId, workspaceId);
         this.versionId = versionId;
         this.dataSourceId = dataSourceId;
         this.userId = userId;

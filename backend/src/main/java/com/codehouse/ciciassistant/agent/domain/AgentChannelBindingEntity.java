@@ -16,8 +16,8 @@ public class AgentChannelBindingEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "agent_id", nullable = false, length = 64)
     private String agentId;
@@ -34,8 +34,8 @@ public class AgentChannelBindingEntity {
     protected AgentChannelBindingEntity() {
     }
 
-    public AgentChannelBindingEntity(String orgId, String agentId, String channelId, boolean enabled) {
-        this.orgId = orgId;
+    public AgentChannelBindingEntity(String companyId, String agentId, String channelId, boolean enabled) {
+        this.companyId = companyId;
         this.agentId = agentId;
         this.channelId = channelId;
         this.enabled = enabled;

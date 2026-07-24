@@ -44,7 +44,7 @@ public class FeishuBotEventBridgeService {
         this.feishuBotMessenger = feishuBotMessenger;
     }
 
-    public void acceptMessageEvent(String orgId, P2MessageReceiveV1 event) {
+    public void acceptMessageEvent(String companyId, P2MessageReceiveV1 event) {
         P2MessageReceiveV1Data eventData = event == null ? null : event.getEvent();
         EventMessage message = eventData == null ? null : eventData.getMessage();
         if (message == null || message.getMessageId() == null || message.getMessageId().isBlank()) {
@@ -54,11 +54,11 @@ public class FeishuBotEventBridgeService {
             log.info("Ignore duplicate Feishu message {}", message.getMessageId());
             return;
         }
-        java.util.concurrent.CompletableFuture.runAsync(() -> processMessage(orgId, eventData));
+        java.util.concurrent.CompletableFuture.runAsync(() -> processMessage(companyId, eventData));
     }
 
-    private void processMessage(String orgId, P2MessageReceiveV1Data eventData) {
-        FeishuBotConfigService.FeishuBotConfig config = feishuBotConfigService.getEnabledConfig(orgId).orElse(null);
+    private void processMessage(String companyId, P2MessageReceiveV1Data eventData) {
+        FeishuBotConfigService.FeishuBotConfig config = feishuBotConfigService.getEnabledConfig(companyId).orElse(null);
         if (config == null) {
             return;
         }
@@ -87,14 +87,14 @@ public class FeishuBotEventBridgeService {
             String unionId = senderId == null ? "" : blankToEmpty(senderId.getUnionId());
             String tenantKey = sender == null ? "" : blankToEmpty(sender.getTenantKey());
             if (openId.isBlank() || tenantKey.isBlank()) {
-                log.warn("Missing Feishu sender identity, orgId={}, messageId={}", orgId, messageId);
+                log.warn("Missing Feishu sender identity, companyId={}, messageId={}", companyId, messageId);
                 return;
             }
 
             Matcher matcher = PAIRING_PATTERN.matcher(text.trim());
             if (matcher.matches()) {
                 FeishuBotBindingEntity binding = feishuBotPairingService.consumePairingCode(
-                        orgId,
+                        companyId,
                         matcher.group(1),
                         tenantKey,
                         openId,
@@ -106,9 +106,9 @@ public class FeishuBotEventBridgeService {
                 return;
             }
 
-            FeishuBotBindingEntity binding = feishuBotPairingService.findActiveBinding(orgId, tenantKey, openId)
-                    .orElseGet(() -> feishuBotPairingService.ensureAutoBinding(orgId, tenantKey, openId, unionId, message.getChatId()));
-            feishuUserProfileService.fetchProfile(orgId, openId)
+            FeishuBotBindingEntity binding = feishuBotPairingService.findActiveBinding(companyId, tenantKey, openId)
+                    .orElseGet(() -> feishuBotPairingService.ensureAutoBinding(companyId, tenantKey, openId, unionId, message.getChatId()));
+            feishuUserProfileService.fetchProfile(companyId, openId)
                     .ifPresent(profile -> feishuBotPairingService.touchProfile(binding, profile.displayName(), profile.avatarUrl()));
 
             feishuBotPairingService.touchMessage(binding, message.getChatId());
@@ -118,7 +118,7 @@ public class FeishuBotEventBridgeService {
                             ? "这次没有生成可发送的回复，请稍后再试。"
                             : answer);
         } catch (Exception ex) {
-            log.error("Failed to bridge Feishu message, orgId={}, messageId={}", orgId, messageId, ex);
+            log.error("Failed to bridge Feishu message, companyId={}, messageId={}", companyId, messageId, ex);
             try {
                 feishuBotMessenger.replyText(config, messageId, "这次处理失败了，请稍后重试，或回到系统工作台继续处理。");
             } catch (Exception replyEx) {

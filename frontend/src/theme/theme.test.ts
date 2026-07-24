@@ -82,7 +82,7 @@ describe("product theme catalog", () => {
   it("keeps admin subpages, dialogs, and foldout panels on the selected theme", () => {
     for (const selector of [
       ":root[data-theme] .admin-main .ontology-modal-backdrop,",
-      ":root[data-theme] .admin-main .admin-organization-modal,",
+      ":root[data-theme] .admin-main .admin-company-modal,",
       ":root[data-theme] .admin-main .skills-row-menu__panel {",
       ":root[data-theme] .admin-main .embed-apps-list,",
       ":root[data-theme] .admin-main .admin-ops-panel,",

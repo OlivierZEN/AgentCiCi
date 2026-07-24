@@ -128,7 +128,7 @@ type PositionedWorkflowEdge = WorkflowPreviewEdge & {
 
 type AgentBuilderShellProps = {
   kbs: KnowledgeBase[];
-  orgId: string;
+  companyId: string;
   token: string;
   pageMode?: "list" | "editor";
   focusAgentId?: string;
@@ -513,11 +513,11 @@ const PREVIEW_ROW_GAP = 72;
 const PREVIEW_PADDING_X = 72;
 const PREVIEW_PADDING_Y = 56;
 
-function createDraft(orgId: string, kbIds: number[]): AgentDraft {
+function createDraft(companyId: string, kbIds: number[]): AgentDraft {
   return {
     name: "未命名 Agent",
     avatarBase64: "",
-    summary: `${orgId} 的业务助手，负责把规则、知识和动作串起来。`,
+    summary: `${companyId} 的业务助手，负责把规则、知识和动作串起来。`,
     greeting: "你好，我是你的业务智能体，可以帮你检索知识、调用工具并生成标准化输出。",
     model: "",
     systemPrompt: "你是企业内部可执行 Agent。先判断用户请求类型，再决定是直接回答、检索知识库还是调用业务工具；不允许编造制度、价格或承诺。",
@@ -1453,29 +1453,29 @@ function toCompileArtifact(response: CompileResponse): CompileArtifact {
 }
 
 /** Fingerprint of the compile API body — when this diverges from the last backend compile, publish must not reuse old artifacts. */
-function compilePayloadDigest(draft: AgentDraft, orgId: string): string {
+function compilePayloadDigest(draft: AgentDraft, companyId: string): string {
   return JSON.stringify({
     ...draft,
-    orgId,
+    companyId,
     skillRefs: draft.skillBindings.filter((item) => item.enabled).map((item) => item.skillCode),
   });
 }
 
-function persistPayloadDigest(draft: AgentDraft, publishConfig: PublishConfigDraft, orgId: string): string {
+function persistPayloadDigest(draft: AgentDraft, publishConfig: PublishConfigDraft, companyId: string): string {
   return JSON.stringify({
     ...draft,
-    orgId,
+    companyId,
     publishConfig: publishConfig.feishu,
   });
 }
 
 function isDraftCompileStaleForPublish(
   draft: AgentDraft,
-  orgId: string,
+  companyId: string,
   lastSuccessfulBackendCompileDigest: string | null,
   loadedAgentBaselineDigest: string | null,
 ): boolean {
-  const digest = compilePayloadDigest(draft, orgId);
+  const digest = compilePayloadDigest(draft, companyId);
   if (lastSuccessfulBackendCompileDigest != null) {
     return digest !== lastSuccessfulBackendCompileDigest;
   }
@@ -1569,8 +1569,8 @@ export function resolveAgentChannels(itemChannels: string[] | undefined, fallbac
   );
 }
 
-function toAgentRecordFromApi(item: AgentApiRecord, orgId: string, kbs: KnowledgeBase[]): AgentRecord {
-  const fallbackDraft = createDraft(orgId, kbs.slice(0, 1).map((kb) => kb.id));
+function toAgentRecordFromApi(item: AgentApiRecord, companyId: string, kbs: KnowledgeBase[]): AgentRecord {
+  const fallbackDraft = createDraft(companyId, kbs.slice(0, 1).map((kb) => kb.id));
   const model = item.model && item.model.trim() ? item.model : fallbackDraft.model;
   const channels = resolveAgentChannels(item.channels, fallbackDraft.channels);
   const draft: AgentDraft = {
@@ -1609,7 +1609,7 @@ function toAgentRecordFromApi(item: AgentApiRecord, orgId: string, kbs: Knowledg
 
 export default function AgentBuilderShell({
   kbs,
-  orgId,
+  companyId,
   token,
   pageMode = "editor",
   focusAgentId,
@@ -1619,7 +1619,7 @@ export default function AgentBuilderShell({
 }: AgentBuilderShellProps) {
   const [library, setLibrary] = useState<AgentRecord[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string>("");
-  const [draft, setDraft] = useState<AgentDraft>(() => createDraft(orgId, []));
+  const [draft, setDraft] = useState<AgentDraft>(() => createDraft(companyId, []));
   const [avatarCropSource, setAvatarCropSource] = useState("");
   const [publishConfig, setPublishConfig] = useState<PublishConfigDraft>(() => createPublishConfigDraft());
   const [searchText, setSearchText] = useState("");
@@ -1786,7 +1786,7 @@ export default function AgentBuilderShell({
         if (cancelled) return;
 
         const hydratedList = applyAgentDetailToList(listBody.data, detailBody.data);
-        const nextLibrary = hydratedList.map((item) => toAgentRecordFromApi(item, orgId, kbs));
+        const nextLibrary = hydratedList.map((item) => toAgentRecordFromApi(item, companyId, kbs));
         const first = nextLibrary[0];
         const preferred = nextLibrary.find((item) => item.id === detailAgentId) ?? first;
         const skillsRes = await fetch("/skills", {
@@ -1801,8 +1801,8 @@ export default function AgentBuilderShell({
         commitSelectedAgentId(preferred.id);
         setDraft(cloneDraft(preferred.draft));
         setPublishConfig(clonePublishConfigDraft(preferred.publishConfig));
-        setLoadedAgentBaselineDigest(compilePayloadDigest(preferred.draft, orgId));
-        setPersistedDraftDigest(persistPayloadDigest(preferred.draft, preferred.publishConfig, orgId));
+        setLoadedAgentBaselineDigest(compilePayloadDigest(preferred.draft, companyId));
+        setPersistedDraftDigest(persistPayloadDigest(preferred.draft, preferred.publishConfig, companyId));
         setLastSuccessfulBackendCompileDigest(null);
         setPublishReadyFromCompile(false);
         resetProductionGateState();
@@ -1820,7 +1820,7 @@ export default function AgentBuilderShell({
     return () => {
       cancelled = true;
     };
-  }, [commitSelectedAgentId, focusAgentId, kbs, orgId, token]);
+  }, [commitSelectedAgentId, focusAgentId, kbs, companyId, token]);
 
   useEffect(() => {
     if (!token) return;
@@ -2564,13 +2564,13 @@ export default function AgentBuilderShell({
       if (!response.ok || !body?.success || !body.data) {
         throw new Error(body?.message ?? `HTTP ${response.status}`);
       }
-      const refreshed = toAgentRecordFromApi(body.data, orgId, kbs);
+      const refreshed = toAgentRecordFromApi(body.data, companyId, kbs);
       setLibrary((current) => current.map((item) => (item.id === agentId ? refreshed : item)));
       commitSelectedAgentId(agentId);
       setDraft(cloneDraft(refreshed.draft));
       setPublishConfig(clonePublishConfigDraft(refreshed.publishConfig));
-      setLoadedAgentBaselineDigest(compilePayloadDigest(refreshed.draft, orgId));
-      setPersistedDraftDigest(persistPayloadDigest(refreshed.draft, refreshed.publishConfig, orgId));
+      setLoadedAgentBaselineDigest(compilePayloadDigest(refreshed.draft, companyId));
+      setPersistedDraftDigest(persistPayloadDigest(refreshed.draft, refreshed.publishConfig, companyId));
       setLastSuccessfulBackendCompileDigest(null);
       setPublishReadyFromCompile(false);
       resetProductionGateState();
@@ -2594,8 +2594,8 @@ export default function AgentBuilderShell({
     commitSelectedAgentId(agentId);
     setDraft(cloneDraft(target.draft));
     setPublishConfig(clonePublishConfigDraft(target.publishConfig));
-    setLoadedAgentBaselineDigest(compilePayloadDigest(target.draft, orgId));
-    setPersistedDraftDigest(persistPayloadDigest(target.draft, target.publishConfig, orgId));
+    setLoadedAgentBaselineDigest(compilePayloadDigest(target.draft, companyId));
+    setPersistedDraftDigest(persistPayloadDigest(target.draft, target.publishConfig, companyId));
     setLastSuccessfulBackendCompileDigest(null);
     setPublishReadyFromCompile(false);
     resetProductionGateState();
@@ -2613,7 +2613,7 @@ export default function AgentBuilderShell({
   };
 
   const createAgent = async () => {
-    const nextDraft = createDraft(orgId, kbs.slice(0, 1).map((item) => item.id));
+    const nextDraft = createDraft(companyId, kbs.slice(0, 1).map((item) => item.id));
     const creationModel = resolveAgentCreationModel(nextDraft.model, modelOptions);
     nextDraft.model = creationModel.model;
     if (creationModel.requiresModelConfig) {
@@ -2657,7 +2657,7 @@ export default function AgentBuilderShell({
       if (!response.ok || !body?.success || !body.data) {
         throw new Error(body?.message ?? `HTTP ${response.status}`);
       }
-      const nextAgent = toAgentRecordFromApi(body.data, orgId, kbs);
+      const nextAgent = toAgentRecordFromApi(body.data, companyId, kbs);
       setLibrary((current) => [nextAgent, ...current]);
       if (pageMode === "list" && onOpenAgent) {
         onOpenAgent(nextAgent.id);
@@ -2667,8 +2667,8 @@ export default function AgentBuilderShell({
       commitSelectedAgentId(nextAgent.id);
       setDraft(cloneDraft(nextAgent.draft));
       setPublishConfig(clonePublishConfigDraft(nextAgent.publishConfig));
-      setLoadedAgentBaselineDigest(compilePayloadDigest(nextAgent.draft, orgId));
-      setPersistedDraftDigest(persistPayloadDigest(nextAgent.draft, nextAgent.publishConfig, orgId));
+      setLoadedAgentBaselineDigest(compilePayloadDigest(nextAgent.draft, companyId));
+      setPersistedDraftDigest(persistPayloadDigest(nextAgent.draft, nextAgent.publishConfig, companyId));
       setLastSuccessfulBackendCompileDigest(null);
       setPublishReadyFromCompile(false);
       resetProductionGateState();
@@ -2688,7 +2688,7 @@ export default function AgentBuilderShell({
   };
 
   const resetEditorAfterDeletedLastAgent = () => {
-    const fallbackDraft = createDraft(orgId, kbs.slice(0, 1).map((item) => item.id));
+    const fallbackDraft = createDraft(companyId, kbs.slice(0, 1).map((item) => item.id));
     commitSelectedAgentId("");
     setDraft(fallbackDraft);
     setPublishConfig(createPublishConfigDraft());
@@ -2730,8 +2730,8 @@ export default function AgentBuilderShell({
           commitSelectedAgentId(fallbackAgent.id);
           setDraft(cloneDraft(fallbackAgent.draft));
           setPublishConfig(clonePublishConfigDraft(fallbackAgent.publishConfig));
-          setLoadedAgentBaselineDigest(compilePayloadDigest(fallbackAgent.draft, orgId));
-          setPersistedDraftDigest(persistPayloadDigest(fallbackAgent.draft, fallbackAgent.publishConfig, orgId));
+          setLoadedAgentBaselineDigest(compilePayloadDigest(fallbackAgent.draft, companyId));
+          setPersistedDraftDigest(persistPayloadDigest(fallbackAgent.draft, fallbackAgent.publishConfig, companyId));
           setLastSuccessfulBackendCompileDigest(null);
           setPublishReadyFromCompile(false);
           resetProductionGateState();
@@ -2881,12 +2881,12 @@ export default function AgentBuilderShell({
           publishConfigs: { feishu: operationPublishConfig.feishu },
           skillBindings: skillsBody.data?.bindings ?? operationDraft.skillBindings,
         },
-        orgId,
+        companyId,
         kbs,
       );
       setLibrary((current) => current.map((item) => (item.id === targetAgentId ? refreshed : item)));
       if (selectedAgentIdRef.current !== targetAgentId) return;
-      setPersistedDraftDigest(persistPayloadDigest(operationDraft, operationPublishConfig, orgId));
+      setPersistedDraftDigest(persistPayloadDigest(operationDraft, operationPublishConfig, companyId));
       if (!silentSuccessNotice) {
         setNotice("草稿已保存到后端（definition/spec/bindings/skills/publish-configs）。");
       }
@@ -2980,7 +2980,7 @@ export default function AgentBuilderShell({
           },
           body: JSON.stringify({
             ...operationDraft,
-            orgId,
+            companyId,
             skillRefs: operationDraft.skillBindings.filter((item) => item.enabled).map((item) => item.skillCode),
           }),
         });
@@ -2992,7 +2992,7 @@ export default function AgentBuilderShell({
         setCompileArtifact(toCompileArtifact(body.data));
         setActiveCompileTab("preview");
         setDebugTrace(null);
-        const digest = compilePayloadDigest(operationDraft, orgId);
+        const digest = compilePayloadDigest(operationDraft, companyId);
         setLastSuccessfulBackendCompileDigest(digest);
         setLoadedAgentBaselineDigest(digest);
         setPublishReadyFromCompile(body.data.changed === true && body.data.draftVersionNo != null);
@@ -3109,17 +3109,17 @@ export default function AgentBuilderShell({
   }, [modelOptions]);
 
   const compileStaleBlocksPublish = useMemo(
-    () => isDraftCompileStaleForPublish(draft, orgId, lastSuccessfulBackendCompileDigest, loadedAgentBaselineDigest),
-    [draft, orgId, lastSuccessfulBackendCompileDigest, loadedAgentBaselineDigest],
+    () => isDraftCompileStaleForPublish(draft, companyId, lastSuccessfulBackendCompileDigest, loadedAgentBaselineDigest),
+    [draft, companyId, lastSuccessfulBackendCompileDigest, loadedAgentBaselineDigest],
   );
   const compileNeedsRebuild = useMemo(() => {
-    const currentCompileDigest = compilePayloadDigest(draft, orgId);
+    const currentCompileDigest = compilePayloadDigest(draft, companyId);
     return isCompileRequired(currentCompileDigest, lastSuccessfulBackendCompileDigest, loadedAgentBaselineDigest);
-  }, [draft, orgId, lastSuccessfulBackendCompileDigest, loadedAgentBaselineDigest]);
+  }, [draft, companyId, lastSuccessfulBackendCompileDigest, loadedAgentBaselineDigest]);
   const hasDraftChanges = useMemo(() => {
     if (persistedDraftDigest == null) return true;
-    return persistPayloadDigest(draft, publishConfig, orgId) !== persistedDraftDigest;
-  }, [draft, orgId, persistedDraftDigest, publishConfig]);
+    return persistPayloadDigest(draft, publishConfig, companyId) !== persistedDraftDigest;
+  }, [draft, companyId, persistedDraftDigest, publishConfig]);
   const publishBlockedByCompileGate = !publishReadyFromCompile;
   const publishBlocked = agentWriteBlocked || isPublishing || isCompiling || compileStaleBlocksPublish || publishBlockedByCompileGate;
   const publishBlockedTitle = agentWriteBlocked

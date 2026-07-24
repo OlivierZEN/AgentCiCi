@@ -11,8 +11,8 @@ public class McpServerEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(nullable = false, length = 128)
     private String name;
@@ -64,10 +64,10 @@ public class McpServerEntity {
 
     protected McpServerEntity() {}
 
-    public McpServerEntity(String orgId, String name, String description,
+    public McpServerEntity(String companyId, String name, String description,
                            String transportType, String url, String headers,
                            int timeoutSeconds) {
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.name = name;
         this.description = description;
         this.transportType = transportType;
@@ -77,7 +77,7 @@ public class McpServerEntity {
     }
 
     public Long getId() { return id; }
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
     public String getName() { return name; }
     public String getDescription() { return description; }
     public String getTransportType() { return transportType; }

@@ -67,22 +67,22 @@ public class OntologyCatalogTransactionService {
 
     @Transactional(readOnly = true)
     public SourcePreparation prepareSource(
-            String orgId,
+            String companyId,
             Long workspaceId,
             Long dataSourceId,
             Long expectedRevision,
             String objectKey) {
-        requireCurrentOrg(orgId);
-        OntologyWorkspaceEntity workspace = requireWorkspace(workspaceId, orgId);
+        requireCurrentOrg(companyId);
+        OntologyWorkspaceEntity workspace = requireWorkspace(workspaceId, companyId);
         verifyWorkspace(workspace, expectedRevision);
         OntologyDataSourceEntity source = dataSources
-                .findByIdAndWorkspaceIdAndOrgId(dataSourceId, workspaceId, orgId)
+                .findByIdAndWorkspaceIdAndCompanyId(dataSourceId, workspaceId, companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("ONTOLOGY_DATA_SOURCE_NOT_FOUND"));
         Long objectId = null;
         if (objectKey != null) {
             List<OntologyPhysicalObjectEntity> selected = objects
-                    .findByDataSourceIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
-                            dataSourceId, workspaceId, orgId).stream()
+                    .findByDataSourceIdAndWorkspaceIdAndCompanyIdOrderByIdAsc(
+                            dataSourceId, workspaceId, companyId).stream()
                     .filter(candidate -> Objects.equals(candidate.getObjectKey(), objectKey))
                     .toList();
             if (selected.size() != 1) {
@@ -91,7 +91,7 @@ public class OntologyCatalogTransactionService {
             objectId = selected.getFirst().getId();
         }
         return new SourcePreparation(
-                orgId,
+                companyId,
                 workspaceId,
                 expectedRevision,
                 toConfig(source),
@@ -107,8 +107,8 @@ public class OntologyCatalogTransactionService {
         OntologyWorkspaceEntity workspace = lockPrepared(prepared);
         requireSourceUnchanged(prepared);
         Map<String, OntologyPhysicalObjectEntity> existing = objects
-                .findByDataSourceIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
-                        prepared.source().id(), prepared.workspaceId(), prepared.orgId()).stream()
+                .findByDataSourceIdAndWorkspaceIdAndCompanyIdOrderByIdAsc(
+                        prepared.source().id(), prepared.workspaceId(), prepared.companyId()).stream()
                 .collect(Collectors.toMap(
                         OntologyPhysicalObjectEntity::getObjectKey,
                         Function.identity(),
@@ -120,7 +120,7 @@ public class OntologyCatalogTransactionService {
             OntologyPhysicalObjectEntity entity = existing.get(value.key());
             if (entity == null) {
                 entity = new OntologyPhysicalObjectEntity(
-                        prepared.orgId(),
+                        prepared.companyId(),
                         prepared.workspaceId(),
                         prepared.source().id(),
                         value.key(),
@@ -135,10 +135,10 @@ public class OntologyCatalogTransactionService {
         existing.values().stream()
                 .filter(entity -> !discoveredKeys.contains(entity.getObjectKey()))
                 .forEach(entity -> persistence.deleteForCurrentOrg(
-                        prepared.orgId(),
-                        () -> objects.deleteByIdAndWorkspaceIdAndOrgId(
-                                entity.getId(), prepared.workspaceId(), prepared.orgId())));
-        invalidateSourceMappings(prepared.orgId(), prepared.workspaceId(), prepared.source().id());
+                        prepared.companyId(),
+                        () -> objects.deleteByIdAndWorkspaceIdAndCompanyId(
+                                entity.getId(), prepared.workspaceId(), prepared.companyId())));
+        invalidateSourceMappings(prepared.companyId(), prepared.workspaceId(), prepared.source().id());
         workspace.advanceDraftRevision(userId);
         persistence.saveForCurrentOrg(workspace);
         return workspace.getDraftRevision();
@@ -152,14 +152,14 @@ public class OntologyCatalogTransactionService {
         OntologyWorkspaceEntity workspace = lockPrepared(prepared);
         requireSourceUnchanged(prepared);
         OntologyPhysicalObjectEntity object = objects
-                .findByIdAndWorkspaceIdAndOrgId(
-                        prepared.objectId(), prepared.workspaceId(), prepared.orgId())
+                .findByIdAndWorkspaceIdAndCompanyId(
+                        prepared.objectId(), prepared.workspaceId(), prepared.companyId())
                 .filter(candidate -> Objects.equals(
                         candidate.getObjectKey(), prepared.objectKey()))
                 .orElseThrow(() -> new ConflictException("ONTOLOGY_REVISION_CONFLICT"));
         Map<String, OntologyPhysicalFieldEntity> existing = fields
-                .findByPhysicalObjectIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
-                        object.getId(), prepared.workspaceId(), prepared.orgId()).stream()
+                .findByPhysicalObjectIdAndWorkspaceIdAndCompanyIdOrderByIdAsc(
+                        object.getId(), prepared.workspaceId(), prepared.companyId()).stream()
                 .collect(Collectors.toMap(
                         OntologyPhysicalFieldEntity::getFieldKey,
                         Function.identity(),
@@ -171,7 +171,7 @@ public class OntologyCatalogTransactionService {
             OntologyPhysicalFieldEntity entity = existing.get(value.key());
             if (entity == null) {
                 entity = new OntologyPhysicalFieldEntity(
-                        prepared.orgId(),
+                        prepared.companyId(),
                         prepared.workspaceId(),
                         object.getId(),
                         value.key(),
@@ -193,10 +193,10 @@ public class OntologyCatalogTransactionService {
         existing.values().stream()
                 .filter(entity -> !discoveredKeys.contains(entity.getFieldKey()))
                 .forEach(entity -> persistence.deleteForCurrentOrg(
-                        prepared.orgId(),
-                        () -> fields.deleteByIdAndWorkspaceIdAndOrgId(
-                                entity.getId(), prepared.workspaceId(), prepared.orgId())));
-        invalidateSourceMappings(prepared.orgId(), prepared.workspaceId(), prepared.source().id());
+                        prepared.companyId(),
+                        () -> fields.deleteByIdAndWorkspaceIdAndCompanyId(
+                                entity.getId(), prepared.workspaceId(), prepared.companyId())));
+        invalidateSourceMappings(prepared.companyId(), prepared.workspaceId(), prepared.source().id());
         workspace.advanceDraftRevision(userId);
         persistence.saveForCurrentOrg(workspace);
         return workspace.getDraftRevision();
@@ -204,27 +204,27 @@ public class OntologyCatalogTransactionService {
 
     @Transactional(readOnly = true)
     public MappingPreparation prepareMapping(
-            String orgId,
+            String companyId,
             Long workspaceId,
             Long expectedRevision,
             MappingKey key) {
-        requireCurrentOrg(orgId);
-        OntologyWorkspaceEntity workspace = requireWorkspace(workspaceId, orgId);
+        requireCurrentOrg(companyId);
+        OntologyWorkspaceEntity workspace = requireWorkspace(workspaceId, companyId);
         verifyWorkspace(workspace, expectedRevision);
         OntologyMappingEntity mapping = mappings
-                .findByWorkspaceIdAndOrgIdAndTargetTypeAndTargetKeyAndDataSourceId(
+                .findByWorkspaceIdAndCompanyIdAndTargetTypeAndTargetKeyAndDataSourceId(
                         workspaceId,
-                        orgId,
+                        companyId,
                         key.targetType(),
                         key.targetKey(),
                         key.dataSourceId())
                 .orElseThrow(() -> new ResourceNotFoundException("ONTOLOGY_MAPPING_NOT_FOUND"));
         OntologyDataSourceEntity source = dataSources
-                .findByIdAndWorkspaceIdAndOrgId(
-                        key.dataSourceId(), workspaceId, orgId)
+                .findByIdAndWorkspaceIdAndCompanyId(
+                        key.dataSourceId(), workspaceId, companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("ONTOLOGY_DATA_SOURCE_NOT_FOUND"));
         return new MappingPreparation(
-                orgId,
+                companyId,
                 workspaceId,
                 expectedRevision,
                 key,
@@ -267,7 +267,7 @@ public class OntologyCatalogTransactionService {
         Set<MappingKey> identities = new LinkedHashSet<>();
         for (MappingPreparation prepared : preparedMappings) {
             if (prepared == null
-                    || !Objects.equals(prepared.orgId(), first.orgId())
+                    || !Objects.equals(prepared.companyId(), first.companyId())
                     || !Objects.equals(prepared.workspaceId(), first.workspaceId())
                     || !Objects.equals(prepared.expectedRevision(), first.expectedRevision())
                     || !identities.add(prepared.key())) {
@@ -275,25 +275,25 @@ public class OntologyCatalogTransactionService {
             }
         }
         OntologyWorkspaceEntity workspace = workspaces
-                .findForUpdateByIdAndOrgId(first.workspaceId(), first.orgId())
+                .findForUpdateByIdAndCompanyId(first.workspaceId(), first.companyId())
                 .orElseThrow(() -> new ResourceNotFoundException("ONTOLOGY_NOT_FOUND"));
         verifyWorkspace(workspace, first.expectedRevision());
         OntologyDocument document = drafts.loadDraft(
-                first.orgId(), first.workspaceId(), workspace);
+                first.companyId(), first.workspaceId(), workspace);
         List<MappingValidation> finalValidations = new java.util.ArrayList<>();
         for (int index = 0; index < preparedMappings.size(); index++) {
             MappingPreparation prepared = preparedMappings.get(index);
             requireSourceUnchanged(new SourcePreparation(
-                    prepared.orgId(),
+                    prepared.companyId(),
                     prepared.workspaceId(),
                     prepared.expectedRevision(),
                     prepared.source(),
                     null,
                     null));
             OntologyMappingEntity mapping = mappings
-                    .findByWorkspaceIdAndOrgIdAndTargetTypeAndTargetKeyAndDataSourceId(
+                    .findByWorkspaceIdAndCompanyIdAndTargetTypeAndTargetKeyAndDataSourceId(
                             prepared.workspaceId(),
-                            prepared.orgId(),
+                            prepared.companyId(),
                             prepared.key().targetType(),
                             prepared.key().targetKey(),
                             prepared.key().dataSourceId())
@@ -303,7 +303,7 @@ public class OntologyCatalogTransactionService {
             }
             MappingValidation adapterValidation = adapterValidations.get(index);
             MappingValidation integrityValidation = integrity.validate(
-                    prepared.orgId(), prepared.workspaceId(), document, prepared.mapping());
+                    prepared.companyId(), prepared.workspaceId(), document, prepared.mapping());
             MappingValidation finalValidation = adapterValidation != null
                     && adapterValidation.valid()
                     && integrityValidation.valid()
@@ -322,7 +322,7 @@ public class OntologyCatalogTransactionService {
 
     private OntologyWorkspaceEntity lockPrepared(SourcePreparation prepared) {
         OntologyWorkspaceEntity workspace = workspaces
-                .findForUpdateByIdAndOrgId(prepared.workspaceId(), prepared.orgId())
+                .findForUpdateByIdAndCompanyId(prepared.workspaceId(), prepared.companyId())
                 .orElseThrow(() -> new ResourceNotFoundException("ONTOLOGY_NOT_FOUND"));
         verifyWorkspace(workspace, prepared.expectedRevision());
         return workspace;
@@ -330,8 +330,8 @@ public class OntologyCatalogTransactionService {
 
     private void requireSourceUnchanged(SourcePreparation prepared) {
         DataSourceConfig current = dataSources
-                .findByIdAndWorkspaceIdAndOrgId(
-                        prepared.source().id(), prepared.workspaceId(), prepared.orgId())
+                .findByIdAndWorkspaceIdAndCompanyId(
+                        prepared.source().id(), prepared.workspaceId(), prepared.companyId())
                 .map(this::toConfig)
                 .orElseThrow(() -> new ConflictException("ONTOLOGY_REVISION_CONFLICT"));
         if (!Objects.equals(current, prepared.source())) {
@@ -339,8 +339,8 @@ public class OntologyCatalogTransactionService {
         }
     }
 
-    private void invalidateSourceMappings(String orgId, Long workspaceId, Long dataSourceId) {
-        mappings.findByWorkspaceIdAndOrgIdOrderByIdAsc(workspaceId, orgId).stream()
+    private void invalidateSourceMappings(String companyId, Long workspaceId, Long dataSourceId) {
+        mappings.findByWorkspaceIdAndCompanyIdOrderByIdAsc(workspaceId, companyId).stream()
                 .filter(mapping -> Objects.equals(mapping.getDataSourceId(), dataSourceId))
                 .forEach(mapping -> {
                     mapping.markPending();
@@ -348,8 +348,8 @@ public class OntologyCatalogTransactionService {
                 });
     }
 
-    private OntologyWorkspaceEntity requireWorkspace(Long workspaceId, String orgId) {
-        return workspaces.findByIdAndOrgId(workspaceId, orgId)
+    private OntologyWorkspaceEntity requireWorkspace(Long workspaceId, String companyId) {
+        return workspaces.findByIdAndCompanyId(workspaceId, companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("ONTOLOGY_NOT_FOUND"));
     }
 
@@ -408,14 +408,14 @@ public class OntologyCatalogTransactionService {
                 && Double.compare(left.confidence(), right.confidence()) == 0;
     }
 
-    private void requireCurrentOrg(String orgId) {
-        if (!Objects.equals(TenantContext.requireOrgId(), orgId)) {
+    private void requireCurrentOrg(String companyId) {
+        if (!Objects.equals(TenantContext.requireCompanyId(), companyId)) {
             throw new ResourceNotFoundException("ONTOLOGY_NOT_FOUND");
         }
     }
 
     public record SourcePreparation(
-            String orgId,
+            String companyId,
             Long workspaceId,
             Long expectedRevision,
             DataSourceConfig source,
@@ -424,7 +424,7 @@ public class OntologyCatalogTransactionService {
     }
 
     public record MappingPreparation(
-            String orgId,
+            String companyId,
             Long workspaceId,
             Long expectedRevision,
             MappingKey key,

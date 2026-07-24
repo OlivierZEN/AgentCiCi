@@ -1,7 +1,7 @@
 package com.codehouse.ciciassistant.auth.config;
 
-import com.codehouse.ciciassistant.auth.domain.OrgEntity;
-import com.codehouse.ciciassistant.auth.domain.OrgRepository;
+import com.codehouse.ciciassistant.auth.domain.CompanyEntity;
+import com.codehouse.ciciassistant.auth.domain.CompanyRepository;
 import com.codehouse.ciciassistant.auth.domain.PlatformAccountEntity;
 import com.codehouse.ciciassistant.auth.domain.PlatformAccountRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,9 +14,9 @@ import org.springframework.context.annotation.Configuration;
 public class AuthBootstrapData {
 
     @Bean
-    CommandLineRunner bootstrapOrg(OrgRepository orgRepository) {
-        return args -> orgRepository.findById("demo-org")
-                .orElseGet(() -> orgRepository.save(new OrgEntity("demo-org", "Demo Organization", "ACTIVE")));
+    CommandLineRunner bootstrapOrg(CompanyRepository companyRepository) {
+        return args -> companyRepository.findById("demo-org")
+                .orElseGet(() -> companyRepository.save(new CompanyEntity("demo-org", "Demo Company", "ACTIVE")));
     }
 
     @Bean

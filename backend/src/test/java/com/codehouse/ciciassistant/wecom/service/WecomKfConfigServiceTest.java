@@ -28,8 +28,8 @@ class WecomKfConfigServiceTest {
                 cipherService,
                 agentDefinitionService,
                 agentDefinitionRepository);
-        when(accountRepository.findByOrgIdAndOpenKfId("org-1", "wk-demo")).thenReturn(Optional.empty());
-        when(agentDefinitionRepository.findByOrgIdAndAgentId("org-1", "after-sales-agent"))
+        when(accountRepository.findByCompanyIdAndOpenKfId("org-1", "wk-demo")).thenReturn(Optional.empty());
+        when(agentDefinitionRepository.findByCompanyIdAndAgentId("org-1", "after-sales-agent"))
                 .thenReturn(Optional.of(new AgentDefinitionEntity(
                         "org-1",
                         "after-sales-agent",
@@ -91,7 +91,7 @@ class WecomKfConfigServiceTest {
                 cipherService,
                 agentDefinitionService,
                 agentDefinitionRepository);
-        when(accountRepository.findByIdAndOrgId(7L, "org-1")).thenReturn(Optional.of(account));
+        when(accountRepository.findByIdAndCompanyId(7L, "org-1")).thenReturn(Optional.of(account));
 
         WecomKfConfigService.ResolvedAccount resolved = service.resolveAccount("org-1", 7L);
 

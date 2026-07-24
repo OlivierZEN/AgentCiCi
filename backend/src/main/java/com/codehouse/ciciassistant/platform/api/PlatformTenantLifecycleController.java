@@ -59,26 +59,26 @@ public class PlatformTenantLifecycleController {
                 actorRole()));
     }
 
-    @PostMapping("/{orgId}/semattice-provisionings")
+    @PostMapping("/{companyId}/semattice-provisionings")
     @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<SematticeProvisioningClient.ProvisioningView> provisionSemattice(
-            @PathVariable @Pattern(regexp = "^org[a-z0-9]{17}$") String orgId,
+            @PathVariable @Pattern(regexp = "^org[a-z0-9]{17}$") String companyId,
             @Valid @RequestBody SematticeProvisioningRequest request) {
-        return ApiResponse.ok(sematticeProvisioningClient.provision(orgId, request.idempotencyKey(), request.displayName(),
+        return ApiResponse.ok(sematticeProvisioningClient.provision(companyId, request.idempotencyKey(), request.displayName(),
                 request.serviceTier(), request.entitlements()));
     }
 
-    @GetMapping("/{orgId}/retention")
-    public ApiResponse<PlatformTenantLifecycleService.TenantRetentionDetailView> getRetention(@PathVariable String orgId) {
-        return ApiResponse.ok(tenantLifecycleService.getRetentionDetail(orgId));
+    @GetMapping("/{companyId}/retention")
+    public ApiResponse<PlatformTenantLifecycleService.TenantRetentionDetailView> getRetention(@PathVariable String companyId) {
+        return ApiResponse.ok(tenantLifecycleService.getRetentionDetail(companyId));
     }
 
-    @PatchMapping("/{orgId}/retention")
+    @PatchMapping("/{companyId}/retention")
     @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<PlatformTenantLifecycleService.TenantRetentionDetailView> updateRetention(
-            @PathVariable String orgId,
+            @PathVariable String companyId,
             @Valid @RequestBody RetentionPolicyRequest request) {
-        return ApiResponse.ok(tenantLifecycleService.updateRetention(orgId,
+        return ApiResponse.ok(tenantLifecycleService.updateRetention(companyId,
                 new PlatformTenantLifecycleService.RetentionUpdateCommand(
                         request.graceUntil(),
                         request.suspendUntil(),
@@ -95,39 +95,39 @@ public class PlatformTenantLifecycleController {
                 actorRole()));
     }
 
-    @PostMapping("/{orgId}/suspend")
+    @PostMapping("/{companyId}/suspend")
     @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<PlatformTenantLifecycleService.TenantLifecycleView> suspendTenant(
-            @PathVariable String orgId,
+            @PathVariable String companyId,
             @RequestBody(required = false) LifecycleActionRequest request) {
-        return ApiResponse.ok(tenantLifecycleService.suspendTenant(orgId, actorId(), actorRole(),
+        return ApiResponse.ok(tenantLifecycleService.suspendTenant(companyId, actorId(), actorRole(),
                 request == null ? null : request.reason()));
     }
 
-    @PostMapping("/{orgId}/resume")
+    @PostMapping("/{companyId}/resume")
     @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<PlatformTenantLifecycleService.TenantLifecycleView> resumeTenant(
-            @PathVariable String orgId,
+            @PathVariable String companyId,
             @RequestBody(required = false) LifecycleActionRequest request) {
-        return ApiResponse.ok(tenantLifecycleService.resumeTenant(orgId, actorId(), actorRole(),
+        return ApiResponse.ok(tenantLifecycleService.resumeTenant(companyId, actorId(), actorRole(),
                 request == null ? null : request.reason()));
     }
 
-    @PostMapping("/{orgId}/pending-purge")
+    @PostMapping("/{companyId}/pending-purge")
     @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<PlatformTenantLifecycleService.TenantLifecycleView> markPendingPurge(
-            @PathVariable String orgId,
+            @PathVariable String companyId,
             @RequestBody(required = false) LifecycleActionRequest request) {
-        return ApiResponse.ok(tenantLifecycleService.markPendingPurge(orgId, actorId(), actorRole(),
+        return ApiResponse.ok(tenantLifecycleService.markPendingPurge(companyId, actorId(), actorRole(),
                 request == null ? null : request.reason()));
     }
 
-    @PostMapping("/{orgId}/purge-jobs")
+    @PostMapping("/{companyId}/purge-jobs")
     @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<PlatformTenantLifecycleService.PurgeJobView> createPurgeJob(
-            @PathVariable String orgId,
+            @PathVariable String companyId,
             @Valid @RequestBody PurgeJobRequest request) {
-        return ApiResponse.ok(tenantLifecycleService.createPurgeJob(orgId,
+        return ApiResponse.ok(tenantLifecycleService.createPurgeJob(companyId,
                 new PlatformTenantLifecycleService.PurgeJobCreateCommand(
                         request.dryRun(),
                         request.reason(),
@@ -138,20 +138,20 @@ public class PlatformTenantLifecycleController {
                 actorRole()));
     }
 
-    @GetMapping("/{orgId}/purge-jobs/{jobId}")
+    @GetMapping("/{companyId}/purge-jobs/{jobId}")
     public ApiResponse<PlatformTenantLifecycleService.PurgeJobView> getPurgeJob(
-            @PathVariable String orgId,
+            @PathVariable String companyId,
             @PathVariable Long jobId) {
-        return ApiResponse.ok(tenantLifecycleService.getPurgeJob(orgId, jobId));
+        return ApiResponse.ok(tenantLifecycleService.getPurgeJob(companyId, jobId));
     }
 
-    @PostMapping("/{orgId}/purge-jobs/{jobId}/retry")
+    @PostMapping("/{companyId}/purge-jobs/{jobId}/retry")
     @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<PlatformTenantLifecycleService.PurgeJobView> retryPurgeJob(
-            @PathVariable String orgId,
+            @PathVariable String companyId,
             @PathVariable Long jobId,
             @RequestBody(required = false) PurgeJobRetryRequest request) {
-        return ApiResponse.ok(tenantLifecycleService.retryPurgeJob(orgId,
+        return ApiResponse.ok(tenantLifecycleService.retryPurgeJob(companyId,
                 jobId,
                 new PlatformTenantLifecycleService.PurgeJobRetryCommand(
                         request == null ? null : request.confirmationText(),
@@ -161,42 +161,42 @@ public class PlatformTenantLifecycleController {
                 actorRole()));
     }
 
-    @PostMapping("/{orgId}/purge-jobs/{jobId}/cancel")
+    @PostMapping("/{companyId}/purge-jobs/{jobId}/cancel")
     @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<PlatformTenantLifecycleService.PurgeJobView> cancelPurgeJob(
-            @PathVariable String orgId,
+            @PathVariable String companyId,
             @PathVariable Long jobId,
             @RequestBody(required = false) LifecycleActionRequest request) {
-        return ApiResponse.ok(tenantLifecycleService.cancelPurgeJob(orgId,
+        return ApiResponse.ok(tenantLifecycleService.cancelPurgeJob(companyId,
                 jobId,
                 actorId(),
                 actorRole(),
                 request == null ? null : request.reason()));
     }
 
-    @PostMapping("/{orgId}/export-jobs")
+    @PostMapping("/{companyId}/export-jobs")
     @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<PlatformTenantLifecycleService.ExportJobView> createExportJob(
-            @PathVariable String orgId,
+            @PathVariable String companyId,
             @RequestBody(required = false) ExportJobRequest request) {
-        return ApiResponse.ok(tenantLifecycleService.createExportJob(orgId, actorId(), actorRole(),
+        return ApiResponse.ok(tenantLifecycleService.createExportJob(companyId, actorId(), actorRole(),
                 request == null ? null : request.reason()));
     }
 
-    @GetMapping("/{orgId}/export-jobs")
-    public ApiResponse<List<PlatformTenantLifecycleService.ExportJobView>> listExportJobs(@PathVariable String orgId) {
-        return ApiResponse.ok(tenantLifecycleService.listExportJobs(orgId, true));
+    @GetMapping("/{companyId}/export-jobs")
+    public ApiResponse<List<PlatformTenantLifecycleService.ExportJobView>> listExportJobs(@PathVariable String companyId) {
+        return ApiResponse.ok(tenantLifecycleService.listExportJobs(companyId, true));
     }
 
-    @GetMapping("/{orgId}/export-jobs/{jobId}")
+    @GetMapping("/{companyId}/export-jobs/{jobId}")
     public ApiResponse<PlatformTenantLifecycleService.ExportJobView> getExportJob(
-            @PathVariable String orgId,
+            @PathVariable String companyId,
             @PathVariable Long jobId) {
-        return ApiResponse.ok(tenantLifecycleService.getExportJob(orgId, jobId, true));
+        return ApiResponse.ok(tenantLifecycleService.getExportJob(companyId, jobId, true));
     }
 
-    @GetMapping("/{orgId}/export-jobs/{jobId}/download")
-    public ResponseEntity<ApiResponse<Void>> rejectPlatformExportDownload(@PathVariable String orgId,
+    @GetMapping("/{companyId}/export-jobs/{jobId}/download")
+    public ResponseEntity<ApiResponse<Void>> rejectPlatformExportDownload(@PathVariable String companyId,
                                                                           @PathVariable Long jobId) {
         return ResponseEntity.status(403)
                 .contentType(MediaType.APPLICATION_JSON)

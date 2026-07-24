@@ -37,14 +37,14 @@ public class AssistantScheduleToolService {
                                 "required", List.of("cadence", "task"))));
     }
 
-    public String dispatch(String orgId, String userId, String agentId, String argumentsJson) {
+    public String dispatch(String companyId, String userId, String agentId, String argumentsJson) {
         if (agentId == null || agentId.isBlank()) {
             return "创建定时任务失败：缺少当前智能体上下文。";
         }
         try {
             JsonNode args = objectMapper.readTree(argumentsJson == null ? "{}" : argumentsJson);
             UserWorkflowService.AssistantScheduleResult result = workflowServiceProvider.getObject()
-                    .createScheduledRoutine(orgId, userId, agentId,
+                    .createScheduledRoutine(companyId, userId, agentId,
                             args.path("title").asText(""),
                             args.path("cadence").asText(""),
                             args.path("task").asText(""));

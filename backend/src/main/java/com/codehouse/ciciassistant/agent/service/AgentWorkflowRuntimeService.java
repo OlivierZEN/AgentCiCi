@@ -39,18 +39,18 @@ public class AgentWorkflowRuntimeService {
         this.agentWorkflowSkillRefService = agentWorkflowSkillRefService;
     }
 
-    public DebugRuntimeResult debug(String orgId, String agentId, String input,
+    public DebugRuntimeResult debug(String companyId, String agentId, String input,
                                     List<String> requestedKnowledgeBaseIds, List<String> skillRefs) {
         long startedNanos = System.nanoTime();
         AgentCapabilityResolverService.AgentCapabilityResolution capability = capabilityResolverService.resolve(
-                orgId, agentId, skillRefs == null ? List.of() : skillRefs);
-        Optional<AgentWorkflowVersionEntity> publishedVersion = resolvePublishedVersion(orgId, capability.agentId());
+                companyId, agentId, skillRefs == null ? List.of() : skillRefs);
+        Optional<AgentWorkflowVersionEntity> publishedVersion = resolvePublishedVersion(companyId, capability.agentId());
         PlatformGovernanceService.RuntimePolicyBundle policyBundle =
-                platformGovernanceService.resolvePublishedPolicyBundle(orgId);
+                platformGovernanceService.resolvePublishedPolicyBundle(companyId);
         String runtimeSource = publishedVersion.isPresent() ? "published_version" : "capability_fallback";
-        RuntimeResolution runtimeResolution = resolveRuntimeResolution(orgId, capability, publishedVersion.orElse(null));
+        RuntimeResolution runtimeResolution = resolveRuntimeResolution(companyId, capability, publishedVersion.orElse(null));
         List<RuntimeSkillGovernanceView> resolvedSkillVersions = buildRuntimeSkillGovernanceViews(
-                orgId, capability.agentId(), capability, publishedVersion.orElse(null));
+                companyId, capability.agentId(), capability, publishedVersion.orElse(null));
         RuntimePolicyBundleView policyBundleView = new RuntimePolicyBundleView(
                 policyBundle.bundleCode(),
                 policyBundle.versionNo(),
@@ -103,12 +103,12 @@ public class AgentWorkflowRuntimeService {
                 executionResult.trace(),
                 executionResult.contextSnapshot()
         );
-        appendTryRunLog(orgId, capability.agentId(), publishedVersion, executionResult, startedNanos);
+        appendTryRunLog(companyId, capability.agentId(), publishedVersion, executionResult, startedNanos);
         return result;
     }
 
     private void appendTryRunLog(
-            String orgId,
+            String companyId,
             String agentId,
             Optional<AgentWorkflowVersionEntity> publishedVersion,
             ExecutionResult executionResult,
@@ -121,7 +121,7 @@ public class AgentWorkflowRuntimeService {
             String out = executionResult.output() == null ? "" : executionResult.output();
             String summary = "TRY_RUN status=" + executionResult.status() + " · " + truncate(out, 400);
             executionLogService.append(
-                    orgId,
+                    companyId,
                     agentId,
                     versionPk,
                     versionNo,
@@ -142,10 +142,10 @@ public class AgentWorkflowRuntimeService {
         return text.substring(0, max - 1) + "…";
     }
 
-    public RuntimeExecutionResult evaluateForChat(String orgId, String agentId, String input, List<String> effectiveToolNames) {
-        Optional<AgentWorkflowVersionEntity> publishedVersion = resolvePublishedVersion(orgId, agentId);
+    public RuntimeExecutionResult evaluateForChat(String companyId, String agentId, String input, List<String> effectiveToolNames) {
+        Optional<AgentWorkflowVersionEntity> publishedVersion = resolvePublishedVersion(companyId, agentId);
         PlatformGovernanceService.RuntimePolicyBundle policyBundle =
-                platformGovernanceService.resolvePublishedPolicyBundle(orgId);
+                platformGovernanceService.resolvePublishedPolicyBundle(companyId);
         ExecutionResult executionResult = executeWorkflow(
                 publishedVersion.orElse(null),
                 input,
@@ -156,7 +156,7 @@ public class AgentWorkflowRuntimeService {
                 executionResult.status(),
                 executionResult.output(),
                 publishedVersion.map(AgentWorkflowVersionEntity::getId).orElse(null),
-                buildRuntimeSkillGovernanceViews(orgId, agentId, null, publishedVersion.orElse(null)),
+                buildRuntimeSkillGovernanceViews(companyId, agentId, null, publishedVersion.orElse(null)),
                 new RuntimePolicyBundleView(
                         policyBundle.bundleCode(),
                         policyBundle.versionNo(),
@@ -168,15 +168,15 @@ public class AgentWorkflowRuntimeService {
         );
     }
 
-    public RuntimeExecutionResult evaluateVersionForEvaluation(String orgId, String agentId, Integer versionNo, String input) {
+    public RuntimeExecutionResult evaluateVersionForEvaluation(String companyId, String agentId, Integer versionNo, String input) {
         AgentWorkflowVersionEntity targetVersion = agentWorkflowVersionRepository
-                .findByOrgIdAndAgentIdAndVersionNo(orgId, agentId, versionNo)
+                .findByCompanyIdAndAgentIdAndVersionNo(companyId, agentId, versionNo)
                 .orElseThrow(() -> new IllegalArgumentException("Agent workflow version not found"));
         AgentCapabilityResolverService.AgentCapabilityResolution capability =
-                capabilityResolverService.resolve(orgId, agentId, List.of());
-        RuntimeResolution runtimeResolution = resolveRuntimeResolution(orgId, capability, targetVersion);
+                capabilityResolverService.resolve(companyId, agentId, List.of());
+        RuntimeResolution runtimeResolution = resolveRuntimeResolution(companyId, capability, targetVersion);
         PlatformGovernanceService.RuntimePolicyBundle policyBundle =
-                platformGovernanceService.resolvePublishedPolicyBundle(orgId);
+                platformGovernanceService.resolvePublishedPolicyBundle(companyId);
         ExecutionResult executionResult = executeWorkflow(
                 targetVersion,
                 input,
@@ -184,7 +184,7 @@ public class AgentWorkflowRuntimeService {
                 policyBundle
         );
         List<RuntimeSkillGovernanceView> resolvedSkillVersions =
-                buildRuntimeSkillGovernanceViews(orgId, agentId, capability, targetVersion);
+                buildRuntimeSkillGovernanceViews(companyId, agentId, capability, targetVersion);
         executionResult.contextSnapshot().put("runMode", "EVALUATION");
         executionResult.contextSnapshot().put("evaluationVersionNo", targetVersion.getVersionNo());
         executionResult.contextSnapshot().put("resolvedSkillVersions", resolvedSkillVersions);
@@ -210,20 +210,20 @@ public class AgentWorkflowRuntimeService {
         );
     }
 
-    private List<RuntimeSkillGovernanceView> buildRuntimeSkillGovernanceViews(String orgId,
+    private List<RuntimeSkillGovernanceView> buildRuntimeSkillGovernanceViews(String companyId,
                                                                               String agentId,
                                                                               AgentCapabilityResolverService.AgentCapabilityResolution capability,
                                                                               AgentWorkflowVersionEntity publishedVersion) {
         RuntimeResolution runtimeResolution = resolveRuntimeResolution(
-                orgId,
+                companyId,
                 capability == null
-                        ? capabilityResolverService.resolve(orgId, agentId, List.of())
+                        ? capabilityResolverService.resolve(companyId, agentId, List.of())
                         : capability,
                 publishedVersion
         );
         List<AgentWorkflowSkillRefService.RuntimeSkillRef> pinnedSkillRefs = publishedVersion == null || publishedVersion.getId() == null
                 ? List.of()
-                : agentWorkflowSkillRefService.listRuntimeSkillRefs(orgId, publishedVersion.getId());
+                : agentWorkflowSkillRefService.listRuntimeSkillRefs(companyId, publishedVersion.getId());
         if (!pinnedSkillRefs.isEmpty()) {
             return pinnedSkillRefs.stream()
                     .map(AgentWorkflowRuntimeService::toRuntimeSkillGovernanceView)
@@ -298,13 +298,13 @@ public class AgentWorkflowRuntimeService {
         return count;
     }
 
-    private Optional<AgentWorkflowVersionEntity> resolvePublishedVersion(String orgId, String agentId) {
-        Optional<AgentDefinitionEntity> definition = agentDefinitionRepository.findByOrgIdAndAgentId(orgId, agentId);
+    private Optional<AgentWorkflowVersionEntity> resolvePublishedVersion(String companyId, String agentId) {
+        Optional<AgentDefinitionEntity> definition = agentDefinitionRepository.findByCompanyIdAndAgentId(companyId, agentId);
         if (definition.isEmpty() || definition.get().getPublishedVersionId() == null) {
             return Optional.empty();
         }
         return agentWorkflowVersionRepository.findById(definition.get().getPublishedVersionId())
-                .filter(item -> orgId.equals(item.getOrgId()) && agentId.equals(item.getAgentId()))
+                .filter(item -> companyId.equals(item.getCompanyId()) && agentId.equals(item.getAgentId()))
                 .filter(item -> "PUBLISHED".equalsIgnoreCase(item.getPublishStatus()));
     }
 
@@ -324,7 +324,7 @@ public class AgentWorkflowRuntimeService {
         return executeWorkflow(publishedVersion, input, capability.effectiveToolNames(), policyBundle);
     }
 
-    private RuntimeResolution resolveRuntimeResolution(String orgId,
+    private RuntimeResolution resolveRuntimeResolution(String companyId,
                                                        AgentCapabilityResolverService.AgentCapabilityResolution capability,
                                                        AgentWorkflowVersionEntity publishedVersion) {
         if (publishedVersion == null || publishedVersion.getId() == null) {
@@ -338,7 +338,7 @@ public class AgentWorkflowRuntimeService {
             );
         }
         List<AgentWorkflowSkillRefService.RuntimeSkillRef> pinnedSkillRefs =
-                agentWorkflowSkillRefService.listRuntimeSkillRefs(orgId, publishedVersion.getId());
+                agentWorkflowSkillRefService.listRuntimeSkillRefs(companyId, publishedVersion.getId());
         if (pinnedSkillRefs.isEmpty()) {
             return new RuntimeResolution(
                     capability.effectiveSkillCodes(),

@@ -1,13 +1,13 @@
-package com.codehouse.ciciassistant.organization;
+package com.codehouse.ciciassistant.company;
 
 import com.codehouse.ciciassistant.auth.RoleCodes;
-import com.codehouse.ciciassistant.auth.domain.OrgEntity;
-import com.codehouse.ciciassistant.auth.domain.OrgRepository;
+import com.codehouse.ciciassistant.auth.domain.CompanyEntity;
+import com.codehouse.ciciassistant.auth.domain.CompanyRepository;
 import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.auth.domain.UserRepository;
 import com.codehouse.ciciassistant.ops.service.AuditService;
-import com.codehouse.ciciassistant.platform.domain.OrganizationExportJobEntity;
-import com.codehouse.ciciassistant.platform.domain.OrganizationExportJobRepository;
+import com.codehouse.ciciassistant.platform.domain.CompanyExportJobEntity;
+import com.codehouse.ciciassistant.platform.domain.CompanyExportJobRepository;
 import java.net.URI;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -19,22 +19,22 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class AdminOrganizationProfileService {
+public class AdminCompanyProfileService {
 
-    private final OrgRepository orgRepository;
-    private final OrganizationProfileRepository profileRepository;
+    private final CompanyRepository companyRepository;
+    private final CompanyProfileRepository profileRepository;
     private final UserRepository userRepository;
-    private final OrganizationExportJobRepository exportJobRepository;
+    private final CompanyExportJobRepository exportJobRepository;
     private final AuditService auditService;
     private final JdbcTemplate jdbcTemplate;
 
-    public AdminOrganizationProfileService(OrgRepository orgRepository,
-                                           OrganizationProfileRepository profileRepository,
+    public AdminCompanyProfileService(CompanyRepository companyRepository,
+                                           CompanyProfileRepository profileRepository,
                                            UserRepository userRepository,
-                                           OrganizationExportJobRepository exportJobRepository,
+                                           CompanyExportJobRepository exportJobRepository,
                                            AuditService auditService,
                                            JdbcTemplate jdbcTemplate) {
-        this.orgRepository = orgRepository;
+        this.companyRepository = companyRepository;
         this.profileRepository = profileRepository;
         this.userRepository = userRepository;
         this.exportJobRepository = exportJobRepository;
@@ -43,18 +43,18 @@ public class AdminOrganizationProfileService {
     }
 
     @Transactional(readOnly = true)
-    public OrganizationProfileView getProfile(String orgId) {
-        OrgEntity org = requireOrg(orgId);
-        OrganizationProfileEntity profile = profileRepository.findById(orgId).orElse(null);
+    public CompanyProfileView getProfile(String companyId) {
+        CompanyEntity org = requireCompany(companyId);
+        CompanyProfileEntity profile = profileRepository.findById(companyId).orElse(null);
         return toView(org, profile);
     }
 
     @Transactional
-    public OrganizationProfileView updateProfile(String orgId, String actorId, ProfileUpdateCommand command) {
+    public CompanyProfileView updateProfile(String companyId, String actorId, ProfileUpdateCommand command) {
         if (command == null) {
             throw new IllegalArgumentException("请求体不能为空");
         }
-        if (command.orgId() != null) {
+        if (command.companyId() != null) {
             throw new IllegalArgumentException("组织 ID 是系统标识，不允许修改");
         }
         String name = required(command.name(), "组织名称", 2, 128);
@@ -64,20 +64,20 @@ public class AdminOrganizationProfileService {
         validateEmail(command.contactEmail());
         validateWebsite(command.website());
         validateOptional(command.industry(), "行业", 128);
-        validateOptional(command.organizationSize(), "组织规模", 64);
+        validateOptional(command.companySize(), "组织规模", 64);
         String timezone = command.timezone() == null || command.timezone().isBlank()
                 ? "Asia/Shanghai"
                 : command.timezone().trim();
         validateTimezone(timezone);
         validateOptional(command.notes(), "备注", 4000);
 
-        OrgEntity org = requireOrg(orgId);
+        CompanyEntity org = requireCompany(companyId);
         String oldName = org.getName();
         org.setName(name);
-        orgRepository.save(org);
+        companyRepository.save(org);
 
-        OrganizationProfileEntity profile = profileRepository.findById(orgId)
-                .orElseGet(() -> new OrganizationProfileEntity(orgId, actorId));
+        CompanyProfileEntity profile = profileRepository.findById(companyId)
+                .orElseGet(() -> new CompanyProfileEntity(companyId, actorId));
         profile.update(new ProfileUpdateCommand(
                 null,
                 name,
@@ -87,34 +87,34 @@ public class AdminOrganizationProfileService {
                 command.contactEmail(),
                 command.website(),
                 command.industry(),
-                command.organizationSize(),
+                command.companySize(),
                 timezone,
                 command.notes()
         ), actorId);
         profileRepository.save(profile);
 
-        auditService.log(orgId, actorId, "organization.profile.update", auditDetail(oldName, name, command));
+        auditService.log(companyId, actorId, "company.profile.update", auditDetail(oldName, name, command));
         if (!Objects.equals(oldName, name)) {
-            auditService.log(orgId, actorId, "organization.name.update",
+            auditService.log(companyId, actorId, "company.name.update",
                     "name: old=\"" + safeAudit(oldName) + "\", new=\"" + safeAudit(name) + "\"");
         }
         return toView(org, profile);
     }
 
-    private OrganizationProfileView toView(OrgEntity org, OrganizationProfileEntity profile) {
+    private CompanyProfileView toView(CompanyEntity org, CompanyProfileEntity profile) {
         OwnerView owner = userRepository
-                .findFirstByOrg_IdAndRoleCodeAndMemberStatusOrderByCreatedAtAsc(
+                .findFirstByCompany_IdAndRoleCodeAndMemberStatusOrderByCreatedAtAsc(
                         org.getId(), RoleCodes.OWNER, UserEntity.STATUS_ACTIVE)
-                .map(AdminOrganizationProfileService::ownerView)
+                .map(AdminCompanyProfileService::ownerView)
                 .orElse(null);
-        long memberCount = userRepository.countByOrg_IdAndMemberStatus(org.getId(), UserEntity.STATUS_ACTIVE);
-        List<ExportJobSummary> recentExportJobs = exportJobRepository.findTop20ByOrgIdOrderByCreatedAtDesc(org.getId())
+        long memberCount = userRepository.countByCompany_IdAndMemberStatus(org.getId(), UserEntity.STATUS_ACTIVE);
+        List<ExportJobSummary> recentExportJobs = exportJobRepository.findTop20ByCompanyIdOrderByCreatedAtDesc(org.getId())
                 .stream()
                 .limit(5)
-                .map(AdminOrganizationProfileService::exportSummary)
+                .map(AdminCompanyProfileService::exportSummary)
                 .toList();
         UsageSummary usageSummary = usageSummary(org.getId(), memberCount);
-        return new OrganizationProfileView(
+        return new CompanyProfileView(
                 org.getId(),
                 org.getName(),
                 value(profile == null ? null : profile.getShortName()),
@@ -124,7 +124,7 @@ public class AdminOrganizationProfileService {
                 value(profile == null ? null : profile.getContactEmail()),
                 value(profile == null ? null : profile.getWebsite()),
                 value(profile == null ? null : profile.getIndustry()),
-                value(profile == null ? null : profile.getOrganizationSize()),
+                value(profile == null ? null : profile.getCompanySize()),
                 value(profile == null ? "Asia/Shanghai" : profile.getTimezone()),
                 value(profile == null ? null : profile.getNotes()),
                 owner,
@@ -137,34 +137,34 @@ public class AdminOrganizationProfileService {
         );
     }
 
-    private UsageSummary usageSummary(String orgId, long activeUserCount) {
+    private UsageSummary usageSummary(String companyId, long activeUserCount) {
         return new UsageSummary(
                 activeUserCount,
-                count("SELECT COUNT(*) FROM organization_member WHERE org_id = ?", orgId),
-                count("SELECT COUNT(*) FROM knowledge_base WHERE org_id = ? AND (deleted_at IS NULL) AND status <> 'DELETED'", orgId),
+                count("SELECT COUNT(*) FROM company_member WHERE company_id = ?", companyId),
+                count("SELECT COUNT(*) FROM knowledge_base WHERE company_id = ? AND (deleted_at IS NULL) AND status <> 'DELETED'", companyId),
                 count("""
                         SELECT COUNT(*)
                         FROM kb_document
-                        WHERE org_id = ?
+                        WHERE company_id = ?
                             AND enabled = TRUE
                             AND archived = FALSE
                             AND deleted_at IS NULL
                             AND status <> 'DELETED'
-                        """, orgId),
-                count("SELECT COUNT(*) FROM skill_definition WHERE org_id = ? AND enabled = TRUE", orgId),
-                count("SELECT COUNT(*) FROM agent_definition WHERE org_id = ? AND enabled = TRUE", orgId),
-                count("SELECT COUNT(*) FROM agent_definition WHERE org_id = ? AND enabled = TRUE AND published_version_id IS NOT NULL", orgId),
-                count("SELECT COUNT(*) FROM organization_export_job WHERE org_id = ?", orgId)
+                        """, companyId),
+                count("SELECT COUNT(*) FROM skill_definition WHERE company_id = ? AND enabled = TRUE", companyId),
+                count("SELECT COUNT(*) FROM agent_definition WHERE company_id = ? AND enabled = TRUE", companyId),
+                count("SELECT COUNT(*) FROM agent_definition WHERE company_id = ? AND enabled = TRUE AND published_version_id IS NOT NULL", companyId),
+                count("SELECT COUNT(*) FROM company_export_job WHERE company_id = ?", companyId)
         );
     }
 
-    private long count(String sql, String orgId) {
-        Long value = jdbcTemplate.queryForObject(sql, Long.class, orgId);
+    private long count(String sql, String companyId) {
+        Long value = jdbcTemplate.queryForObject(sql, Long.class, companyId);
         return value == null ? 0 : value;
     }
 
-    private OrgEntity requireOrg(String orgId) {
-        return orgRepository.findById(orgId)
+    private CompanyEntity requireCompany(String companyId) {
+        return companyRepository.findById(companyId)
                 .orElseThrow(() -> new IllegalArgumentException("组织不存在"));
     }
 
@@ -178,7 +178,7 @@ public class AdminOrganizationProfileService {
         return new OwnerView(user.getId(), displayName, value(user.getMobile()));
     }
 
-    private static ExportJobSummary exportSummary(OrganizationExportJobEntity job) {
+    private static ExportJobSummary exportSummary(CompanyExportJobEntity job) {
         return new ExportJobSummary(
                 job.getId(),
                 job.getStatus(),
@@ -275,7 +275,7 @@ public class AdminOrganizationProfileService {
     }
 
     public record ProfileUpdateCommand(
-            String orgId,
+            String companyId,
             String name,
             String shortName,
             String contactName,
@@ -283,14 +283,14 @@ public class AdminOrganizationProfileService {
             String contactEmail,
             String website,
             String industry,
-            String organizationSize,
+            String companySize,
             String timezone,
             String notes
     ) {
     }
 
-    public record OrganizationProfileView(
-            String orgId,
+    public record CompanyProfileView(
+            String companyId,
             String name,
             String shortName,
             String status,
@@ -299,7 +299,7 @@ public class AdminOrganizationProfileService {
             String contactEmail,
             String website,
             String industry,
-            String organizationSize,
+            String companySize,
             String timezone,
             String notes,
             OwnerView owner,

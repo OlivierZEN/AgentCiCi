@@ -6,10 +6,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PlatformSkillTemplateVersionRepository extends JpaRepository<PlatformSkillTemplateVersionEntity, Long> {
 
-    List<PlatformSkillTemplateVersionEntity> findByOrgIdAndTemplateCodeOrderByVersionNoDesc(String orgId, String templateCode);
+    List<PlatformSkillTemplateVersionEntity> findByCompanyIdAndTemplateCodeOrderByVersionNoDesc(String companyId, String templateCode);
 
-    Optional<PlatformSkillTemplateVersionEntity> findByOrgIdAndTemplateCodeAndVersionNo(
-            String orgId, String templateCode, Integer versionNo);
+    Optional<PlatformSkillTemplateVersionEntity> findByCompanyIdAndTemplateCodeAndVersionNo(
+            String companyId, String templateCode, Integer versionNo);
 
-    Optional<PlatformSkillTemplateVersionEntity> findTopByOrgIdAndTemplateCodeOrderByVersionNoDesc(String orgId, String templateCode);
+    Optional<PlatformSkillTemplateVersionEntity> findTopByCompanyIdAndTemplateCodeOrderByVersionNoDesc(String companyId, String templateCode);
 }

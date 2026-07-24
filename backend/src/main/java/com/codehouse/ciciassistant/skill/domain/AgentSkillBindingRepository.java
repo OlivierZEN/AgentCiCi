@@ -5,16 +5,16 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AgentSkillBindingRepository extends JpaRepository<AgentSkillBindingEntity, Long> {
 
-    boolean existsByOrgIdAndAgentIdAndSkillId(String orgId, String agentId, Long skillId);
+    boolean existsByCompanyIdAndAgentIdAndSkillId(String companyId, String agentId, Long skillId);
 
-    boolean existsByOrgIdAndAgentIdAndSkillIdAndEnabledTrue(String orgId, String agentId, Long skillId);
+    boolean existsByCompanyIdAndAgentIdAndSkillIdAndEnabledTrue(String companyId, String agentId, Long skillId);
 
-    List<AgentSkillBindingEntity> findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(String orgId, String agentId);
+    List<AgentSkillBindingEntity> findByCompanyIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(String companyId, String agentId);
 
-    List<AgentSkillBindingEntity> findTop1001ByOrgIdAndSkillIdAndEnabledTrueOrderByAgentIdAscPriorityAsc(
-            String orgId, Long skillId);
+    List<AgentSkillBindingEntity> findTop1001ByCompanyIdAndSkillIdAndEnabledTrueOrderByAgentIdAscPriorityAsc(
+            String companyId, Long skillId);
 
-    List<AgentSkillBindingEntity> findByOrgIdAndSkillIdInAndEnabledTrue(String orgId, List<Long> skillIds);
+    List<AgentSkillBindingEntity> findByCompanyIdAndSkillIdInAndEnabledTrue(String companyId, List<Long> skillIds);
 
-    void deleteByOrgIdAndAgentId(String orgId, String agentId);
+    void deleteByCompanyIdAndAgentId(String companyId, String agentId);
 }

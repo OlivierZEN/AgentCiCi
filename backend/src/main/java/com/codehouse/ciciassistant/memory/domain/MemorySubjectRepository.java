@@ -5,6 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface MemorySubjectRepository extends JpaRepository<MemorySubjectEntity, Long> {
 
-    Optional<MemorySubjectEntity> findByOrgIdAndApplicationCodeAndSubjectTypeAndExternalRef(
-            String orgId, String applicationCode, String subjectType, String externalRef);
+    Optional<MemorySubjectEntity> findByCompanyIdAndApplicationCodeAndSubjectTypeAndExternalRef(
+            String companyId, String applicationCode, String subjectType, String externalRef);
 }

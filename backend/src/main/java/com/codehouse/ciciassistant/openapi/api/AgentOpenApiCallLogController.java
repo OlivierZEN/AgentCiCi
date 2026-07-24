@@ -36,13 +36,13 @@ public class AgentOpenApiCallLogController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String q) {
         accessControlService.require(
-                TenantContext.requireOrgId(),
+                TenantContext.requireCompanyId(),
                 TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context")),
                 TenantContext.getRoles(),
                 agentId,
                 AgentPermission.LOG_VIEW);
         return ApiResponse.ok(callLogService.list(
-                TenantContext.requireOrgId(),
+                TenantContext.requireCompanyId(),
                 agentId,
                 from,
                 to,

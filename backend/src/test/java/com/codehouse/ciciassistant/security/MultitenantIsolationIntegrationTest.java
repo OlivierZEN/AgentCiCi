@@ -78,26 +78,26 @@ class MultitenantIsolationIntegrationTest {
     private KbChunkRepository chunkRepository;
 
     @Test
-    void shouldKeepOrganizationScopedDataInvisibleAndImmutableAcrossTenants() throws Exception {
+    void shouldKeepCompanyScopedDataInvisibleAndImmutableAcrossTenants() throws Exception {
         CreatedOrg orgA = registerOrg("隔离测试 A");
         CreatedOrg orgB = registerOrg("隔离测试 B");
         TenantFixture fixtureB = seedTenantFixture(orgB);
 
-        mockMvc.perform(post("/auth/switch-organization")
+        mockMvc.perform(post("/auth/switch-company")
                         .header(HttpHeaders.AUTHORIZATION, bearer(orgA.token()))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                { "orgId": "%s" }
-                                """.formatted(orgB.orgId())))
+                                { "companyId": "%s" }
+                                """.formatted(orgB.companyId())))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("当前账号不属于该组织"));
 
-        MvcResult profileResult = mockMvc.perform(get("/admin/organization/profile")
+        MvcResult profileResult = mockMvc.perform(get("/admin/company/profile")
                         .header(HttpHeaders.AUTHORIZATION, bearer(orgA.token())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.orgId").value(orgA.orgId()))
+                .andExpect(jsonPath("$.data.companyId").value(orgA.companyId()))
                 .andReturn();
-        assertThat(profileResult.getResponse().getContentAsString()).doesNotContain(orgB.orgId());
+        assertThat(profileResult.getResponse().getContentAsString()).doesNotContain(orgB.companyId());
 
         assertAgentIsolation(orgA, orgB, fixtureB);
         assertChatIsolation(orgA, orgB, fixtureB);
@@ -124,7 +124,7 @@ class MultitenantIsolationIntegrationTest {
                 .andExpect(status().isNotFound());
 
         AgentDefinitionEntity stored = agentDefinitionRepository
-                .findByOrgIdAndAgentId(orgB.orgId(), fixtureB.agentId())
+                .findByCompanyIdAndAgentId(orgB.companyId(), fixtureB.agentId())
                 .orElseThrow();
         assertThat(stored.isEnabled()).isTrue();
 
@@ -151,8 +151,8 @@ class MultitenantIsolationIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, bearer(orgA.token())))
                 .andExpect(status().isNotFound());
 
-        assertThat(chatSessionRepository.findByIdAndOrgId(fixtureB.privateSessionId(), orgB.orgId())).isPresent();
-        assertThat(chatMessageRepository.findByOrgIdAndSessionIdOrderByCreatedAtAsc(orgB.orgId(), fixtureB.privateSessionId()))
+        assertThat(chatSessionRepository.findByIdAndCompanyId(fixtureB.privateSessionId(), orgB.companyId())).isPresent();
+        assertThat(chatMessageRepository.findByCompanyIdAndSessionIdOrderByCreatedAtAsc(orgB.companyId(), fixtureB.privateSessionId()))
                 .extracting(ChatMessageEntity::getContent)
                 .contains("组织 B 会话机密");
 
@@ -162,13 +162,13 @@ class MultitenantIsolationIntegrationTest {
                 .andExpect(jsonPath("$.data[0].content").value("组织 B 会话机密"));
 
         String sharedWorkbenchSession = "workbench:cici-system";
-        chatSessionStateService.mergeUserTurn(orgA.orgId(), sharedWorkbenchSession, "cici-system", "继续上一步");
-        chatSessionStateService.mergeUserTurn(orgB.orgId(), sharedWorkbenchSession, "cici-system", "添加名单，范围是组织 B 客户");
+        chatSessionStateService.mergeUserTurn(orgA.companyId(), sharedWorkbenchSession, "cici-system", "继续上一步");
+        chatSessionStateService.mergeUserTurn(orgB.companyId(), sharedWorkbenchSession, "cici-system", "添加名单，范围是组织 B 客户");
 
-        var stateA = chatSessionStateRepository.findBySessionIdAndOrgId(sharedWorkbenchSession, orgA.orgId()).orElseThrow();
-        var stateB = chatSessionStateRepository.findBySessionIdAndOrgId(sharedWorkbenchSession, orgB.orgId()).orElseThrow();
-        assertThat(stateA.getOrgId()).isEqualTo(orgA.orgId());
-        assertThat(stateB.getOrgId()).isEqualTo(orgB.orgId());
+        var stateA = chatSessionStateRepository.findBySessionIdAndCompanyId(sharedWorkbenchSession, orgA.companyId()).orElseThrow();
+        var stateB = chatSessionStateRepository.findBySessionIdAndCompanyId(sharedWorkbenchSession, orgB.companyId()).orElseThrow();
+        assertThat(stateA.getCompanyId()).isEqualTo(orgA.companyId());
+        assertThat(stateB.getCompanyId()).isEqualTo(orgB.companyId());
         assertThat(stateA.getStateJson()).contains("continue_current_plan").doesNotContain("add_members");
         assertThat(stateB.getStateJson()).contains("add_members").contains("组织 B 客户").doesNotContain("continue_current_plan");
     }
@@ -216,7 +216,7 @@ class MultitenantIsolationIntegrationTest {
         mockMvc.perform(post("/kb/documents/{documentId}/disable", fixtureB.documentId())
                         .header(HttpHeaders.AUTHORIZATION, bearer(orgA.token())))
                 .andExpect(status().is4xxClientError());
-        assertThat(documentRepository.findByIdAndOrgId(fixtureB.documentId(), orgB.orgId()))
+        assertThat(documentRepository.findByIdAndCompanyId(fixtureB.documentId(), orgB.companyId()))
                 .get()
                 .extracting(KbDocumentEntity::isEnabled)
                 .isEqualTo(true);
@@ -224,7 +224,7 @@ class MultitenantIsolationIntegrationTest {
         mockMvc.perform(delete("/kb/chunks/{chunkId}", fixtureB.chunkId())
                         .header(HttpHeaders.AUTHORIZATION, bearer(orgA.token())))
                 .andExpect(status().is4xxClientError());
-        assertThat(chunkRepository.findByIdAndOrgId(fixtureB.chunkId(), orgB.orgId()))
+        assertThat(chunkRepository.findByIdAndCompanyId(fixtureB.chunkId(), orgB.companyId()))
                 .get()
                 .extracting(KbChunkEntity::isEnabled)
                 .isEqualTo(true);
@@ -232,7 +232,7 @@ class MultitenantIsolationIntegrationTest {
         mockMvc.perform(delete("/kb/{kbId}", fixtureB.kbId())
                         .header(HttpHeaders.AUTHORIZATION, bearer(orgA.token())))
                 .andExpect(status().is4xxClientError());
-        assertThat(knowledgeBaseRepository.findByIdAndOrgId(fixtureB.kbId(), orgB.orgId()))
+        assertThat(knowledgeBaseRepository.findByIdAndCompanyId(fixtureB.kbId(), orgB.companyId()))
                 .get()
                 .extracting(KnowledgeBaseEntity::getStatus)
                 .isNotEqualTo("DELETED");
@@ -262,7 +262,7 @@ class MultitenantIsolationIntegrationTest {
         String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 12);
         String agentId = "tenant-b-agent-" + suffix;
         AgentDefinitionEntity agent = agentDefinitionRepository.saveAndFlush(new AgentDefinitionEntity(
-                org.orgId(),
+                org.companyId(),
                 agentId,
                 "组织 B 私有 Agent",
                 "组织 B 私有摘要",
@@ -281,17 +281,17 @@ class MultitenantIsolationIntegrationTest {
         String sessionId = "tenant-b-session-" + suffix;
         chatSessionRepository.saveAndFlush(new ChatSessionEntity(
                 sessionId,
-                org.orgId(),
+                org.companyId(),
                 org.userId(),
                 agent.getAgentId(),
                 "组织 B 私有会话"));
-        chatMessageRepository.saveAndFlush(new ChatMessageEntity(sessionId, org.orgId(), "user", "组织 B 会话机密"));
+        chatMessageRepository.saveAndFlush(new ChatMessageEntity(sessionId, org.companyId(), "user", "组织 B 会话机密"));
 
         String traceId = "trace-" + suffix;
         Instant now = Instant.now();
         agentRunTraceRepository.saveAndFlush(new AgentRunTraceEntity(
                 traceId,
-                org.orgId(),
+                org.companyId(),
                 org.userId(),
                 "web:tenant-b:" + suffix,
                 agent.getAgentId(),
@@ -314,11 +314,11 @@ class MultitenantIsolationIntegrationTest {
                 now));
 
         KnowledgeBaseEntity kb = knowledgeBaseRepository.saveAndFlush(
-                new KnowledgeBaseEntity(org.orgId(), "组织 B 私有知识库", "不可被其他组织读取"));
+                new KnowledgeBaseEntity(org.companyId(), "组织 B 私有知识库", "不可被其他组织读取"));
         KbDocumentEntity document = documentRepository.saveAndFlush(
-                new KbDocumentEntity(org.orgId(), kb.getId(), "组织 B 私有文档", "text/plain", "/tmp/tenant-b-secret.txt"));
+                new KbDocumentEntity(org.companyId(), kb.getId(), "组织 B 私有文档", "text/plain", "/tmp/tenant-b-secret.txt"));
         KbChunkEntity chunk = chunkRepository.saveAndFlush(new KbChunkEntity(
-                org.orgId(),
+                org.companyId(),
                 String.valueOf(kb.getId()),
                 document.getId(),
                 0,
@@ -330,21 +330,21 @@ class MultitenantIsolationIntegrationTest {
         return new TenantFixture(agent.getAgentId(), sessionId, traceId, kb.getId(), document.getId(), chunk.getId());
     }
 
-    private CreatedOrg registerOrg(String organizationName) throws Exception {
+    private CreatedOrg registerOrg(String companyName) throws Exception {
         MvcResult result = mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                   "mobile": "%s",
                                   "password": "%s",
-                                  "organizationName": "%s"
+                                  "companyName": "%s"
                                 }
-                                """.formatted(randomMobile(), PASSWORD, organizationName)))
+                                """.formatted(randomMobile(), PASSWORD, companyName)))
                 .andExpect(status().isOk())
                 .andReturn();
         JsonNode data = objectMapper.readTree(result.getResponse().getContentAsString()).path("data");
         return new CreatedOrg(
-                data.path("orgId").asText(),
+                data.path("companyId").asText(),
                 data.path("userId").asText(),
                 data.path("token").asText());
     }
@@ -372,7 +372,7 @@ class MultitenantIsolationIntegrationTest {
         return "139" + String.format("%08d", suffix);
     }
 
-    private record CreatedOrg(String orgId, String userId, String token) {
+    private record CreatedOrg(String companyId, String userId, String token) {
     }
 
     private record TenantFixture(

@@ -4,5 +4,5 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AgentTaskEventRepository extends JpaRepository<AgentTaskEventEntity, Long> {
-    List<AgentTaskEventEntity> findByOrgIdAndRunIdOrderByOccurredAtAscIdAsc(String orgId, Long runId);
+    List<AgentTaskEventEntity> findByCompanyIdAndRunIdOrderByOccurredAtAscIdAsc(String companyId, Long runId);
 }

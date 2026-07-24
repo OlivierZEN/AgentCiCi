@@ -27,14 +27,14 @@ public class DataQualityController {
 
     @GetMapping("/sources")
     public ApiResponse<List<Map<String, Object>>> listSources() {
-        return ApiResponse.ok(kbDataQualityService.listSources(TenantContext.requireOrgId()));
+        return ApiResponse.ok(kbDataQualityService.listSources(TenantContext.requireCompanyId()));
     }
 
     @PostMapping("/knowledge-bases/{kbId}/runs")
     public ApiResponse<Map<String, Object>> startScan(@PathVariable Long kbId,
                                                        @RequestBody(required = false) KnowledgeBaseController.QualityScanRequest request) {
         return ApiResponse.ok(kbDataQualityService.startScan(
-                TenantContext.requireOrgId(),
+                TenantContext.requireCompanyId(),
                 kbId,
                 currentUserId(),
                 new KbDataQualityService.QualityScanCommand(request == null ? "MANUAL" : request.triggerType())));
@@ -42,13 +42,13 @@ public class DataQualityController {
 
     @GetMapping("/knowledge-bases/{kbId}/runs")
     public ApiResponse<List<Map<String, Object>>> listRuns(@PathVariable Long kbId) {
-        return ApiResponse.ok(kbDataQualityService.listRuns(TenantContext.requireOrgId(), kbId));
+        return ApiResponse.ok(kbDataQualityService.listRuns(TenantContext.requireCompanyId(), kbId));
     }
 
     @GetMapping("/knowledge-bases/{kbId}/issues")
     public ApiResponse<List<Map<String, Object>>> listIssues(@PathVariable Long kbId,
                                                               @RequestParam(name = "status", required = false) String status) {
-        return ApiResponse.ok(kbDataQualityService.listIssues(TenantContext.requireOrgId(), kbId, status));
+        return ApiResponse.ok(kbDataQualityService.listIssues(TenantContext.requireCompanyId(), kbId, status));
     }
 
     private String currentUserId() {

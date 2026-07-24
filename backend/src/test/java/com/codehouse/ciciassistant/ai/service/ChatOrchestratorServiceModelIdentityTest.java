@@ -878,7 +878,7 @@ class ChatOrchestratorServiceModelIdentityTest {
             when(skillPromptAssembler.assemble(anyString(), any(), any(), any())).thenReturn("system");
             when(userMemoryService.listForInjection(anyString(), anyString(), anyString())).thenReturn(List.of());
             when(chatSessionStateService.get(anyString(), anyString())).thenReturn(Optional.empty());
-            when(chatMessageRepository.findByOrgIdAndSessionIdOrderByCreatedAtDesc(anyString(), anyString(), any()))
+            when(chatMessageRepository.findByCompanyIdAndSessionIdOrderByCreatedAtDesc(anyString(), anyString(), any()))
                     .thenReturn(List.of());
             when(chatSessionRepository.findById(anyString())).thenReturn(Optional.empty());
             when(agentWorkflowRuntimeService.evaluateForChat(anyString(), anyString(), anyString(), anyList()))

@@ -28,10 +28,10 @@ public class AgentRuntimeCatalogService {
         this.runtimeScheduleSyncService = runtimeScheduleSyncService;
     }
 
-    public Map<String, Object> buildTriggers(String orgId, String agentId) {
-        AgentDefinitionService.AgentDetail detail = agentDefinitionService.get(orgId, agentId);
+    public Map<String, Object> buildTriggers(String companyId, String agentId) {
+        AgentDefinitionService.AgentDetail detail = agentDefinitionService.get(companyId, agentId);
         Optional<AgentWorkflowVersionEntity> latestVersion =
-                workflowVersionRepository.findTopByOrgIdAndAgentIdOrderByVersionNoDesc(orgId, agentId);
+                workflowVersionRepository.findTopByCompanyIdAndAgentIdOrderByVersionNoDesc(companyId, agentId);
         boolean hasCompiledVersions = latestVersion.isPresent();
         Long publishedVersionId = detail.definition().getPublishedVersionId();
         boolean published = publishedVersionId != null && publishedVersionId > 0;
@@ -55,7 +55,7 @@ public class AgentRuntimeCatalogService {
         }
 
         List<Map<String, Object>> scheduleTriggers = new ArrayList<>(
-                runtimeScheduleSyncService.listActiveRows(orgId, agentId));
+                runtimeScheduleSyncService.listActiveRows(companyId, agentId));
         String scheduleSource = scheduleTriggers.isEmpty() ? "none" : "persisted";
         if (scheduleTriggers.isEmpty()) {
             Optional<AgentWorkflowVersionEntity> publishedVersion = (published && publishedVersionId != null)
@@ -118,8 +118,8 @@ public class AgentRuntimeCatalogService {
         return payload;
     }
 
-    public Long publishedVersionId(String orgId, String agentId) {
-        return agentDefinitionService.get(orgId, agentId).definition().getPublishedVersionId();
+    public Long publishedVersionId(String companyId, String agentId) {
+        return agentDefinitionService.get(companyId, agentId).definition().getPublishedVersionId();
     }
 
     private static String humanizeChannel(String channelId) {

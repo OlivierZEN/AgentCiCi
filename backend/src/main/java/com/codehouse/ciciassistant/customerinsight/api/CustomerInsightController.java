@@ -36,13 +36,13 @@ public class CustomerInsightController {
 
     @GetMapping("/projects")
     public ApiResponse<List<Map<String, Object>>> listProjects() {
-        return ApiResponse.ok(customerInsightService.listProjects(TenantContext.requireOrgId()));
+        return ApiResponse.ok(customerInsightService.listProjects(TenantContext.requireCompanyId()));
     }
 
     @PostMapping("/projects")
     public ApiResponse<Map<String, Object>> createProject(@Valid @RequestBody ProjectRequest request) {
         return ApiResponse.ok(customerInsightService.createProject(
-                TenantContext.requireOrgId(),
+                TenantContext.requireCompanyId(),
                 requireUserId(),
                 request.toCommand()
         ));
@@ -50,14 +50,14 @@ public class CustomerInsightController {
 
     @GetMapping("/projects/{projectId}")
     public ApiResponse<Map<String, Object>> projectDetail(@PathVariable String projectId) {
-        return ApiResponse.ok(customerInsightService.getProject(TenantContext.requireOrgId(), projectId));
+        return ApiResponse.ok(customerInsightService.getProject(TenantContext.requireCompanyId(), projectId));
     }
 
     @PatchMapping("/projects/{projectId}")
     public ApiResponse<Map<String, Object>> updateProject(@PathVariable String projectId,
                                                           @RequestBody ProjectRequest request) {
         return ApiResponse.ok(customerInsightService.updateProject(
-                TenantContext.requireOrgId(),
+                TenantContext.requireCompanyId(),
                 projectId,
                 request.toCommand()
         ));
@@ -65,13 +65,13 @@ public class CustomerInsightController {
 
     @DeleteMapping("/projects/{projectId}")
     public ApiResponse<Void> deleteProject(@PathVariable String projectId) {
-        customerInsightService.deleteProject(TenantContext.requireOrgId(), projectId);
+        customerInsightService.deleteProject(TenantContext.requireCompanyId(), projectId);
         return ApiResponse.okMessage("客户洞察项目已删除");
     }
 
     @PostMapping("/projects/{projectId}/refresh-sources")
     public ApiResponse<Map<String, Object>> refreshSources(@PathVariable String projectId) {
-        return ApiResponse.ok(customerInsightService.refreshSources(TenantContext.requireOrgId(), projectId));
+        return ApiResponse.ok(customerInsightService.refreshSources(TenantContext.requireCompanyId(), projectId));
     }
 
     @PutMapping("/projects/{projectId}/sections/{sectionCode}")
@@ -79,7 +79,7 @@ public class CustomerInsightController {
                                                         @PathVariable String sectionCode,
                                                         @RequestBody SectionRequest request) {
         return ApiResponse.ok(customerInsightService.saveSection(
-                TenantContext.requireOrgId(),
+                TenantContext.requireCompanyId(),
                 projectId,
                 sectionCode,
                 request.toCommand()
@@ -91,7 +91,7 @@ public class CustomerInsightController {
                                                             @PathVariable String sectionCode,
                                                             @RequestBody(required = false) SectionRequest request) {
         return ApiResponse.ok(customerInsightService.generateSection(
-                TenantContext.requireOrgId(),
+                TenantContext.requireCompanyId(),
                 requireUserId(),
                 projectId,
                 sectionCode,
@@ -102,7 +102,7 @@ public class CustomerInsightController {
     @PostMapping("/projects/{projectId}/generate-full")
     public ApiResponse<Map<String, Object>> generateFull(@PathVariable String projectId) {
         return ApiResponse.ok(customerInsightService.generateFull(
-                TenantContext.requireOrgId(),
+                TenantContext.requireCompanyId(),
                 requireUserId(),
                 projectId
         ));
@@ -110,7 +110,7 @@ public class CustomerInsightController {
 
     @GetMapping("/projects/{projectId}/jobs/{jobId}")
     public ApiResponse<Map<String, Object>> job(@PathVariable String projectId, @PathVariable Long jobId) {
-        return ApiResponse.ok(customerInsightService.getJob(TenantContext.requireOrgId(), projectId, jobId));
+        return ApiResponse.ok(customerInsightService.getJob(TenantContext.requireCompanyId(), projectId, jobId));
     }
 
     private String requireUserId() {

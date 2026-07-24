@@ -6,12 +6,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PlatformPolicyBundleRepository extends JpaRepository<PlatformPolicyBundleEntity, Long> {
 
-    List<PlatformPolicyBundleEntity> findByOrgIdAndBundleCodeOrderByVersionNoDesc(String orgId, String bundleCode);
+    List<PlatformPolicyBundleEntity> findByCompanyIdAndBundleCodeOrderByVersionNoDesc(String companyId, String bundleCode);
 
-    Optional<PlatformPolicyBundleEntity> findByOrgIdAndBundleCodeAndVersionNo(String orgId, String bundleCode, Integer versionNo);
+    Optional<PlatformPolicyBundleEntity> findByCompanyIdAndBundleCodeAndVersionNo(String companyId, String bundleCode, Integer versionNo);
 
-    Optional<PlatformPolicyBundleEntity> findTopByOrgIdAndBundleCodeAndPublishStatusOrderByVersionNoDesc(
-            String orgId,
+    Optional<PlatformPolicyBundleEntity> findTopByCompanyIdAndBundleCodeAndPublishStatusOrderByVersionNoDesc(
+            String companyId,
             String bundleCode,
             String publishStatus
     );

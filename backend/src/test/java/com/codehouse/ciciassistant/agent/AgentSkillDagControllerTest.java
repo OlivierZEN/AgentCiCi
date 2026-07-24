@@ -25,7 +25,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class AgentSkillDagControllerTest {
 
-    private static final String ORG_ID = "demo-org";
+    private static final String COMPANY_ID = "demo-org";
     private static final String USER_ID = "member-1";
     private static final String AGENT_ID = "sales-agent";
 
@@ -40,7 +40,7 @@ class AgentSkillDagControllerTest {
 
     @BeforeEach
     void setUp() {
-        TenantContext.setOrgId(ORG_ID);
+        TenantContext.setCompanyId(COMPANY_ID);
         TenantContext.setUserId(USER_ID);
         TenantContext.setRoles(List.of(RoleCodes.ORG_USER));
         controller = new AgentSkillDagController(graphService, accessControlService, agentDefinitionService);
@@ -61,13 +61,13 @@ class AgentSkillDagControllerTest {
                 List.of(),
                 new SkillDependencyGraphService.GraphSummary(1, 1, 0, 0, 0, 0),
                 List.of());
-        when(graphService.getAgentGraph(ORG_ID, AGENT_ID, 3)).thenReturn(graph);
+        when(graphService.getAgentGraph(COMPANY_ID, AGENT_ID, 3)).thenReturn(graph);
 
         ApiResponse<SkillDependencyGraphService.GraphView> response = controller.getSkillDag(AGENT_ID, 3);
 
-        verify(agentDefinitionService).warmupBuiltinAgents(ORG_ID);
+        verify(agentDefinitionService).warmupBuiltinAgents(COMPANY_ID);
         verify(accessControlService).require(
-                ORG_ID,
+                COMPANY_ID,
                 USER_ID,
                 List.of(RoleCodes.ORG_USER),
                 AGENT_ID,

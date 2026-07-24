@@ -55,20 +55,20 @@ public class BuiltinSkillCreatorService {
         this.objectMapper = objectMapper;
     }
 
-    public GeneratedSkillDraft generate(String orgId, GenerateCommand command) {
+    public GeneratedSkillDraft generate(String companyId, GenerateCommand command) {
         String sourceText = requireText(command.sourceText(), "sourceText");
-        List<ToolOption> tools = loadToolOptions(orgId);
-        List<KnowledgeBaseOption> knowledgeBases = loadKnowledgeBases(orgId);
+        List<ToolOption> tools = loadToolOptions(companyId);
+        List<KnowledgeBaseOption> knowledgeBases = loadKnowledgeBases(companyId);
         Set<String> availableToolNames = tools.stream().map(ToolOption::toolName).collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
         Set<String> availableKbIds = knowledgeBases.stream().map(KnowledgeBaseOption::id).collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
-        GeneratedSkillDraft modelDraft = tryGenerateByModel(orgId, command, tools, knowledgeBases, availableToolNames, availableKbIds);
+        GeneratedSkillDraft modelDraft = tryGenerateByModel(companyId, command, tools, knowledgeBases, availableToolNames, availableKbIds);
         if (modelDraft != null) {
             return modelDraft;
         }
-        return generateByHeuristic(orgId, command, tools, knowledgeBases, availableToolNames, availableKbIds);
+        return generateByHeuristic(companyId, command, tools, knowledgeBases, availableToolNames, availableKbIds);
     }
 
-    private GeneratedSkillDraft generateByHeuristic(String orgId,
+    private GeneratedSkillDraft generateByHeuristic(String companyId,
                                                     GenerateCommand command,
                                                     List<ToolOption> tools,
                                                     List<KnowledgeBaseOption> knowledgeBases,
@@ -85,7 +85,7 @@ public class BuiltinSkillCreatorService {
         String skillCode = command.preferredSkillCode() != null && !command.preferredSkillCode().isBlank()
                 ? schemaValidator.sanitizeSkillCode(command.preferredSkillCode())
                 : buildGenericSkillCode(sourceText, orderedSteps, warnings);
-        skillCode = ensureUniqueSkillCode(orgId, skillCode, warnings);
+        skillCode = ensureUniqueSkillCode(companyId, skillCode, warnings);
 
         String name = trimToNull(command.preferredName());
         if (name == null) {
@@ -139,14 +139,14 @@ public class BuiltinSkillCreatorService {
         );
     }
 
-    private GeneratedSkillDraft tryGenerateByModel(String orgId,
+    private GeneratedSkillDraft tryGenerateByModel(String companyId,
                                                    GenerateCommand command,
                                                    List<ToolOption> tools,
                                                    List<KnowledgeBaseOption> knowledgeBases,
                                                    Set<String> availableToolNames,
                                                    Set<String> availableKbIds) {
         try {
-            Map<String, String> route = modelRouterService.route(orgId, "skill-authoring");
+            Map<String, String> route = modelRouterService.route(companyId, "skill-authoring");
             String provider = trimToNull(command.preferredProvider());
             if (provider == null) {
                 provider = route.get("provider");
@@ -162,7 +162,7 @@ public class BuiltinSkillCreatorService {
                     Map.of("role", "system", "content", buildModelSystemPrompt()),
                     Map.of("role", "user", "content", buildModelUserPrompt(command, tools, knowledgeBases))
             );
-            log.info("Skill authoring: calling model [{}] from provider [{}] for org [{}]", modelName, provider, orgId);
+            log.info("Skill authoring: calling model [{}] from provider [{}] for org [{}]", modelName, provider, companyId);
             AliyunBailianClient.ChatCompletionResult result =
                     aliyunBailianClient.chatCompletion(modelName, messages, null, true);
             String content = trimToNull(result.content());
@@ -220,7 +220,7 @@ public class BuiltinSkillCreatorService {
                         warnings
                 );
             }
-            String ensuredCode = ensureUniqueSkillCode(orgId, sanitized.skillCode(), warnings);
+            String ensuredCode = ensureUniqueSkillCode(companyId, sanitized.skillCode(), warnings);
             log.info("Skill authoring: model-based generation succeeded, skillCode={}", ensuredCode);
             return new GeneratedSkillDraft(
                     ensuredCode,
@@ -388,20 +388,20 @@ public class BuiltinSkillCreatorService {
         );
     }
 
-    private List<ToolOption> loadToolOptions(String orgId) {
+    private List<ToolOption> loadToolOptions(String companyId) {
         Map<String, ToolOption> out = new LinkedHashMap<>();
         for (ToolCatalogItem item : BuiltinToolCatalog.list()) {
             out.put(item.toolName(), new ToolOption(item.toolName(), item.displayName(), item.description(), item.category()));
         }
-        for (ToolDefinitionEntity item : toolDefinitionRepository.findByOrgIdAndEnabledTrue(orgId)) {
+        for (ToolDefinitionEntity item : toolDefinitionRepository.findByCompanyIdAndEnabledTrue(companyId)) {
             out.putIfAbsent(item.getToolName(), new ToolOption(item.getToolName(), item.getToolName(), item.getDescription(), "custom"));
         }
         return List.copyOf(out.values());
     }
 
-    private List<KnowledgeBaseOption> loadKnowledgeBases(String orgId) {
+    private List<KnowledgeBaseOption> loadKnowledgeBases(String companyId) {
         List<KnowledgeBaseOption> out = new ArrayList<>();
-        for (KnowledgeBaseEntity item : knowledgeBaseRepository.findByOrgIdOrderByIdDesc(orgId)) {
+        for (KnowledgeBaseEntity item : knowledgeBaseRepository.findByCompanyIdOrderByIdDesc(companyId)) {
             if ("DELETED".equalsIgnoreCase(item.getStatus())) {
                 continue;
             }
@@ -494,10 +494,10 @@ public class BuiltinSkillCreatorService {
         return base;
     }
 
-    private String ensureUniqueSkillCode(String orgId, String base, List<String> warnings) {
+    private String ensureUniqueSkillCode(String companyId, String base, List<String> warnings) {
         String candidate = base;
         int suffix = 2;
-        while (skillDefinitionRepository.existsByOrgIdAndSkillCode(orgId, candidate)) {
+        while (skillDefinitionRepository.existsByCompanyIdAndSkillCode(companyId, candidate)) {
             candidate = base + "-" + suffix;
             suffix++;
         }

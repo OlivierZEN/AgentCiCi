@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ToolDefinitionRepository extends JpaRepository<ToolDefinitionEntity, Long> {
 
-    List<ToolDefinitionEntity> findByOrgIdAndEnabledTrue(String orgId);
+    List<ToolDefinitionEntity> findByCompanyIdAndEnabledTrue(String companyId);
 
-    java.util.Optional<ToolDefinitionEntity> findByOrgIdAndToolName(String orgId, String toolName);
+    java.util.Optional<ToolDefinitionEntity> findByCompanyIdAndToolName(String companyId, String toolName);
 }

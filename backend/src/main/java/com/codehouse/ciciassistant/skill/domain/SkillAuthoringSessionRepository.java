@@ -5,5 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface SkillAuthoringSessionRepository extends JpaRepository<SkillAuthoringSessionEntity, String> {
 
-    Optional<SkillAuthoringSessionEntity> findByIdAndOrgId(String id, String orgId);
+    Optional<SkillAuthoringSessionEntity> findByIdAndCompanyId(String id, String companyId);
 }

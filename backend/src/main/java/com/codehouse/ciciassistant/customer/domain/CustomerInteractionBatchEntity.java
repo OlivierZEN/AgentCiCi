@@ -26,8 +26,8 @@ public class CustomerInteractionBatchEntity {
     @Column(name = "public_id", nullable = false, unique = true, length = 64)
     private String publicId;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "crm_account_id", nullable = false, length = 128)
     private String crmAccountId;
@@ -74,11 +74,11 @@ public class CustomerInteractionBatchEntity {
     protected CustomerInteractionBatchEntity() {
     }
 
-    public CustomerInteractionBatchEntity(String publicId, String orgId, String crmAccountId,
+    public CustomerInteractionBatchEntity(String publicId, String companyId, String crmAccountId,
                                           String createdBy, String sourceType, Instant occurredAt,
                                           String subject, String narrationText, String pastedText) {
         this.publicId = publicId;
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.crmAccountId = crmAccountId;
         this.createdBy = createdBy;
         this.sourceType = sourceType;
@@ -112,7 +112,7 @@ public class CustomerInteractionBatchEntity {
 
     public Long getId() { return id; }
     public String getPublicId() { return publicId; }
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
     public String getCrmAccountId() { return crmAccountId; }
     public String getCreatedBy() { return createdBy; }
     public String getSourceType() { return sourceType; }

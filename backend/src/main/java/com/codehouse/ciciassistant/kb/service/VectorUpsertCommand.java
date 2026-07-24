@@ -3,7 +3,7 @@ package com.codehouse.ciciassistant.kb.service;
 import java.util.List;
 
 public record VectorUpsertCommand(
-        String orgId,
+        String companyId,
         String knowledgeBaseId,
         Long documentId,
         Long chunkId,

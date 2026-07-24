@@ -48,7 +48,7 @@ public class MeetingEmbedRuntimeService {
                 .orElseGet(() -> sessionRepository.save(new MeetingSessionEntity(
                         "meet_" + UUID.randomUUID().toString().replace("-", "").substring(0, 24),
                         token.nonce(),
-                        token.orgId(),
+                        token.companyId(),
                         token.userId(),
                         token.externalUserId(),
                         token.source(),
@@ -74,12 +74,12 @@ public class MeetingEmbedRuntimeService {
                     ? titleFromSession(session)
                     : command.title().trim();
             MeetingMinutesService.MeetingMinutesResult result = meetingMinutesService.summarize(
-                    token.orgId(),
+                    token.companyId(),
                     title,
                     command == null ? List.of() : command.transcript());
             session.markSummaryReady(result.summary());
             billingUsageMeteringService.recordMeetingMinutesRunSafely(new BillingUsageMeteringService.MeetingMinutesMeteringInput(
-                    session.getOrgId(),
+                    session.getCompanyId(),
                     session.getUserId(),
                     session.getId(),
                     result.modelName(),
@@ -277,7 +277,7 @@ public class MeetingEmbedRuntimeService {
     }
 
     private MeetingSessionEntity requireSession(EmbedTokenService.AuthenticatedEmbedToken token, String sessionId) {
-        MeetingSessionEntity session = sessionRepository.findByIdAndOrgId(sessionId, token.orgId())
+        MeetingSessionEntity session = sessionRepository.findByIdAndCompanyId(sessionId, token.companyId())
                 .orElseThrow(() -> new IllegalArgumentException("Meeting session not found"));
         if (!session.getTokenNonce().equals(token.nonce())
                 || !session.getAppCode().equals(token.appCode())
@@ -298,7 +298,7 @@ public class MeetingEmbedRuntimeService {
     private Map<String, Object> sessionView(MeetingSessionEntity session) {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("sessionId", session.getId());
-        data.put("orgId", session.getOrgId());
+        data.put("companyId", session.getCompanyId());
         data.put("appCode", session.getAppCode());
         data.put("source", session.getSource());
         data.put("objectType", session.getObjectType());

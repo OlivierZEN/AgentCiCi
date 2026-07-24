@@ -70,7 +70,7 @@ public class CrmProductSalesAnalysisService {
         this.clock = clock;
     }
 
-    public SalesRankResult analyze(String orgId, String userId, SalesRankRequest rawRequest) {
+    public SalesRankResult analyze(String companyId, String userId, SalesRankRequest rawRequest) {
         SalesRankRequest request = rawRequest == null
                 ? new SalesRankRequest(null, null, null, null, null)
                 : rawRequest;
@@ -85,12 +85,12 @@ public class CrmProductSalesAnalysisService {
 
         try {
             List<Map<String, Object>> products = cloudcc.queryAllRecords(
-                    orgId, userId, "product", PRODUCT_FIELDS, "");
+                    companyId, userId, "product", PRODUCT_FIELDS, "");
             List<Map<String, Object>> orders = cloudcc.queryAllRecords(
-                    orgId, userId, "cloudccorder", ORDER_FIELDS, "");
+                    companyId, userId, "cloudccorder", ORDER_FIELDS, "");
             List<Map<String, Object>> items = cloudcc.queryAllRecords(
-                    orgId, userId, "cloudccorderitem", ORDER_ITEM_FIELDS, "");
-            OptionalData optionalData = loadOptionalData(orgId, userId);
+                    companyId, userId, "cloudccorderitem", ORDER_ITEM_FIELDS, "");
+            OptionalData optionalData = loadOptionalData(companyId, userId);
             return aggregate(metric, startDate, endDate, topN, comparePrevious,
                     products, orders, items, optionalData);
         } catch (CloudccOpenApiService.CloudccApiException ex) {
@@ -102,7 +102,7 @@ public class CrmProductSalesAnalysisService {
         }
     }
 
-    private OptionalData loadOptionalData(String orgId, String userId) {
+    private OptionalData loadOptionalData(String companyId, String userId) {
         List<String> sources = new ArrayList<>(SOURCE_OBJECTS);
         List<String> warnings = new ArrayList<>();
         List<Map<String, Object>> accounts = List.of();
@@ -114,14 +114,14 @@ public class CrmProductSalesAnalysisService {
         boolean opportunityProductsAvailable = false;
         boolean contractsAvailable = false;
         try {
-            accounts = cloudcc.queryAllRecords(orgId, userId, "Account", ACCOUNT_FIELDS, "");
+            accounts = cloudcc.queryAllRecords(companyId, userId, "Account", ACCOUNT_FIELDS, "");
             sources.add("Account");
             accountsAvailable = true;
         } catch (RuntimeException ex) {
             warnings.add("客户结构增强数据不可用，已保留订单销售事实");
         }
         try {
-            opportunities = cloudcc.queryAllRecords(orgId, userId, "Opportunity", OPPORTUNITY_FIELDS, "");
+            opportunities = cloudcc.queryAllRecords(companyId, userId, "Opportunity", OPPORTUNITY_FIELDS, "");
             sources.add("Opportunity");
             opportunitiesAvailable = true;
         } catch (RuntimeException ex) {
@@ -129,14 +129,14 @@ public class CrmProductSalesAnalysisService {
         }
         try {
             opportunityProducts = cloudcc.queryAllRecords(
-                    orgId, userId, "opportunitypdt", OPPORTUNITY_PRODUCT_FIELDS, "");
+                    companyId, userId, "opportunitypdt", OPPORTUNITY_PRODUCT_FIELDS, "");
             sources.add("opportunitypdt");
             opportunityProductsAvailable = true;
         } catch (RuntimeException ex) {
             warnings.add("商机产品增强数据不可用，已保留订单销售事实");
         }
         try {
-            contracts = cloudcc.queryAllRecords(orgId, userId, "contract", CONTRACT_FIELDS, "");
+            contracts = cloudcc.queryAllRecords(companyId, userId, "contract", CONTRACT_FIELDS, "");
             sources.add("contract");
             contractsAvailable = true;
         } catch (RuntimeException ex) {

@@ -15,8 +15,8 @@ public class ToolDefinitionEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "tool_name", nullable = false, length = 64)
     private String toolName;
@@ -33,16 +33,16 @@ public class ToolDefinitionEntity {
     protected ToolDefinitionEntity() {
     }
 
-    public ToolDefinitionEntity(String orgId, String toolName, String description, String riskLevel, boolean enabled) {
-        this.orgId = orgId;
+    public ToolDefinitionEntity(String companyId, String toolName, String description, String riskLevel, boolean enabled) {
+        this.companyId = companyId;
         this.toolName = toolName;
         this.description = description;
         this.riskLevel = riskLevel;
         this.enabled = enabled;
     }
 
-    public String getOrgId() {
-        return orgId;
+    public String getCompanyId() {
+        return companyId;
     }
 
     public String getToolName() {

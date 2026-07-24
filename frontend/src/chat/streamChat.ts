@@ -32,7 +32,7 @@ export type StreamPhaseEvent = {
 
 export type SessionUpdateEvent = {
   sessionId?: string;
-  scope?: "org" | "user";
+  scope?: "company" | "user";
   trigger?: "user_message" | "assistant_message";
   updatedAt?: string;
 };

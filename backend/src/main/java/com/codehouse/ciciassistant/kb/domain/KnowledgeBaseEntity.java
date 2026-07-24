@@ -16,8 +16,8 @@ public class KnowledgeBaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "name", nullable = false, length = 128)
     private String name;
@@ -67,8 +67,8 @@ public class KnowledgeBaseEntity {
     protected KnowledgeBaseEntity() {
     }
 
-    public KnowledgeBaseEntity(String orgId, String name, String description) {
-        this.orgId = orgId;
+    public KnowledgeBaseEntity(String companyId, String name, String description) {
+        this.companyId = companyId;
         this.name = name;
         this.description = description;
         this.status = "DRAFT";
@@ -89,8 +89,8 @@ public class KnowledgeBaseEntity {
         return id;
     }
 
-    public String getOrgId() {
-        return orgId;
+    public String getCompanyId() {
+        return companyId;
     }
 
     public String getName() {

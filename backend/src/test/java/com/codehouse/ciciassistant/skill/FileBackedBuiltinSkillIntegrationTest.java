@@ -137,7 +137,7 @@ class FileBackedBuiltinSkillIntegrationTest {
 
         skillDefinitionService.ensurePhaseOneDefaults("demo-org");
         SkillDefinitionEntity skill = skillDefinitionRepository
-                .findByOrgIdAndSkillCode("demo-org", CRM_ANALYSIS_SKILL_CODE)
+                .findByCompanyIdAndSkillCode("demo-org", CRM_ANALYSIS_SKILL_CODE)
                 .orElseThrow();
         assertThat(skill.getToolWhitelist()).isEqualTo("crm_product_sales_rank");
         assertThat(skill.getKbWhitelist()).isNullOrEmpty();
@@ -147,7 +147,7 @@ class FileBackedBuiltinSkillIntegrationTest {
         String activationMode = jdbcTemplate.queryForObject("""
                 SELECT activation_mode
                 FROM agent_skill_binding
-                WHERE org_id = ? AND agent_id = 'cici-system' AND skill_id = ?
+                WHERE company_id = ? AND agent_id = 'cici-system' AND skill_id = ?
                 """, String.class, "demo-org", skill.getId());
         assertThat(activationMode).isEqualTo("always-on");
 
@@ -185,7 +185,7 @@ class FileBackedBuiltinSkillIntegrationTest {
         String moduleManifest = jdbcTemplate.queryForObject("""
                 SELECT module_manifest_json
                 FROM platform_skill_template_version
-                WHERE org_id = ? AND template_code = ? AND version_no = 1
+                WHERE company_id = ? AND template_code = ? AND version_no = 1
                 """, String.class, "demo-org", SKILL_CODE);
         assertThat(moduleManifest).contains("\"object\"").contains("\"checksum\"");
         assertThat(moduleManifest).doesNotContain("请求体示例");
@@ -195,12 +195,12 @@ class FileBackedBuiltinSkillIntegrationTest {
     void shouldResolveAndInjectOnlyRelevantModuleDocumentsAtRuntime() throws Exception {
         loginToken("13800138111");
         skillDefinitionService.ensurePhaseOneDefaults("demo-org");
-        SkillDefinitionEntity skill = skillDefinitionRepository.findByOrgIdAndSkillCode("demo-org", SKILL_CODE).orElseThrow();
-        jdbcTemplate.update("DELETE FROM agent_skill_binding WHERE org_id = ? AND agent_id = ? AND skill_id = ?",
+        SkillDefinitionEntity skill = skillDefinitionRepository.findByCompanyIdAndSkillCode("demo-org", SKILL_CODE).orElseThrow();
+        jdbcTemplate.update("DELETE FROM agent_skill_binding WHERE company_id = ? AND agent_id = ? AND skill_id = ?",
                 "demo-org", "cici-system", skill.getId());
         jdbcTemplate.update("""
                 INSERT INTO agent_skill_binding (
-                    org_id, agent_id, skill_id, activation_mode, activation_condition, priority, enabled, created_at
+                    company_id, agent_id, skill_id, activation_mode, activation_condition, priority, enabled, created_at
                 )
                 VALUES (?, ?, ?, 'intent-route', NULL, 90, TRUE, CURRENT_TIMESTAMP)
                 """, "demo-org", "cici-system", skill.getId());
@@ -245,12 +245,12 @@ class FileBackedBuiltinSkillIntegrationTest {
     void shouldInjectCloudccSetupSvcRuntimeConfigWithoutLeakingToken() throws Exception {
         loginToken("13800138111");
         skillDefinitionService.ensurePhaseOneDefaults("demo-org");
-        SkillDefinitionEntity skill = skillDefinitionRepository.findByOrgIdAndSkillCode("demo-org", SKILL_CODE).orElseThrow();
-        jdbcTemplate.update("DELETE FROM agent_skill_binding WHERE org_id = ? AND agent_id = ? AND skill_id = ?",
+        SkillDefinitionEntity skill = skillDefinitionRepository.findByCompanyIdAndSkillCode("demo-org", SKILL_CODE).orElseThrow();
+        jdbcTemplate.update("DELETE FROM agent_skill_binding WHERE company_id = ? AND agent_id = ? AND skill_id = ?",
                 "demo-org", "cici-system", skill.getId());
         jdbcTemplate.update("""
                 INSERT INTO agent_skill_binding (
-                    org_id, agent_id, skill_id, activation_mode, activation_condition, priority, enabled, created_at
+                    company_id, agent_id, skill_id, activation_mode, activation_condition, priority, enabled, created_at
                 )
                 VALUES (?, ?, ?, 'intent-route', NULL, 90, TRUE, CURRENT_TIMESTAMP)
                 """, "demo-org", "cici-system", skill.getId());
@@ -258,15 +258,15 @@ class FileBackedBuiltinSkillIntegrationTest {
         String cloudccUserId = jdbcTemplate.queryForObject(
                 """
                         SELECT m.id
-                        FROM organization_member m
+                        FROM company_member m
                         JOIN user_account a ON a.id = m.account_id
-                        WHERE m.org_id = ? AND a.primary_mobile = ?
+                        WHERE m.company_id = ? AND a.primary_mobile = ?
                         """,
                 String.class,
                 "demo-org",
                 "13800138111");
         jdbcTemplate.update("""
-                UPDATE organization_member
+                UPDATE company_member
                 SET cc_username = ?, cc_safetymark = ?
                 WHERE id = ?
                 """, "cloudcc-user", "cloudcc-safety", cloudccUserId);
@@ -309,7 +309,7 @@ class FileBackedBuiltinSkillIntegrationTest {
         try {
             integrationAppService.update("demo-org", IntegrationAppService.APP_CODE_CLOUDCC_CRM,
                     true, "cloudcc", Map.of(
-                            "orgId", "cloudcc-org",
+                            "companyId", "cloudcc-org",
                             "orgapi_switch_address", "http://localhost:%d/domain".formatted(server.getAddress().getPort()),
                             "clientId", "cloudcc-client",
                             "secretKey", "cloudcc-secret"
@@ -356,7 +356,7 @@ class FileBackedBuiltinSkillIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "orgId": "demo-org",
+                                  "companyId": "demo-org",
                                   "mobile": "%s",
                                   "password": "szyd1234"
                                 }

@@ -54,10 +54,10 @@ public class ExternalMemoryContextService {
     @Transactional
     public MemorySubjectEntity resolveSubject(ExternalMemoryContext context) {
         validateContext(context);
-        return subjectRepository.findByOrgIdAndApplicationCodeAndSubjectTypeAndExternalRef(
-                        context.orgId(), context.applicationCode(), context.subjectType(), context.externalSubjectRef())
+        return subjectRepository.findByCompanyIdAndApplicationCodeAndSubjectTypeAndExternalRef(
+                        context.companyId(), context.applicationCode(), context.subjectType(), context.externalSubjectRef())
                 .orElseGet(() -> subjectRepository.save(new MemorySubjectEntity(
-                        context.orgId(), context.applicationCode(), context.subjectType(),
+                        context.companyId(), context.applicationCode(), context.subjectType(),
                         context.externalSubjectRef(), context.identityLevel())));
     }
 
@@ -72,14 +72,14 @@ public class ExternalMemoryContextService {
             throw new IllegalArgumentException("summary exceeds maximum length");
         }
         String safeState = blankToDefault(stateJson, "{}");
-        return snapshotRepository.findByOrgIdAndApplicationCodeAndConversationRef(
-                        context.orgId(), context.applicationCode(), context.conversationRef())
+        return snapshotRepository.findByCompanyIdAndApplicationCodeAndConversationRef(
+                        context.companyId(), context.applicationCode(), context.conversationRef())
                 .map(existing -> {
                     existing.update(trimToNull(activeAgentId), safeSummary, safeState);
                     return snapshotRepository.save(existing);
                 })
                 .orElseGet(() -> snapshotRepository.save(new MemoryConversationSnapshotEntity(
-                        context.orgId(), context.applicationCode(), context.conversationRef(), subject.getId(),
+                        context.companyId(), context.applicationCode(), context.conversationRef(), subject.getId(),
                         trimToNull(activeAgentId), safeSummary, safeState)));
     }
 
@@ -88,7 +88,7 @@ public class ExternalMemoryContextService {
         MemorySubjectEntity subject = resolveSubject(context);
         validateWriteCommand(command);
         return recordRepository.save(new MemoryRecordEntity(
-                context.orgId(), subject.getId(), command.scope(), trimToNull(command.scopeKey()),
+                context.companyId(), subject.getId(), command.scope(), trimToNull(command.scopeKey()),
                 command.memoryType(), requiredText(command.content(), "content"), command.status(),
                 command.sensitivity(), command.confidence() == null ? BigDecimal.ONE : command.confidence(),
                 command.validFrom() == null ? Instant.now() : command.validFrom(), command.validTo(),
@@ -103,7 +103,7 @@ public class ExternalMemoryContextService {
         Instant effectiveNow = now == null ? Instant.now() : now;
         Set<String> namespaces = grantedDomainNamespaces == null ? Set.of() : new LinkedHashSet<>(grantedDomainNamespaces);
         List<MemoryRecordEntity> records = recordRepository
-                .findByOrgIdAndSubjectIdAndStatusInOrderByUpdatedAtDesc(context.orgId(), subject.getId(), List.of("ACTIVE", "VERIFIED"))
+                .findByCompanyIdAndSubjectIdAndStatusInOrderByUpdatedAtDesc(context.companyId(), subject.getId(), List.of("ACTIVE", "VERIFIED"))
                 .stream()
                 .filter(item -> isCurrent(item, effectiveNow))
                 .filter(item -> "NORMAL".equals(item.getSensitivity()))
@@ -111,14 +111,14 @@ public class ExternalMemoryContextService {
                 .limit(MAX_CONTEXT_RECORDS)
                 .toList();
         Optional<MemoryConversationSnapshotEntity> snapshot = snapshotRepository
-                .findByOrgIdAndApplicationCodeAndConversationRef(
-                        context.orgId(), context.applicationCode(), context.conversationRef());
+                .findByCompanyIdAndApplicationCodeAndConversationRef(
+                        context.companyId(), context.applicationCode(), context.conversationRef());
         return new MemoryContext(subject.getId(), snapshot.map(MemoryConversationSnapshotEntity::getSummary).orElse(""), records);
     }
 
     private MemorySubjectEntity requireExistingSubject(ExternalMemoryContext context) {
-        return subjectRepository.findByOrgIdAndApplicationCodeAndSubjectTypeAndExternalRef(
-                        context.orgId(), context.applicationCode(), context.subjectType(), context.externalSubjectRef())
+        return subjectRepository.findByCompanyIdAndApplicationCodeAndSubjectTypeAndExternalRef(
+                        context.companyId(), context.applicationCode(), context.subjectType(), context.externalSubjectRef())
                 .orElseThrow(() -> new IllegalArgumentException("external memory subject is not registered"));
     }
 
@@ -142,7 +142,7 @@ public class ExternalMemoryContextService {
         if (context == null) {
             throw new IllegalArgumentException("external memory context is required");
         }
-        requiredText(context.orgId(), "orgId");
+        requiredText(context.companyId(), "companyId");
         requiredText(context.applicationCode(), "applicationCode");
         requiredText(context.conversationRef(), "conversationRef");
         requiredText(context.externalSubjectRef(), "externalSubjectRef");
@@ -195,7 +195,7 @@ public class ExternalMemoryContextService {
         return normalized.isEmpty() ? null : normalized;
     }
 
-    public record ExternalMemoryContext(String orgId, String applicationCode, String conversationRef,
+    public record ExternalMemoryContext(String companyId, String applicationCode, String conversationRef,
                                         String externalSubjectRef, String subjectType, String identityLevel) {
     }
 

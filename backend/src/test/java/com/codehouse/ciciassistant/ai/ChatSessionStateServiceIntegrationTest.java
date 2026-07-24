@@ -29,15 +29,15 @@ class ChatSessionStateServiceIntegrationTest {
     @AfterEach
     void cleanUp() {
         if (orgA != null) {
-            repository.deleteBySessionIdAndOrgId(SESSION_ID, orgA);
+            repository.deleteBySessionIdAndCompanyId(SESSION_ID, orgA);
         }
         if (orgB != null) {
-            repository.deleteBySessionIdAndOrgId(SESSION_ID, orgB);
+            repository.deleteBySessionIdAndCompanyId(SESSION_ID, orgB);
         }
     }
 
     @Test
-    void storesSameWorkbenchSessionIdSeparatelyForEachOrganization() {
+    void storesSameWorkbenchSessionIdSeparatelyForEachCompany() {
         orgA = "org-a-" + UUID.randomUUID().toString().substring(0, 8);
         orgB = "org-b-" + UUID.randomUUID().toString().substring(0, 8);
 
@@ -45,13 +45,13 @@ class ChatSessionStateServiceIntegrationTest {
         service.mergeUserTurn(orgB, SESSION_ID, "cici-system", "帮我看下今天的邮件");
         service.mergeUserTurn(orgB, SESSION_ID, "cici-system", "继续");
 
-        var stateA = repository.findBySessionIdAndOrgId(SESSION_ID, orgA);
-        var stateB = repository.findBySessionIdAndOrgId(SESSION_ID, orgB);
+        var stateA = repository.findBySessionIdAndCompanyId(SESSION_ID, orgA);
+        var stateB = repository.findBySessionIdAndCompanyId(SESSION_ID, orgB);
 
         assertThat(stateA).isPresent();
         assertThat(stateB).isPresent();
-        assertThat(stateA.get().getOrgId()).isEqualTo(orgA);
-        assertThat(stateB.get().getOrgId()).isEqualTo(orgB);
+        assertThat(stateA.get().getCompanyId()).isEqualTo(orgA);
+        assertThat(stateB.get().getCompanyId()).isEqualTo(orgB);
         assertThat(stateA.get().getVersion()).isEqualTo(0L);
         assertThat(stateB.get().getVersion()).isGreaterThanOrEqualTo(1L);
     }

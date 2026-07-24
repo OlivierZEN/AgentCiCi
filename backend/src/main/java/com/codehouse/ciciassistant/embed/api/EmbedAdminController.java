@@ -31,30 +31,30 @@ public class EmbedAdminController {
 
     @GetMapping
     public ApiResponse<List<Map<String, Object>>> list() {
-        return ApiResponse.ok(embedAppService.listAdminApps(TenantContext.requireOrgId()));
+        return ApiResponse.ok(embedAppService.listAdminApps(TenantContext.requireCompanyId()));
     }
 
     @GetMapping("/{appCode}")
     public ApiResponse<Map<String, Object>> detail(@PathVariable String appCode) {
-        return ApiResponse.ok(embedAppService.adminDetail(TenantContext.requireOrgId(), appCode));
+        return ApiResponse.ok(embedAppService.adminDetail(TenantContext.requireCompanyId(), appCode));
     }
 
     @GetMapping("/{appCode}/sessions")
     public ApiResponse<List<Map<String, Object>>> sessions(@PathVariable String appCode,
                                                            @RequestParam(defaultValue = "20") int limit) {
-        return ApiResponse.ok(embedAppService.recentSessions(TenantContext.requireOrgId(), appCode, limit));
+        return ApiResponse.ok(embedAppService.recentSessions(TenantContext.requireCompanyId(), appCode, limit));
     }
 
     @PutMapping("/{appCode}/config")
     public ApiResponse<Map<String, Object>> updateConfig(@PathVariable String appCode,
                                                          @RequestBody EmbedAppService.ConfigCommand command) {
-        return ApiResponse.ok(embedAppService.updateConfig(TenantContext.requireOrgId(), appCode, command));
+        return ApiResponse.ok(embedAppService.updateConfig(TenantContext.requireCompanyId(), appCode, command));
     }
 
     @PostMapping("/{appCode}/debug-token")
     public ApiResponse<EmbedTokenService.TokenIssue> debugToken(@PathVariable String appCode,
                                                                 @RequestBody EmbedTokenService.TokenCommand command) {
         String userId = TenantContext.getUserId().orElse("");
-        return ApiResponse.ok(embedTokenService.issueAdminDebugToken(TenantContext.requireOrgId(), userId, appCode, command));
+        return ApiResponse.ok(embedTokenService.issueAdminDebugToken(TenantContext.requireCompanyId(), userId, appCode, command));
     }
 }

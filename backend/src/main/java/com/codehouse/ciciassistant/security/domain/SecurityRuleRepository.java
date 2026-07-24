@@ -7,12 +7,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface SecurityRuleRepository extends JpaRepository<SecurityRuleEntity, Long> {
 
-    List<SecurityRuleEntity> findByOrgIdOrderByUpdatedAtDescIdDesc(String orgId);
+    List<SecurityRuleEntity> findByCompanyIdOrderByUpdatedAtDescIdDesc(String companyId);
 
-    List<SecurityRuleEntity> findByOrgIdAndEnabledTrueOrderByUpdatedAtDescIdDesc(String orgId);
+    List<SecurityRuleEntity> findByCompanyIdAndEnabledTrueOrderByUpdatedAtDescIdDesc(String companyId);
 
-    Optional<SecurityRuleEntity> findByIdAndOrgId(Long id, String orgId);
+    Optional<SecurityRuleEntity> findByIdAndCompanyId(Long id, String companyId);
 
-    List<SecurityRuleEntity> findByOrgIdAndCategoryOrderByUpdatedAtDescIdDesc(
-            String orgId, String category, Pageable pageable);
+    List<SecurityRuleEntity> findByCompanyIdAndCategoryOrderByUpdatedAtDescIdDesc(
+            String companyId, String category, Pageable pageable);
 }

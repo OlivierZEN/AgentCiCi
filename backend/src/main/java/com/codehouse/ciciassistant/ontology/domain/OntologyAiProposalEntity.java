@@ -40,7 +40,7 @@ public class OntologyAiProposalEntity extends AbstractOntologyWorkspaceEntity {
     }
 
     public OntologyAiProposalEntity(
-            String orgId,
+            String companyId,
             Long workspaceId,
             String proposalType,
             String instruction,
@@ -48,7 +48,7 @@ public class OntologyAiProposalEntity extends AbstractOntologyWorkspaceEntity {
             String diffJson,
             String validationJson,
             String createdBy) {
-        super(orgId, workspaceId);
+        super(companyId, workspaceId);
         this.proposalType = proposalType;
         this.status = "PENDING";
         this.instruction = instruction;

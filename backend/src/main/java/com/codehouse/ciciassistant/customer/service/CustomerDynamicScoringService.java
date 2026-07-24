@@ -49,18 +49,18 @@ public class CustomerDynamicScoringService {
     }
 
     @Transactional
-    public Map<String, Object> recordAnalysis(String orgId, String accountId, String eventId, String batchId,
+    public Map<String, Object> recordAnalysis(String companyId, String accountId, String eventId, String batchId,
                                               String sourceType, Instant occurredAt, String analysisJson) {
-        persistAnalysis(orgId, accountId, eventId, batchId, sourceType, occurredAt, analysisJson, false);
-        return explanation(orgId, accountId);
+        persistAnalysis(companyId, accountId, eventId, batchId, sourceType, occurredAt, analysisJson, false);
+        return explanation(companyId, accountId);
     }
 
-    private void persistAnalysis(String orgId, String accountId, String eventId, String batchId,
+    private void persistAnalysis(String companyId, String accountId, String eventId, String batchId,
                                  String sourceType, Instant occurredAt, String analysisJson, boolean legacyFallback) {
         Map<String, Object> analysis = parse(analysisJson);
         List<Map<String, Object>> candidates = mapList(analysis.get("scoringSignals"));
         if (candidates.isEmpty() && legacyFallback) candidates = legacyPendingSignals(analysis);
-        List<CustomerDynamicSignalEntity> previous = signalRepository.findByOrgIdAndSourceEventId(orgId, eventId);
+        List<CustomerDynamicSignalEntity> previous = signalRepository.findByCompanyIdAndSourceEventId(companyId, eventId);
         Map<String, CustomerDynamicSignalEntity> previousById = previous.stream()
                 .collect(Collectors.toMap(CustomerDynamicSignalEntity::getPublicId, Function.identity(), (left, right) -> left));
         Set<String> currentIds = new HashSet<>();
@@ -76,11 +76,11 @@ public class CustomerDynamicScoringService {
             double confidence = decimal(candidate.get("confidence"), 0, 1, 0.5);
             int validDays = integer(candidate.get("validDays"), 7, 365, 90);
             String fingerprint = sha256(dimension + "|" + direction + "|" + normalized(evidence));
-            String publicId = "cds_" + sha256(orgId + "|" + eventId + "|" + fingerprint).substring(0, 40);
+            String publicId = "cds_" + sha256(companyId + "|" + eventId + "|" + fingerprint).substring(0, 40);
             currentIds.add(publicId);
             CustomerDynamicSignalEntity entity = previousById.get(publicId);
             if (entity == null) {
-                entity = new CustomerDynamicSignalEntity(publicId, orgId, accountId, eventId, batchId,
+                entity = new CustomerDynamicSignalEntity(publicId, companyId, accountId, eventId, batchId,
                         normalizedSource(sourceType), dimension, direction, impact, confidence, title,
                         rationale, evidence, occurredAt, occurredAt.plus(validDays, ChronoUnit.DAYS),
                         fingerprint, VERSION);
@@ -97,33 +97,33 @@ public class CustomerDynamicScoringService {
     }
 
     @Transactional
-    public Map<String, Object> explanation(String orgId, String accountId) {
+    public Map<String, Object> explanation(String companyId, String accountId) {
         List<CustomerDynamicSignalEntity> signals = signalRepository
-                .findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc(orgId, accountId);
+                .findByCompanyIdAndCrmAccountIdOrderByOccurredAtDesc(companyId, accountId);
         Set<String> representedEvents = signals.stream()
                 .map(CustomerDynamicSignalEntity::getSourceEventId)
                 .collect(Collectors.toSet());
         List<CustomerInteractionEventEntity> backfillEvents = eventRepository
-                .findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc(orgId, accountId).stream()
+                .findByCompanyIdAndCrmAccountIdOrderByOccurredAtDesc(companyId, accountId).stream()
                 .filter(event -> event.getSourceBatchId() != null && !event.getSourceBatchId().isBlank())
                 .filter(event -> !representedEvents.contains(event.getPublicId()))
                 .filter(event -> hasSignalCandidates(event.getAnalysisJson()))
                 .limit(50)
                 .toList();
-        backfillEvents.forEach(event -> persistAnalysis(orgId, accountId, event.getPublicId(), event.getSourceBatchId(),
+        backfillEvents.forEach(event -> persistAnalysis(companyId, accountId, event.getPublicId(), event.getSourceBatchId(),
                 event.getSourceType(), event.getOccurredAt(), event.getAnalysisJson(), true));
         if (!backfillEvents.isEmpty()) {
-            signals = signalRepository.findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc(orgId, accountId);
+            signals = signalRepository.findByCompanyIdAndCrmAccountIdOrderByOccurredAtDesc(companyId, accountId);
         }
-        return explanationFrom(orgId, accountId, signals);
+        return explanationFrom(companyId, accountId, signals);
     }
 
     @Transactional
-    public void overlayScores(String orgId, List<Map<String, Object>> items) {
+    public void overlayScores(String companyId, List<Map<String, Object>> items) {
         if (items == null || items.isEmpty()) return;
         List<String> accountIds = items.stream().map(item -> text(item.get("accountId"))).filter(id -> !id.isBlank()).distinct().toList();
         Map<String, CustomerScoreSnapshotEntity> snapshots = snapshotRepository
-                .findByOrgIdAndCrmAccountIdIn(orgId, accountIds).stream()
+                .findByCompanyIdAndCrmAccountIdIn(companyId, accountIds).stream()
                 .collect(Collectors.toMap(CustomerScoreSnapshotEntity::getCrmAccountId, Function.identity()));
         for (Map<String, Object> item : items) overlay(item, snapshots.get(text(item.get("accountId"))));
     }
@@ -147,7 +147,7 @@ public class CustomerDynamicScoringService {
         }
     }
 
-    private Map<String, Object> explanationFrom(String orgId, String accountId, List<CustomerDynamicSignalEntity> signals) {
+    private Map<String, Object> explanationFrom(String companyId, String accountId, List<CustomerDynamicSignalEntity> signals) {
         Instant now = Instant.now();
         boolean changedStatus = false;
         Set<String> seenFingerprints = new HashSet<>();
@@ -195,8 +195,8 @@ public class CustomerDynamicScoringService {
         int relationship = score(totals.get("RELATIONSHIP"));
         int risk = score(-totals.get("RISK"));
         int health = clamp((int) Math.round(healthDimension * 0.5 + relationship * 0.2 + (100 - risk) * 0.3));
-        CustomerScoreSnapshotEntity snapshot = snapshotRepository.findByOrgIdAndCrmAccountId(orgId, accountId)
-                .orElseGet(() -> new CustomerScoreSnapshotEntity(orgId, accountId));
+        CustomerScoreSnapshotEntity snapshot = snapshotRepository.findByCompanyIdAndCrmAccountId(companyId, accountId)
+                .orElseGet(() -> new CustomerScoreSnapshotEntity(companyId, accountId));
         snapshot.update(health, healthDimension, expansion, renewal, relationship, risk,
                 round(recentHealthDelta), activeCount, pendingCount, VERSION);
         snapshotRepository.save(snapshot);

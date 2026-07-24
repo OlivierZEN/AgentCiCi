@@ -7,19 +7,19 @@ import org.springframework.data.repository.query.Param;
 
 public interface UserQuickCommandRepository extends JpaRepository<UserQuickCommandEntity, Long> {
 
-    List<UserQuickCommandEntity> findByOrgIdAndUserIdAndAgentIdAndEnabledTrueOrderBySortOrderAscIdAsc(
-            String orgId,
+    List<UserQuickCommandEntity> findByCompanyIdAndUserIdAndAgentIdAndEnabledTrueOrderBySortOrderAscIdAsc(
+            String companyId,
             String userId,
             String agentId);
 
     @Query("""
             select coalesce(max(item.sortOrder), 0)
             from UserQuickCommandEntity item
-            where item.orgId = :orgId
+            where item.companyId = :companyId
               and item.userId = :userId
               and item.agentId = :agentId
             """)
-    int maxSortOrder(@Param("orgId") String orgId,
+    int maxSortOrder(@Param("companyId") String companyId,
                      @Param("userId") String userId,
                      @Param("agentId") String agentId);
 }

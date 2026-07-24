@@ -145,7 +145,7 @@ class AgentTaskRuntimeIntegrationTest {
             assertThat(review.selected()).isTrue();
             assertThat(review.gateStatus()).isEqualTo("PASS");
             assertThat(review.reviewerStatus()).isEqualTo("PASS");
-            assertThat(reviewRepository.findByOrgIdAndRunIdOrderByReviewRoundAsc("demo-org", execution.runId())).hasSize(1);
+            assertThat(reviewRepository.findByCompanyIdAndRunIdOrderByReviewRoundAsc("demo-org", execution.runId())).hasSize(1);
             assertThat(runtimeService.snapshot("demo-org", execution.runId()).events())
                     .extracting(AgentTaskRuntimeService.EventView::type).contains("REFLECT_GATE");
             assertThrows(IllegalArgumentException.class, () -> reflectService.reflect(

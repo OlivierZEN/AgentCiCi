@@ -18,8 +18,8 @@ public class AgentAccessGrantEntity {
     @Column(name = "id", nullable = false, length = 64)
     private String id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "agent_id", nullable = false, length = 64)
     private String agentId;
@@ -54,7 +54,7 @@ public class AgentAccessGrantEntity {
     protected AgentAccessGrantEntity() {
     }
 
-    public AgentAccessGrantEntity(String orgId,
+    public AgentAccessGrantEntity(String companyId,
                                   String agentId,
                                   String principalType,
                                   String principalId,
@@ -64,7 +64,7 @@ public class AgentAccessGrantEntity {
                                   Instant expiresAt) {
         Instant now = Instant.now();
         this.id = UUID.randomUUID().toString();
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.agentId = agentId;
         this.principalType = principalType;
         this.principalId = principalId;
@@ -81,8 +81,8 @@ public class AgentAccessGrantEntity {
         return id;
     }
 
-    public String getOrgId() {
-        return orgId;
+    public String getCompanyId() {
+        return companyId;
     }
 
     public String getAgentId() {

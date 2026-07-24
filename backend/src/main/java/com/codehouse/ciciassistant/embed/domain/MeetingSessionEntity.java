@@ -23,8 +23,8 @@ public class MeetingSessionEntity {
     @Column(name = "token_nonce", nullable = false, length = 128)
     private String tokenNonce;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "user_id", nullable = false, length = 64)
     private String userId;
@@ -82,7 +82,7 @@ public class MeetingSessionEntity {
 
     public MeetingSessionEntity(String id,
                                 String tokenNonce,
-                                String orgId,
+                                String companyId,
                                 String userId,
                                 String externalUserId,
                                 String source,
@@ -95,7 +95,7 @@ public class MeetingSessionEntity {
                                 String contextJson) {
         this.id = id;
         this.tokenNonce = tokenNonce;
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.userId = userId;
         this.externalUserId = externalUserId;
         this.source = source;
@@ -113,7 +113,7 @@ public class MeetingSessionEntity {
 
     public String getId() { return id; }
     public String getTokenNonce() { return tokenNonce; }
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
     public String getUserId() { return userId; }
     public String getExternalUserId() { return externalUserId; }
     public String getSource() { return source; }

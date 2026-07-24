@@ -7,13 +7,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface UserWorkflowTriggerRepository extends JpaRepository<UserWorkflowTriggerEntity, Long> {
 
-    List<UserWorkflowTriggerEntity> findByOrgIdAndUserIdAndAgentIdOrderByIdAsc(String orgId, String userId, String agentId);
+    List<UserWorkflowTriggerEntity> findByCompanyIdAndUserIdAndAgentIdOrderByIdAsc(String companyId, String userId, String agentId);
 
     List<UserWorkflowTriggerEntity> findTop100ByEnabledTrueAndNextFireAtLessThanEqualOrderByNextFireAtAsc(Instant now);
 
-    Optional<UserWorkflowTriggerEntity> findByIdAndOrgIdAndUserIdAndAgentId(Long id, String orgId, String userId, String agentId);
+    Optional<UserWorkflowTriggerEntity> findByIdAndCompanyIdAndUserIdAndAgentId(Long id, String companyId, String userId, String agentId);
 
-    void deleteByOrgIdAndUserIdAndAgentId(String orgId, String userId, String agentId);
+    void deleteByCompanyIdAndUserIdAndAgentId(String companyId, String userId, String agentId);
 
-    Optional<UserWorkflowTriggerEntity> findByOrgIdAndUserIdAndAgentIdAndRoutineKey(String orgId, String userId, String agentId, String routineKey);
+    Optional<UserWorkflowTriggerEntity> findByCompanyIdAndUserIdAndAgentIdAndRoutineKey(String companyId, String userId, String agentId, String routineKey);
 }

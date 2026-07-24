@@ -16,8 +16,8 @@ public class AgentKnowledgeBindingEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "agent_id", nullable = false, length = 64)
     private String agentId;
@@ -37,8 +37,8 @@ public class AgentKnowledgeBindingEntity {
     protected AgentKnowledgeBindingEntity() {
     }
 
-    public AgentKnowledgeBindingEntity(String orgId, String agentId, Long knowledgeBaseId, Integer priority, boolean enabled) {
-        this.orgId = orgId;
+    public AgentKnowledgeBindingEntity(String companyId, String agentId, Long knowledgeBaseId, Integer priority, boolean enabled) {
+        this.companyId = companyId;
         this.agentId = agentId;
         this.knowledgeBaseId = knowledgeBaseId;
         this.priority = priority;

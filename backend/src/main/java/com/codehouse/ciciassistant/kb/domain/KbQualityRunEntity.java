@@ -16,8 +16,8 @@ public class KbQualityRunEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "knowledge_base_id", nullable = false)
     private Long knowledgeBaseId;
@@ -61,8 +61,8 @@ public class KbQualityRunEntity {
     protected KbQualityRunEntity() {
     }
 
-    public KbQualityRunEntity(String orgId, Long knowledgeBaseId, String triggerType, String createdBy) {
-        this.orgId = orgId;
+    public KbQualityRunEntity(String companyId, Long knowledgeBaseId, String triggerType, String createdBy) {
+        this.companyId = companyId;
         this.knowledgeBaseId = knowledgeBaseId;
         this.status = "RUNNING";
         this.triggerType = triggerType;
@@ -72,7 +72,7 @@ public class KbQualityRunEntity {
     }
 
     public Long getId() { return id; }
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
     public Long getKnowledgeBaseId() { return knowledgeBaseId; }
     public String getStatus() { return status; }
     public String getTriggerType() { return triggerType; }

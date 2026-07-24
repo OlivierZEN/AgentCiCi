@@ -16,8 +16,8 @@ public class PlatformAuditLogEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "user_id", nullable = false, length = 64)
     private String userId;
@@ -43,14 +43,14 @@ public class PlatformAuditLogEntity {
     protected PlatformAuditLogEntity() {
     }
 
-    public PlatformAuditLogEntity(String orgId,
+    public PlatformAuditLogEntity(String companyId,
                                   String userId,
                                   String roleCode,
                                   String eventType,
                                   String resourceType,
                                   String resourceKey,
                                   String detail) {
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.userId = userId;
         this.roleCode = roleCode;
         this.eventType = eventType;
@@ -64,8 +64,8 @@ public class PlatformAuditLogEntity {
         return id;
     }
 
-    public String getOrgId() {
-        return orgId;
+    public String getCompanyId() {
+        return companyId;
     }
 
     public String getUserId() {

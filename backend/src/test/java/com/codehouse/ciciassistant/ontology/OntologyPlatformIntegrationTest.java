@@ -110,16 +110,16 @@ class OntologyPlatformIntegrationTest {
         runPrefix = "ontology-api-" + UUID.randomUUID();
         orgA = runPrefix + "-a";
         orgB = runPrefix + "-b";
-        ownerAToken = organizationToken(orgA, "owner-a", RoleCodes.OWNER);
-        memberAToken = organizationToken(orgA, "member-a", RoleCodes.ORG_USER);
-        ownerBToken = organizationToken(orgB, "owner-b", RoleCodes.OWNER);
+        ownerAToken = companyToken(orgA, "owner-a", RoleCodes.OWNER);
+        memberAToken = companyToken(orgA, "member-a", RoleCodes.ORG_USER);
+        ownerBToken = companyToken(orgB, "owner-b", RoleCodes.OWNER);
         platformToken = jwtService.issuePlatformToken("platform-a", List.of(RoleCodes.PLATFORM_ADMIN));
     }
 
     @AfterEach
     void cleanUp() {
         for (String table : DELETE_ORDER) {
-            jdbcTemplate.update("DELETE FROM " + table + " WHERE org_id LIKE ?", runPrefix + "%");
+            jdbcTemplate.update("DELETE FROM " + table + " WHERE company_id LIKE ?", runPrefix + "%");
         }
     }
 
@@ -187,7 +187,7 @@ class OntologyPlatformIntegrationTest {
 
         for (String table : DELETE_ORDER) {
             assertThat(jdbcTemplate.queryForObject(
-                    "SELECT COUNT(*) FROM " + table + " WHERE org_id = ?",
+                    "SELECT COUNT(*) FROM " + table + " WHERE company_id = ?",
                     Long.class,
                     orgA)).as(table).isZero();
         }
@@ -216,7 +216,7 @@ class OntologyPlatformIntegrationTest {
                 return Optional.empty();
             }
             throw new IllegalStateException("unexpected workspace lookup in guarded create test");
-        }).when(workspaceRepository).findByOrgIdAndKey(orgA, request.key());
+        }).when(workspaceRepository).findByCompanyIdAndKey(orgA, request.key());
         ExecutorService executor = Executors.newFixedThreadPool(2);
         try {
             CompletableFuture<MvcResult> first = concurrentWorkspaceCreate(
@@ -248,7 +248,7 @@ class OntologyPlatformIntegrationTest {
         }
 
         assertThat(jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM ontology_workspace WHERE org_id = ? AND key = ?",
+                "SELECT COUNT(*) FROM ontology_workspace WHERE company_id = ? AND key = ?",
                 Long.class,
                 orgA,
                 request.key())).isEqualTo(1L);
@@ -256,7 +256,7 @@ class OntologyPlatformIntegrationTest {
     }
 
     @Test
-    void semanticQueryRequiresAnOrganizationMemberButNotAnAdministrator() throws Exception {
+    void semanticQueryRequiresAnCompanyMemberButNotAnAdministrator() throws Exception {
         mockMvc.perform(post("/semantic-query/explain")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
@@ -301,7 +301,7 @@ class OntologyPlatformIntegrationTest {
                                 "DIRECT", 1, "MANUAL", "VALID")));
         jdbcTemplate.update("""
                         INSERT INTO ontology_version(
-                            org_id, workspace_id, version_no, source_draft_revision,
+                            company_id, workspace_id, version_no, source_draft_revision,
                             content_hash, snapshot_json, json_schema, graphql_sdl,
                             query_contract_json, validation_summary_json, published_by
                         ) VALUES (?, ?, 1, 0, ?, ?, '{}', 'type Query { noop: String }', '{}', '[]', ?)
@@ -311,7 +311,7 @@ class OntologyPlatformIntegrationTest {
         jdbcTemplate.update("""
                         UPDATE ontology_workspace
                         SET status = 'PUBLISHED', published_version = 1
-                        WHERE id = ? AND org_id = ?
+                        WHERE id = ? AND company_id = ?
                         """,
                 workspaceId, orgA);
 
@@ -516,7 +516,7 @@ class OntologyPlatformIntegrationTest {
 
         jdbcTemplate.update("""
                         INSERT INTO ontology_ai_proposal(
-                            org_id, workspace_id, proposal_type, status, instruction,
+                            company_id, workspace_id, proposal_type, status, instruction,
                             payload_json, diff_json, validation_json, created_by
                         ) VALUES (?, ?, 'REFINE', 'PENDING', 'pending', '{}', ?, '[]', 'owner-a')
                         """,
@@ -525,7 +525,7 @@ class OntologyPlatformIntegrationTest {
                 "{\"baseRevision\":2,\"candidateHash\":\"\",\"added\":[],\"changed\":[],\"removed\":[]}");
         jdbcTemplate.update("""
                         INSERT INTO ontology_ai_proposal(
-                            org_id, workspace_id, proposal_type, status, instruction,
+                            company_id, workspace_id, proposal_type, status, instruction,
                             payload_json, diff_json, validation_json, created_by
                         ) VALUES (?, ?, 'REFINE', 'FAILED', 'failed', '{}', ?, ?, 'owner-a')
                         """,
@@ -665,7 +665,7 @@ class OntologyPlatformIntegrationTest {
 
     @Test
     void serializesCatalogCommitsAndWritesFreshServerValidationTimestamp() throws Exception {
-        TenantContext.setOrgId(orgA);
+        TenantContext.setCompanyId(orgA);
         TenantContext.setUserId("owner-a");
         OntologyManagementService.WorkspaceView installed =
                 management.installReferencePackage("owner-a", "project-delivery");
@@ -697,7 +697,7 @@ class OntologyPlatformIntegrationTest {
             executor.shutdownNow();
         }
 
-        TenantContext.setOrgId(orgA);
+        TenantContext.setCompanyId(orgA);
         TenantContext.setUserId("owner-a");
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT draft_revision FROM ontology_workspace WHERE id = ?",
@@ -724,7 +724,7 @@ class OntologyPlatformIntegrationTest {
         assertThat(validated.validation().valid()).isTrue();
         assertThat(validated.revision()).isEqualTo(4L);
         OntologyMappingEntity mapping = mappingRepository
-                .findByWorkspaceIdAndOrgIdAndTargetTypeAndTargetKeyAndDataSourceId(
+                .findByWorkspaceIdAndCompanyIdAndTargetTypeAndTargetKeyAndDataSourceId(
                         workspaceId, orgA, "PROPERTY", "project.name", dataSourceId)
                 .orElseThrow();
         java.time.Instant discoveredAt = jdbcTemplate.queryForObject(
@@ -955,9 +955,9 @@ class OntologyPlatformIntegrationTest {
                 .andExpect(jsonPath("$.message").value("DATA_SOURCE_UNAVAILABLE"));
     }
 
-    private String organizationToken(String orgId, String memberId, String role) {
+    private String companyToken(String companyId, String memberId, String role) {
         return jwtService.issueToken(memberId, Map.of(
-                "org_id", orgId,
+                "company_id", companyId,
                 "member_id", memberId,
                 "roles", List.of(role)), 3600);
     }
@@ -1012,7 +1012,7 @@ class OntologyPlatformIntegrationTest {
             CountDownLatch start,
             SourcePreparation prepared) {
         return CompletableFuture.supplyAsync(() -> {
-            TenantContext.setOrgId(orgA);
+            TenantContext.setCompanyId(orgA);
             TenantContext.setUserId("owner-a");
             ready.countDown();
             try {

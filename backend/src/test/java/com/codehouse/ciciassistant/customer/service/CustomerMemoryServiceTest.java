@@ -25,7 +25,7 @@ class CustomerMemoryServiceTest {
     void setUp() {
         repository = mock(CustomerMemoryItemRepository.class);
         CustomerInteractionEventRepository eventRepository = mock(CustomerInteractionEventRepository.class);
-        when(eventRepository.findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc("org-1", "account-1"))
+        when(eventRepository.findByCompanyIdAndCrmAccountIdOrderByOccurredAtDesc("org-1", "account-1"))
                 .thenReturn(List.of());
         when(repository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
         service = new CustomerMemoryService(repository, eventRepository, new ObjectMapper());
@@ -33,7 +33,7 @@ class CustomerMemoryServiceTest {
 
     @Test
     void keepsDefaultContextInsideNinetyDaysAndExpandsForHistoryQuestions() {
-        when(repository.findByOrgIdAndCrmAccountIdAndStatusOrderByOccurredAtDesc(
+        when(repository.findByCompanyIdAndCrmAccountIdAndStatusOrderByOccurredAtDesc(
                 "org-1", "account-1", CustomerMemoryItemEntity.STATUS_ACTIVE)).thenReturn(List.of());
         Map<String, Object> customer = customer(List.of(
                 timeline("event-new", Instant.now().minus(2, ChronoUnit.DAYS)),
@@ -54,7 +54,7 @@ class CustomerMemoryServiceTest {
     void retainsUnresolvedMemoryAndPrioritizesExplicitArchiveReference() {
         CustomerMemoryItemEntity risk = memory("event-risk", "RISK", "客户预算仍未确认", 5);
         CustomerMemoryItemEntity referenced = memory("event-target", "FACT", "客户确认了部署范围", 40);
-        when(repository.findByOrgIdAndCrmAccountIdAndStatusOrderByOccurredAtDesc(
+        when(repository.findByCompanyIdAndCrmAccountIdAndStatusOrderByOccurredAtDesc(
                 "org-1", "account-1", CustomerMemoryItemEntity.STATUS_ACTIVE))
                 .thenReturn(List.of(risk, referenced));
 

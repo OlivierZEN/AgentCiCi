@@ -63,9 +63,9 @@ public interface OntologyDataSourceAdapter {
             DataSourceConfig source,
             PhysicalQuery query);
 
-    record AdapterContext(String orgId, String userId) {
+    record AdapterContext(String companyId, String userId) {
         public AdapterContext {
-            if (orgId == null || orgId.isBlank() || userId == null || userId.isBlank()) {
+            if (companyId == null || companyId.isBlank() || userId == null || userId.isBlank()) {
                 throw new IllegalArgumentException("ADAPTER_CONTEXT_REQUIRED");
             }
         }

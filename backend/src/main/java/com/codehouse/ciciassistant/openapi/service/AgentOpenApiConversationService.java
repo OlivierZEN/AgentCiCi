@@ -132,7 +132,7 @@ public class AgentOpenApiConversationService {
         AgentApiTaskEntity task = taskRepository.save(new AgentApiTaskEntity(
                 taskId,
                 requestId,
-                auth.credential().getOrgId(),
+                auth.credential().getCompanyId(),
                 auth.credential().getId(),
                 auth.credential().getAgentId(),
                 input.externalUserId(),
@@ -200,7 +200,7 @@ public class AgentOpenApiConversationService {
         AgentApiTaskEntity task = taskRepository.save(new AgentApiTaskEntity(
                 taskId,
                 requestId,
-                auth.credential().getOrgId(),
+                auth.credential().getCompanyId(),
                 auth.credential().getId(),
                 auth.credential().getAgentId(),
                 input.externalUserId(),
@@ -239,9 +239,9 @@ public class AgentOpenApiConversationService {
         AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(request);
         authService.requireScope(auth, "chat");
         AgentApiTaskEntity task = taskRepository
-                .findByTaskIdAndOrgIdAndCredentialIdAndAgentId(
+                .findByTaskIdAndCompanyIdAndCredentialIdAndAgentId(
                         taskId,
-                        auth.credential().getOrgId(),
+                        auth.credential().getCompanyId(),
                         auth.credential().getId(),
                         auth.credential().getAgentId())
                 .orElseThrow(() -> new AgentOpenApiException(HttpStatus.NOT_FOUND, "task_not_found", "Task not found"));
@@ -256,8 +256,8 @@ public class AgentOpenApiConversationService {
         authService.requireScope(auth, "history");
         String normalizedUser = text(user);
         return sessionMapRepository
-                .findTop100ByOrgIdAndCredentialIdAndAgentIdAndDeletedAtIsNullOrderByUpdatedAtDesc(
-                        auth.credential().getOrgId(),
+                .findTop100ByCompanyIdAndCredentialIdAndAgentIdAndDeletedAtIsNullOrderByUpdatedAtDesc(
+                        auth.credential().getCompanyId(),
                         auth.credential().getId(),
                         auth.credential().getAgentId())
                 .stream()
@@ -297,12 +297,12 @@ public class AgentOpenApiConversationService {
         AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(request);
         authService.requireScope(auth, "history");
         List<AgentApiMessageEntity> rows = text(conversationId).isBlank()
-                ? messageRepository.findTop100ByOrgIdAndCredentialIdAndAgentIdOrderByCreatedAtDesc(
-                        auth.credential().getOrgId(),
+                ? messageRepository.findTop100ByCompanyIdAndCredentialIdAndAgentIdOrderByCreatedAtDesc(
+                        auth.credential().getCompanyId(),
                         auth.credential().getId(),
                         auth.credential().getAgentId())
-                : messageRepository.findTop100ByOrgIdAndCredentialIdAndAgentIdAndExternalSessionIdOrderByCreatedAtDesc(
-                        auth.credential().getOrgId(),
+                : messageRepository.findTop100ByCompanyIdAndCredentialIdAndAgentIdAndExternalSessionIdOrderByCreatedAtDesc(
+                        auth.credential().getCompanyId(),
                         auth.credential().getId(),
                         auth.credential().getAgentId(),
                         text(conversationId));
@@ -330,7 +330,7 @@ public class AgentOpenApiConversationService {
         String rating = normalizeRating(command == null ? "" : command.rating());
         AgentApiFeedbackEntity feedback = feedbackRepository.save(new AgentApiFeedbackEntity(
                 message.getMessageId(),
-                auth.credential().getOrgId(),
+                auth.credential().getCompanyId(),
                 auth.credential().getId(),
                 auth.credential().getAgentId(),
                 rating,
@@ -372,7 +372,7 @@ public class AgentOpenApiConversationService {
         String fileId = id("file");
         AgentApiFileEntity entity = fileRepository.save(new AgentApiFileEntity(
                 fileId,
-                auth.credential().getOrgId(),
+                auth.credential().getCompanyId(),
                 auth.credential().getId(),
                 auth.credential().getAgentId(),
                 text(user),
@@ -440,8 +440,8 @@ public class AgentOpenApiConversationService {
             return;
         }
         Map<String, AgentApiFileEntity> found = new LinkedHashMap<>();
-        fileRepository.findByOrgIdAndCredentialIdAndAgentIdAndFileIdIn(
-                        auth.credential().getOrgId(),
+        fileRepository.findByCompanyIdAndCredentialIdAndAgentIdAndFileIdIn(
+                        auth.credential().getCompanyId(),
                         auth.credential().getId(),
                         auth.credential().getAgentId(),
                         ids)
@@ -482,7 +482,7 @@ public class AgentOpenApiConversationService {
                 messageId,
                 requestId,
                 taskId,
-                execution.auth().credential().getOrgId(),
+                execution.auth().credential().getCompanyId(),
                 execution.auth().credential().getId(),
                 execution.auth().credential().getAgentId(),
                 input.externalUserId(),
@@ -512,7 +512,7 @@ public class AgentOpenApiConversationService {
                 messageId,
                 requestId,
                 taskId,
-                execution.auth().credential().getOrgId(),
+                execution.auth().credential().getCompanyId(),
                 execution.auth().credential().getId(),
                 execution.auth().credential().getAgentId(),
                 input.externalUserId(),
@@ -533,8 +533,8 @@ public class AgentOpenApiConversationService {
 
     private AgentApiSessionMapEntity requireConversation(AgentOpenApiAuthService.AuthenticatedCredential auth, String conversationId) {
         return sessionMapRepository
-                .findByOrgIdAndCredentialIdAndAgentIdAndExternalSessionIdAndDeletedAtIsNull(
-                        auth.credential().getOrgId(),
+                .findByCompanyIdAndCredentialIdAndAgentIdAndExternalSessionIdAndDeletedAtIsNull(
+                        auth.credential().getCompanyId(),
                         auth.credential().getId(),
                         auth.credential().getAgentId(),
                         text(conversationId))
@@ -543,9 +543,9 @@ public class AgentOpenApiConversationService {
 
     private AgentApiMessageEntity requireMessage(AgentOpenApiAuthService.AuthenticatedCredential auth, String messageId) {
         return messageRepository
-                .findByMessageIdAndOrgIdAndCredentialIdAndAgentId(
+                .findByMessageIdAndCompanyIdAndCredentialIdAndAgentId(
                         text(messageId),
-                        auth.credential().getOrgId(),
+                        auth.credential().getCompanyId(),
                         auth.credential().getId(),
                         auth.credential().getAgentId())
                 .orElseThrow(() -> new AgentOpenApiException(HttpStatus.NOT_FOUND, "message_not_found", "Message not found"));

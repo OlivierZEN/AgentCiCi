@@ -38,7 +38,7 @@ public class AgentOpenApiCredentialController {
     @GetMapping
     public ApiResponse<List<AgentOpenApiCredentialService.CredentialView>> list(@PathVariable String agentId) {
         requireOpenApi(agentId);
-        return ApiResponse.ok(credentialService.list(TenantContext.requireOrgId(), agentId));
+        return ApiResponse.ok(credentialService.list(TenantContext.requireCompanyId(), agentId));
     }
 
     @PostMapping
@@ -46,7 +46,7 @@ public class AgentOpenApiCredentialController {
                                                    @Valid @RequestBody CreateCredentialRequest request) {
         requireOpenApi(agentId);
         AgentOpenApiCredentialService.CredentialCreation created = credentialService.create(
-                TenantContext.requireOrgId(),
+                TenantContext.requireCompanyId(),
                 agentId,
                 TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context")),
                 new AgentOpenApiCredentialService.CreateCredentialCommand(
@@ -73,7 +73,7 @@ public class AgentOpenApiCredentialController {
                                                                             @Valid @RequestBody UpdateCredentialRequest request) {
         requireOpenApi(agentId);
         return ApiResponse.ok(credentialService.update(
-                TenantContext.requireOrgId(),
+                TenantContext.requireCompanyId(),
                 agentId,
                 credentialId,
                 new AgentOpenApiCredentialService.UpdateCredentialCommand(
@@ -95,7 +95,7 @@ public class AgentOpenApiCredentialController {
     public ApiResponse<AgentApiMemoryBindingService.BindingView> getMemoryBinding(@PathVariable String agentId,
                                                                                    @PathVariable Long credentialId) {
         requireOpenApi(agentId);
-        return ApiResponse.ok(memoryBindingService.get(TenantContext.requireOrgId(), agentId, credentialId));
+        return ApiResponse.ok(memoryBindingService.get(TenantContext.requireCompanyId(), agentId, credentialId));
     }
 
     @PutMapping("/{credentialId}/memory-binding")
@@ -104,7 +104,7 @@ public class AgentOpenApiCredentialController {
                                                                                        @Valid @RequestBody MemoryBindingRequest request) {
         requireOpenApi(agentId);
         return ApiResponse.ok(memoryBindingService.upsert(
-                TenantContext.requireOrgId(), agentId, credentialId,
+                TenantContext.requireCompanyId(), agentId, credentialId,
                 TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context")),
                 new AgentApiMemoryBindingService.BindingCommand(request.applicationCode(), request.subjectType(),
                         request.identityLevel(), request.domainNamespaces())));
@@ -115,7 +115,7 @@ public class AgentOpenApiCredentialController {
                                                                                         @PathVariable Long credentialId) {
         requireOpenApi(agentId);
         return ApiResponse.ok(memoryBindingService.disable(
-                TenantContext.requireOrgId(), agentId, credentialId,
+                TenantContext.requireCompanyId(), agentId, credentialId,
                 TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"))));
     }
 
@@ -123,7 +123,7 @@ public class AgentOpenApiCredentialController {
     public ApiResponse<Map<String, Object>> rotate(@PathVariable String agentId, @PathVariable Long credentialId) {
         requireOpenApi(agentId);
         AgentOpenApiCredentialService.CredentialCreation rotated = credentialService.rotate(
-                TenantContext.requireOrgId(),
+                TenantContext.requireCompanyId(),
                 agentId,
                 credentialId);
         return ApiResponse.ok(
@@ -136,7 +136,7 @@ public class AgentOpenApiCredentialController {
                                                                             @PathVariable Long credentialId) {
         requireOpenApi(agentId);
         return ApiResponse.ok(credentialService.revoke(
-                TenantContext.requireOrgId(),
+                TenantContext.requireCompanyId(),
                 agentId,
                 credentialId,
                 TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"))));
@@ -144,7 +144,7 @@ public class AgentOpenApiCredentialController {
 
     private void requireOpenApi(String agentId) {
         accessControlService.require(
-                TenantContext.requireOrgId(),
+                TenantContext.requireCompanyId(),
                 TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context")),
                 TenantContext.getRoles(),
                 agentId,

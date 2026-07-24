@@ -13,11 +13,11 @@ public class ModelRouterService {
         this.modelProviderService = modelProviderService;
     }
 
-    public Map<String, String> route(String orgId, String sceneCode) {
-        return route(orgId, sceneCode, null);
+    public Map<String, String> route(String companyId, String sceneCode) {
+        return route(companyId, sceneCode, null);
     }
 
-    public Map<String, String> route(String orgId, String sceneCode, String preferredModelName) {
-        return modelProviderService.resolveRuntimeModelRoute(orgId, sceneCode, preferredModelName);
+    public Map<String, String> route(String companyId, String sceneCode, String preferredModelName) {
+        return modelProviderService.resolveRuntimeModelRoute(companyId, sceneCode, preferredModelName);
     }
 }

@@ -6,11 +6,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface EmailAccountRepository extends JpaRepository<EmailAccountEntity, Long> {
 
-    List<EmailAccountEntity> findByOrgIdAndUserIdOrderByIdAsc(String orgId, String userId);
+    List<EmailAccountEntity> findByCompanyIdAndUserIdOrderByIdAsc(String companyId, String userId);
 
-    Optional<EmailAccountEntity> findByIdAndOrgIdAndUserId(Long id, String orgId, String userId);
+    Optional<EmailAccountEntity> findByIdAndCompanyIdAndUserId(Long id, String companyId, String userId);
 
-    Optional<EmailAccountEntity> findFirstByOrgIdAndUserIdAndEnabledTrueOrderByIdAsc(String orgId, String userId);
+    Optional<EmailAccountEntity> findFirstByCompanyIdAndUserIdAndEnabledTrueOrderByIdAsc(String companyId, String userId);
 
-    Optional<EmailAccountEntity> findByOrgIdAndUserIdAndEmailAddress(String orgId, String userId, String emailAddress);
+    Optional<EmailAccountEntity> findByCompanyIdAndUserIdAndEmailAddress(String companyId, String userId, String emailAddress);
 }

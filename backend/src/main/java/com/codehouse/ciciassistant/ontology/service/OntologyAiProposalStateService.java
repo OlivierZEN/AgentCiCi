@@ -45,25 +45,25 @@ public class OntologyAiProposalStateService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public <T> BeginResult<T> begin(
-            String orgId,
+            String companyId,
             String userId,
             Long workspaceId,
             String proposalType,
             String instruction,
             Preparation<T> preparation) {
-        requireCurrentOrg(orgId);
-        OntologyWorkspaceEntity workspace = lockWorkspace(orgId, workspaceId);
+        requireCurrentOrg(companyId);
+        OntologyWorkspaceEntity workspace = lockWorkspace(companyId, workspaceId);
         if ("ARCHIVED".equals(workspace.getStatus())) {
             throw invalid();
         }
-        OntologyDocument current = drafts.loadDraft(orgId, workspaceId, workspace);
+        OntologyDocument current = drafts.loadDraft(companyId, workspaceId, workspace);
         T prepared = Objects.requireNonNull(preparation, "preparation").prepare(current);
         long baseRevision = workspace.getDraftRevision();
         PendingDiff pendingDiff = new PendingDiff(
                 baseRevision, "", List.of(), List.of(), List.of());
         OntologyAiProposalEntity proposal = persistence.saveForCurrentOrg(
                 new OntologyAiProposalEntity(
-                        orgId,
+                        companyId,
                         workspaceId,
                         proposalType,
                         instruction,
@@ -76,16 +76,16 @@ public class OntologyAiProposalStateService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Transition finishReady(
-            String orgId,
+            String companyId,
             Long workspaceId,
             Long proposalId,
             long baseRevision,
             String payloadJson,
             String diffJson,
             String validationJson) {
-        requireCurrentOrg(orgId);
-        OntologyWorkspaceEntity workspace = lockWorkspace(orgId, workspaceId);
-        OntologyAiProposalEntity proposal = lockPendingProposal(orgId, workspaceId, proposalId);
+        requireCurrentOrg(companyId);
+        OntologyWorkspaceEntity workspace = lockWorkspace(companyId, workspaceId);
+        OntologyAiProposalEntity proposal = lockPendingProposal(companyId, workspaceId, proposalId);
         Transition terminal = terminalWorkspaceFailure(workspace, proposal, baseRevision);
         if (terminal != null) {
             return terminal;
@@ -97,16 +97,16 @@ public class OntologyAiProposalStateService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Transition fail(
-            String orgId,
+            String companyId,
             Long workspaceId,
             Long proposalId,
             long baseRevision,
             String code,
             String diagnostic) {
-        requireCurrentOrg(orgId);
-        OntologyWorkspaceEntity workspace = lockWorkspace(orgId, workspaceId);
+        requireCurrentOrg(companyId);
+        OntologyWorkspaceEntity workspace = lockWorkspace(companyId, workspaceId);
         OntologyAiProposalEntity proposal = proposals
-                .findForUpdateByIdAndOrgId(proposalId, orgId)
+                .findForUpdateByIdAndCompanyId(proposalId, companyId)
                 .orElseThrow(() -> new ResourceNotFoundException(INVALID_CODE));
         if (!Objects.equals(proposal.getWorkspaceId(), workspaceId)) {
             throw invalid();
@@ -125,17 +125,17 @@ public class OntologyAiProposalStateService {
         return markFailed(proposal, code, diagnostic);
     }
 
-    private OntologyWorkspaceEntity lockWorkspace(String orgId, Long workspaceId) {
-        return workspaces.findForUpdateByIdAndOrgId(workspaceId, orgId)
+    private OntologyWorkspaceEntity lockWorkspace(String companyId, Long workspaceId) {
+        return workspaces.findForUpdateByIdAndCompanyId(workspaceId, companyId)
                 .orElseThrow(() -> new ResourceNotFoundException(INVALID_CODE));
     }
 
     private OntologyAiProposalEntity lockPendingProposal(
-            String orgId,
+            String companyId,
             Long workspaceId,
             Long proposalId) {
         OntologyAiProposalEntity proposal = proposals
-                .findForUpdateByIdAndOrgId(proposalId, orgId)
+                .findForUpdateByIdAndCompanyId(proposalId, companyId)
                 .orElseThrow(() -> new ResourceNotFoundException(INVALID_CODE));
         if (!Objects.equals(proposal.getWorkspaceId(), workspaceId)
                 || !"PENDING".equals(proposal.getStatus())) {
@@ -166,8 +166,8 @@ public class OntologyAiProposalStateService {
         return new Transition(saved, code, diagnostic);
     }
 
-    private void requireCurrentOrg(String orgId) {
-        if (!Objects.equals(TenantContext.requireOrgId(), orgId)) {
+    private void requireCurrentOrg(String companyId) {
+        if (!Objects.equals(TenantContext.requireCompanyId(), companyId)) {
             throw new ForbiddenException(INVALID_CODE);
         }
     }

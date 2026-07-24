@@ -16,8 +16,8 @@ public class SecurityPolicySnapshotEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "policy_version", nullable = false, length = 64)
     private String policyVersion;
@@ -31,8 +31,8 @@ public class SecurityPolicySnapshotEntity {
     protected SecurityPolicySnapshotEntity() {
     }
 
-    public SecurityPolicySnapshotEntity(String orgId, String policyVersion, String snapshotJson) {
-        this.orgId = orgId;
+    public SecurityPolicySnapshotEntity(String companyId, String policyVersion, String snapshotJson) {
+        this.companyId = companyId;
         this.policyVersion = policyVersion;
         this.snapshotJson = snapshotJson;
         this.createdAt = Instant.now();

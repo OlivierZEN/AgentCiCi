@@ -27,7 +27,7 @@ public class AgentOpenApiCallLogService {
                       String message) {
         callLogRepository.save(new AgentApiCallLogEntity(
                 requestId,
-                auth.credential().getOrgId(),
+                auth.credential().getCompanyId(),
                 auth.credential().getId(),
                 auth.credential().getAgentId(),
                 auth.credential().getRunAsUserId(),
@@ -70,7 +70,7 @@ public class AgentOpenApiCallLogService {
                         clip(message, 1200)));
     }
 
-    public List<CallLogView> list(String orgId,
+    public List<CallLogView> list(String companyId,
                                   String agentId,
                                   Instant from,
                                   Instant to,
@@ -81,8 +81,8 @@ public class AgentOpenApiCallLogService {
         Instant resolvedFrom = from == null ? resolvedTo.minus(Duration.ofDays(7)) : from;
         String normalizedStatus = status == null ? "" : status.trim().toUpperCase(Locale.ROOT);
         String keyword = q == null ? "" : q.trim().toLowerCase(Locale.ROOT);
-        return callLogRepository.findTop100ByOrgIdAndAgentIdAndCreatedAtBetweenOrderByCreatedAtDesc(
-                        orgId,
+        return callLogRepository.findTop100ByCompanyIdAndAgentIdAndCreatedAtBetweenOrderByCreatedAtDesc(
+                        companyId,
                         agentId,
                         resolvedFrom,
                         resolvedTo)

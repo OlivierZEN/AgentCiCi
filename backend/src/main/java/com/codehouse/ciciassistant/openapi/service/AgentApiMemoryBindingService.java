@@ -38,14 +38,14 @@ public class AgentApiMemoryBindingService {
     }
 
     @Transactional(readOnly = true)
-    public BindingView get(String orgId, String agentId, Long credentialId) {
-        requireCredential(orgId, agentId, credentialId);
+    public BindingView get(String companyId, String agentId, Long credentialId) {
+        requireCredential(companyId, agentId, credentialId);
         return bindings.findByCredentialId(credentialId).map(this::toView).orElse(null);
     }
 
     @Transactional
-    public BindingView upsert(String orgId, String agentId, Long credentialId, String actorUserId, BindingCommand command) {
-        requireCredential(orgId, agentId, credentialId);
+    public BindingView upsert(String companyId, String agentId, Long credentialId, String actorUserId, BindingCommand command) {
+        requireCredential(companyId, agentId, credentialId);
         String applicationCode = normalizeApplicationCode(command.applicationCode());
         String subjectType = normalizeEnum(command.subjectType(), SUBJECT_TYPES, "subjectType");
         String identityLevel = normalizeEnum(command.identityLevel(), IDENTITY_LEVELS, "identityLevel");
@@ -54,26 +54,26 @@ public class AgentApiMemoryBindingService {
                 .map(existing -> { existing.update(applicationCode, subjectType, identityLevel, namespaces); return existing; })
                 .orElseGet(() -> new AgentApiMemoryBindingEntity(credentialId, applicationCode, subjectType, identityLevel, namespaces));
         BindingView view = toView(bindings.save(binding));
-        audit.log(orgId, actorUserId, "agent.api_memory_binding.upsert",
+        audit.log(companyId, actorUserId, "agent.api_memory_binding.upsert",
                 "agent=" + agentId + ",credentialId=" + credentialId + ",application=" + applicationCode + ",enabled=true");
         return view;
     }
 
     @Transactional
-    public BindingView disable(String orgId, String agentId, Long credentialId, String actorUserId) {
-        requireCredential(orgId, agentId, credentialId);
+    public BindingView disable(String companyId, String agentId, Long credentialId, String actorUserId) {
+        requireCredential(companyId, agentId, credentialId);
         AgentApiMemoryBindingEntity binding = bindings.findByCredentialId(credentialId)
                 .orElseThrow(() -> new IllegalArgumentException("Memory binding not found"));
         binding.disable();
         BindingView view = toView(bindings.save(binding));
-        audit.log(orgId, actorUserId, "agent.api_memory_binding.disable",
+        audit.log(companyId, actorUserId, "agent.api_memory_binding.disable",
                 "agent=" + agentId + ",credentialId=" + credentialId + ",enabled=false");
         return view;
     }
 
-    private AgentApiCredentialEntity requireCredential(String orgId, String agentId, Long credentialId) {
+    private AgentApiCredentialEntity requireCredential(String companyId, String agentId, Long credentialId) {
         if (credentialId == null || credentialId <= 0) throw new IllegalArgumentException("credentialId is required");
-        return credentials.findByIdAndOrgIdAndAgentId(credentialId, orgId, agentId)
+        return credentials.findByIdAndCompanyIdAndAgentId(credentialId, companyId, agentId)
                 .orElseThrow(() -> new IllegalArgumentException("Agent API key not found"));
     }
 

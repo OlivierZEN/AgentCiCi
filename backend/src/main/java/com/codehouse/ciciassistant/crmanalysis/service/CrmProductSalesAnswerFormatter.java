@@ -225,7 +225,7 @@ public class CrmProductSalesAnswerFormatter {
             answer.append("。\n");
         }
         if (!appended && pipelineAvailable && contractsAvailable) {
-            answer.append("- 当前可见范围内未发现与 Top 产品直接关联的开放商机产品或活跃合同；这是覆盖信号，不等同于全组织没有管道。");
+            answer.append("- 当前可见范围内未发现与 Top 产品直接关联的开放商机产品或活跃合同；这是覆盖信号，不等同于全公司没有管道。");
         }
     }
 

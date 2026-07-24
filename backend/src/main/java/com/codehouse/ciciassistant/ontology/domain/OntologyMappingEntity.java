@@ -50,7 +50,7 @@ public class OntologyMappingEntity extends AbstractOntologyWorkspaceEntity {
     }
 
     public OntologyMappingEntity(
-            String orgId,
+            String companyId,
             Long workspaceId,
             String targetType,
             String targetKey,
@@ -63,7 +63,7 @@ public class OntologyMappingEntity extends AbstractOntologyWorkspaceEntity {
             String source,
             String validationStatus,
             String createdBy) {
-        super(orgId, workspaceId);
+        super(companyId, workspaceId);
         this.targetType = targetType;
         this.targetKey = targetKey;
         this.dataSourceId = dataSourceId;

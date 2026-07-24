@@ -18,7 +18,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 public class TenantContextFilter extends OncePerRequestFilter {
 
-    public static final String ORG_HEADER = "X-Org-Id";
+    public static final String COMPANY_HEADER = "X-Company-Id";
     public static final String USER_HEADER = "X-User-Id";
     private static final String AUTH_HEADER = "Authorization";
 
@@ -38,7 +38,7 @@ public class TenantContextFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         try {
-            String orgId = allowHeaderContext ? request.getHeader(ORG_HEADER) : null;
+            String companyId = allowHeaderContext ? request.getHeader(COMPANY_HEADER) : null;
             String userId = allowHeaderContext ? request.getHeader(USER_HEADER) : null;
             String authorization = request.getHeader(AUTH_HEADER);
             boolean authenticated = false;
@@ -62,8 +62,8 @@ public class TenantContextFilter extends OncePerRequestFilter {
                         response.getWriter().write(objectMapper.writeValueAsString(ApiResponse.fail("Embed token is not valid for this endpoint")));
                         return;
                     }
-                    orgId = claims.get("org_id", String.class);
-                    TenantContext.setTokenType(tokenType == null || tokenType.isBlank() ? "organization" : tokenType);
+                    companyId = claims.get("company_id", String.class);
+                    TenantContext.setTokenType(tokenType == null || tokenType.isBlank() ? "company" : tokenType);
                     TenantContext.setRoles(extractRoles(claims));
                     authenticated = true;
                     if ("platform".equals(tokenType)) {
@@ -71,8 +71,14 @@ public class TenantContextFilter extends OncePerRequestFilter {
                         if (userId == null || userId.isBlank()) {
                             userId = claims.getSubject();
                         }
-                        orgId = null;
+                        companyId = null;
                     } else {
+                        if (!hasText(companyId)) {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json");
+                            response.getWriter().write(objectMapper.writeValueAsString(ApiResponse.fail("Invalid company token")));
+                            return;
+                        }
                         String memberId = claims.get("member_id", String.class);
                         userId = memberId == null || memberId.isBlank() ? claims.getSubject() : memberId;
                     }
@@ -85,7 +91,7 @@ public class TenantContextFilter extends OncePerRequestFilter {
             }
 
             if (!authenticated && allowHeaderContext) {
-                authenticated = hasText(orgId) && hasText(userId);
+                authenticated = hasText(companyId) && hasText(userId);
             }
 
             if (!authenticated && requiresAuthenticatedContext(request)) {
@@ -95,8 +101,8 @@ public class TenantContextFilter extends OncePerRequestFilter {
                 return;
             }
 
-            if (orgId != null && !orgId.isBlank()) {
-                TenantContext.setOrgId(orgId.trim());
+            if (companyId != null && !companyId.isBlank()) {
+                TenantContext.setCompanyId(companyId.trim());
             }
             if (userId != null && !userId.isBlank()) {
                 TenantContext.setUserId(userId.trim());

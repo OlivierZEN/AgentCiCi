@@ -81,7 +81,7 @@ class AgentRunTraceServiceTest {
     }
 
     @Test
-    void projectsOnlyTheSameOrganizationRuntimeFactsForAnExactlyLinkedTrace() {
+    void projectsOnlyTheSameCompanyRuntimeFactsForAnExactlyLinkedTrace() {
         AgentRunTraceRepository traces = mock(AgentRunTraceRepository.class);
         AgentTaskRuntimeService runtime = mock(AgentTaskRuntimeService.class);
         AgentRunTraceService service = new AgentRunTraceService(
@@ -94,7 +94,7 @@ class AgentRunTraceServiceTest {
                 1, 0, 0, "[]", "[]", "[]",
                 "{\"runtimeExecution\":{\"contextSnapshot\":{\"runtimeTask\":{\"runtimeRunId\":42,\"riskLevel\":\"HIGH\",\"requiresConfirmation\":true}}}}",
                 startedAt);
-        when(traces.findByTraceIdAndOrgId("trace-1", "org-1")).thenReturn(Optional.of(trace));
+        when(traces.findByTraceIdAndCompanyId("trace-1", "org-1")).thenReturn(Optional.of(trace));
         when(runtime.traceExecution("org-1", 42L)).thenReturn(Optional.of(new AgentTaskRuntimeService.TraceExecutionView(
                 42L, "PLAN_EXEC", "SUCCEEDED", 1, "PASS", "PASS", "token=hidden",
                 List.of(new AgentTaskRuntimeService.TraceStepView(
