@@ -60,4 +60,4 @@ updated_by: MANAGER-001
 
 - 标题区已使用现有组织控制台的紧凑布局加入产品下拉，不改变业务导航；当前 AgentCiCi 管理端与目标 Semattice 管理端均有明确状态和辅助说明。
 - AgentCiCi 服务端已增加受当前 TenantContext 保护的短时跳转签发端点，并复用既有 OACT 统一身份、成员活跃度和 Semattice provisioned binding 校验；管理员令牌额外只获得只读 `audit.read`，不增加持久角色或写权限。
-- 前端不存储、回显或记录 OACT；仅在收到可信固定主机的 fragment URI 后立即导航。真实管理员会话验收和任何生产发布不在本次实现中自动执行。
+- 前端不存储、回显或记录 OACT；仅在收到可信固定主机的 fragment URI 后立即导航。用户已明确授权在主线合并后按生产运行手册执行一次受控发布；真实管理员会话验收仍不伪造。

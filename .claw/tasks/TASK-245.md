@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-245
-status: review
-updated_at: 2026-07-25T01:50:00Z
+status: in_progress
+updated_at: 2026-07-25T02:20:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -14,8 +14,8 @@ spec_path: docs/specs/FEAT-138-assistant-admin-session-entrypoint.md
 
 ## Current State
 
-- Status: `review`
-- Next action: 使用真实组织管理员会话完成 Semattice 跳转与浏览器返回 AgentCiCi 的验收；未获授权不发布生产。
+- Status: `in_progress`
+- Next action: 合并到 `main`，依生产运行手册完成备份、不可变镜像发布、线上健康检查；真实组织管理员会话验收继续保持不伪造。
 - Blocked: none
 - Spec: `docs/specs/FEAT-138-assistant-admin-session-entrypoint.md`
 - Assignment: `.claw/assignments/TASK-245.yaml`
@@ -28,6 +28,7 @@ spec_path: docs/specs/FEAT-138-assistant-admin-session-entrypoint.md
 - 用户进一步确认：在组织控制台标题右侧放置产品下拉入口，列表可在 AgentCiCi 管理端与 Semattice 管理端之间切换。
 - 已实现：标题右侧下拉明确标识当前 AgentCiCi 管理端，并为 Semattice 管理端提供键盘可达、Esc/点外关闭和进入中禁用状态。
 - 已实现：受保护的 `/auth/semattice/console` 仅对当前 `OWNER` / `ORG_ADMIN` 按 TenantContext 重新核验后签发短时 OACT；前端只校验固定 HTTPS 主机并立即以 fragment 跳转，不持久化或记录 token。
+- 用户已于 2026-07-25 明确授权本任务合并主线并进行一次受控生产发布。
 
 ## Changed Files
 

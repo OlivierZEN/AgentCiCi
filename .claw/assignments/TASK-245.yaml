@@ -58,9 +58,10 @@ task_boundary:
   - "移除组织管理端的独立登录体验，并从前台组织菜单进入后台。"
   - "仅复用当前前台会话，保留服务端角色和组织隔离授权。"
   - "在组织控制台标题处提供 AgentCiCi 与 Semattice 的产品切换菜单；Semattice 仅由当前组织管理员以短时 OACT 进入。"
-  - "允许新增一个仅面向当前组织管理员的 OACT 签发入口；不新增角色、移动端实现或生产发布。"
+  - "允许新增一个仅面向当前组织管理员的 OACT 签发入口；不新增角色或移动端实现。"
+  - "用户于 2026-07-25 明确授权：完成主线合并后，按 `docs/production-release-runbook.md` 对本任务进行一次受控生产发布、备份与健康验收。"
 change_manifest_required: true
 preflight_required: true
 local_login_required: true
 identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
-signature: "MANAGER-001; user confirmed the session-integrated organization administration entrypoint and Semattice product switch on 2026-07-25."
+signature: "MANAGER-001; user confirmed the session-integrated organization administration entrypoint and Semattice product switch on 2026-07-25, and explicitly authorized mainline merge plus one controlled production release."
