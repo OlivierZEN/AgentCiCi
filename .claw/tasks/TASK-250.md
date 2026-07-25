@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-250
-status: review
-updated_at: 2026-07-25T00:00:00Z
+status: done
+updated_at: 2026-07-25T00:10:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: backend-agent
@@ -14,8 +14,8 @@ spec_path: docs/specs/FEAT-143-mcp-http-session-propagation.md
 
 ## Current State
 
-- Status: `review`
-- Next action: 等待用户授权合并主线或生产发布；发布后在 `cc-semattic-mcp` 刷新工具并执行受权工具调用复核。
+- Status: `done`
+- Next action: 已合并主线；生产发布与真实 `cc-semattic-mcp` 刷新/调用复核需要单独授权。
 - Blocked: none
 
 ## Scope
@@ -40,3 +40,4 @@ spec_path: docs/specs/FEAT-143-mcp-http-session-propagation.md
 - 任务范围的 SSH 身份、Git 身份、任务分支与 MCP 源码/测试/状态文件均经 `dev-login.py` 和 `check-assignment.py` 返回 `allowed`。
 - `mvn -q -Dmaven.repo.local=../.m2 -Dtest=McpClientTest test` 通过（1 test）：本地 HTTP 伪 MCP 服务以 SSE 返回 initialize 结果，断言四步顺序、会话 ID、协议版本与 Bearer JWT。
 - `mvn -q -Dmaven.repo.local=../.m2 -DskipTests compile` 和 `git diff --check` 通过。
+- 主线已以快进方式包含 `4958bc1 fix(mcp): reuse streamable HTTP session`。

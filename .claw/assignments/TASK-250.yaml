@@ -1,7 +1,7 @@
 task_id: TASK-250
 assignee: MANAGER-001
 assigned_by: MANAGER-001
-status: active
+status: completed
 assigned_at: 2026-07-24T23:56:24Z
 expires_at: none
 spec_path: docs/specs/FEAT-143-mcp-http-session-propagation.md
