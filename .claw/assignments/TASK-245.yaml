@@ -19,6 +19,9 @@ allowed_write_roots:
   - frontend/src/suite/AgentCiciWebsite.tsx
   - frontend/src/constants.ts
   - frontend/src/styles.css
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/api/**
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/service/**
+  - backend/src/test/java/com/codehouse/ciciassistant/auth/**
   - README.md
   - AgentCiCi智能体平台实现设计方案.md
   - DESIGN.json
@@ -37,6 +40,11 @@ scope_files:
   - frontend/src/App.tsx
   - frontend/src/constants.ts
   - frontend/src/styles.css
+  - frontend/src/admin/AdminShell.tsx
+  - frontend/src/admin/adminAuthScope.test.ts
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/api/AuthController.java
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/service/OfficialAccessTokenService.java
+  - backend/src/test/java/com/codehouse/ciciassistant/auth/OfficialAccessTokenServiceTest.java
   - README.md
   - AgentCiCi智能体平台实现设计方案.md
   - DESIGN.json
@@ -49,9 +57,10 @@ shared_contracts:
 task_boundary:
   - "移除组织管理端的独立登录体验，并从前台组织菜单进入后台。"
   - "仅复用当前前台会话，保留服务端角色和组织隔离授权。"
-  - "不新增后端 API、角色、移动端实现或生产发布。"
+  - "在组织控制台标题处提供 AgentCiCi 与 Semattice 的产品切换菜单；Semattice 仅由当前组织管理员以短时 OACT 进入。"
+  - "允许新增一个仅面向当前组织管理员的 OACT 签发入口；不新增角色、移动端实现或生产发布。"
 change_manifest_required: true
 preflight_required: true
 local_login_required: true
 identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
-signature: "MANAGER-001; user confirmed the session-integrated organization administration entrypoint on 2026-07-24."
+signature: "MANAGER-001; user confirmed the session-integrated organization administration entrypoint and Semattice product switch on 2026-07-25."
