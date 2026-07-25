@@ -3252,7 +3252,7 @@ button.secondary:hover:not(:disabled) {
   position: absolute;
   z-index: 30;
   top: calc(100% + 7px);
-  right: 0;
+  left: 0;
   width: 238px;
   border: 1px solid var(--admin-line);
   background: var(--admin-panel);

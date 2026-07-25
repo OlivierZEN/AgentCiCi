@@ -30,11 +30,14 @@ describe("admin auth async scope", () => {
 
   it("keeps the Semattice entry in the organization console behind the signed current-admin session", () => {
     const shellSource = readFileSync(new URL("./AdminShell.tsx", import.meta.url), "utf8");
+    const stylesSource = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
 
     expect(shellSource).toContain('"/auth/semattice/console"');
     expect(shellSource).toContain('target.hash.startsWith("#oact=")');
     expect(shellSource).toContain('window.location.assign(target.toString())');
     expect(shellSource).toContain("Semattice 管理端");
     expect(shellSource).not.toContain("cici_semattice_token");
+    expect(stylesSource).toMatch(/\.admin-product-switch__menu\s*\{[^}]*left:\s*0;/s);
+    expect(stylesSource).not.toMatch(/\.admin-product-switch__menu\s*\{[^}]*right:\s*0;/s);
   });
 });
