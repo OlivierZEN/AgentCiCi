@@ -17,13 +17,13 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-250 - MCP HTTP 会话复用修复
 
-- status: `in_progress`
+- status: `review`
 - priority: `critical`
 - owner_role: `backend-agent`
 - spec_path: `docs/specs/FEAT-143-mcp-http-session-propagation.md`
 - task_status_path: `.claw/tasks/TASK-250.md`
 - assignment_path: `.claw/assignments/TASK-250.yaml`
-- next_action: 保存 initialize 的 MCP 会话 ID，完成 initialized 通知后对 tools/list/tools/call 透传会话及协议版本并做本地 HTTP 回归。
+- next_action: 等待用户授权合并主线或生产发布；随后在 `cc-semattic-mcp` 验证真实工具刷新和受权工具调用。
 
 ### TASK-249 - 组织简档接口反向代理修复
 

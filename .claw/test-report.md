@@ -4,14 +4,21 @@ Total output lines: 6804
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-24T14:23:00Z
+updated_at: 2026-07-25T00:00:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-24T14:23:00Z
+last_run_at: 2026-07-25T00:00:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-250 - MCP HTTP 会话复用修复
+
+- `identity/assignment`：`MANAGER-001` 的 SSH 持钥、Git 身份、`codex/TASK-250-mcp-session-propagation` 分支及 MCP 源码/测试/状态代表路径经 `dev-login.py` 与 `check-assignment.py` 返回 `allowed`。
+- `backend-focused`：`mvn -q -Dmaven.repo.local=../.m2 -Dtest=McpClientTest test` 通过（1 test）。本地 HTTP 伪 MCP 服务以 SSE 返回 `initialize` JSON-RPC 结果与 `Mcp-Session-Id`；断言请求顺序为 initialize、initialized 通知、tools/list、tools/call，后三步复用同一会话，所有请求使用 `MCP-Protocol-Version: 2025-03-26`，tools/call 保留 `Bearer user-jwt`。测试也确认 MCP Server 配置中的陈旧会话/协议头不会污染新初始化。
+- `backend-compile/static`：`mvn -q -Dmaven.repo.local=../.m2 -DskipTests compile` 与 `git diff --check` 通过。
+- `production-limit`：未改动 Semattice、MCP Server 配置、主线或生产环境；真实 `cc-semattic-mcp` 刷新和工具调用留待用户授权合并/发布后以受权会话复核。
 
 ## TASK-247 - 平台全量个人用户目录
 

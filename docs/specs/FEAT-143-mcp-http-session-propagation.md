@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-143
 title: MCP Streamable HTTP 会话复用修复
-status: active
+status: review
 owner_role: backend-agent
 task_ids: TASK-250
 related_decisions: none
 related_issues: MCP 工具刷新失败：tools/list 在会话初始化阶段无效
-updated_at: 2026-07-24T23:56:24Z
+updated_at: 2026-07-25T00:00:00Z
 updated_by: MANAGER-001
 ---
 
@@ -78,7 +78,10 @@ updated_by: MANAGER-001
 
 ## 实现进展
 
-- 当前状态：已完成根因确认与任务授权，待实现。
+- 当前状态：已完成实现并进入 review。
+- `McpClient` 将初始化响应和解析结果分离，SSE 分支也会在返回前读取 `Mcp-Session-Id`；`notifications/initialized` 失败会阻止后续调用。
+- 会话和初始化完成状态按 MCP Server 隔离保存在当前进程，`tools/list`/`tools/call` 会先确保初始化完成。
+- 配置或动态头中的 `Mcp-Session-Id`、`MCP-Protocol-Version` 被忽略，最终请求只使用客户端协商的会话和声明的协议版本。
 
 ## 交接说明
 

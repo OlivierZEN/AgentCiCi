@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-250
-status: in_progress
-updated_at: 2026-07-24T23:56:24Z
+status: review
+updated_at: 2026-07-25T00:00:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: backend-agent
@@ -14,8 +14,8 @@ spec_path: docs/specs/FEAT-143-mcp-http-session-propagation.md
 
 ## Current State
 
-- Status: `in_progress`
-- Next action: 实现初始化响应头捕获、初始化完成通知和后续 MCP 请求头透传，并运行定向回归。
+- Status: `review`
+- Next action: 等待用户授权合并主线或生产发布；发布后在 `cc-semattic-mcp` 刷新工具并执行受权工具调用复核。
 - Blocked: none
 
 ## Scope
@@ -34,3 +34,9 @@ spec_path: docs/specs/FEAT-143-mcp-http-session-propagation.md
 - 规格：`docs/specs/FEAT-143-mcp-http-session-propagation.md`。
 - 实施分支：`codex/TASK-250-mcp-session-propagation`。
 - 任务结束前不得合并 `main` 或发布生产；需要用户明确授权。
+
+## Verification
+
+- 任务范围的 SSH 身份、Git 身份、任务分支与 MCP 源码/测试/状态文件均经 `dev-login.py` 和 `check-assignment.py` 返回 `allowed`。
+- `mvn -q -Dmaven.repo.local=../.m2 -Dtest=McpClientTest test` 通过（1 test）：本地 HTTP 伪 MCP 服务以 SSE 返回 initialize 结果，断言四步顺序、会话 ID、协议版本与 Bearer JWT。
+- `mvn -q -Dmaven.repo.local=../.m2 -DskipTests compile` 和 `git diff --check` 通过。

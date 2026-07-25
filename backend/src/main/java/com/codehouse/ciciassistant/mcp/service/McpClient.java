@@ -16,8 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.concurrent.locks.ReentrantLock;
 import org.springframework.stereotype.Component;
 
 /**
@@ -27,8 +26,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class McpClient {
 
-    private static final Logger log = LoggerFactory.getLogger(McpClient.class);
     private static final String PROTOCOL_VERSION = "2025-03-26";
+    private static final String MCP_PROTOCOL_VERSION_HEADER = "MCP-Protocol-Version";
+    private static final String MCP_SESSION_ID_HEADER = "Mcp-Session-Id";
 
     private final ObjectMapper objectMapper;
     // Do not pin to HTTP/1.1: mcp.cloudcc.cn (and many other MCP servers) negotiate HTTP/2
@@ -40,8 +40,14 @@ public class McpClient {
             .build();
     private final AtomicInteger idSeq = new AtomicInteger(1);
 
-    /** serverId → session-id returned by the MCP server after initialize */
-    private final ConcurrentHashMap<Long, String> sessionIds = new ConcurrentHashMap<>();
+    /** server key → session-id returned by the MCP server after initialize */
+    private final ConcurrentHashMap<String, String> sessionIds = new ConcurrentHashMap<>();
+
+    /** Server keys that have completed initialize and notifications/initialized in this process. */
+    private final ConcurrentHashMap.KeySetView<String, Boolean> initializedServerKeys = ConcurrentHashMap.newKeySet();
+
+    /** Serializes initialization so one server cannot receive interleaved MCP sessions. */
+    private final ConcurrentHashMap<String, ReentrantLock> initializationLocks = new ConcurrentHashMap<>();
 
     public McpClient(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
@@ -58,6 +64,20 @@ public class McpClient {
     }
 
     public JsonNode initialize(McpServerEntity server, Map<String, String> extraHeaders) throws Exception {
+        String serverKey = serverKey(server);
+        ReentrantLock lock = initializationLocks.computeIfAbsent(serverKey, ignored -> new ReentrantLock());
+        lock.lock();
+        try {
+            // A caller explicitly asking to initialize starts a fresh MCP session.
+            clearSession(serverKey);
+            return initializeInternal(server, serverKey, extraHeaders);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private JsonNode initializeInternal(McpServerEntity server, String serverKey, Map<String, String> extraHeaders)
+            throws Exception {
         ObjectNode params = objectMapper.createObjectNode();
         params.put("protocolVersion", PROTOCOL_VERSION);
         params.putObject("capabilities");
@@ -65,9 +85,15 @@ public class McpClient {
         clientInfo.put("name", "cc-cici-assistant");
         clientInfo.put("version", "1.0.0");
 
-        JsonNode result = rpc(server, "initialize", params, extraHeaders);
+        RpcResponse initializeResponse = rpcWithResponse(server, "initialize", params, extraHeaders);
+        initializeResponse.httpResponse().headers().firstValue(MCP_SESSION_ID_HEADER)
+                .filter(sessionId -> !sessionId.isBlank())
+                .ifPresent(sessionId -> sessionIds.put(serverKey, sessionId));
+
+        // The server must see this notification on the same session before later MCP methods.
         sendNotification(server, "notifications/initialized", objectMapper.createObjectNode(), extraHeaders);
-        return result;
+        initializedServerKeys.add(serverKey);
+        return initializeResponse.result();
     }
 
     /**
@@ -78,6 +104,7 @@ public class McpClient {
     }
 
     public List<McpTool> listTools(McpServerEntity server, Map<String, String> extraHeaders) throws Exception {
+        ensureInitialized(server, extraHeaders);
         JsonNode result = rpc(server, "tools/list", objectMapper.createObjectNode(), extraHeaders);
         if (result == null || !result.has("tools")) {
             return Collections.emptyList();
@@ -102,6 +129,7 @@ public class McpClient {
 
     public String callTool(McpServerEntity server, String toolName, String argumentsJson, Map<String, String> extraHeaders)
             throws Exception {
+        ensureInitialized(server, extraHeaders);
         ObjectNode params = objectMapper.createObjectNode();
         params.put("name", toolName);
         if (argumentsJson != null && !argumentsJson.isBlank()) {
@@ -145,12 +173,19 @@ public class McpClient {
     }
 
     public void clearSession(Long serverId) {
-        sessionIds.remove(serverId);
+        if (serverId != null) {
+            clearSession(serverKey(serverId));
+        }
     }
 
     // ── internals ───────────────────────────────────────────
 
     private JsonNode rpc(McpServerEntity server, String method, JsonNode params, Map<String, String> extraHeaders) throws Exception {
+        return rpcWithResponse(server, method, params, extraHeaders).result();
+    }
+
+    private RpcResponse rpcWithResponse(McpServerEntity server, String method, JsonNode params,
+                                        Map<String, String> extraHeaders) throws Exception {
         ObjectNode request = objectMapper.createObjectNode();
         request.put("jsonrpc", "2.0");
         request.put("id", idSeq.getAndIncrement());
@@ -161,7 +196,7 @@ public class McpClient {
         String body = httpResp.body();
 
         if (body.startsWith("event:") || body.startsWith("data:")) {
-            return extractJsonRpcFromSse(body);
+            return new RpcResponse(httpResp, extractJsonRpcFromSse(body));
         }
 
         JsonNode root = objectMapper.readTree(body);
@@ -173,24 +208,16 @@ public class McpClient {
             );
         }
 
-        String sessionId = httpResp.headers().firstValue("mcp-session-id").orElse(null);
-        if (sessionId != null && server.getId() != null) {
-            sessionIds.put(server.getId(), sessionId);
-        }
-
-        return root.get("result");
+        return new RpcResponse(httpResp, root.get("result"));
     }
 
-    private void sendNotification(McpServerEntity server, String method, JsonNode params, Map<String, String> extraHeaders) {
-        try {
-            ObjectNode notification = objectMapper.createObjectNode();
-            notification.put("jsonrpc", "2.0");
-            notification.put("method", method);
-            notification.set("params", params);
-            doPost(server, notification, extraHeaders);
-        } catch (Exception e) {
-            log.debug("Failed to send notification {}: {}", method, e.getMessage());
-        }
+    private void sendNotification(McpServerEntity server, String method, JsonNode params,
+                                  Map<String, String> extraHeaders) throws Exception {
+        ObjectNode notification = objectMapper.createObjectNode();
+        notification.put("jsonrpc", "2.0");
+        notification.put("method", method);
+        notification.set("params", params);
+        doPost(server, notification, extraHeaders);
     }
 
     private HttpResponse<String> doPost(McpServerEntity server, JsonNode body, Map<String, String> extraHeaders)
@@ -203,13 +230,6 @@ public class McpClient {
                 .timeout(Duration.ofSeconds(server.getTimeoutSeconds()))
                 .POST(HttpRequest.BodyPublishers.ofString(jsonBody, StandardCharsets.UTF_8));
 
-        if (server.getId() != null) {
-            String sid = sessionIds.get(server.getId());
-            if (sid != null) {
-                builder.header("Mcp-Session-Id", sid);
-            }
-        }
-
         parseAndApplyHeaders(server.getHeaders(), builder);
         if (extraHeaders != null) {
             for (Map.Entry<String, String> entry : extraHeaders.entrySet()) {
@@ -218,12 +238,20 @@ public class McpClient {
                 if (key == null || key.isBlank() || val == null || val.isBlank()) {
                     continue;
                 }
-                if (!key.equalsIgnoreCase("Content-Type") && !key.equalsIgnoreCase("Accept")) {
+                if (isConfigurableRequestHeader(key)) {
                     // Dynamic headers should override any static configured headers
                     // (e.g. stale accessToken/base_url from MCP server settings).
                     builder.setHeader(key, val);
                 }
             }
+        }
+
+        // Protocol/session headers are not configurable credentials. Set them last so a stale
+        // MCP Server configuration cannot replace the session negotiated by this process.
+        builder.setHeader(MCP_PROTOCOL_VERSION_HEADER, PROTOCOL_VERSION);
+        String sessionId = sessionIds.get(serverKey(server));
+        if (sessionId != null && !sessionId.isBlank()) {
+            builder.setHeader(MCP_SESSION_ID_HEADER, sessionId);
         }
 
         HttpResponse<String> response = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
@@ -232,6 +260,36 @@ public class McpClient {
                     "HTTP " + response.statusCode() + ": " + response.body());
         }
         return response;
+    }
+
+    private void ensureInitialized(McpServerEntity server, Map<String, String> extraHeaders) throws Exception {
+        String serverKey = serverKey(server);
+        if (initializedServerKeys.contains(serverKey)) {
+            return;
+        }
+        ReentrantLock lock = initializationLocks.computeIfAbsent(serverKey, ignored -> new ReentrantLock());
+        lock.lock();
+        try {
+            if (!initializedServerKeys.contains(serverKey)) {
+                clearSession(serverKey);
+                initializeInternal(server, serverKey, extraHeaders);
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private void clearSession(String serverKey) {
+        sessionIds.remove(serverKey);
+        initializedServerKeys.remove(serverKey);
+    }
+
+    private String serverKey(McpServerEntity server) {
+        return server.getId() == null ? "url:" + server.getUrl() : serverKey(server.getId());
+    }
+
+    private String serverKey(Long serverId) {
+        return "id:" + serverId;
     }
 
     private void parseAndApplyHeaders(String headersText, HttpRequest.Builder builder) {
@@ -250,10 +308,17 @@ public class McpClient {
             if (val.startsWith("\"") && val.endsWith("\"") && val.length() >= 2) {
                 val = val.substring(1, val.length() - 1);
             }
-            if (!key.equalsIgnoreCase("Content-Type") && !key.equalsIgnoreCase("Accept")) {
+            if (isConfigurableRequestHeader(key)) {
                 builder.header(key, val);
             }
         }
+    }
+
+    private boolean isConfigurableRequestHeader(String headerName) {
+        return !headerName.equalsIgnoreCase("Content-Type")
+                && !headerName.equalsIgnoreCase("Accept")
+                && !headerName.equalsIgnoreCase(MCP_PROTOCOL_VERSION_HEADER)
+                && !headerName.equalsIgnoreCase(MCP_SESSION_ID_HEADER);
     }
 
     /**
@@ -277,6 +342,8 @@ public class McpClient {
     }
 
     // ── value types ─────────────────────────────────────────
+
+    private record RpcResponse(HttpResponse<String> httpResponse, JsonNode result) {}
 
     public record McpTool(String name, String description, JsonNode inputSchema) {}
 
