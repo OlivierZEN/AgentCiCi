@@ -32,7 +32,7 @@ updated_by: MANAGER-001
 - 前台仅根据 `/auth/companies` 已返回的目标组织 `roleCode` 决定是否展示入口；不能据此绕过后端授权。
 - Semattice 跳转端点也必须由服务端读取当前 TenantContext，并再次校验 `OWNER` / `ORG_ADMIN`、活跃成员、统一身份映射和已 provisioned 的 Semattice binding；任何缺失、过期或权限不符均 fail closed。
 - AdminGuard 仍通过 `/auth/me` 复核 `OWNER` / `ORG_ADMIN`，前端存储缺失、token 失效、角色不符或跨组织状态不一致均 fail closed 并返回前台。
-- 不新增 token、后端 API、角色或权限放宽；后台 API 继续由既有服务端组织上下文和角色控制。
+- 不新增持久 token、角色或权限放宽；仅新增受当前 TenantContext 保护的 Semattice 跳转签发 API，后台 API 继续由既有服务端组织上下文和角色控制。
 
 ## 交互与状态
 
@@ -55,3 +55,9 @@ updated_by: MANAGER-001
 - 用户已确认：以现有组织菜单为容器，使用同一行文本命令“管理后台”作为权限提示，不做钉钉视觉复刻。
 - 用户已确认：以截图中的组织控制台标题区作为跨产品入口位置，使用下拉列表切换 AgentCiCi 与 Semattice 管理端，不做钉钉视觉复刻。
 - 图片决策：跳过。该功能是已有认证后菜单的窄范围语义增强，用户提供的参考图已明确交互意图，额外生成图像不会改善现有产品组件的层级或可用性。
+
+## 实现进度
+
+- 标题区已使用现有组织控制台的紧凑布局加入产品下拉，不改变业务导航；当前 AgentCiCi 管理端与目标 Semattice 管理端均有明确状态和辅助说明。
+- AgentCiCi 服务端已增加受当前 TenantContext 保护的短时跳转签发端点，并复用既有 OACT 统一身份、成员活跃度和 Semattice provisioned binding 校验；管理员令牌额外只获得只读 `audit.read`，不增加持久角色或写权限。
+- 前端不存储、回显或记录 OACT；仅在收到可信固定主机的 fragment URI 后立即导航。真实管理员会话验收和任何生产发布不在本次实现中自动执行。

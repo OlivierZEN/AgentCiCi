@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-245
-status: in_progress
-updated_at: 2026-07-25T01:30:00Z
+status: review
+updated_at: 2026-07-25T01:50:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -14,8 +14,8 @@ spec_path: docs/specs/FEAT-138-assistant-admin-session-entrypoint.md
 
 ## Current State
 
-- Status: `in_progress`
-- Next action: 在组织控制台标题处实现 AgentCiCi / Semattice 管理端切换，并以当前管理员会话签发短时 OACT 跳转。
+- Status: `review`
+- Next action: 使用真实组织管理员会话完成 Semattice 跳转与浏览器返回 AgentCiCi 的验收；未获授权不发布生产。
 - Blocked: none
 - Spec: `docs/specs/FEAT-138-assistant-admin-session-entrypoint.md`
 - Assignment: `.claw/assignments/TASK-245.yaml`
@@ -26,6 +26,8 @@ spec_path: docs/specs/FEAT-138-assistant-admin-session-entrypoint.md
 - 已实现：管理员组织行显示轻量“管理后台”命令；跨组织先调用 `/auth/switch-company`，随后复用返回会话进入 `/admin`。
 - 已关闭独立后台表单：`/admin/login`、无前台管理员会话的 `/admin/*` 均回到 `/app`；后台返回前台只清除 `cici_admin_token` 镜像。
 - 用户进一步确认：在组织控制台标题右侧放置产品下拉入口，列表可在 AgentCiCi 管理端与 Semattice 管理端之间切换。
+- 已实现：标题右侧下拉明确标识当前 AgentCiCi 管理端，并为 Semattice 管理端提供键盘可达、Esc/点外关闭和进入中禁用状态。
+- 已实现：受保护的 `/auth/semattice/console` 仅对当前 `OWNER` / `ORG_ADMIN` 按 TenantContext 重新核验后签发短时 OACT；前端只校验固定 HTTPS 主机并立即以 fragment 跳转，不持久化或记录 token。
 
 ## Changed Files
 
@@ -48,13 +50,17 @@ spec_path: docs/specs/FEAT-138-assistant-admin-session-entrypoint.md
 - `AgentCiCi智能体平台实现设计方案.md`
 - `DESIGN.json`
 - `backend/src/main/java/com/codehouse/ciciassistant/auth/api/AuthController.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/auth/service/AuthService.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/auth/service/OfficialAccessTokenService.java`
+- `backend/src/test/java/com/codehouse/ciciassistant/auth/OfficialAccessTokenServiceTest.java`
+- `frontend/src/admin/adminAuthScope.test.ts`
+- `frontend/src/styles.css`
 
 ## Verification
 
 - Status: `passed_with_manual_acceptance_pending`
-- Evidence: `npm test -- --run src/admin/adminSession.test.ts src/admin/adminNavigationGuard.test.ts src/theme/theme.test.ts` 通过（3 files / 18 tests）；`npm run build`、`git diff --check` 通过；`/admin/login` 在 1280×900 桌面端浏览器直接回到 `/app`，控制台无错误。当前会话没有真实组织管理员凭据，菜单内授权交互未伪造验收。
+- Evidence: `npm test -- --run src/admin/adminAuthScope.test.ts src/admin/adminSession.test.ts` 通过（2 files / 6 tests）；`npm run build`、`mvn -q -Dtest=OfficialAccessTokenServiceTest test` 和 `git diff --check` 通过。当前会话没有真实组织管理员凭据，产品菜单签发/跳转与浏览器返回未伪造验收。
 
 ## Handoff
 
-- 仅复用现有用户会话和组织切换 API；OACT 只能经短时响应内存与 URL fragment 传递，禁止写入 localStorage、sessionStorage、日志或 query string；角色校验必须继续 fail closed。真实验收应覆盖当前组织进入、跨组织进入、普通成员无入口/直达拒绝，以及后台返回前台后助手会话仍有效。
+- 仅复用现有用户会话和组织切换 API；OACT 只能经短时响应内存与 URL fragment 传递，禁止写入 localStorage、sessionStorage、Cookie、日志或 query string；角色校验必须继续 fail closed。真实验收应覆盖当前组织进入、跨组织进入、普通成员无入口/直达拒绝、Semattice 跳转以及浏览器返回 AgentCiCi 后助手会话仍有效。

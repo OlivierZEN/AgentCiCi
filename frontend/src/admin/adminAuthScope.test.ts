@@ -27,4 +27,14 @@ describe("admin auth async scope", () => {
     expect(shellSource).toContain("invalidateAdminAuthRequests");
     expect(ontologySource).toMatch(/useEffect\(\(\) => \{\s*void loadWorkspaces\(\);\s*void loadReferencePackages\(\);\s*\}, \[authScopeKey,/);
   });
+
+  it("keeps the Semattice entry in the organization console behind the signed current-admin session", () => {
+    const shellSource = readFileSync(new URL("./AdminShell.tsx", import.meta.url), "utf8");
+
+    expect(shellSource).toContain('"/auth/semattice/console"');
+    expect(shellSource).toContain('target.hash.startsWith("#oact=")');
+    expect(shellSource).toContain('window.location.assign(target.toString())');
+    expect(shellSource).toContain("Semattice 管理端");
+    expect(shellSource).not.toContain("cici_semattice_token");
+  });
 });

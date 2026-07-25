@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-24T13:16:55Z
+updated_at: 2026-07-25T01:50:00Z
 updated_by: MANAGER-001
 phase: multi-track-production-and-review
 active_task: TASK-245
-next_action: "等待真实组织管理员会话验收 TASK-245 的同组织、跨组织与后台返回前台流程；未获授权不发布生产。"
+next_action: "等待真实组织管理员会话验收 TASK-245 的同组织、跨组织、Semattice 跳转与浏览器返回 AgentCiCi 流程；未获授权不发布生产。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-245 / FEAT-138：已完成本地实现并进入 review。组织管理员在前台“切换组织”菜单可从对应组织行点击轻量“管理后台”；跨组织时先调用既有 `/auth/switch-company`，再复用返回 token 进入 `/admin`。`/admin/login` 和无前台管理员会话的后台直达均回 `/app`；后台返回前台仅清除 `cici_admin_token` 镜像。定向前端测试 18/18、生产构建和 `/admin/login` 桌面端重定向检查通过；本会话没有真实管理员凭据，授权菜单交互待用户验收。该任务不新增后端 API、角色、移动端或生产发布。
+- TASK-245 / FEAT-138：已完成本地实现并进入 review。组织管理员在前台“切换组织”菜单可从对应组织行点击轻量“管理后台”；跨组织时先调用既有 `/auth/switch-company`，再复用返回 token 进入 `/admin`。组织控制台标题右侧新增产品下拉：当前 AgentCiCi 管理端具状态标识，Semattice 管理端通过受保护的 `/auth/semattice/console` 按当前 TenantContext 再核验管理员、活跃成员、统一身份和 provisioned binding 后签发短时 OACT，前端仅以内存处理并立即跳转固定 HTTPS fragment URI。定向前端测试 6/6、后端 OACT 定向测试和生产构建通过；本会话没有真实管理员凭据，产品菜单签发/跳转与浏览器返回待用户验收。该任务只新增受保护跳转签发 API，不新增持久 token、角色、移动端或生产发布。
 
 - TASK-244 / FEAT-137：用户反馈完成 SSO 后回调 `x.agentcici.com/auth/oidc/callback` 返回 `Invalid OIDC login state`。根因是主站和应用站都创建 host-only state Cookie、而 callback 固定到 `x`。现已以 `2.8.13 / 877337078ea8` 发布：主站先跳 `x`，仅 `x` 创建 state。发布前备份 `/opt/cici/backups/20260724-201945-before-2.8.13-oidc-canonical-entrypoint` 四项均非空；backend/frontend 健康，版本、Nginx 和公网 canonical-start smoke 均通过。真实用户 Keycloak 复验待完成。
 

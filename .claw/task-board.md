@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-24T13:16:55Z
+updated_at: 2026-07-25T01:50:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -15,7 +15,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
-### TASK-245 - 前台会话内置组织管理入口
+### TASK-245 - 前台会话内置组织管理入口与 Semattice 管理端切换
 
 - status: `review`
 - priority: `high`
@@ -23,7 +23,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - spec_path: `docs/specs/FEAT-138-assistant-admin-session-entrypoint.md`
 - task_status_path: `.claw/tasks/TASK-245.md`
 - assignment_path: `.claw/assignments/TASK-245.yaml`
-- next_action: 等待真实组织管理员会话完成菜单内同组织、跨组织和后台返回前台验收；未授权生产发布。
+- next_action: 等待真实组织管理员会话完成菜单内同组织、跨组织、Semattice 跳转和浏览器返回 AgentCiCi 的验收；未授权生产发布。
 
 ### TASK-244 - OIDC 统一入口 state 修复
 
