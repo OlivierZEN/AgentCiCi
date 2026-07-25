@@ -63,11 +63,15 @@ export default function AdminShell() {
   const token = auth?.token ?? "";
   const [me, setMe] = useState<MePayload>({});
   const [companyName, setCompanyName] = useState(auth?.companyName || auth?.companyId || "");
+  const [productMenuOpen, setProductMenuOpen] = useState(false);
+  const [sematticeEntryPending, setSematticeEntryPending] = useState(false);
+  const [productMenuNotice, setProductMenuNotice] = useState("");
   const [collapsedNavGroups, setCollapsedNavGroups] = useState<string[]>([]);
   const [navigationGuard, setNavigationGuard] = useState<AdminNavigationGuard | null>(null);
   const navigationGuardIdRef = useRef(0);
   const profileRequestIdRef = useRef(0);
   const companyRequestIdRef = useRef(0);
+  const productMenuRef = useRef<HTMLDivElement | null>(null);
   const guardScope = createAdminAuthScopeKey(auth?.companyId ?? "", token);
   const authScopeRef = useRef(guardScope);
   const previousGuardScopeRef = useRef(guardScope);
@@ -205,6 +209,21 @@ export default function AdminShell() {
   }, [auth]);
 
   useEffect(() => {
+    const onPointerDown = (event: MouseEvent) => {
+      if (!productMenuRef.current?.contains(event.target as Node)) setProductMenuOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setProductMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, []);
+
+  useEffect(() => {
     const onCompanyProfileUpdated = (evt: Event) => {
       if (!auth) return;
       const detail = (evt as CustomEvent<CompanyProfileUpdatedDetail>).detail;
@@ -227,6 +246,27 @@ export default function AdminShell() {
     navigate("/app", { replace: true });
   };
 
+  const enterSematticeConsole = async () => {
+    if (sematticeEntryPending || !token) return;
+    setSematticeEntryPending(true);
+    setProductMenuNotice("");
+    try {
+      const response = await authFetch(LS_ADMIN_TOKEN, "/auth/semattice/console", { method: "POST" }, {
+        onUnauthorized: () => clearAuthPayload(LS_ADMIN_TOKEN),
+      });
+      const json = await response.json().catch(() => null);
+      const redirectUri = typeof json?.data?.redirectUri === "string" ? json.data.redirectUri : "";
+      const target = redirectUri ? new URL(redirectUri) : null;
+      if (!response.ok || !target || target.protocol !== "https:" || target.hostname !== "semattice.agentcici.com" || !target.hash.startsWith("#oact=")) {
+        throw new Error("Semattice 管理端暂时无法进入，请确认当前组织已开通且具有管理权限。");
+      }
+      window.location.assign(target.toString());
+    } catch (error) {
+      setProductMenuNotice(error instanceof Error ? error.message : "Semattice 管理端暂时无法进入，请稍后重试。");
+      setSematticeEntryPending(false);
+    }
+  };
+
   const toggleNavGroup = (label: string) => {
     setCollapsedNavGroups((current) =>
       current.includes(label) ? current.filter((item) => item !== label) : [...current, label],
@@ -244,6 +284,34 @@ export default function AdminShell() {
       <aside className="admin-nav">
         <div className="admin-nav__head">
           <p className="brand admin-brand">组织控制台</p>
+          <div className="admin-product-switch" ref={productMenuRef}>
+            <button
+              type="button"
+              className="admin-product-switch__trigger"
+              aria-haspopup="menu"
+              aria-expanded={productMenuOpen}
+              onClick={() => {
+                setProductMenuNotice("");
+                setProductMenuOpen((open) => !open);
+              }}
+            >
+              <span>AgentCiCi</span>
+              <svg viewBox="0 0 16 16" aria-hidden><path d="m4 6 4 4 4-4" /></svg>
+            </button>
+            {productMenuOpen ? (
+              <div className="admin-product-switch__menu" role="menu" aria-label="切换管理端">
+                <button type="button" role="menuitem" className="admin-product-switch__item is-current" onClick={() => setProductMenuOpen(false)}>
+                  <span><strong>AgentCiCi 管理端</strong><small>当前管理端</small></span>
+                  <svg viewBox="0 0 16 16" aria-hidden><path d="m3.5 8 2.8 2.8 6.2-6.2" /></svg>
+                </button>
+                <button type="button" role="menuitem" className="admin-product-switch__item" onClick={() => void enterSematticeConsole()} disabled={sematticeEntryPending}>
+                  <span><strong>{sematticeEntryPending ? "正在进入 Semattice…" : "Semattice 管理端"}</strong><small>对象、权限与运行治理</small></span>
+                  <svg viewBox="0 0 16 16" aria-hidden><path d="M6 3.5 10.5 8 6 12.5" /></svg>
+                </button>
+                {productMenuNotice ? <p className="admin-product-switch__notice" role="status">{productMenuNotice}</p> : null}
+              </div>
+            ) : null}
+          </div>
           <button type="button" className="admin-nav__logout-icon" onClick={logout} aria-label="返回前台工作台" title="返回前台工作台">
             <svg viewBox="0 0 24 24" aria-hidden>
               <path d="M10 6H6.8A1.8 1.8 0 0 0 5 7.8v8.4A1.8 1.8 0 0 0 6.8 18H10" />

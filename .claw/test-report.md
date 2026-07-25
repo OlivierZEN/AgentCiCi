@@ -4,10 +4,10 @@ Total output lines: 6804
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-25T00:00:00Z
+updated_at: 2026-07-25T02:35:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-25T00:00:00Z
+last_run_at: 2026-07-25T02:35:00Z
 last_run_status: passed
 ---
 
@@ -38,6 +38,10 @@ last_run_status: passed
 - `browser-desktop`：1280×900 本地浏览器访问 `/admin/login` 直接重定向到 `/app` 的统一登录界面，控制台 error/warning 为 0。
 - `main-merge-frontend`：合并 `origin/main` 后重新执行同一组 18 项定向测试与生产构建，均通过；仅保留既有 Vite 大 chunk 警告。
 - `manual-acceptance-limit`：本会话没有真实组织管理员凭据，未伪造“管理后台”菜单的同组织进入、跨组织 `/auth/switch-company`、普通成员无入口/直达拒绝，以及后台返回后助手会话保留的端到端结果；这些为 review 阶段的真实会话验收项。
+- `semattice-switch/frontend`：`npm test -- --run src/admin/adminAuthScope.test.ts src/admin/adminSession.test.ts` 通过（2 files / 6 tests）；覆盖产品下拉的 Semattice 端点、固定 fragment 跳转、菜单文案以及 OACT 不写入浏览器存储的静态边界。
+- `semattice-switch/backend`：`mvn -q -Dtest=OfficialAccessTokenServiceTest test` 通过；覆盖 RS256 OACT 的 scope 投影、管理员最小 `audit.read` 补充及缺失统一身份绑定时 fail closed。
+- `semattice-switch/build`：`npm run build` 通过；仅保留既有 Vite 大 chunk 警告。`git diff --check` 通过。
+- `semattice-switch/manual-acceptance-limit`：没有使用或请求真实组织管理员凭据，未伪造 OACT 签发、Semattice 实际进入、普通成员 403 或浏览器返回 AgentCiCi 的端到端结果；这些保留为 review 阶段的真实会话验收项。
 
 ## TASK-246 - 租户详情路由标识兼容修复
 

@@ -68,6 +68,9 @@ class OfficialAccessTokenServiceTest {
         assertThat(claims.get("tenant_id", String.class)).isEqualTo("11111111-1111-4111-8111-111111111111");
         assertThat(claims.get("company_id", String.class)).isEqualTo(company.getId());
         assertThat(claims.get("scope", String.class)).isEqualTo("metadata.version.read record.read");
+        assertThat(issued.scopes()).containsExactly("metadata.version.read", "record.read");
+        assertThat(service.issueForSematticeConsole(member).scopes())
+                .containsExactly("metadata.version.read", "record.read", "audit.read");
         assertThat(claims.get("membership_version", String.class)).isNotBlank();
         assertThat(service.jwks().get("keys")).isNotNull();
         assertThat(issued.expiresAt()).isAfter(claims.getIssuedAt().toInstant());

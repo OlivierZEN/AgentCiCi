@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-24T14:23:00Z
+updated_at: 2026-07-25T02:35:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -65,15 +65,15 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - assignment_path: `.claw/assignments/TASK-246.yaml`
 - next_action: 已合并 main 并发布 `2.8.14`；等待受权平台账号复核真实详情页。
 
-### TASK-245 - 前台会话内置组织管理入口
+### TASK-245 - 前台会话内置组织管理入口与 Semattice 管理端切换
 
-- status: `review`
+- status: `in_progress`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-138-assistant-admin-session-entrypoint.md`
 - task_status_path: `.claw/tasks/TASK-245.md`
 - assignment_path: `.claw/assignments/TASK-245.yaml`
-- next_action: 等待真实组织管理员会话完成菜单内同组织、跨组织和后台返回前台验收；未授权生产发布。
+- next_action: 已获用户授权，执行主线合并后的受控生产发布、健康检查与公网 smoke；真实管理员会话验收不伪造。
 
 ### TASK-244 - OIDC 统一入口 state 修复
 

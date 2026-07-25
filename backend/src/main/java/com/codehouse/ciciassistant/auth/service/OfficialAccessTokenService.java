@@ -1,5 +1,6 @@
 package com.codehouse.ciciassistant.auth.service;
 
+import com.codehouse.ciciassistant.auth.RoleCodes;
 import com.codehouse.ciciassistant.auth.domain.AccountExternalIdentityEntity;
 import com.codehouse.ciciassistant.auth.domain.AccountExternalIdentityRepository;
 import com.codehouse.ciciassistant.auth.domain.SematticeProvisioningBindingEntity;
@@ -67,6 +68,14 @@ public class OfficialAccessTokenService {
     }
 
     public IssuedToken issueForSemattice(UserEntity member) {
+        return issueForSemattice(member, sematticeScopes);
+    }
+
+    public IssuedToken issueForSematticeConsole(UserEntity member) {
+        return issueForSemattice(member, sematticeConsoleScopesFor(member));
+    }
+
+    private IssuedToken issueForSemattice(UserEntity member, List<String> issuedScopes) {
         requireEnabled();
         if (!UserEntity.STATUS_ACTIVE.equals(member.getMemberStatus())
                 || !"ACTIVE".equalsIgnoreCase(member.getCompany().getStatus())) {
@@ -92,7 +101,7 @@ public class OfficialAccessTokenService {
                 .claim("member_id", member.getId())
                 .claim("account_id", member.getAccountId())
                 .claim("roles", List.of(member.getRoleCode()))
-                .claim("scope", String.join(" ", sematticeScopes))
+                .claim("scope", String.join(" ", issuedScopes))
                 .claim("actor_type", "user")
                 .claim("authorized_party", "agentcici")
                 .claim("membership_version", membershipVersion)
@@ -101,7 +110,7 @@ public class OfficialAccessTokenService {
                 .expiration(Date.from(expiresAt))
                 .signWith(privateKey, Jwts.SIG.RS256)
                 .compact();
-        return new IssuedToken(token, expiresAt, binding.getSematticeTenantId(), member.getCompany().getId(), sematticeScopes);
+        return new IssuedToken(token, expiresAt, binding.getSematticeTenantId(), member.getCompany().getId(), issuedScopes);
     }
 
     public Map<String, Object> jwks() {
@@ -145,6 +154,15 @@ public class OfficialAccessTokenService {
             return List.of();
         }
         return configured.stream().map(OfficialAccessTokenService::trim).filter(value -> !value.isBlank()).distinct().toList();
+    }
+
+    private List<String> sematticeConsoleScopesFor(UserEntity member) {
+        if (!RoleCodes.isOrgAdminRole(member.getRoleCode()) || sematticeScopes.contains("audit.read")) {
+            return sematticeScopes;
+        }
+        return java.util.stream.Stream.concat(sematticeScopes.stream(), java.util.stream.Stream.of("audit.read"))
+                .distinct()
+                .toList();
     }
 
     private static String membershipVersion(UserEntity member) {

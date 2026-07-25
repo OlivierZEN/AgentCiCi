@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-138
 title: 前台会话内置组织管理入口
-status: review
+status: in_implementation
 owner_role: fullstack-agent
 task_ids: TASK-245
 related_decisions: FEAT-136 unified identity; existing organization membership RBAC
 related_issues: none
-updated_at: 2026-07-24T13:09:40Z
+updated_at: 2026-07-25T01:30:00Z
 updated_by: MANAGER-001
 ---
 
@@ -22,18 +22,22 @@ updated_by: MANAGER-001
 - 组织切换菜单保留每个组织的选择操作；组织名称为主信息，当前组织保持右侧“当前”标记。
 - 对管理员组织，在同一行增加轻量文本命令“管理后台”，不使用卡片、胶囊、额外弹窗或厂商视觉复刻。
 - 点击“管理后台”时：目标组织不是当前组织则先调用现有 `/auth/switch-company`，再使用返回的同一会话 token 进入 `/admin`；当前组织则直接进入。
+- 组织控制台左侧标题“组织控制台”右侧提供紧凑的产品下拉菜单，明确列出“AgentCiCi 管理端”和“Semattice 管理端”。当前 AgentCiCi 管理端显示已在此处；选择 Semattice 只对当前 `OWNER` / `ORG_ADMIN` 可用，并从当前会话请求短时 OACT 后跳转 `https://semattice.agentcici.com/console/#oact=<token>`。
+- OACT 由 AgentCiCi 的受保护 `POST /auth/semattice/console` 签发，响应只包含一次跳转 URI。前端不得把 OACT 写入 localStorage、sessionStorage、Cookie、query string、日志或错误提示；仅立即 `window.location.assign` 到 fragment URI。签发失败时留在 AgentCiCi 管理端并展示可操作错误。
 - `/admin/login` 不再显示独立登录表单，统一回到 `/app`；任意 `/admin/*` 直接访问时，守卫可采用已存在的前台管理员会话，否则回到 `/app`，不提供第二条登录路径。
 - 管理后台“退出后台”仅回到前台工作台，并清理后台视图的本地镜像，不退出前台用户会话。
 
 ## 权限与安全
 
 - 前台仅根据 `/auth/companies` 已返回的目标组织 `roleCode` 决定是否展示入口；不能据此绕过后端授权。
+- Semattice 跳转端点也必须由服务端读取当前 TenantContext，并再次校验 `OWNER` / `ORG_ADMIN`、活跃成员、统一身份映射和已 provisioned 的 Semattice binding；任何缺失、过期或权限不符均 fail closed。
 - AdminGuard 仍通过 `/auth/me` 复核 `OWNER` / `ORG_ADMIN`，前端存储缺失、token 失效、角色不符或跨组织状态不一致均 fail closed 并返回前台。
-- 不新增 token、后端 API、角色或权限放宽；后台 API 继续由既有服务端组织上下文和角色控制。
+- 不新增持久 token、角色或权限放宽；仅新增受当前 TenantContext 保护的 Semattice 跳转签发 API，后台 API 继续由既有服务端组织上下文和角色控制。
 
 ## 交互与状态
 
 - 管理入口可键盘聚焦并有清晰 `focus-visible` 状态；进入中禁用同一组织的两个动作，并显示“正在进入…”。
+- 产品菜单使用轻量、不透明的暖象牙下拉层，不使用 modal、卡片或胶囊；可键盘进入、Esc 关闭，当前产品具有明确文本状态。Semattice 跳转期间菜单项显示“正在进入 Semattice…”。
 - 普通成员组织没有管理入口；组织切换失败或管理会话校验失败显示可操作提示，保留前台当前会话。
 - 不新增移动端布局或测试范围。
 
@@ -43,9 +47,17 @@ updated_by: MANAGER-001
 - 非管理员看不到入口、直接打开后台也不能进入。
 - `/admin/login` 与无会话后台路由回到 `/app`；后台退出回到 `/app` 且前台会话保留。
 - 前端定向测试、生产构建和桌面端浏览器检查覆盖组织菜单默认、管理员、进入中、权限拒绝与后台退出状态。
+- 前端定向测试、后端 OACT scope/角色负例、生产构建和桌面端浏览器检查覆盖产品菜单默认、进入中、权限拒绝、跳转 URI fragment 以及后台退出状态。
 
 ## 视觉决策
 
 - register：`product`。面向在桌面端进行组织切换和治理的企业员工与管理员，环境为日常业务工作台，采用现有鎏金账房/受控主题的紧凑、克制产品语汇。
 - 用户已确认：以现有组织菜单为容器，使用同一行文本命令“管理后台”作为权限提示，不做钉钉视觉复刻。
+- 用户已确认：以截图中的组织控制台标题区作为跨产品入口位置，使用下拉列表切换 AgentCiCi 与 Semattice 管理端，不做钉钉视觉复刻。
 - 图片决策：跳过。该功能是已有认证后菜单的窄范围语义增强，用户提供的参考图已明确交互意图，额外生成图像不会改善现有产品组件的层级或可用性。
+
+## 实现进度
+
+- 标题区已使用现有组织控制台的紧凑布局加入产品下拉，不改变业务导航；当前 AgentCiCi 管理端与目标 Semattice 管理端均有明确状态和辅助说明。
+- AgentCiCi 服务端已增加受当前 TenantContext 保护的短时跳转签发端点，并复用既有 OACT 统一身份、成员活跃度和 Semattice provisioned binding 校验；管理员令牌额外只获得只读 `audit.read`，不增加持久角色或写权限。
+- 前端不存储、回显或记录 OACT；仅在收到可信固定主机的 fragment URI 后立即导航。用户已明确授权在主线合并后按生产运行手册执行一次受控发布；真实管理员会话验收仍不伪造。

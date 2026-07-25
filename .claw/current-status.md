@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-25T00:10:00Z
+updated_at: 2026-07-25T02:35:00Z
 updated_by: MANAGER-001
 phase: production-and-review
-active_task: TASK-249
-next_action: "等待 TASK-249 的合并或生产发布授权；发布后验证组织简档 API 不再返回 SPA HTML。"
+active_task: TASK-245
+next_action: "完成 TASK-245 主线合并后的受控生产发布、健康检查与公网 smoke；真实管理员会话跳转验收不伪造。"
 read_next:
   goals: false
   decisions: false
@@ -32,7 +32,7 @@ read_next:
 
 - TASK-246 / FEAT-139：已合并 `main`（`6cee975`）并发布 `2.8.14`。租户 API 边界会把迁移期 `orgId` 归一为 `companyId`，并在生成/请求详情路由前拒绝无效标识，避免 `/platform/tenants/undefined` 触发 `Validation failure`。合并后 21 项前端定向测试、构建、Compose 配置和 diff 检查通过；发布前四项备份均非空，backend/frontend 健康，版本接口为 `2.8.14 / 6cee975539e4`，Nginx 与公网 `agentcici.com`、`/platform/tenants`、`x` 均通过。未使用平台账号，真实受保护页面交互待受权复核。
 
-- TASK-245 / FEAT-138：已完成本地实现并进入 review。组织管理员在前台“切换组织”菜单可从对应组织行点击轻量“管理后台”；跨组织时先调用既有 `/auth/switch-company`，再复用返回 token 进入 `/admin`。`/admin/login` 和无前台管理员会话的后台直达均回 `/app`；后台返回前台仅清除 `cici_admin_token` 镜像。定向前端测试 18/18、生产构建和 `/admin/login` 桌面端重定向检查通过；本会话没有真实管理员凭据，授权菜单交互待用户验收。该任务不新增后端 API、角色、移动端或生产发布。
+- TASK-245 / FEAT-138：组织控制台标题右侧已加入 AgentCiCi / Semattice 管理端下拉；Semattice 通过受保护的 `/auth/semattice/console` 重新核验当前管理员、活跃成员、统一身份与 provisioned binding 后，签发短时 OACT 并仅以固定 HTTPS fragment URI 跳转。前端不持久化 token；定向前端测试 6/6、后端 OACT 定向测试与生产构建已通过。用户已明确授权主线合并和本次受控生产发布；真实管理员会话跳转与浏览器返回仍待后续受权复核。
 
 - TASK-244 / FEAT-137：用户反馈完成 SSO 后回调 `x.agentcici.com/auth/oidc/callback` 返回 `Invalid OIDC login state`。根因是主站和应用站都创建 host-only state Cookie、而 callback 固定到 `x`。现已以 `2.8.13 / 877337078ea8` 发布：主站先跳 `x`，仅 `x` 创建 state。发布前备份 `/opt/cici/backups/20260724-201945-before-2.8.13-oidc-canonical-entrypoint` 四项均非空；backend/frontend 健康，版本、Nginx 和公网 canonical-start smoke 均通过。真实用户 Keycloak 复验待完成。
 

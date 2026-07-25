@@ -367,7 +367,7 @@ public class AuthService {
                                                                                  OfficialAccessTokenService tokenService) {
         UserEntity user = userRepository.findByIdAndCompany_Id(userId, companyId)
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
-        return tokenService.issueForSemattice(user);
+        return tokenService.issueForSematticeConsole(user);
     }
 
     @Transactional
