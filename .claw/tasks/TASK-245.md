@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-245
 status: review
-updated_at: 2026-07-25T03:05:00Z
+updated_at: 2026-07-25T02:42:41Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -15,7 +15,7 @@ spec_path: docs/specs/FEAT-138-assistant-admin-session-entrypoint.md
 ## Current State
 
 - Status: `review`
-- Next action: 使用真实组织管理员会话验收 Semattice 跳转和浏览器返回 AgentCiCi；不伪造受保护交互。
+- Next action: `2.8.17` 已修正产品菜单在侧栏内完整展开；Semattice 已提供回到 AgentCiCi 管理端的产品菜单。真实组织管理员可按既有统一登录会话完成验收，不伪造受保护交互。
 - Blocked: none
 - Spec: `docs/specs/FEAT-138-assistant-admin-session-entrypoint.md`
 - Assignment: `.claw/assignments/TASK-245.yaml`
@@ -30,6 +30,7 @@ spec_path: docs/specs/FEAT-138-assistant-admin-session-entrypoint.md
 - 已实现：受保护的 `/auth/semattice/console` 仅对当前 `OWNER` / `ORG_ADMIN` 按 TenantContext 重新核验后签发短时 OACT；前端只校验固定 HTTPS 主机并立即以 fragment 跳转，不持久化或记录 token。
 - 用户已于 2026-07-25 明确授权本任务合并主线并进行一次受控生产发布。
 - 已合并 `main`（`ac598745e588`）并发布 `2.8.16`；仅 backend/frontend 重建，四个状态服务保持运行。
+- 用户反馈的菜单左侧裁切已修正为触发器左对齐；Semattice 顶栏产品菜单已增加直接返回 `https://x.agentcici.com/admin` 的入口，不传递 OACT。
 
 ## Changed Files
 
@@ -61,7 +62,7 @@ spec_path: docs/specs/FEAT-138-assistant-admin-session-entrypoint.md
 ## Verification
 
 - Status: `passed_with_manual_acceptance_pending`
-- Evidence: 合并后 OACT 定向测试、后端编译、前端生产构建、Compose 解析及差异检查通过。`2.8.16` backend/frontend manifests 已核验；生产备份四项均非空，六服务健康，`/actuator/health` 为 `UP`、版本为 `2.8.16 / ac598745e588`、Nginx 校验通过；`x.agentcici.com` 与 `agentcici.com` 均为 200，匿名 `/auth/me` 和 `/auth/semattice/console` 均为预期 401。当前会话没有真实组织管理员凭据，产品菜单签发/跳转与浏览器返回未伪造验收。
+- Evidence: `adminAuthScope.test.ts` 3 项通过，新增断言确保产品弹层使用 `left: 0` 且不再以 `right: 0` 锚定；前端生产构建、Compose 解析及差异检查通过。`2.8.17` backend/frontend manifests 已核验；生产备份四项均非空，六服务健康，`/actuator/health` 为 `UP`、Nginx 校验通过；`x.agentcici.com` 为 200，匿名 `/auth/me` 和 `/auth/semattice/console` 均为预期 401。当前会话没有真实组织管理员凭据，产品菜单签发/跳转与浏览器返回未伪造验收。
 
 ## Handoff
 

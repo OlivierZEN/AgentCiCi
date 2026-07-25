@@ -5,7 +5,7 @@ updated_at: 2026-07-25T03:05:00Z
 updated_by: MANAGER-001
 phase: production-and-review
 active_task: TASK-249
-next_action: "等待 TASK-249 的合并或生产发布授权；TASK-245 已发布，真实管理员跳转验收待受权会话完成。"
+next_action: "等待 TASK-249 的合并或生产发布授权；TASK-245 已发布 2.8.17，真实管理员可用既有会话复核双向切换。"
 read_next:
   goals: false
   decisions: false
@@ -32,7 +32,7 @@ read_next:
 
 - TASK-246 / FEAT-139：已合并 `main`（`6cee975`）并发布 `2.8.14`。租户 API 边界会把迁移期 `orgId` 归一为 `companyId`，并在生成/请求详情路由前拒绝无效标识，避免 `/platform/tenants/undefined` 触发 `Validation failure`。合并后 21 项前端定向测试、构建、Compose 配置和 diff 检查通过；发布前四项备份均非空，backend/frontend 健康，版本接口为 `2.8.14 / 6cee975539e4`，Nginx 与公网 `agentcici.com`、`/platform/tenants`、`x` 均通过。未使用平台账号，真实受保护页面交互待受权复核。
 
-- TASK-245 / FEAT-138：已合并 main（`ac598745e588`）并发布 `2.8.16`。组织控制台标题右侧现可在 AgentCiCi / Semattice 管理端间切换；受保护的 `/auth/semattice/console` 按当前 TenantContext 重新核验管理员、活跃成员、统一身份与 provisioned binding 后签发短时 OACT，并仅以固定 HTTPS fragment URI 跳转。生产四项备份均非空，backend/frontend 与四个状态服务均健康，health `UP`、Nginx 有效、两站首页为 200，匿名 `/auth/me` 和新端点均为预期 401。未使用或伪造真实管理员凭据，跳转与浏览器返回待受权会话复核。
+- TASK-245 / FEAT-138：已合并 main（`c6822c4`）并发布 `2.8.17`。AgentCiCi 产品菜单改为触发器左对齐，避免弹层越过侧栏左界；Semattice 顶栏菜单明确当前项并可直接回到 `https://x.agentcici.com/admin`，不传递 OACT。生产四项备份均非空，backend/frontend 与四个状态服务均健康，health `UP`、Nginx 有效、`x.agentcici.com` 为 200，匿名 `/auth/me` 和新端点均为预期 401。未使用或伪造真实管理员凭据，双向切换可由受权会话继续复核。
 
 - TASK-244 / FEAT-137：用户反馈完成 SSO 后回调 `x.agentcici.com/auth/oidc/callback` 返回 `Invalid OIDC login state`。根因是主站和应用站都创建 host-only state Cookie、而 callback 固定到 `x`。现已以 `2.8.13 / 877337078ea8` 发布：主站先跳 `x`，仅 `x` 创建 state。发布前备份 `/opt/cici/backups/20260724-201945-before-2.8.13-oidc-canonical-entrypoint` 四项均非空；backend/frontend 健康，版本、Nginx 和公网 canonical-start smoke 均通过。真实用户 Keycloak 复验待完成。
 

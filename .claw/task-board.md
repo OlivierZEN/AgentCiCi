@@ -67,13 +67,13 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-245 - 前台会话内置组织管理入口与 Semattice 管理端切换
 
-- status: `in_progress`
+- status: `review`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-138-assistant-admin-session-entrypoint.md`
 - task_status_path: `.claw/tasks/TASK-245.md`
 - assignment_path: `.claw/assignments/TASK-245.yaml`
-- next_action: 已合并 main 并发布 `2.8.16`；等待真实组织管理员验收 Semattice 跳转和浏览器返回 AgentCiCi。
+- next_action: 已合并 main 并发布 `2.8.17`；侧栏内产品菜单不再裁切，Semattice 顶栏可直接回到 AgentCiCi 管理端。等待真实组织管理员以既有统一登录会话验收。
 
 ### TASK-244 - OIDC 统一入口 state 修复
 

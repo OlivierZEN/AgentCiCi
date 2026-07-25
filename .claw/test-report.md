@@ -44,6 +44,7 @@ last_run_status: passed
 - `semattice-switch/manual-acceptance-limit`：没有使用或请求真实组织管理员凭据，未伪造 OACT 签发、Semattice 实际进入、普通成员 403 或浏览器返回 AgentCiCi 的端到端结果；这些保留为 review 阶段的真实会话验收项。
 - `main-merge/release`：`ac598745e588` 已合并并推送 `main`，annotated tag `2.8.16` 已推送。合并后 OACT 定向测试、后端编译、前端生产构建、Compose 配置与 `git diff --check` 通过；前端仅有既有 Vite chunk-size warning。
 - `production-2.8.16`：backend/frontend ACR index digest 分别为 `sha256:1b965955e81130e37f4001ab27bf33299219669f11f310cb0f8f425cafd5fcd8`、`sha256:a179fa0c7376f5849f4d46736e4527d7ec8031328b8d9027ffbc40b06a68f85e`。备份 `/opt/cici/backups/20260725-092810-before-2.8.16-task245` 的 env、PostgreSQL、KB、Qdrant 均非空；仅重建 backend/frontend，六服务健康，health `UP`、版本 `2.8.16 / ac598745e588`、Nginx 有效；`x.agentcici.com` 与 `agentcici.com` 均 HTTP 200，匿名 `/auth/me` 与 `/auth/semattice/console` 均为预期 401。
+- `menu-fix/production-2.8.17`：`adminAuthScope.test.ts` 3 项通过，新增断言确保产品弹层使用 `left: 0` 且不再以 `right: 0` 锚定；前端生产构建和 diff 检查通过。backend/frontend ACR index digest 分别为 `sha256:e214c1f8f27f2a08832b35f8b7a17328e8179bb63653ce706009aeabee5f4cbd`、`sha256:17adbe6607c7b04d89201f2a3fd72b75853e0a421d7bd354f2dbb78d49a10f75`。备份 `/opt/cici/backups/20260725-104037-before-2.8.17-task245-menu-fix` 的 env、PostgreSQL、KB、Qdrant 均非空；仅重建 backend/frontend，六服务健康，health `UP`、Nginx 有效、`x.agentcici.com` 为 200，匿名 `/auth/me` 与 `/auth/semattice/console` 均为预期 401。
 
 ## TASK-246 - 租户详情路由标识兼容修复
 
