@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-245
-status: in_progress
-updated_at: 2026-07-25T02:20:00Z
+status: review
+updated_at: 2026-07-25T03:05:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -14,8 +14,8 @@ spec_path: docs/specs/FEAT-138-assistant-admin-session-entrypoint.md
 
 ## Current State
 
-- Status: `in_progress`
-- Next action: 合并到 `main`，依生产运行手册完成备份、不可变镜像发布、线上健康检查；真实组织管理员会话验收继续保持不伪造。
+- Status: `review`
+- Next action: 使用真实组织管理员会话验收 Semattice 跳转和浏览器返回 AgentCiCi；不伪造受保护交互。
 - Blocked: none
 - Spec: `docs/specs/FEAT-138-assistant-admin-session-entrypoint.md`
 - Assignment: `.claw/assignments/TASK-245.yaml`
@@ -29,6 +29,7 @@ spec_path: docs/specs/FEAT-138-assistant-admin-session-entrypoint.md
 - 已实现：标题右侧下拉明确标识当前 AgentCiCi 管理端，并为 Semattice 管理端提供键盘可达、Esc/点外关闭和进入中禁用状态。
 - 已实现：受保护的 `/auth/semattice/console` 仅对当前 `OWNER` / `ORG_ADMIN` 按 TenantContext 重新核验后签发短时 OACT；前端只校验固定 HTTPS 主机并立即以 fragment 跳转，不持久化或记录 token。
 - 用户已于 2026-07-25 明确授权本任务合并主线并进行一次受控生产发布。
+- 已合并 `main`（`ac598745e588`）并发布 `2.8.16`；仅 backend/frontend 重建，四个状态服务保持运行。
 
 ## Changed Files
 
@@ -60,7 +61,7 @@ spec_path: docs/specs/FEAT-138-assistant-admin-session-entrypoint.md
 ## Verification
 
 - Status: `passed_with_manual_acceptance_pending`
-- Evidence: `npm test -- --run src/admin/adminAuthScope.test.ts src/admin/adminSession.test.ts` 通过（2 files / 6 tests）；`npm run build`、`mvn -q -Dtest=OfficialAccessTokenServiceTest test` 和 `git diff --check` 通过。当前会话没有真实组织管理员凭据，产品菜单签发/跳转与浏览器返回未伪造验收。
+- Evidence: 合并后 OACT 定向测试、后端编译、前端生产构建、Compose 解析及差异检查通过。`2.8.16` backend/frontend manifests 已核验；生产备份四项均非空，六服务健康，`/actuator/health` 为 `UP`、版本为 `2.8.16 / ac598745e588`、Nginx 校验通过；`x.agentcici.com` 与 `agentcici.com` 均为 200，匿名 `/auth/me` 和 `/auth/semattice/console` 均为预期 401。当前会话没有真实组织管理员凭据，产品菜单签发/跳转与浏览器返回未伪造验收。
 
 ## Handoff
 

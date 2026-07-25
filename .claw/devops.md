@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-24T14:23:00Z
+updated_at: 2026-07-25T03:05:00Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -21,6 +21,12 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.8.16 TASK-245 Semattice 管理端切换 on 2026-07-25:
+  - Git/发布：主线合并提交 `ac598745e588`；`scripts/release-acr.sh --dry-run --version 2.8.16` 与正式发布通过，annotated tag `2.8.16` 已推送。
+  - 镜像：backend/frontend ACR index digest 分别为 `sha256:1b965955e81130e37f4001ab27bf33299219669f11f310cb0f8f425cafd5fcd8`、`sha256:a179fa0c7376f5849f4d46736e4527d7ec8031328b8d9027ffbc40b06a68f85e`。
+  - 备份/部署：`/opt/cici/backups/20260725-092810-before-2.8.16-task245` 的 env、PostgreSQL、KB、Qdrant 均非空；仅 pull/force-recreate backend/frontend，四个状态服务保持运行。
+  - 验收：六服务健康，health `UP`，版本 `2.8.16 / ac598745e588`，Nginx 有效；`x.agentcici.com` 与 `agentcici.com` 均为 200，匿名 `/auth/me` 与 `/auth/semattice/console` 均为预期 401。未使用真实管理员凭据，产品切换端到端交互待受权会话复核。
 
 - 2.8.15 TASK-247 平台全量个人用户目录 on 2026-07-24:
   - Git/发布：主线合并提交 `38cb22e3a587`；`scripts/release-acr.sh --dry-run` 与正式发布通过，annotated tag `2.8.15` 已推送。

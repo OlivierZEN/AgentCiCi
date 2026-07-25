@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-25T02:35:00Z
+updated_at: 2026-07-25T03:05:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -37,7 +37,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-248 - 平台注册用户目录展示已加入组织
 
-- status: `in_progress`
+- status: `review`
 - priority: `high`
 - owner_role: `platform-governance-agent`
 - spec_path: `docs/specs/FEAT-141-platform-user-directory-organizations.md`
@@ -73,7 +73,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - spec_path: `docs/specs/FEAT-138-assistant-admin-session-entrypoint.md`
 - task_status_path: `.claw/tasks/TASK-245.md`
 - assignment_path: `.claw/assignments/TASK-245.yaml`
-- next_action: 已获用户授权，执行主线合并后的受控生产发布、健康检查与公网 smoke；真实管理员会话验收不伪造。
+- next_action: 已合并 main 并发布 `2.8.16`；等待真实组织管理员验收 Semattice 跳转和浏览器返回 AgentCiCi。
 
 ### TASK-244 - OIDC 统一入口 state 修复
 

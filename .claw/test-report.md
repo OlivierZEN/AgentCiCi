@@ -4,10 +4,10 @@ Total output lines: 6804
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-25T02:35:00Z
+updated_at: 2026-07-25T03:05:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-25T02:35:00Z
+last_run_at: 2026-07-25T03:05:00Z
 last_run_status: passed
 ---
 
@@ -42,6 +42,8 @@ last_run_status: passed
 - `semattice-switch/backend`：`mvn -q -Dtest=OfficialAccessTokenServiceTest test` 通过；覆盖 RS256 OACT 的 scope 投影、管理员最小 `audit.read` 补充及缺失统一身份绑定时 fail closed。
 - `semattice-switch/build`：`npm run build` 通过；仅保留既有 Vite 大 chunk 警告。`git diff --check` 通过。
 - `semattice-switch/manual-acceptance-limit`：没有使用或请求真实组织管理员凭据，未伪造 OACT 签发、Semattice 实际进入、普通成员 403 或浏览器返回 AgentCiCi 的端到端结果；这些保留为 review 阶段的真实会话验收项。
+- `main-merge/release`：`ac598745e588` 已合并并推送 `main`，annotated tag `2.8.16` 已推送。合并后 OACT 定向测试、后端编译、前端生产构建、Compose 配置与 `git diff --check` 通过；前端仅有既有 Vite chunk-size warning。
+- `production-2.8.16`：backend/frontend ACR index digest 分别为 `sha256:1b965955e81130e37f4001ab27bf33299219669f11f310cb0f8f425cafd5fcd8`、`sha256:a179fa0c7376f5849f4d46736e4527d7ec8031328b8d9027ffbc40b06a68f85e`。备份 `/opt/cici/backups/20260725-092810-before-2.8.16-task245` 的 env、PostgreSQL、KB、Qdrant 均非空；仅重建 backend/frontend，六服务健康，health `UP`、版本 `2.8.16 / ac598745e588`、Nginx 有效；`x.agentcici.com` 与 `agentcici.com` 均 HTTP 200，匿名 `/auth/me` 与 `/auth/semattice/console` 均为预期 401。
 
 ## TASK-246 - 租户详情路由标识兼容修复
 
