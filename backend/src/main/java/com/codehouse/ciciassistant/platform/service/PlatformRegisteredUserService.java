@@ -80,6 +80,7 @@ public class PlatformRegisteredUserService {
             List<RegisteredUserOrganizationView> organizations) {
         return new RegisteredUserView(
                 account.getId(),
+                account.getPublicId(),
                 account.getDisplayName() == null ? "" : account.getDisplayName(),
                 account.getPrimaryMobile(),
                 account.getEmail() == null ? "" : account.getEmail(),
@@ -94,6 +95,7 @@ public class PlatformRegisteredUserService {
 
     public record RegisteredUserView(
             String id,
+            String publicId,
             String displayName,
             String mobile,
             String email,

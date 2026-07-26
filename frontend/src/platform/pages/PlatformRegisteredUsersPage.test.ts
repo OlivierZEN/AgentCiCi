@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { formatRegisteredUserOrganizations, registeredUserDirectoryCopy } from "./PlatformRegisteredUsersPage";
+import {
+  formatRegisteredUserOrganizations,
+  formatUserPublicId,
+  registeredUserDirectoryCopy,
+} from "./PlatformRegisteredUsersPage";
 
 describe("PlatformRegisteredUsersPage copy", () => {
   it("states that the directory includes all personal users once", () => {
@@ -15,5 +19,11 @@ describe("PlatformRegisteredUsersPage copy", () => {
       { id: "company-2", name: "第二组织" },
     ])).toBe("第一组织、第二组织");
     expect(formatRegisteredUserOrganizations([])).toBe("未加入组织");
+  });
+
+  it("renders the public identifier as the human-facing user reference", () => {
+    expect(formatUserPublicId({ id: "internal-uuid", publicId: "U2026A7K29MXQ" }))
+      .toBe("用户编号：U2026A7K29MXQ");
+    expect(formatUserPublicId({ id: "internal-uuid", publicId: "" })).toBe("用户编号：-");
   });
 });

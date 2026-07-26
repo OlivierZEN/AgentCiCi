@@ -4,6 +4,7 @@ import { safeFetchJson } from "../../utils/http";
 
 type RegisteredUser = {
   id: string;
+  publicId: string;
   displayName: string;
   mobile: string;
   email: string;
@@ -60,6 +61,10 @@ function formatDateTime(value: string) {
     minute: "2-digit",
     hour12: false,
   }).format(date);
+}
+
+export function formatUserPublicId(user: Pick<RegisteredUser, "id" | "publicId">): string {
+  return user.publicId ? `用户编号：${user.publicId}` : "用户编号：-";
 }
 
 export default function PlatformRegisteredUsersPage() {
@@ -159,7 +164,7 @@ export default function PlatformRegisteredUsersPage() {
                 <tr key={user.id}>
                   <td>
                     <div className="skills-data-table__skill-name">{user.displayName || "未设置昵称"}</div>
-                    <div className="skills-data-table__skill-code">{user.id}</div>
+                    <div className="skills-data-table__skill-code" title={`内部 ID：${user.id}`}>{formatUserPublicId(user)}</div>
                   </td>
                   <td>{user.mobile || "-"}</td>
                   <td>{user.email || "-"}</td>

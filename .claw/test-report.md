@@ -13,6 +13,17 @@ last_run_status: passed
 
 # Test Report
 
+## TASK-251 - 全局用户公共编号
+
+- `identity/assignment`：MANAGER-001 的 SSH 持钥、Git 身份、`codex/TASK-251-global-user-public-id` 分支和迁移/账户/平台目录/测试/状态代表路径经 `dev-login.py` 返回 `allowed`。
+- `backend-focused`：`mvn -q -Dtest=PlatformRegisteredUserServiceTest,UserAccountPublicIdIntegrationTest test` 通过；目录投影测试覆盖 `publicId` 返回，未配置临时数据库时迁移集成用例按设计跳过。
+- `fresh-postgresql`：新建后删除 PostgreSQL 16 容器，从 V1 迁移至 V96 后插入 `created_at=2024` 的历史账户，再迁移 V97；断言回填 `U2024[A-Z0-9]{8}`。随后插入 2026 账户，断言触发器生成 `U2026[A-Z0-9]{8}`、两者不重复，直接更新 `public_id` 被不可变触发器拒绝。命令：`USER_ACCOUNT_PUBLIC_ID_MIGRATION_TEST_URL=... mvn -q -Dtest=UserAccountPublicIdIntegrationTest test`。
+- `frontend`：`npm test -- --run src/platform/pages/PlatformRegisteredUsersPage.test.ts` 通过（2 tests）；`npm run build` 通过，仅有既有 Vite 大 chunk 提示。
+- `browser-desktop`：本地 Vite 页面以 Playwright mock 的平台角色和目录响应在 1280px 桌面态验证。用户行显示“用户编号：U2026A7K29MXQ”，未破坏既有五列表格、搜索、分页或主题，控制台 error 为 0。截图为 `frontend/.playwright-cli/page-2026-07-26T13-00-48-305Z.png`，属于本地未提交验收产物。
+- `production-limit`：未连接或修改生产数据库，未发布 AgentCiCi；真实现有用户将在未来受权发布执行 Flyway V97 后由迁移自动回填。
+- `main-integration`：2026-07-26 已合入唯一的 AgentCiCi `main` 工作区；本次未创建版本或执行生产发布。
+- `main-regression`：合入后 `mvn -q -Dtest=PlatformRegisteredUserServiceTest,UserAccountPublicIdIntegrationTest test`、`mvn -q -DskipTests compile`、前端目录定向测试（1 文件 / 3 tests）与 `npm run build` 均通过；前端构建仅有既有 chunk-size warning。
+
 ## TASK-250 - MCP HTTP 会话复用修复
 
 - `identity/assignment`：`MANAGER-001` 的 SSH 持钥、Git 身份、`codex/TASK-250-mcp-session-propagation` 分支及 MCP 源码/测试/状态代表路径经 `dev-login.py` 与 `check-assignment.py` 返回 `allowed`。

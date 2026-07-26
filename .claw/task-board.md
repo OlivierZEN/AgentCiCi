@@ -15,6 +15,16 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-251 - 全局用户公共编号
+
+- status: `done`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-144-global-user-public-id.md`
+- task_status_path: `.claw/tasks/TASK-251.md`
+- assignment_path: `.claw/assignments/TASK-251.yaml`
+- next_action: 已于 2026-07-26 合入唯一的 AgentCiCi `main` 工作区；等待明确生产发布授权后执行 V97 回填并以受权会话复核。
+
 ### TASK-250 - MCP HTTP 会话复用修复
 
 - status: `done`

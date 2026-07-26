@@ -17,6 +17,9 @@ public class UserAccountEntity {
     @Column(name = "id", nullable = false, length = 64)
     private String id;
 
+    @Column(name = "public_id", nullable = false, length = 13, insertable = false, updatable = false)
+    private String publicId;
+
     @Column(name = "primary_mobile", nullable = false, length = 32, unique = true)
     private String primaryMobile;
 
@@ -58,6 +61,10 @@ public class UserAccountEntity {
 
     public String getId() {
         return id;
+    }
+
+    public String getPublicId() {
+        return publicId;
     }
 
     public String getPrimaryMobile() {

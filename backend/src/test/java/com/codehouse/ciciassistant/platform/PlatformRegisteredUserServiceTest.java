@@ -14,6 +14,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class PlatformRegisteredUserServiceTest {
 
@@ -54,6 +55,8 @@ class PlatformRegisteredUserServiceTest {
         assertThat(result.items().get(2).organizations())
                 .extracting(PlatformRegisteredUserService.RegisteredUserOrganizationView::name)
                 .containsExactly("第一组织", "第二组织");
+        assertThat(result.items()).extracting(PlatformRegisteredUserService.RegisteredUserView::publicId)
+                .containsExactly("U2026A1B2C3D4", "U2026E5F6G7H8", "U2026J9K0L1M2");
         verify(accounts).searchRegisteredAccounts("组织", request);
         verify(memberships).findByAccount_IdInAndMemberStatusOrderByCreatedAtDesc(
                 List.of(withoutCompany.getId(), oneCompany.getId(), multipleCompanies.getId()),
@@ -76,6 +79,11 @@ class PlatformRegisteredUserServiceTest {
     private UserAccountEntity account(String mobile, String displayName) {
         UserAccountEntity account = new UserAccountEntity(mobile);
         account.setDisplayName(displayName);
+        ReflectionTestUtils.setField(account, "publicId", switch (mobile) {
+            case "13800000001" -> "U2026A1B2C3D4";
+            case "13800000002" -> "U2026E5F6G7H8";
+            default -> "U2026J9K0L1M2";
+        });
         return account;
     }
 

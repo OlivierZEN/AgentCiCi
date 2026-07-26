@@ -5,7 +5,7 @@ updated_at: 2026-07-26T13:36:00Z
 updated_by: MANAGER-001
 phase: production-and-review
 active_task: TASK-249
-next_action: "等待 TASK-249 的合并或生产发布授权；TASK-245 已发布 2.8.17，真实管理员可用既有会话复核双向切换。"
+next_action: "等待 TASK-249 的合并或生产发布授权；如另行授权发布 AgentCiCi，先执行并验证 V97 全局用户公共编号回填。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-251 / FEAT-144：全局用户公共编号已合入唯一的 `main` 工作区，格式固定为 `UYYYYXXXXXXXX`，例如 `U2026A7K29MXQ`。V97 会按 `created_at` 为全部历史账户回填、为所有新账户自动生成，并用格式、唯一和不可变约束保护；平台“注册用户”目录只读显示。UUID `user_account.id`、Keycloak `issuer + sub`、邮箱/手机号和组织成员关系保持原语义；未发布生产。
 
 - TASK-250 / FEAT-143：已合并 `main`（`4958bc1`）。`McpClient` 在解析结果前读取 `initialize` 响应的 `Mcp-Session-Id`，包括 SSE 分支；只有同一会话的 `notifications/initialized` HTTP 成功后才允许 `tools/list`/`tools/call`。所有 MCP POST 最终统一使用 `MCP-Protocol-Version: 2025-03-26` 与当前内存会话 ID，配置或动态头不能注入陈旧协议/会话值，既有动态 Bearer JWT 仍会透传。定向本地 HTTP 测试验证严格四步顺序、SSE 会话捕获、工具列表/调用请求头和 Bearer JWT；后端编译与 diff 检查通过。未修改 Semattice、数据库、前端或生产环境；生产发布和真实受权复核仍需单独授权。
 
