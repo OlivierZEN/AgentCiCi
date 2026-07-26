@@ -1,5 +1,6 @@
 package com.codehouse.ciciassistant.auth.domain;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -22,6 +23,19 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     Optional<UserEntity> findByCompany_IdAndAccount_IdAndMemberStatus(String companyId, String accountId, String memberStatus);
 
     List<UserEntity> findByAccount_IdAndMemberStatusOrderByCreatedAtDesc(String accountId, String memberStatus);
+
+    @Query("""
+            select m
+            from UserEntity m
+            join fetch m.account
+            join fetch m.company
+            where m.account.id in :accountIds
+              and m.memberStatus = :memberStatus
+            order by m.createdAt desc
+            """)
+    List<UserEntity> findByAccount_IdInAndMemberStatusOrderByCreatedAtDesc(
+            @Param("accountIds") Collection<String> accountIds,
+            @Param("memberStatus") String memberStatus);
 
     long countByCompany_IdAndRoleCodeAndMemberStatus(String companyId, String roleCode, String memberStatus);
 

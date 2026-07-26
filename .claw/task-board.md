@@ -37,13 +37,13 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-248 - 平台注册用户目录展示已加入组织
 
-- status: `review`
+- status: `done`
 - priority: `high`
 - owner_role: `platform-governance-agent`
 - spec_path: `docs/specs/FEAT-141-platform-user-directory-organizations.md`
 - task_status_path: `.claw/tasks/TASK-248.md`
 - assignment_path: `.claw/assignments/TASK-248.yaml`
-- next_action: 以账户为唯一行源，批量聚合当前有效组织后补充接口字段与表格列。
+- next_action: 已于 2026-07-26 合入唯一的 AgentCiCi `main` 工作区；不发布生产。
 
 ### TASK-247 - 平台全量个人用户目录
 
