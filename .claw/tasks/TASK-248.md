@@ -1,7 +1,7 @@
 ---
 kind: task-status
 task_id: TASK-248
-status: done
+status: review
 updated_at: 2026-07-26T13:36:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
@@ -14,7 +14,7 @@ spec_path: docs/specs/FEAT-141-platform-user-directory-organizations.md
 
 ## Current State
 
-- Status: `done`
+- Status: `review`
 - Next action: 已合入唯一的 `main` 工作区；本任务未获生产发布授权。
 - Blocked: none
 

@@ -17,7 +17,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-251 - 全局用户公共编号
 
-- status: `done`
+- status: `review`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-144-global-user-public-id.md`
@@ -47,7 +47,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-248 - 平台注册用户目录展示已加入组织
 
-- status: `done`
+- status: `review`
 - priority: `high`
 - owner_role: `platform-governance-agent`
 - spec_path: `docs/specs/FEAT-141-platform-user-directory-organizations.md`

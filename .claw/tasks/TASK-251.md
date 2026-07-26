@@ -1,7 +1,7 @@
 ---
 kind: task-status
 task_id: TASK-251
-status: done
+status: review
 updated_at: 2026-07-26T13:36:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
@@ -14,7 +14,7 @@ spec_path: docs/specs/FEAT-144-global-user-public-id.md
 
 ## Current State
 
-- Status: `done`
+- Status: `review`
 - Next action: 已合入唯一的 `main` 工作区；如另行授权发布，执行 Flyway V97 自动回填真实存量账户，再以受权平台会话复核目录。
 - Blocked: none
 
