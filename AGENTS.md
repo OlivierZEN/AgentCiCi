@@ -9,6 +9,12 @@
 - 技能可用后，按其流程维护 `README.md`、`AGENTS.md`、`.claw/` 或 `.ai-dev/`、`docs/specs/`。
 <!-- cc-aidev-guidelines-common:end -->
 
+## 唯一工作目录与提交边界
+
+- AgentCiCi 的唯一仓库目录是 `/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`；Semattice 的唯一仓库目录是 `/Volumes/AISpace/codehouse/AI-Native-Platform`。
+- AI agent 仅可操作这两个仓库，禁止在其外创建、克隆、扩展或使用任何项目仓库、worktree、临时项目目录或派生工作区。
+- 每次修改 AgentCiCi 代码或项目文档后，必须在本仓库内完成相应 Git 提交；不得把改动留在未提交工作区或其他目录。
+
 ## 工作方式
 
 - 默认先读 `.claw/current-status.md`；涉及实现、交接或排期时再读 `.claw/task-board.md` 与对应 `.claw/tasks/TASK-xxx.md`。
