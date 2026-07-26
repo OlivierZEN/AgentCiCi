@@ -4,10 +4,10 @@ Total output lines: 6804
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-26T13:36:00Z
+updated_at: 2026-07-26T14:05:27Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-26T13:36:00Z
+last_run_at: 2026-07-26T14:05:27Z
 last_run_status: passed
 ---
 
@@ -20,8 +20,7 @@ last_run_status: passed
 - `fresh-postgresql`：新建后删除 PostgreSQL 16 容器，从 V1 迁移至 V96 后插入 `created_at=2024` 的历史账户，再迁移 V97；断言回填 `U2024[A-Z0-9]{8}`。随后插入 2026 账户，断言触发器生成 `U2026[A-Z0-9]{8}`、两者不重复，直接更新 `public_id` 被不可变触发器拒绝。命令：`USER_ACCOUNT_PUBLIC_ID_MIGRATION_TEST_URL=... mvn -q -Dtest=UserAccountPublicIdIntegrationTest test`。
 - `frontend`：`npm test -- --run src/platform/pages/PlatformRegisteredUsersPage.test.ts` 通过（2 tests）；`npm run build` 通过，仅有既有 Vite 大 chunk 提示。
 - `browser-desktop`：本地 Vite 页面以 Playwright mock 的平台角色和目录响应在 1280px 桌面态验证。用户行显示“用户编号：U2026A7K29MXQ”，未破坏既有五列表格、搜索、分页或主题，控制台 error 为 0。截图为 `frontend/.playwright-cli/page-2026-07-26T13-00-48-305Z.png`，属于本地未提交验收产物。
-- `production-limit`：未连接或修改生产数据库，未发布 AgentCiCi；真实现有用户将在未来受权发布执行 Flyway V97 后由迁移自动回填。
-- `main-integration`：2026-07-26 已合入唯一的 AgentCiCi `main` 工作区；本次未创建版本或执行生产发布。
+- `production-2.8.19`：用户授权发布后，后端/前端 ACR index digest 分别为 `sha256:b9db2c4974aeebb63c38223189bd41eb9f17b8d875faa87de19d4c3ea9303b82`、`sha256:a44c54c6a8d7a0eaea547c3a557712fe881e641a4f1466d6fc98f781dbc7cab7`；发布前备份 `/opt/cici/backups/20260726-220110-before-2.8.19` 的 env、PostgreSQL、KB、Qdrant 均非空。六服务健康，内网 health 为 `UP`、版本为 `2.8.19 / 99d4cc3cb206`、V97 成功，公共编号空值和格式不匹配均为 0；生产 IP/SNI 的 onechat/x HTTPS 均为 200，匿名 `/auth/me` 为 401。无受权平台账号，真实目录展示保留为人工验收项。
 - `main-regression`：合入后 `mvn -q -Dtest=PlatformRegisteredUserServiceTest,UserAccountPublicIdIntegrationTest test`、`mvn -q -DskipTests compile`、前端目录定向测试（1 文件 / 3 tests）与 `npm run build` 均通过；前端构建仅有既有 chunk-size warning。
 
 ## TASK-250 - MCP HTTP 会话复用修复
@@ -40,7 +39,7 @@ last_run_status: passed
 - `frontend-focused`：`npm test -- --run src/platform/pages/PlatformRegisteredUsersPage.test.ts` 通过（1 file / 2 tests）；覆盖全量账户目录文案和多组织名称/无组织文案格式化。
 - `frontend-build/static`：`npm run build` 与 `git diff --check` 通过；构建仅有既有 Vite chunk-size warning。
 - `browser-limit`：本地桌面端访问 `/platform/registered-users` 按预期跳转 `/platform/login`，控制台 error 为 0，并保存登录边界截图 `output/playwright/task248-platform-registered-users-auth-boundary.png`。本会话没有受权平台账号，未使用或伪造凭据，因此真实受保护目录内容和列宽待后续受权会话复核。
-- `main-integration`：2026-07-26 已合入唯一的 AgentCiCi `main` 工作区；本次未创建版本或执行生产发布。
+- `production-2.8.19`：与 TASK-251 同版发布；后端/前端镜像、备份、六服务健康、Nginx 与公网匿名边界均已复核。无受权平台账号，真实目录中的“已加入组织”列仍待人工复核。
 - `main-regression`：合入后的 `mvn -q -Dtest=PlatformRegisteredUserServiceTest test` 与 `npm test -- --run src/platform/pages/PlatformRegisteredUsersPage.test.ts` 均通过（前端 1 文件 / 2 tests）。
 
 ## TASK-247 - 平台全量个人用户目录

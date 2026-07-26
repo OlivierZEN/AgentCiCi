@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-248
-status: review
-updated_at: 2026-07-26T13:36:00Z
+status: complete
+updated_at: 2026-07-26T14:05:27Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: platform-governance-agent
@@ -14,8 +14,8 @@ spec_path: docs/specs/FEAT-141-platform-user-directory-organizations.md
 
 ## Current State
 
-- Status: `review`
-- Next action: 已合入唯一的 `main` 工作区；本任务未获生产发布授权。
+- Status: `complete`
+- Next action: 已发布生产；待受权平台会话复核真实目录中的“已加入组织”列。
 - Blocked: none
 
 ## Scope
@@ -30,7 +30,7 @@ spec_path: docs/specs/FEAT-141-platform-user-directory-organizations.md
 - `company_member` 是一对多成员关系，本任务必须在账户分页之后批量读取并去重，不能用联结改变分页语义。
 - `mvn -q -Dtest=PlatformRegisteredUserServiceTest test`、后端编译、前端 2 项定向测试、生产构建和 `git diff --check` 均通过。
 - 本地桌面端访问受保护路由按预期转至平台登录，控制台没有 error；无受权平台账号，未使用或伪造凭据来验收真实目录内容。
-- 2026-07-26 已在唯一的 AgentCiCi 仓库中合入 `main`，未发布生产。
+- 2026-07-26 用户授权后已发布 `2.8.19 / 99d4cc3cb206`；六服务健康，生产 IP/SNI 的 HTTPS smoke 通过。未使用或伪造平台凭据，真实受保护目录内容仍待受权会话复核。
 
 ## Handoff
 

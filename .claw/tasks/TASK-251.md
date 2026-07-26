@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-251
-status: review
-updated_at: 2026-07-26T13:36:00Z
+status: complete
+updated_at: 2026-07-26T14:05:27Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -14,8 +14,8 @@ spec_path: docs/specs/FEAT-144-global-user-public-id.md
 
 ## Current State
 
-- Status: `review`
-- Next action: 已合入唯一的 `main` 工作区；如另行授权发布，执行 Flyway V97 自动回填真实存量账户，再以受权平台会话复核目录。
+- Status: `complete`
+- Next action: 生产已发布；待受权平台会话复核真实目录中的公共编号与已加入组织列。
 - Blocked: none
 
 ## Scope
@@ -30,7 +30,7 @@ spec_path: docs/specs/FEAT-144-global-user-public-id.md
 - 现有平台注册用户目录已经以 `user_account` 为唯一行源，适合承载公共编号展示。
 - 全新 PostgreSQL 16 已从 V1 迁移到 V96，插入 2024 历史账户后迁移 V97，断言回填格式为 `U2024XXXXXXXX`；随后插入 2026 账户，断言自动生成 `U2026XXXXXXXX` 且更新公共编号被数据库拒绝。
 - 后端定向测试、前端 2 项定向测试、前端构建、模拟平台角色桌面截图和静态检查均通过；临时数据库容器已删除。
-- 2026-07-26 已合入唯一的 AgentCiCi `main` 工作区，未发布生产。
+- 2026-07-26 用户授权后已发布 `2.8.19 / 99d4cc3cb206`。生产 Flyway V97 成功，`user_account.public_id` 空值和格式不匹配均为 0；六服务健康，匿名 `/auth/me` 仍为 401。
 
 ## Handoff
 

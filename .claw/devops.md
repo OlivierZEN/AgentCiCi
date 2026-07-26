@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-25T03:05:00Z
+updated_at: 2026-07-26T14:05:27Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -21,6 +21,11 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.8.19 TASK-248/TASK-251 平台用户目录与全局公共编号 on 2026-07-26:
+  - Git/发布：固定发布提交 `99d4cc3cb206`，annotated tag `2.8.19` 已推送；backend/frontend ACR index digest 分别为 `sha256:b9db2c4974aeebb63c38223189bd41eb9f17b8d875faa87de19d4c3ea9303b82`、`sha256:a44c54c6a8d7a0eaea547c3a557712fe881e641a4f1466d6fc98f781dbc7cab7`。`2.8.18` 因构建期间并发提交导致镜像提交与标签不一致，未部署，不能作为回滚目标。
+  - 备份/部署：`/opt/cici/backups/20260726-220110-before-2.8.19` 的 env、PostgreSQL、KB、Qdrant 均非空。Compose 对基础设施也使用同一 tag，ACR 未提供对应基础设施 tag 时，将 ECS 上已验证的 `2.6.12` 基础设施镜像本地标记为 `2.8.19` 后成功重建六服务。
+  - 验收：六服务 healthy，内网 health `UP`，版本 `2.8.19 / 99d4cc3cb206`，Flyway V97 为 `success=true`，生产 `user_account.public_id` 空值与格式不匹配均为 0，Nginx 有效；生产 IP/SNI 的 onechat 与 x HTTPS 均为 200，HTTP 为 301，匿名 `/auth/me` 为 401。onechat/x DNS 在本机与 ECS 都未解析，作为既有 DNS 风险保留；无受权平台账号，真实目录字段展示待人工复核。
 
 - 2.8.16 TASK-245 Semattice 管理端切换 on 2026-07-25:
   - Git/发布：主线合并提交 `ac598745e588`；`scripts/release-acr.sh --dry-run --version 2.8.16` 与正式发布通过，annotated tag `2.8.16` 已推送。

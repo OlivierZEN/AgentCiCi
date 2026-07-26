@@ -17,13 +17,13 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-251 - 全局用户公共编号
 
-- status: `review`
+- status: `complete`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-144-global-user-public-id.md`
 - task_status_path: `.claw/tasks/TASK-251.md`
 - assignment_path: `.claw/assignments/TASK-251.yaml`
-- next_action: 已于 2026-07-26 合入唯一的 AgentCiCi `main` 工作区；等待明确生产发布授权后执行 V97 回填并以受权会话复核。
+- next_action: 已发布 `2.8.19 / 99d4cc3cb206`；V97 回填成功，待受权平台会话复核真实目录展示。
 
 ### TASK-250 - MCP HTTP 会话复用修复
 
@@ -47,13 +47,13 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-248 - 平台注册用户目录展示已加入组织
 
-- status: `review`
+- status: `complete`
 - priority: `high`
 - owner_role: `platform-governance-agent`
 - spec_path: `docs/specs/FEAT-141-platform-user-directory-organizations.md`
 - task_status_path: `.claw/tasks/TASK-248.md`
 - assignment_path: `.claw/assignments/TASK-248.yaml`
-- next_action: 已于 2026-07-26 合入唯一的 AgentCiCi `main` 工作区；不发布生产。
+- next_action: 已发布 `2.8.19 / 99d4cc3cb206`；待受权平台会话复核真实目录展示。
 
 ### TASK-247 - 平台全量个人用户目录
 
