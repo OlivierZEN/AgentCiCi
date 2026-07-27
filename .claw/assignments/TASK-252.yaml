@@ -6,10 +6,17 @@ assigned_at: 2026-07-27T00:00:00Z
 expires_at: none
 spec_path: docs/specs/FEAT-145-unified-principal-identity-governance.md
 task_status_path: .claw/tasks/TASK-252.md
-branch: main
+branch: feature/TASK-252-unified-principal
 pr_url: n/a
-scope_mode: exact_files
+scope_mode: task_bounded_broad_code
 allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/**
+  - backend/src/main/java/com/codehouse/ciciassistant/company/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/**
+  - backend/src/test/java/com/codehouse/ciciassistant/auth/**
+  - backend/src/test/java/com/codehouse/ciciassistant/company/**
+  - frontend/src/**
   - docs/specs/**
   - .claw/tasks/**
   - .claw/assignments/**
@@ -22,22 +29,23 @@ protected_paths:
   - infrastructure/**
   - .claw/developers/**
 scope_files:
-  - docs/specs/FEAT-145-unified-principal-identity-governance.md
-  - .claw/tasks/TASK-252.md
   - .claw/assignments/TASK-252.yaml
+  - .claw/tasks/TASK-252.md
   - .claw/task-board.md
   - .claw/current-status.md
+  - .claw/test-report.md
+  - docs/specs/FEAT-145-unified-principal-identity-governance.md
 touch_policy: exclusive
 shared_contracts:
   - Keycloak issuer plus subject remains the immutable OIDC identity key.
   - AgentCiCi user_account and company_member remain the existing human-account compatibility model until a forward migration is approved.
   - Semattice is the only system referred to as the data platform.
 task_boundary:
-  - "形成统一 Principal 模型的详细设计：人类主体、机器主体、人类兜底责任、公司成员、Keycloak 映射与官方应用投影。"
-  - "说明数据模型、状态机、受控开户流程、接口契约、迁移分期、安全与验收。"
-  - "仅写设计与项目状态；不改后端、前端、数据库迁移、Keycloak 配置、外部应用或生产环境。"
+  - "实现 FEAT-145 的 AgentCiCi 主数据、受控人类邀请、Keycloak 绑定、机器主体与人类责任治理。"
+  - "实现必要的 API、迁移、测试、运行配置和官方应用契约；保持 UUID、issuer+sub、company_id 与既有 OACT/JWKS 的兼容边界。"
+  - "允许按生产 release runbook 构建、推送、发布和验收；Semattice 的独立实现须在其仓库另建任务并遵循其项目规范。"
 change_manifest_required: true
 preflight_required: true
 local_login_required: true
 identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
-signature: "MANAGER-001; user confirmed the unified Principal model and requested a detailed implementation design on 2026-07-27."
+signature: "MANAGER-001; user explicitly authorized FEAT-145 implementation, mainline merge/push and production release on 2026-07-27."

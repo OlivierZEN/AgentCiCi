@@ -3,9 +3,9 @@ kind: current-status
 version: 4
 updated_at: 2026-07-26T14:05:27Z
 updated_by: MANAGER-001
-phase: identity-architecture-review
+phase: identity-architecture-implementation
 active_task: TASK-252
-next_action: "等待用户审阅 FEAT-145 统一 Principal 详细设计；批准后按阶段创建独立实现任务。"
+next_action: "实现 FEAT-145 并按 production-release-runbook 完成合并、推送、生产发布和联合验收。"
 read_next:
   goals: false
   decisions: false

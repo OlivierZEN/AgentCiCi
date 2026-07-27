@@ -1,7 +1,7 @@
 ---
 kind: task-status
 task_id: TASK-252
-status: review
+status: in_progress
 updated_at: 2026-07-27T00:00:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
@@ -14,14 +14,15 @@ spec_path: docs/specs/FEAT-145-unified-principal-identity-governance.md
 
 ## Current State
 
-- Status: `review`
-- Next action: 等待用户审阅 FEAT-145；获得批准后再拆分实现任务，任何运行时改造均需新的授权与分配。
+- Status: `in_progress`
+- Next action: 在 `feature/TASK-252-unified-principal` 实现 AgentCiCi Principal、受控邀请与机器主体，并按生产 Runbook 完成验证和发布。
 - Blocked: none
 
 ## Scope
 
 - 覆盖人类主体、机器主体、Keycloak 身份绑定、公司成员、责任人、应用成员投影与生命周期。
-- 只形成实施前设计；不变更代码、数据库、Keycloak、其他应用或生产环境。
+- 实现 AgentCiCi Principal、受控人类邀请、Keycloak 绑定、机器主体/责任人、迁移、测试、发布与验收。
+- Semattice 运行时改造在其独立仓库任务中实施，保持接口与事件契约一致。
 
 ## Evidence
 
