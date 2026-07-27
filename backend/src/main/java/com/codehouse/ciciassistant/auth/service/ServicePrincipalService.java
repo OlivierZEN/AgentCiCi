@@ -6,9 +6,11 @@ import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,18 +24,22 @@ public class ServicePrincipalService {
     private final JdbcTemplate jdbcTemplate;
     private final UserRepository userRepository;
     private final KeycloakIdentityProvisioningService keycloak;
+    private final List<String> sematticeAllowedScopes;
 
     public ServicePrincipalService(JdbcTemplate jdbcTemplate,
                                    UserRepository userRepository,
-                                   KeycloakIdentityProvisioningService keycloak) {
+                                   KeycloakIdentityProvisioningService keycloak,
+                                   @Value("${app.auth.official-access.semattice-scopes:}") List<String> sematticeAllowedScopes) {
         this.jdbcTemplate = jdbcTemplate;
         this.userRepository = userRepository;
         this.keycloak = keycloak;
+        this.sematticeAllowedScopes = sematticeAllowedScopes == null ? List.of() : sematticeAllowedScopes.stream()
+                .filter(scope -> scope != null && !scope.isBlank()).map(String::trim).distinct().toList();
     }
 
     @Transactional
     public Map<String, Object> create(String companyId, String actorMemberId, String displayName,
-                                      String serviceKind, String audience, String requestedClientId) {
+                                      String serviceKind, String audience, String requestedClientId, List<String> requestedScopes) {
         UserEntity owner = userRepository.findByIdAndCompany_Id(actorMemberId, companyId)
                 .orElseThrow(() -> new ForbiddenException("机器账户必须由当前组织的人类成员负责"));
         if (!UserEntity.STATUS_ACTIVE.equals(owner.getMemberStatus())) {
@@ -42,6 +48,7 @@ public class ServicePrincipalService {
         String name = required(displayName, "displayName");
         String kind = enumValue(serviceKind, "serviceKind", "OFFICIAL_APP", "THIRD_PARTY", "AUTOMATION", "SYSTEM");
         String targetAudience = required(audience, "audience");
+        List<String> scopes = requireAllowedScopes(requestedScopes);
         String clientId = requestedClientId == null || requestedClientId.isBlank()
                 ? "agentcici-" + randomSuffix(12).toLowerCase() : required(requestedClientId, "clientId");
         if (!clientId.matches("^[a-z0-9][a-z0-9-]{2,127}$")) {
@@ -68,12 +75,17 @@ public class ServicePrincipalService {
                 INSERT INTO service_principal_owner (service_principal_id, owner_principal_id, company_member_id, owner_role, owner_status, assigned_at)
                 VALUES (?, ?, ?, 'PRIMARY', 'ACTIVE', ?)
                 """, principalId, owner.getAccountId(), owner.getId(), now);
+        scopes.forEach(scope -> jdbcTemplate.update("""
+                INSERT INTO service_principal_scope (service_principal_id, scope_code, created_at)
+                VALUES (?, ?, ?)
+                """, principalId, scope, now));
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("principalId", principalId);
         result.put("publicId", publicId);
         result.put("clientId", clientId);
         result.put("clientSecret", credentials.clientSecret());
         result.put("tokenAudience", targetAudience);
+        result.put("scopes", scopes);
         result.put("ownerMemberId", owner.getId());
         result.put("credentialNotice", "clientSecret 仅本次返回；请立即写入受管密钥库，系统不会保存或再次显示。");
         return result;
@@ -84,6 +96,18 @@ public class ServicePrincipalService {
             throw new IllegalArgumentException(field + " is required");
         }
         return value.trim();
+    }
+
+    private List<String> requireAllowedScopes(List<String> requestedScopes) {
+        List<String> scopes = requestedScopes == null ? List.of() : requestedScopes.stream()
+                .filter(scope -> scope != null && !scope.isBlank()).map(String::trim).distinct().toList();
+        if (scopes.isEmpty()) {
+            throw new IllegalArgumentException("机器账户至少需要一个 scope");
+        }
+        if (sematticeAllowedScopes.isEmpty() || scopes.stream().anyMatch(scope -> !sematticeAllowedScopes.contains(scope))) {
+            throw new ForbiddenException("机器账户申请了未授权的 Semattice scope");
+        }
+        return scopes;
     }
 
     private static String enumValue(String value, String field, String... allowed) {

@@ -7,6 +7,7 @@ import com.codehouse.ciciassistant.tenant.TenantContext;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import java.util.Map;
+import java.util.List;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,13 +29,14 @@ public class AdminServicePrincipalController {
         return ApiResponse.ok(service.create(
                 TenantContext.requireCompanyId(),
                 TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context")),
-                request.displayName(), request.serviceKind(), request.audience(), request.clientId()));
+                request.displayName(), request.serviceKind(), request.audience(), request.clientId(), request.scopes()));
     }
 
     public record CreateServicePrincipalRequest(
             @NotBlank String displayName,
             @NotBlank String serviceKind,
             @NotBlank String audience,
-            String clientId) {
+            String clientId,
+            List<@NotBlank String> scopes) {
     }
 }
