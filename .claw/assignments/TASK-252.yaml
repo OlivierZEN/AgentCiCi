@@ -23,8 +23,6 @@ allowed_write_roots:
   - .claw/task-board.md
   - .claw/current-status.md
 protected_paths:
-  - backend/**
-  - frontend/**
   - infra/**
   - infrastructure/**
   - .claw/developers/**
