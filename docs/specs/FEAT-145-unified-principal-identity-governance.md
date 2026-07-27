@@ -314,7 +314,7 @@ sequenceDiagram
 机器调用 Semattice 时采用“一次交换、短期复用”：
 
 1. 机器用其 Keycloak client_credentials 向 Keycloak 获取服务 access token；其 sub 是 service-account 用户，azp 是具体 client_id。
-2. 机器以该 token 调用 AgentCiCi POST /public/official/service-token。该端点只在交换时通过 Keycloak JWKS 验证签名、iss、exp、sub、azp，并从本地 Principal、PRIMARY owner、公司成员、Semattice 开通绑定和持久化 scope 解析有效上下文。
+2. 机器以该 token 调用 AgentCiCi POST /openapi/v1/official/service-token。该端点只在交换时通过 Keycloak JWKS 验证签名、iss、exp、sub、azp，并从本地 Principal、PRIMARY owner、公司成员、Semattice 开通绑定和持久化 scope 解析有效上下文。
 3. AgentCiCi 签发受众固定为 semattice-api、最长 10 分钟的 OACT，其中 sub/principal_id 为 SERVICE Principal，附带 principal_type=SERVICE、owner_principal_id、client_id、tenant_id、company_id 与精确 scope。
 4. Semattice API、MCP 与 CLI 仅本地校验 OACT 的固定 issuer/audience/JWKS、过期时间、Principal 类型、owner 证据和自身授权；不得接受原始 Keycloak service token，也不得逐请求回调 Keycloak 或 AgentCiCi。
 

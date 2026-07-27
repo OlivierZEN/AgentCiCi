@@ -17,7 +17,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class OfficialServiceTokenExchangeFilter extends OncePerRequestFilter {
 
     public static final String TOKEN_ATTRIBUTE = OfficialServiceTokenExchangeFilter.class.getName() + ".keycloakAccessToken";
-    private static final String EXCHANGE_PATH = "/public/official/service-token";
+    private static final String EXCHANGE_PATH = "/openapi/v1/official/service-token";
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {

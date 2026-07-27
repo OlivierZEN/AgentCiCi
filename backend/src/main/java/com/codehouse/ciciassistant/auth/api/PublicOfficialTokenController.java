@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** Public only in routing terms: its Keycloak bearer token is verified before an OACT is issued. */
 @RestController
-@RequestMapping("/public/official/service-token")
+@RequestMapping("/openapi/v1/official/service-token")
 public class PublicOfficialTokenController {
 
     private final ServicePrincipalTokenExchangeService exchanges;

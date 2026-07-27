@@ -24,6 +24,7 @@ last_run_status: passed
 - `machine-oact-contract`：mvn compile、OfficialAccessTokenServiceTest 和 KeycloakOidcLoginServiceTest 通过。后者以本地 JWKS 服务器签发 RS256 client-credentials token，验证交换边界必须解析受信 Keycloak iss、sub 与 azp；SERVICE OACT 覆盖 service principal、PRIMARY owner、client ID 与 scope claim，未输出 bearer 或 secret。
 - `fresh-postgresql-v99`：一次性 PostgreSQL 16 执行 V1 至 V99 后 PrincipalIdentityGovernanceIntegrationTest 通过；确认 service_principal_scope 已创建，新增 HUMAN Principal 和 legacy Keycloak binding mirror 均保持兼容。临时容器 cici-feat145-pg 已删除。
 - `semattice-principal-projection`：Semattice Go 全量测试、vet、module verify、Linux amd64 CGO-free 构建和 diff check 通过；不可变 release `/opt/semattice/releases/20260727T151437Z-console` 后服务 active、edge health 为 200、匿名 console API 与 capability invoke 均为预期 401、Nginx 校验通过。
+- `exchange-route-correction`：2.8.21 发布后发现生产 Nginx 未代理 /public 前缀，公网 POST 落入前端为 405，而 backend loopback 为预期 401。未越权修改不在 TASK-252 范围内的 Nginx 配置；端点改为既有安全代理前缀 /openapi/v1/official/service-token，前置 token-isolation filter 与 controller 同步更新，compile 与定向安全测试再次通过。
 - `frontend`：`npm run build` 通过；仅有既有 Vite 大 chunk 提示。
 
 ## TASK-251 - 全局用户公共编号
