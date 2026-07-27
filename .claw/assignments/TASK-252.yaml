@@ -17,6 +17,7 @@ allowed_write_roots:
   - backend/src/test/java/com/codehouse/ciciassistant/auth/**
   - backend/src/test/java/com/codehouse/ciciassistant/company/**
   - frontend/src/**
+  - deploy/docker-compose.acr.yml
   - docs/specs/**
   - .claw/tasks/**
   - .claw/assignments/**

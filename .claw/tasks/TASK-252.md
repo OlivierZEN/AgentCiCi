@@ -16,6 +16,7 @@ spec_path: docs/specs/FEAT-145-unified-principal-identity-governance.md
 
 - Status: `in_progress`
 - Next action: 完成 Keycloak 生产管理客户端配置与端到端邀请/机器账户验收，随后按 Runbook 合并发布。
+- Deployment scope: `deploy/docker-compose.acr.yml` 仅用于把独立 Keycloak provisioner 配置传入 backend；不修改服务拓扑、网络或证书。
 - Blocked: none
 
 ## Scope
