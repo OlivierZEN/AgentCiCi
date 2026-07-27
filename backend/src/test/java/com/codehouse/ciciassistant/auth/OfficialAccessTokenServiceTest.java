@@ -63,10 +63,13 @@ class OfficialAccessTokenServiceTest {
                 .getPayload();
 
         assertThat(claims.getIssuer()).isEqualTo("https://x.agentcici.com");
-        assertThat(claims.getSubject()).isEqualTo("keycloak-user-subject");
+        assertThat(claims.getSubject()).isEqualTo(account.getId());
         assertThat(claims.getAudience()).containsExactly(OfficialAccessTokenService.SEMATTICE_AUDIENCE);
         assertThat(claims.get("tenant_id", String.class)).isEqualTo("11111111-1111-4111-8111-111111111111");
         assertThat(claims.get("company_id", String.class)).isEqualTo(company.getId());
+        assertThat(claims.get("principal_id", String.class)).isEqualTo(account.getId());
+        assertThat(claims.get("principal_type", String.class)).isEqualTo("HUMAN");
+        assertThat(claims.get("keycloak_subject", String.class)).isEqualTo("keycloak-user-subject");
         assertThat(claims.get("scope", String.class)).isEqualTo("metadata.version.read record.read");
         assertThat(issued.scopes()).containsExactly("metadata.version.read", "record.read");
         assertThat(service.issueForSematticeConsole(member).scopes())
