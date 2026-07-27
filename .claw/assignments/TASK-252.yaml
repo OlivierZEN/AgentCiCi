@@ -6,7 +6,7 @@ assigned_at: 2026-07-27T00:00:00Z
 expires_at: none
 spec_path: docs/specs/FEAT-145-unified-principal-identity-governance.md
 task_status_path: .claw/tasks/TASK-252.md
-branch: feature/TASK-252-unified-principal
+branch: main
 pr_url: n/a
 scope_mode: task_bounded_broad_code
 allowed_write_roots:

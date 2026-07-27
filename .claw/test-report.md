@@ -20,6 +20,7 @@ last_run_status: passed
 - `fresh-postgresql`：一次性 PostgreSQL 16 容器执行 V1→V96、插入历史账户、再迁移 V97/V98；`UserAccountPublicIdIntegrationTest` 通过。该过程发现并修复了 `user_account → principal` 外键早于 AFTER trigger 检查的问题，最终采用 `DEFERRABLE INITIALLY DEFERRED`，确保新账户与其 HUMAN Principal 在同一事务内一致提交。
 - `principal-mapping`：`PrincipalIdentityGovernanceIntegrationTest` 通过，验证新 `user_account` 自动创建 `HUMAN:ACTIVE` Principal，且后续 `account_external_identity` 写入会镜像为 `principal_identity/HUMAN_USER`。
 - `oidc-regression`：`KeycloakOidcLoginServiceTest` 3/3 通过。`AuthFlowIntegrationTest` 未通过：共享测试库连接阶段连续超时，Spring Context 未创建，17 项均为同一环境错误；未改写历史迁移、未对共享库执行 repair，使用隔离 PostgreSQL 完成 V98 迁移验证。
+- `production-2.8.20`：backend/frontend ACR index digest 分别为 `sha256:9b6493264ce20ab256ad0dd3f2ca0a4fb434d2307e6a0121ecafc08165bb27bc`、`sha256:f51cbde8f06d0ca6933d5a6b747a4b4762c013ec060db6b5fad7790dcd44b429`；发布前备份 `/opt/cici/backups/20260727-225300-before-2.8.20-feat145` 的 env、PostgreSQL、KB、Qdrant 均非空。六服务 healthy，版本为 `2.8.20 / 8db900e4efc2`，Flyway V98 成功，生产 Principal/HUMAN/Identity 计数均为 24；`x.agentcici.com` 为 200、匿名 `/auth/me` 为 401、OIDC start 302 到 Keycloak。`onechat.agentcici.com` DNS 不可解析，未作为当前发布成功依据。Keycloak Realm 尚无 SMTP，自动开户 feature flag 保持 false。
 - `frontend`：`npm run build` 通过；仅有既有 Vite 大 chunk 提示。
 
 ## TASK-251 - 全局用户公共编号

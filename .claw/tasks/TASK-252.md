@@ -15,9 +15,9 @@ spec_path: docs/specs/FEAT-145-unified-principal-identity-governance.md
 ## Current State
 
 - Status: `in_progress`
-- Next action: 完成 Keycloak 生产管理客户端配置与端到端邀请/机器账户验收，随后按 Runbook 合并发布。
+- Next action: Keycloak Realm 配置受管 SMTP 后，写入 provisioner secret、开启受控邀请灰度，并用受权测试邮箱完成端到端验收。
 - Deployment scope: `deploy/docker-compose.acr.yml` 仅用于把独立 Keycloak provisioner 配置传入 backend；不修改服务拓扑、网络或证书。
-- Blocked: none
+- Blocked: Keycloak `agentcici` Realm 尚未配置 SMTP；为避免创建无法激活的统一账号，生产 provisioner 保持关闭。
 
 ## Scope
 
@@ -31,6 +31,7 @@ spec_path: docs/specs/FEAT-145-unified-principal-identity-governance.md
 - 已核对 Semattice 当前 JWT/JWKS verifier：资源服务可本地验证可信 issuer，JWKS 缓存五分钟，不逐请求回调 IdP；本规格在此基础上增加 HUMAN/SERVICE Principal 投影与本地授权校验。
 - 本任务只改规格和项目状态，未运行代码测试。
 - 已实现 V98 Principal/Identity/Service Principal 基座、受控邀请、首次 OIDC 激活和机器账户责任人 API；已在一次性 PostgreSQL 16 中验证 V1→V98 迁移与兼容映射。
+- 已合并主分支并发布 `2.8.20 / 8db900e4efc2`；生产 Flyway V98 成功，24 个既有全局账户与 24 条 Keycloak 身份绑定已回填。Keycloak 专用 `agentcici-provisioner` client 已创建并授予最小管理角色，未启用自动开户。
 
 ## Handoff
 
