@@ -23,7 +23,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - spec_path: `docs/specs/FEAT-145-unified-principal-identity-governance.md`
 - task_status_path: `.claw/tasks/TASK-252.md`
 - assignment_path: `.claw/assignments/TASK-252.yaml`
-- next_action: 已发布 `2.8.20`；等待 Keycloak SMTP 配置后开启受控邀请灰度，并另建 Semattice 独立任务完成跨应用 Principal 投影验收。
+- next_action: 机器 OACT 交换和 Semattice Principal 投影已完成代码与 Semattice release；发布 AgentCiCi 新版本后，等待 Keycloak SMTP、OACT 签名配置和受权 service client 凭据，开启受控人类邀请/机器交换灰度并完成真实端到端验收。
 
 ### TASK-251 - 全局用户公共编号
 

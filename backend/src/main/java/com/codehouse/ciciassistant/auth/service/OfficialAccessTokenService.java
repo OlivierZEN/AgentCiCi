@@ -75,6 +75,54 @@ public class OfficialAccessTokenService {
         return issueForSemattice(member, sematticeConsoleScopesFor(member));
     }
 
+    /**
+     * Signs the resource-facing token after the caller has resolved an active service principal,
+     * its accountable human owner, tenant binding and persisted scope grants.
+     */
+    public IssuedToken issueForSematticeService(String principalId,
+                                                String ownerPrincipalId,
+                                                String clientId,
+                                                String tenantId,
+                                                String companyId,
+                                                List<String> requestedScopes) {
+        requireEnabled();
+        requireUuid(principalId, "service principal");
+        requireUuid(ownerPrincipalId, "service owner");
+        if (!hasText(clientId) || !clientId.matches("^[a-z0-9][a-z0-9-]{2,127}$")) {
+            throw new ForbiddenException("机器账户客户端标识无效");
+        }
+        if (!hasText(tenantId) || !hasText(companyId)) {
+            throw new ForbiddenException("机器账户缺少数据平台租户绑定");
+        }
+        List<String> issuedScopes = normalizeScopes(requestedScopes);
+        if (issuedScopes.isEmpty() || issuedScopes.stream().anyMatch(scope -> !sematticeScopes.contains(scope))) {
+            throw new ForbiddenException("机器账户 scope 未获官方应用授权");
+        }
+
+        Instant now = Instant.now();
+        Instant expiresAt = now.plusSeconds(ttlSeconds);
+        String token = Jwts.builder()
+                .header().keyId(keyId).and()
+                .issuer(issuer)
+                .subject(principalId)
+                .audience().add(SEMATTICE_AUDIENCE).and()
+                .claim("tenant_id", tenantId)
+                .claim("company_id", companyId)
+                .claim("principal_id", principalId)
+                .claim("principal_type", "SERVICE")
+                .claim("owner_principal_id", ownerPrincipalId)
+                .claim("client_id", clientId)
+                .claim("scope", String.join(" ", issuedScopes))
+                .claim("actor_type", "service")
+                .claim("authorized_party", "agentcici")
+                .id(UUID.randomUUID().toString())
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(expiresAt))
+                .signWith(privateKey, Jwts.SIG.RS256)
+                .compact();
+        return new IssuedToken(token, expiresAt, tenantId, companyId, issuedScopes);
+    }
+
     private IssuedToken issueForSemattice(UserEntity member, List<String> issuedScopes) {
         requireEnabled();
         if (!UserEntity.STATUS_ACTIVE.equals(member.getMemberStatus())
@@ -192,6 +240,14 @@ public class OfficialAccessTokenService {
 
     private static String trim(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private static void requireUuid(String value, String label) {
+        try {
+            UUID.fromString(value);
+        } catch (Exception ex) {
+            throw new ForbiddenException(label + " 标识无效");
+        }
     }
 
     public record IssuedToken(String token,

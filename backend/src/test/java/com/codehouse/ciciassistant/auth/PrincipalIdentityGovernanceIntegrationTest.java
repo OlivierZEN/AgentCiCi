@@ -24,6 +24,8 @@ class PrincipalIdentityGovernanceIntegrationTest {
         migrate(jdbcUrl, username, password);
         try (Connection connection = DriverManager.getConnection(jdbcUrl, username, password);
              Statement statement = connection.createStatement()) {
+            assertThat(single(statement, "SELECT to_regclass('public.service_principal_scope')"))
+                    .isEqualTo("service_principal_scope");
             statement.executeUpdate("""
                     INSERT INTO user_account (id, primary_mobile, display_name, status, created_at, updated_at)
                     VALUES ('principal-test-account', '13900000093', '主体测试', 'ACTIVE', now(), now())

@@ -311,12 +311,16 @@ sequenceDiagram
 → ACTIVE，并发布脱敏审计事件
 ```
 
-机器调用资源服务时使用 Keycloak `client_credentials`：
+机器调用 Semattice 时采用“一次交换、短期复用”：
 
-- Token `sub` 是 Keycloak service-account 用户；`azp`/`client_id` 标识具体 Client。
-- 资源服务本地校验 `iss`、`aud`、`exp`、`nbf`、签名算法和最小 scope。
-- 资源服务再以 `issuer + sub + client_id` 解析受控投影的 `SERVICE` Principal，并校验公司、状态、责任人有效性与资源授权。
-- 人类责任人用于治理和审计，不把其 `member_id` 或权限隐式授予机器。
+1. 机器用其 Keycloak client_credentials 向 Keycloak 获取服务 access token；其 sub 是 service-account 用户，azp 是具体 client_id。
+2. 机器以该 token 调用 AgentCiCi POST /public/official/service-token。该端点只在交换时通过 Keycloak JWKS 验证签名、iss、exp、sub、azp，并从本地 Principal、PRIMARY owner、公司成员、Semattice 开通绑定和持久化 scope 解析有效上下文。
+3. AgentCiCi 签发受众固定为 semattice-api、最长 10 分钟的 OACT，其中 sub/principal_id 为 SERVICE Principal，附带 principal_type=SERVICE、owner_principal_id、client_id、tenant_id、company_id 与精确 scope。
+4. Semattice API、MCP 与 CLI 仅本地校验 OACT 的固定 issuer/audience/JWKS、过期时间、Principal 类型、owner 证据和自身授权；不得接受原始 Keycloak service token，也不得逐请求回调 Keycloak 或 AgentCiCi。
+
+交换端点在 routing 层是公开路径，但不是匿名接口：专用前置过滤器仅将该路径的 Authorization Bearer 令牌从 AgentCiCi 公司 JWT 过滤器隔离，控制器仍强制调用 Keycloak 验证和本地状态校验。任何缺失、伪造、过期、错误 azp、失效 owner/成员/公司、未开通 tenant、空 scope 或 feature flag 未开启的请求均 fail closed。
+
+人类责任人用于治理和审计，不把其 member_id 或权限隐式授予机器。
 
 轮换、移交与撤销：
 
@@ -422,8 +426,8 @@ Keycloak client_credentials
 ## 实现进展
 
 - 已完成：目标 Principal 分层、数据模型、Keycloak 边界、人类开户、机器责任治理、跨应用控制面、分期迁移与验收设计。
-- 未开始：任何运行时代码、迁移、Keycloak Realm/Client 变更、Semattice/FollowUp 投影、生产发布或真实身份数据操作。
-- 实施前必须为每个拆分任务创建独立 `TASK`、精确 assignment，并在当前会话重新通过 SSH 身份门禁。
+- 已完成：V98/V99 Principal 迁移与历史回填、受控人类开户实现、Keycloak 最小 provisioner client、机器主体/责任人/scope 模型、机器 Keycloak token 至 OACT 交换端点、Semattice HUMAN/SERVICE OACT 本地投影与生产兼容发布。
+- 受控开关：生产保持 provisioning 与 service-token-exchange 关闭，直至 SMTP、OACT 签名配置、Semattice JWKS 信任与受权 E2E 真实凭据均完成；关闭时所有新交换 fail closed。
 
 ## 迁移与分期实施
 
@@ -449,15 +453,16 @@ Keycloak client_credentials
 
 ### Phase 3：官方应用成员投影
 
-- 发布受控内部 API、outbox 事件和契约测试。
-- Semattice 与 FollowUp 先调用 AgentCiCi `company-members:ensure`，再创建自身 PENDING/ACTIVE 投影。
-- 应用消费成员暂停/撤销事件，并在本地停止授权；不得反向写人类主体。
+- Semattice 已发布 OACT principal_id / principal_type 本地投影：HUMAN 兼容旧 OACT，SERVICE 强制 owner/client 证据；不接受原始 Keycloak 服务令牌。
+- FollowUp 尚未接入；接入时先调用 AgentCiCi company-members:ensure，再创建自身 PENDING/ACTIVE 投影，并消费成员暂停/撤销事件。
+- 应用不得反向写人类主体。
 
 ### Phase 4：机器 Principal 与责任治理
 
 - 已新增 `service_principal`、责任人/维护人数据模型与组织管理员创建 API。每个创建请求强制将当前有效公司成员登记为 `PRIMARY` owner，且 Client Secret 仅在创建响应中返回一次，不落库。
+- 已新增 service_principal_scope 和受控 Keycloak client-credentials 至 OACT 交换：交换只读取有效 SERVICE Principal、同公司 PRIMARY owner、已开通 Semattice binding 和已授予 scope；OACT 最长 10 分钟，资源请求不再换取 token。
 - 新发机器客户端全部纳入人类责任链；已有第三方 Client 分批登记 owner，逾期未登记的客户端进入受控暂停。
-- 资源服务接入 service Principal 投影校验与审计关联。
+- Semattice 已接入 service Principal OACT 投影校验与审计关联；FollowUp 待其独立任务接入。
 
 ### Phase 5：成员模型收敛
 
@@ -490,7 +495,7 @@ Keycloak client_credentials
 
 - 新人邀请不会产生重复 AgentCiCi 账户、重复 Keycloak User、重复成员或重复邀请；幂等重试返回同一操作结果。
 - 未激活、绑定冲突、失效成员、无责任人的机器主体、错误 issuer/audience/scope 均 fail closed。
-- Keycloak 人类密码、MFA、refresh token、Client Secret、私钥和 bearer token 不出现在 AgentCiCi 数据库、日志、事件或 API 响应中。
+- Keycloak 人类密码、MFA、refresh token、私钥和 bearer token 不出现在 AgentCiCi 数据库、日志、事件或 API 响应中；Client Secret 仅能在受控机器账户创建响应中经 TLS 返回一次，随后必须进入受管密钥库，绝不持久化、记录或再次展示。
 - 官方应用不能直接创建 Keycloak 人类用户；只能经受控 AgentCiCi API 创建/确保成员。
 - Semattice 与 FollowUp 对人类、机器 token 都完成本地 JWT/JWKS 和本地授权校验，不逐请求调用 Keycloak。
 

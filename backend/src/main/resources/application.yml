@@ -73,6 +73,10 @@ app:
       client-id: agentcici-bff
       client-secret: ""
       redirect-uri: ""
+      service-token-exchange:
+        # Accepts a Keycloak client-credentials token only at the OACT exchange boundary.
+        # Keep disabled until service principals, OACT signing and Semattice JWKS trust are deployed.
+        enabled: false
       provisioning:
         # In production this is enabled with the confidential client that has
         # realm-management users/query-users/manage-users only. Do not reuse the BFF client.

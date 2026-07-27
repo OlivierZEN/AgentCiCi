@@ -101,4 +101,40 @@ class OfficialAccessTokenServiceTest {
                 .isInstanceOf(ForbiddenException.class)
                 .hasMessageContaining("尚未绑定统一身份");
     }
+
+    @Test
+    void signsServiceTokenWithBoundedPrincipalAndAccountableOwner() throws Exception {
+        KeyPair keys = KeyPairGenerator.getInstance("RSA").generateKeyPair();
+        OfficialAccessTokenService service = new OfficialAccessTokenService(
+                org.mockito.Mockito.mock(AccountExternalIdentityRepository.class),
+                org.mockito.Mockito.mock(SematticeProvisioningBindingRepository.class),
+                true,
+                "https://x.agentcici.com",
+                "oact-test-1",
+                Base64.getEncoder().encodeToString(keys.getPrivate().getEncoded()),
+                List.of("metadata.version.read", "record.read"),
+                600);
+
+        String principalId = "11111111-1111-4111-8111-111111111111";
+        String ownerPrincipalId = "22222222-2222-4222-8222-222222222222";
+        OfficialAccessTokenService.IssuedToken issued = service.issueForSematticeService(
+                principalId, ownerPrincipalId, "agentcici-data-sync",
+                "33333333-3333-4333-8333-333333333333", "orgaaaaaaaaaaaaaaaaa",
+                List.of("record.read"));
+        Claims claims = Jwts.parser().verifyWith(KeyFactory.getInstance("RSA").generatePublic(new RSAPublicKeySpec(
+                        ((RSAPrivateCrtKey) keys.getPrivate()).getModulus(),
+                        ((RSAPrivateCrtKey) keys.getPrivate()).getPublicExponent())))
+                .build().parseSignedClaims(issued.token()).getPayload();
+
+        assertThat(claims.getSubject()).isEqualTo(principalId);
+        assertThat(claims.get("principal_type", String.class)).isEqualTo("SERVICE");
+        assertThat(claims.get("owner_principal_id", String.class)).isEqualTo(ownerPrincipalId);
+        assertThat(claims.get("client_id", String.class)).isEqualTo("agentcici-data-sync");
+        assertThat(claims.get("actor_type", String.class)).isEqualTo("service");
+        assertThat(claims.get("scope", String.class)).isEqualTo("record.read");
+        assertThatThrownBy(() -> service.issueForSematticeService(
+                principalId, ownerPrincipalId, "agentcici-data-sync", "tenant", "company", List.of("audit.read")))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessageContaining("scope");
+    }
 }

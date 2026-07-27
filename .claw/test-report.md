@@ -21,6 +21,9 @@ last_run_status: passed
 - `principal-mapping`：`PrincipalIdentityGovernanceIntegrationTest` 通过，验证新 `user_account` 自动创建 `HUMAN:ACTIVE` Principal，且后续 `account_external_identity` 写入会镜像为 `principal_identity/HUMAN_USER`。
 - `oidc-regression`：`KeycloakOidcLoginServiceTest` 3/3 通过。`AuthFlowIntegrationTest` 未通过：共享测试库连接阶段连续超时，Spring Context 未创建，17 项均为同一环境错误；未改写历史迁移、未对共享库执行 repair，使用隔离 PostgreSQL 完成 V98 迁移验证。
 - `production-2.8.20`：backend/frontend ACR index digest 分别为 `sha256:9b6493264ce20ab256ad0dd3f2ca0a4fb434d2307e6a0121ecafc08165bb27bc`、`sha256:f51cbde8f06d0ca6933d5a6b747a4b4762c013ec060db6b5fad7790dcd44b429`；发布前备份 `/opt/cici/backups/20260727-225300-before-2.8.20-feat145` 的 env、PostgreSQL、KB、Qdrant 均非空。六服务 healthy，版本为 `2.8.20 / 8db900e4efc2`，Flyway V98 成功，生产 Principal/HUMAN/Identity 计数均为 24；`x.agentcici.com` 为 200、匿名 `/auth/me` 为 401、OIDC start 302 到 Keycloak。`onechat.agentcici.com` DNS 不可解析，未作为当前发布成功依据。Keycloak Realm 尚无 SMTP，自动开户 feature flag 保持 false。
+- `machine-oact-contract`：mvn compile、OfficialAccessTokenServiceTest 和 KeycloakOidcLoginServiceTest 通过。后者以本地 JWKS 服务器签发 RS256 client-credentials token，验证交换边界必须解析受信 Keycloak iss、sub 与 azp；SERVICE OACT 覆盖 service principal、PRIMARY owner、client ID 与 scope claim，未输出 bearer 或 secret。
+- `fresh-postgresql-v99`：一次性 PostgreSQL 16 执行 V1 至 V99 后 PrincipalIdentityGovernanceIntegrationTest 通过；确认 service_principal_scope 已创建，新增 HUMAN Principal 和 legacy Keycloak binding mirror 均保持兼容。临时容器 cici-feat145-pg 已删除。
+- `semattice-principal-projection`：Semattice Go 全量测试、vet、module verify、Linux amd64 CGO-free 构建和 diff check 通过；不可变 release `/opt/semattice/releases/20260727T151437Z-console` 后服务 active、edge health 为 200、匿名 console API 与 capability invoke 均为预期 401、Nginx 校验通过。
 - `frontend`：`npm run build` 通过；仅有既有 Vite 大 chunk 提示。
 
 ## TASK-251 - 全局用户公共编号

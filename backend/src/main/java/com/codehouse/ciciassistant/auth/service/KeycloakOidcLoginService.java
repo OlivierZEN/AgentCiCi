@@ -122,6 +122,10 @@ public class KeycloakOidcLoginService {
                 + "/auth/oidc/login?return_to=" + encode(safeReturnTo(requestedReturnTo)));
     }
 
+    public String issuer() {
+        return issuer;
+    }
+
     public URI complete(String code, String state, String stateCookie) {
         requireEnabled();
         if (!hasText(code) || !hasText(state) || !MessageDigest.isEqual(state.getBytes(StandardCharsets.UTF_8), blank(stateCookie).getBytes(StandardCharsets.UTF_8))) {
@@ -154,6 +158,37 @@ public class KeycloakOidcLoginService {
             throw new UnauthorizedException("OIDC login ticket expired");
         }
         return completion.login();
+    }
+
+    /**
+     * Validates a Keycloak client-credentials access token at the one token-exchange boundary.
+     * Resource services never call this method: they validate the resulting OACT locally.
+     */
+    public ServiceAccessToken verifyServiceAccessToken(String token) {
+        requireEnabled();
+        try {
+            String[] parts = token == null ? new String[0] : token.split("\\.");
+            if (parts.length != 3) {
+                throw new UnauthorizedException("Keycloak service token is malformed");
+            }
+            JsonNode header = objectMapper.readTree(Base64.getUrlDecoder().decode(parts[0]));
+            String kid = header.path("kid").asText("");
+            if (!"RS256".equals(header.path("alg").asText("")) || kid.isBlank()) {
+                throw new UnauthorizedException("Keycloak service token algorithm is invalid");
+            }
+            PublicKey key = resolveJwk(kid);
+            Claims claims = Jwts.parser().verifyWith((RSAPublicKey) key).build().parseSignedClaims(token).getPayload();
+            String subject = trim(claims.getSubject());
+            String authorizedParty = trim(claims.get("azp", String.class));
+            if (!issuer.equals(trimTrailingSlash(claims.getIssuer())) || subject.isBlank() || authorizedParty.isBlank()) {
+                throw new UnauthorizedException("Keycloak service token claims are invalid");
+            }
+            return new ServiceAccessToken(subject, authorizedParty);
+        } catch (UnauthorizedException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new UnauthorizedException("Keycloak service token verification failed");
+        }
     }
 
     private TokenResponse exchangeCode(String code, String verifier) {
@@ -295,6 +330,9 @@ public class KeycloakOidcLoginService {
     }
 
     public record LoginStart(URI redirectUri, String state) {
+    }
+
+    public record ServiceAccessToken(String subject, String clientId) {
     }
 
     private record TokenResponse(String idToken, String refreshToken, int refreshExpiresIn) {
