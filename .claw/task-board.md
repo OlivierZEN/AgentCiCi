@@ -17,13 +17,13 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-252 - 统一 Principal 身份与治理模型设计
 
-- status: `in_progress`
+- status: `review`
 - priority: `critical`
 - owner_role: `project-manager`
 - spec_path: `docs/specs/FEAT-145-unified-principal-identity-governance.md`
 - task_status_path: `.claw/tasks/TASK-252.md`
 - assignment_path: `.claw/assignments/TASK-252.yaml`
-- next_action: 仅完成详细数据、流程、接口、迁移和安全设计；不得改动运行时代码或生产环境。
+- next_action: FEAT-145 详细设计已完成，等待用户审阅批准；后续每个实现阶段独立分配并授权。
 
 ### TASK-251 - 全局用户公共编号
 

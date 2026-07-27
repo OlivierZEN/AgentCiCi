@@ -3,9 +3,9 @@ kind: current-status
 version: 4
 updated_at: 2026-07-26T14:05:27Z
 updated_by: MANAGER-001
-phase: identity-architecture-design
+phase: identity-architecture-review
 active_task: TASK-252
-next_action: "完成 FEAT-145 统一 Principal 详细设计；不改运行时代码或生产环境。"
+next_action: "等待用户审阅 FEAT-145 统一 Principal 详细设计；批准后按阶段创建独立实现任务。"
 read_next:
   goals: false
   decisions: false
