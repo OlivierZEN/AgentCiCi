@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-27T15:46:00Z
+updated_at: 2026-07-27T15:51:00Z
 updated_by: MANAGER-001
 phase: identity-architecture-implementation
 active_task: TASK-252
-next_action: "补齐 Keycloak provisioner 凭据与受管 SMTP 后，分别开启机器开户和人类邀请灰度，并完成受权端到端验收。"
+next_action: "为首个受控机器主体指定公司、服务名与人类 PRIMARY 责任人，完成 OACT exchange；配置受管 SMTP 后再开启人类邀请灰度。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-252 / FEAT-145：AgentCiCi `main` 已发布 `2.8.24 / 58a96d618207`，Semattice Principal 投影已发布 `20260727T151437Z-console`。V98/V99 建立并回填 HUMAN/SERVICE Principal、Keycloak identity mirror、责任人、幂等操作与机器 scope；生产 Flyway V98/V99 成功。服务交换端点为 `/openapi/v1/official/service-token`，缺少 Bearer 为 401、feature flag 关闭时为 403；Semattice 只接受短期 OACT 并本地 JWKS 验签，不接受原始 Keycloak service token。人类 `provisioning`、机器 `machine-provisioning` 与 service-token-exchange 已由 Compose 显式传入且均为 `false`：生产仅存在 provisioner Client ID，未保存其密钥，Realm 也未配置 SMTP，因此未开启任何账户自动创建或真实交换。六服务 healthy、backend health `UP`、`x.agentcici.com` 200、匿名 `/auth/me` 401、OACT JWKS 200。`onechat.agentcici.com` DNS 不可解析，作为既有入口风险保留。
+- TASK-252 / FEAT-145：AgentCiCi `main` 已发布 `2.8.24 / 58a96d618207`，Semattice Principal 投影已发布 `20260727T151437Z-console`。V98/V99 建立并回填 HUMAN/SERVICE Principal、Keycloak identity mirror、责任人、幂等操作与机器 scope；生产 Flyway V98/V99 成功。服务交换端点为 `/openapi/v1/official/service-token`，缺少 Bearer 为 401、feature flag 关闭时为 403；Semattice 只接受短期 OACT 并本地 JWKS 验签，不接受原始 Keycloak service token。人类 provisioning 与 service-token-exchange 由 Compose 显式传入且保持 `false`；机器 `machine-provisioning` 已启用，provisioner secret 已仅写入部署环境，Client Credentials 管理令牌实测成功（300 秒），但尚未创建任何机器主体。Realm 仍无 SMTP，故未开启人类邀请。六服务 healthy、backend health `UP`、`x.agentcici.com` 200、匿名 `/auth/me` 401、OACT JWKS 200。`onechat.agentcici.com` DNS 不可解析，作为既有入口风险保留。
 
 - TASK-251 / FEAT-144 与 TASK-248 / FEAT-141 已发布生产 `2.8.19 / 99d4cc3cb206`。Flyway V97 成功回填全部历史账户的 `UYYYYXXXXXXXX` 公共编号，并为新账户维持格式、唯一与不可变约束；生产库 `public_id` 空值与格式不匹配均为 0。平台“注册用户”目录保持一账户一行，并只读展示公共编号及已加入组织。六服务健康、Nginx 校验通过，生产 IP/SNI 的 onechat/x HTTPS 均为 200，匿名 `/auth/me` 为 401。真实受权平台会话的目录列展示仍待后续复核。
 

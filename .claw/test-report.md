@@ -4,10 +4,10 @@ Total output lines: 6804
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-27T15:46:00Z
+updated_at: 2026-07-27T15:51:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-27T15:46:00Z
+last_run_at: 2026-07-27T15:51:00Z
 last_run_status: passed
 ---
 
@@ -25,6 +25,7 @@ last_run_status: passed
 - `machine-provisioning-decoupling`：`KeycloakIdentityProvisioningServiceTest`、`OfficialAccessTokenServiceTest`、`KeycloakOidcLoginServiceTest` 与 backend compile 通过。验证机器开户不要求人类邀请 redirect URI、仅人类开户要求该 URI、机器开关关闭时 `createServiceClient` fail closed。生产只检测到 provisioner Client ID，未检测到其 secret，且 Keycloak host 无 SMTP listener/MTA；因此未启用任一自动开户开关。
 - `production-2.8.23`：backend/frontend ACR index digest 分别为 `sha256:82d4278d215ae1ac9adbcace14b9121c7bd9c84c520a2ca17712b560327928b0`、`sha256:0f6e22ebce5cf7e7fb3703ca568152dad4f12e27068b6cf7c70bb83faa3b451a`；发布前备份 `/opt/cici/backups/20260727-233807-before-2.8.23` 的 env、PostgreSQL、KB、Qdrant 均非空。backend/frontend 已按 `--force-recreate --no-deps` 切换，六容器健康，`/system/version` 为 `2.8.23 / a7cd78f88543`，Flyway V98/V99 为 true；`x.agentcici.com` 200、匿名 `/auth/me` 401、交换端点无 Bearer 401 / 伪造 Bearer 403、Keycloak discovery 与 OACT JWKS 200。机器、人类 provisioning 与交换开关继续 fail closed。
 - `production-2.8.24`：Compose flag contract 以 `docker compose config` 验证，并发布 backend/frontend index digest `sha256:d2a1dcad568e3167e327e713c977ad2fc83a40cf1348ac4f46be1174a4f0043e` / `sha256:710971cde48ce1fdc59af837331a79d0eb1a42d428a87fa90bace2a496a49ca8`。备份 `/opt/cici/backups/20260727-234415-before-2.8.24` 四项均非空；线上实际运行 `2.8.24 / 58a96d618207`，六容器健康，V98/V99=true，machine-provisioning、service-token-exchange、人类 provisioning 均为 false。匿名边界与交换 401/403 继续通过。
+- `machine-provisioning-live`：Keycloak provisioner secret 经轮换后通过受限 stdin 写入部署环境，配置备份 `/opt/cici/backups/20260727-234937-before-machine-provisioning-enable` 存在。backend 重建后健康；以部署环境中的 confidential client 进行 client_credentials 得到有效 300 秒令牌，未打印 token 或 secret。机器开关为 true；人类 provisioning 与服务交换开关均仍为 false。
 - `fresh-postgresql-v99`：一次性 PostgreSQL 16 执行 V1 至 V99 后 PrincipalIdentityGovernanceIntegrationTest 通过；确认 service_principal_scope 已创建，新增 HUMAN Principal 和 legacy Keycloak binding mirror 均保持兼容。临时容器 cici-feat145-pg 已删除。
 - `semattice-principal-projection`：Semattice Go 全量测试、vet、module verify、Linux amd64 CGO-free 构建和 diff check 通过；不可变 release `/opt/semattice/releases/20260727T151437Z-console` 后服务 active、edge health 为 200、匿名 console API 与 capability invoke 均为预期 401、Nginx 校验通过。
 - `exchange-route-correction`：2.8.21 发布后发现生产 Nginx 未代理 /public 前缀，公网 POST 落入前端为 405，而 backend loopback 为预期 401。未越权修改不在 TASK-252 范围内的 Nginx 配置；端点改为既有安全代理前缀 /openapi/v1/official/service-token，前置 token-isolation filter 与 controller 同步更新，compile 与定向安全测试再次通过。

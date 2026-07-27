@@ -15,9 +15,9 @@ spec_path: docs/specs/FEAT-145-unified-principal-identity-governance.md
 ## Current State
 
 - Status: `in_progress`
-- Next action: 写入 Keycloak provisioner secret 后，可独立开启受控机器开户；配置 Realm 受管 SMTP 后，再开启人类邀请灰度。两条路径均需使用受权测试主体完成端到端验收。
+- Next action: 机器开户已可独立使用；需指定首个服务的 `company_id`、稳定 client/service 名称、精确 scope 与有效人类 PRIMARY owner 后创建并完成 OACT exchange。配置 Realm 受管 SMTP 后，再开启人类邀请灰度。
 - Deployment scope: `deploy/docker-compose.acr.yml` 仅用于把独立 Keycloak provisioner 配置传入 backend；不修改服务拓扑、网络或证书。
-- Blocked: Keycloak `agentcici` Realm 尚未配置 SMTP，且生产未保存 provisioner client secret；为避免创建无法激活或无密钥治理的主体，人类 `provisioning` 与机器 `machine-provisioning` 均保持关闭。
+- Blocked: Keycloak `agentcici` Realm 尚未配置 SMTP；人类 `provisioning` 继续关闭。机器开户已具备 provisioner secret 与受控开关，但首个机器主体需要业务指定目标公司、服务名、scope 与人类 PRIMARY owner，不能由系统自行猜测。
 
 ## Scope
 
@@ -35,6 +35,7 @@ spec_path: docs/specs/FEAT-145-unified-principal-identity-governance.md
 - 已发布机器 Keycloak client-credentials → 短期 Semattice OACT 交换边界，并完成 Semattice HUMAN/SERVICE Principal 本地投影发布；公开路由缺少 Bearer 返回 401，开关关闭返回 403。机器开户开关现独立于人类邮件邀请，不因 SMTP 缺失被代码耦合阻断。
 - `a7cd78f88543` 已标记并发布为 `2.8.23`：后端/前端镜像 index digest 分别为 `sha256:82d4278d215ae1ac9adbcace14b9121c7bd9c84c520a2ca17712b560327928b0`、`sha256:0f6e22ebce5cf7e7fb3703ca568152dad4f12e27068b6cf7c70bb83faa3b451a`；发布前备份 `/opt/cici/backups/20260727-233807-before-2.8.23` 包含环境、PostgreSQL、KB 与 Qdrant。六容器均健康，backend `/system/version` 为 `2.8.23 / a7cd78f88543`，匿名边界与 OACT JWKS 均验证通过。
 - `58a96d618207` 已标记并发布为 `2.8.24`：Compose 现显式传递 machine-provisioning 与 service-token-exchange 开关；后端/前端 index digest 分别为 `sha256:d2a1dcad568e3167e327e713c977ad2fc83a40cf1348ac4f46be1174a4f0043e`、`sha256:710971cde48ce1fdc59af837331a79d0eb1a42d428a87fa90bace2a496a49ca8`。备份 `/opt/cici/backups/20260727-234415-before-2.8.24` 完整；六容器健康，backend `/system/version` 为 `2.8.24 / 58a96d618207`，三项受控开关均明确为 false。
+- 生产 provisioner secret 已按 Keycloak Client Secret rotation 写入 `/opt/cici/deploy/acr.env`，变更前配置备份为 `/opt/cici/backups/20260727-234937-before-machine-provisioning-enable`；backend 已重建且健康。使用该 secret 的 Keycloak `client_credentials` 返回有效 300 秒管理令牌；不输出令牌或密钥。机器开关现为 true，人类邀请和服务交换仍为 false。
 
 ## Handoff
 
