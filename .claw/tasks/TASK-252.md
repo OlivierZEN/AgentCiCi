@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-252
 status: in_progress
-updated_at: 2026-07-27T16:10:00Z
+updated_at: 2026-07-27T15:42:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: project-manager
@@ -33,6 +33,7 @@ spec_path: docs/specs/FEAT-145-unified-principal-identity-governance.md
 - 已实现 V98 Principal/Identity/Service Principal 基座、受控邀请、首次 OIDC 激活和机器账户责任人 API；已在一次性 PostgreSQL 16 中验证 V1→V98 迁移与兼容映射。
 - 已合并主分支并发布 `2.8.22 / 645b53f6ea58`；生产 Flyway V98/V99 成功，24 个既有全局账户与 24 条 Keycloak 身份绑定已回填。Keycloak 专用 `agentcici-provisioner` client 已创建并授予最小管理角色，未启用自动开户。
 - 已发布机器 Keycloak client-credentials → 短期 Semattice OACT 交换边界，并完成 Semattice HUMAN/SERVICE Principal 本地投影发布；公开路由缺少 Bearer 返回 401，开关关闭返回 403。机器开户开关现独立于人类邮件邀请，不因 SMTP 缺失被代码耦合阻断。
+- `a7cd78f88543` 已标记并发布为 `2.8.23`：后端/前端镜像 index digest 分别为 `sha256:82d4278d215ae1ac9adbcace14b9121c7bd9c84c520a2ca17712b560327928b0`、`sha256:0f6e22ebce5cf7e7fb3703ca568152dad4f12e27068b6cf7c70bb83faa3b451a`；发布前备份 `/opt/cici/backups/20260727-233807-before-2.8.23` 包含环境、PostgreSQL、KB 与 Qdrant。六容器均健康，backend `/system/version` 为 `2.8.23 / a7cd78f88543`，匿名边界与 OACT JWKS 均验证通过。
 
 ## Handoff
 
