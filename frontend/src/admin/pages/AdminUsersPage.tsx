@@ -9,6 +9,7 @@ const STATUS_SUSPENDED = "SUSPENDED";
 type UserRow = {
   id: string;
   mobile: string;
+  email?: string;
   roleCode: string;
   memberStatus?: string;
   createdAt: string;
@@ -51,7 +52,7 @@ export default function AdminUsersPage() {
     ccUsername: "",
     ccSafetymark: "",
   });
-  const [inviteForm, setInviteForm] = useState({ mobile: "", nickname: "", roleCode: "ORG_USER" });
+  const [inviteForm, setInviteForm] = useState({ mobile: "", email: "", nickname: "", roleCode: "ORG_USER" });
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState("");
@@ -142,8 +143,8 @@ export default function AdminUsersPage() {
         setNotice(json.message ?? "添加成员失败");
         return;
       }
-      setNotice("成员已加入组织");
-      setInviteForm({ mobile: "", nickname: "", roleCode: "ORG_USER" });
+      setNotice(json.data?.memberStatus === "PENDING_ACTIVATION" ? "邀请已发送，成员完成统一账号激活后即可加入组织" : "成员已加入组织");
+      setInviteForm({ mobile: "", email: "", nickname: "", roleCode: "ORG_USER" });
       setInviteModalOpen(false);
       setSelectedUserId(json.data?.id ?? "");
       await load();
@@ -501,6 +502,15 @@ export default function AdminUsersPage() {
                   placeholder="请输入成员手机号"
                   autoFocus
                   required
+                />
+              </label>
+              <label className="user-invite-field">
+                <span>邮箱（统一账号激活必填）</span>
+                <input
+                  type="email"
+                  value={inviteForm.email}
+                  onChange={(e) => setInviteForm((form) => ({ ...form, email: e.target.value }))}
+                  placeholder="用于接收统一账号激活邮件"
                 />
               </label>
               <label className="user-invite-field">

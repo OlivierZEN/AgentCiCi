@@ -14,6 +14,7 @@ import java.util.UUID;
 public class UserEntity {
 
     public static final String STATUS_ACTIVE = "ACTIVE";
+    public static final String STATUS_PENDING_ACTIVATION = "PENDING_ACTIVATION";
     public static final String STATUS_SUSPENDED = "SUSPENDED";
 
     @Id

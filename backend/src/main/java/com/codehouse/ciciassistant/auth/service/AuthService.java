@@ -170,7 +170,7 @@ public class AuthService {
         return issueLoginForMember(user);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public Map<String, Object> loginByExternalIdentityAccount(String accountId, String idpSessionId) {
         if (idpSessionId == null || idpSessionId.isBlank()) {
             throw new UnauthorizedException("Missing identity provider session");
@@ -180,6 +180,20 @@ public class AuthService {
                 .stream()
                 .filter(member -> "ACTIVE".equalsIgnoreCase(member.getCompany().getStatus()))
                 .toList();
+        if (members.isEmpty()) {
+            // A member is only promoted after the person completed a successful
+            // OIDC login. This is the activation boundary for an email invite.
+            List<UserEntity> pendingMembers = userRepository
+                    .findByAccount_IdAndMemberStatusOrderByCreatedAtDesc(accountId, UserEntity.STATUS_PENDING_ACTIVATION)
+                    .stream()
+                    .filter(member -> "ACTIVE".equalsIgnoreCase(member.getCompany().getStatus()))
+                    .toList();
+            if (!pendingMembers.isEmpty()) {
+                pendingMembers.forEach(member -> member.setMemberStatus(UserEntity.STATUS_ACTIVE));
+                userRepository.saveAll(pendingMembers);
+                members = pendingMembers;
+            }
+        }
         if (members.isEmpty()) {
             throw new UnauthorizedException("No active company membership");
         }

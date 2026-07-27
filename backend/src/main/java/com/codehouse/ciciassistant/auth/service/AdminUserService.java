@@ -24,15 +24,18 @@ public class AdminUserService {
     private final CompanyRepository companyRepository;
     private final UserAccountRepository userAccountRepository;
     private final AccountLoginIdentifierRepository accountLoginIdentifierRepository;
+    private final KeycloakIdentityProvisioningService keycloakIdentityProvisioningService;
 
     public AdminUserService(UserRepository userRepository,
                             CompanyRepository companyRepository,
                             UserAccountRepository userAccountRepository,
-                            AccountLoginIdentifierRepository accountLoginIdentifierRepository) {
+                            AccountLoginIdentifierRepository accountLoginIdentifierRepository,
+                            KeycloakIdentityProvisioningService keycloakIdentityProvisioningService) {
         this.userRepository = userRepository;
         this.companyRepository = companyRepository;
         this.userAccountRepository = userAccountRepository;
         this.accountLoginIdentifierRepository = accountLoginIdentifierRepository;
+        this.keycloakIdentityProvisioningService = keycloakIdentityProvisioningService;
     }
 
     public List<Map<String, Object>> listUsers(String companyId) {
@@ -45,6 +48,7 @@ public class AdminUserService {
     public Map<String, Object> inviteMember(
             String companyId,
             String mobile,
+            String email,
             String nickname,
             String roleCode) {
         String mobileValue = normalizeMobile(mobile);
@@ -52,7 +56,9 @@ public class AdminUserService {
             throw new IllegalArgumentException("手机号格式不正确");
         }
         String normalizedRole = normalizeMemberRole(roleCode);
-        UserAccountEntity account = findOrCreateMobileAccount(mobileValue);
+        UserAccountEntity account = findOrCreateMobileAccount(mobileValue, email, nickname);
+        KeycloakIdentityProvisioningService.ProvisionResult identity = keycloakIdentityProvisioningService
+                .ensureHumanIdentity(account);
         UserEntity target = userRepository.findByCompany_IdAndAccount_Id(companyId, account.getId())
                 .orElseGet(() -> {
                     var org = companyRepository.findById(companyId)
@@ -62,7 +68,9 @@ public class AdminUserService {
         if (!RoleCodes.OWNER.equals(target.getRoleCode())) {
             target.setRoleCode(normalizedRole);
         }
-        target.setMemberStatus(UserEntity.STATUS_ACTIVE);
+        target.setMemberStatus(identity.activationRequired()
+                ? UserEntity.STATUS_PENDING_ACTIVATION
+                : UserEntity.STATUS_ACTIVE);
         target.setNickname(trimOrNull(nickname));
         userRepository.save(target);
         return toRow(target);
@@ -206,6 +214,7 @@ public class AdminUserService {
         row.put("memberId", u.getId());
         row.put("accountId", u.getAccountId());
         row.put("mobile", u.getMobile());
+        row.put("email", u.getAccount() == null || u.getAccount().getEmail() == null ? "" : u.getAccount().getEmail());
         row.put("roleCode", u.getRoleCode());
         row.put("memberStatus", u.getMemberStatus());
         row.put("nickname", u.getNickname() == null ? "" : u.getNickname());
@@ -216,7 +225,7 @@ public class AdminUserService {
         return row;
     }
 
-    private UserAccountEntity findOrCreateMobileAccount(String mobileValue) {
+    private UserAccountEntity findOrCreateMobileAccount(String mobileValue, String email, String nickname) {
         UserAccountEntity account = accountLoginIdentifierRepository
                 .findByIdentifierTypeAndNormalizedValueAndStatus(
                         AccountLoginIdentifierEntity.TYPE_MOBILE,
@@ -224,18 +233,37 @@ public class AdminUserService {
                         AccountLoginIdentifierEntity.STATUS_ACTIVE)
                 .map(AccountLoginIdentifierEntity::getAccount)
                 .or(() -> userAccountRepository.findByPrimaryMobile(mobileValue))
-                .orElseGet(() -> userAccountRepository.save(new UserAccountEntity(mobileValue)));
+                .orElseGet(() -> userAccountRepository.saveAndFlush(new UserAccountEntity(mobileValue)));
+        String emailValue = trimOrNull(email);
+        if (emailValue != null && !emailValue.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+            throw new IllegalArgumentException("邮箱格式不正确");
+        }
+        if (emailValue != null) {
+            String accountId = account.getId();
+            userAccountRepository.findByEmailIgnoreCase(emailValue)
+                    .filter(existing -> !existing.getId().equals(accountId))
+                    .ifPresent(existing -> {
+                        throw new IllegalArgumentException("该邮箱已被其他全局账号使用");
+                    });
+            account.setEmail(emailValue);
+        }
+        if (account.getDisplayName() == null && trimOrNull(nickname) != null) {
+            account.setDisplayName(trimOrNull(nickname));
+        }
+        UserAccountEntity persistedAccount = userAccountRepository.saveAndFlush(account);
         accountLoginIdentifierRepository
                 .findByAccount_IdAndIdentifierTypeAndStatus(
-                        account.getId(),
+                        persistedAccount.getId(),
                         AccountLoginIdentifierEntity.TYPE_MOBILE,
                         AccountLoginIdentifierEntity.STATUS_ACTIVE)
                 .orElseGet(() -> accountLoginIdentifierRepository.save(new AccountLoginIdentifierEntity(
-                        account,
+                        persistedAccount,
                         AccountLoginIdentifierEntity.TYPE_MOBILE,
                         mobileValue,
                         mobileValue)));
-        return account;
+        // public_id is generated by PostgreSQL, so reload after flush before it is used as
+        // the Keycloak username. This makes the unique human identifier immutable end-to-end.
+        return userAccountRepository.findById(persistedAccount.getId()).orElseThrow();
     }
 
     private void assertNotLastActiveOwner(String companyId, UserEntity target) {

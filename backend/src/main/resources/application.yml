@@ -73,6 +73,13 @@ app:
       client-id: agentcici-bff
       client-secret: ""
       redirect-uri: ""
+      provisioning:
+        # In production this is enabled with the confidential client that has
+        # realm-management users/query-users/manage-users only. Do not reuse the BFF client.
+        enabled: false
+        admin-client-id: ""
+        admin-client-secret: ""
+        invitation-redirect-uri: ""
   agent-open-api:
     enabled: false
     conversation-api-enabled: true

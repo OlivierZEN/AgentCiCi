@@ -442,9 +442,9 @@ Keycloak client_credentials
 
 ### Phase 2：Keycloak 受控开户与人类邀请
 
-- 部署独立 AgentCiCi Keycloak provisioner 的最小权限配置与密钥引用。
-- 实现幂等 Saga、Keycloak User 创建/精确查找、绑定、Required Actions、失败补偿与运营查询。
-- 将新公司成员入口切换至 `ensure human member`，以 feature flag 按公司灰度。
+- 已实现独立的 AgentCiCi Keycloak provisioner 配置入口（默认关闭）；生产启用时使用独立 confidential client，不复用 BFF client。
+- 已实现精确查找/创建 Keycloak User、`issuer + sub` 绑定、`VERIFY_EMAIL` / `UPDATE_PASSWORD` Required Actions 与首次成功 OIDC 登录激活成员；创建失败时本地事务回滚，重试时以 `public_id` 精确查找，避免重复 User。
+- 新公司成员入口已接受邮箱。未启用 provisioner 保持兼容；启用后邮箱必填且成员处于 `PENDING_ACTIVATION`，完成激活前不可获得应用会话。
 - 既有未绑定成员只通过受控邀请或人工确认补齐，不强制重置密码或静默创建重复用户。
 
 ### Phase 3：官方应用成员投影
@@ -455,7 +455,7 @@ Keycloak client_credentials
 
 ### Phase 4：机器 Principal 与责任治理
 
-- 新增 `service_principal`、责任人/维护人、授权 grant、轮换和移交状态机。
+- 已新增 `service_principal`、责任人/维护人数据模型与组织管理员创建 API。每个创建请求强制将当前有效公司成员登记为 `PRIMARY` owner，且 Client Secret 仅在创建响应中返回一次，不落库。
 - 新发机器客户端全部纳入人类责任链；已有第三方 Client 分批登记 owner，逾期未登记的客户端进入受控暂停。
 - 资源服务接入 service Principal 投影校验与审计关联。
 

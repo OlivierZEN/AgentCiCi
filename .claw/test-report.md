@@ -13,6 +13,15 @@ last_run_status: passed
 
 # Test Report
 
+## TASK-252 - FEAT-145 统一 Principal 身份与治理
+
+- `identity/assignment`：MANAGER-001 的 SSH 持钥、Git 身份、`feature/TASK-252-unified-principal` 分支和授权范围经 `dev-login.py` 返回 `allowed`。
+- `backend-compile`：`mvn -q -DskipTests compile` 通过。
+- `fresh-postgresql`：一次性 PostgreSQL 16 容器执行 V1→V96、插入历史账户、再迁移 V97/V98；`UserAccountPublicIdIntegrationTest` 通过。该过程发现并修复了 `user_account → principal` 外键早于 AFTER trigger 检查的问题，最终采用 `DEFERRABLE INITIALLY DEFERRED`，确保新账户与其 HUMAN Principal 在同一事务内一致提交。
+- `principal-mapping`：`PrincipalIdentityGovernanceIntegrationTest` 通过，验证新 `user_account` 自动创建 `HUMAN:ACTIVE` Principal，且后续 `account_external_identity` 写入会镜像为 `principal_identity/HUMAN_USER`。
+- `oidc-regression`：`KeycloakOidcLoginServiceTest` 3/3 通过。`AuthFlowIntegrationTest` 未通过：共享测试库连接阶段连续超时，Spring Context 未创建，17 项均为同一环境错误；未改写历史迁移、未对共享库执行 repair，使用隔离 PostgreSQL 完成 V98 迁移验证。
+- `frontend`：`npm run build` 通过；仅有既有 Vite 大 chunk 提示。
+
 ## TASK-251 - 全局用户公共编号
 
 - `identity/assignment`：MANAGER-001 的 SSH 持钥、Git 身份、`codex/TASK-251-global-user-public-id` 分支和迁移/账户/平台目录/测试/状态代表路径经 `dev-login.py` 返回 `allowed`。

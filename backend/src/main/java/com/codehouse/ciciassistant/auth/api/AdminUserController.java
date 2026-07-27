@@ -39,6 +39,7 @@ public class AdminUserController {
         return ApiResponse.ok(adminUserService.inviteMember(
                 companyId,
                 request.mobile(),
+                request.email(),
                 request.nickname(),
                 request.roleCode()));
     }
@@ -89,6 +90,7 @@ public class AdminUserController {
 
     public record InviteMemberRequest(
             @NotBlank String mobile,
+            String email,
             String nickname,
             @NotBlank String roleCode
     ) {

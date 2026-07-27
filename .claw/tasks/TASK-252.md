@@ -15,7 +15,7 @@ spec_path: docs/specs/FEAT-145-unified-principal-identity-governance.md
 ## Current State
 
 - Status: `in_progress`
-- Next action: 在 `feature/TASK-252-unified-principal` 实现 AgentCiCi Principal、受控邀请与机器主体，并按生产 Runbook 完成验证和发布。
+- Next action: 完成 Keycloak 生产管理客户端配置与端到端邀请/机器账户验收，随后按 Runbook 合并发布。
 - Blocked: none
 
 ## Scope
@@ -29,6 +29,7 @@ spec_path: docs/specs/FEAT-145-unified-principal-identity-governance.md
 - 已核对现有 `user_account`、V96 `account_external_identity`、V97 `public_id` 与 `company_member`：当前人类账户、OIDC 绑定和成员已分层，但邀请不创建 Keycloak 用户且直接激活。
 - 已核对 Semattice 当前 JWT/JWKS verifier：资源服务可本地验证可信 issuer，JWKS 缓存五分钟，不逐请求回调 IdP；本规格在此基础上增加 HUMAN/SERVICE Principal 投影与本地授权校验。
 - 本任务只改规格和项目状态，未运行代码测试。
+- 已实现 V98 Principal/Identity/Service Principal 基座、受控邀请、首次 OIDC 激活和机器账户责任人 API；已在一次性 PostgreSQL 16 中验证 V1→V98 迁移与兼容映射。
 
 ## Handoff
 
