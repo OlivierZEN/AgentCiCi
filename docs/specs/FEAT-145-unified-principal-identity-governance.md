@@ -428,6 +428,7 @@ Keycloak client_credentials
 - 已完成：目标 Principal 分层、数据模型、Keycloak 边界、人类开户、机器责任治理、跨应用控制面、分期迁移与验收设计。
 - 已完成：V98/V99 Principal 迁移与历史回填、受控人类开户实现、Keycloak 最小 provisioner client、机器主体/责任人/scope 模型、机器 Keycloak token 至 OACT 交换端点、Semattice HUMAN/SERVICE OACT 本地投影与生产兼容发布。
 - 受控开关：人类 `provisioning`（邮件邀请）与机器 `machine-provisioning`（Keycloak confidential client）相互独立；二者均默认关闭并共用最小权限 provisioner 凭据。生产保持人类 provisioning 与 service-token-exchange 关闭，直至 SMTP、OACT 签名配置、Semattice JWKS 信任与受权 E2E 真实凭据均完成；关闭时所有新交换 fail closed。
+- 部署边界：Compose 必须显式传递 `APP_AUTH_OIDC_MACHINE_PROVISIONING_ENABLED` 与 `APP_AUTH_OIDC_SERVICE_TOKEN_EXCHANGE_ENABLED`；缺失环境变量时按 `false` 传入，不能因 Spring 默认值或宿主环境差异意外放开机器开户或交换端点。
 
 ## 迁移与分期实施
 
