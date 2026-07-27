@@ -3,9 +3,9 @@ kind: current-status
 version: 4
 updated_at: 2026-07-26T14:05:27Z
 updated_by: MANAGER-001
-phase: production-and-review
-active_task: TASK-249
-next_action: "等待 TASK-249 的合并或生产发布授权；如另行授权发布 AgentCiCi，先执行并验证 V97 全局用户公共编号回填。"
+phase: identity-architecture-design
+active_task: TASK-252
+next_action: "完成 FEAT-145 统一 Principal 详细设计；不改运行时代码或生产环境。"
 read_next:
   goals: false
   decisions: false
