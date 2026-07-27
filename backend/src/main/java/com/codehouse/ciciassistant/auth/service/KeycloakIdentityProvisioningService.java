@@ -30,7 +30,8 @@ public class KeycloakIdentityProvisioningService {
     private final AccountExternalIdentityRepository identityRepository;
     private final UserAccountRepository accountRepository;
     private final ObjectMapper objectMapper;
-    private final boolean enabled;
+    private final boolean humanProvisioningEnabled;
+    private final boolean machineProvisioningEnabled;
     private final String issuer;
     private final String adminClientId;
     private final String adminClientSecret;
@@ -40,7 +41,8 @@ public class KeycloakIdentityProvisioningService {
     public KeycloakIdentityProvisioningService(AccountExternalIdentityRepository identityRepository,
                                                UserAccountRepository accountRepository,
                                                ObjectMapper objectMapper,
-                                               @Value("${app.auth.oidc.provisioning.enabled:false}") boolean enabled,
+                                               @Value("${app.auth.oidc.provisioning.enabled:false}") boolean humanProvisioningEnabled,
+                                               @Value("${app.auth.oidc.machine-provisioning.enabled:false}") boolean machineProvisioningEnabled,
                                                @Value("${app.auth.oidc.issuer:}") String issuer,
                                                @Value("${app.auth.oidc.provisioning.admin-client-id:}") String adminClientId,
                                                @Value("${app.auth.oidc.provisioning.admin-client-secret:}") String adminClientSecret,
@@ -48,14 +50,18 @@ public class KeycloakIdentityProvisioningService {
         this.identityRepository = identityRepository;
         this.accountRepository = accountRepository;
         this.objectMapper = objectMapper;
-        this.enabled = enabled;
+        this.humanProvisioningEnabled = humanProvisioningEnabled;
+        this.machineProvisioningEnabled = machineProvisioningEnabled;
         this.issuer = trimTrailingSlash(issuer);
         this.adminClientId = trim(adminClientId);
         this.adminClientSecret = trim(adminClientSecret);
         this.invitationRedirectUri = trim(invitationRedirectUri);
-        if (enabled && (this.issuer.isBlank() || this.adminClientId.isBlank() || this.adminClientSecret.isBlank()
-                || this.invitationRedirectUri.isBlank())) {
-            throw new IllegalArgumentException("Keycloak invitation provisioning configuration is incomplete");
+        if ((humanProvisioningEnabled || machineProvisioningEnabled)
+                && (this.issuer.isBlank() || this.adminClientId.isBlank() || this.adminClientSecret.isBlank())) {
+            throw new IllegalArgumentException("Keycloak provisioning configuration is incomplete");
+        }
+        if (humanProvisioningEnabled && this.invitationRedirectUri.isBlank()) {
+            throw new IllegalArgumentException("Keycloak invitation provisioning redirect URI is incomplete");
         }
     }
 
@@ -64,7 +70,7 @@ public class KeycloakIdentityProvisioningService {
         if (existing.isPresent()) {
             return new ProvisionResult(true, false, existing.get().getSubject());
         }
-        if (!enabled) {
+        if (!humanProvisioningEnabled) {
             // Compatibility mode is deliberately explicit and must not be used in production
             // once the Keycloak invitation client has been configured.
             return new ProvisionResult(false, false, "");
@@ -96,7 +102,11 @@ public class KeycloakIdentityProvisioningService {
     }
 
     public boolean isEnabled() {
-        return enabled;
+        return humanProvisioningEnabled;
+    }
+
+    public boolean isMachineProvisioningEnabled() {
+        return machineProvisioningEnabled;
     }
 
     public String issuer() {
@@ -105,7 +115,7 @@ public class KeycloakIdentityProvisioningService {
 
     /** Creates a confidential Keycloak client and returns its secret exactly once. */
     public ServiceClientCredentials createServiceClient(String clientId, String audience) {
-        if (!enabled) {
+        if (!machineProvisioningEnabled) {
             throw new IllegalStateException("统一身份机器账户开通尚未启用");
         }
         try {

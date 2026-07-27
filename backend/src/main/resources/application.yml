@@ -84,6 +84,11 @@ app:
         admin-client-id: ""
         admin-client-secret: ""
         invitation-redirect-uri: ""
+      machine-provisioning:
+        # Independent from human email invitations: enabling this creates only
+        # governed service-account clients through the dedicated provisioner.
+        # It still requires issuer and the provisioner client credentials above.
+        enabled: false
   agent-open-api:
     enabled: false
     conversation-api-enabled: true

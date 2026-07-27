@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-27T14:56:00Z
+updated_at: 2026-07-27T16:10:00Z
 updated_by: MANAGER-001
 phase: identity-architecture-implementation
 active_task: TASK-252
-next_action: "为 Keycloak agentcici Realm 配置受管 SMTP 后，开启 FEAT-145 受控邀请灰度并完成真实受权端到端验收。"
+next_action: "补齐 Keycloak provisioner 凭据与受管 SMTP 后，分别开启机器开户和人类邀请灰度，并完成受权端到端验收。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-252 / FEAT-145：已合并 `main`（`8db900e4efc2`）并发布生产 `2.8.20`。V98 建立 `principal`、`principal_identity`、`service_principal`、机器责任人与幂等操作模型；生产 Flyway V98 成功，24 个既有账户均回填为 HUMAN Principal，24 条既有 Keycloak `issuer + sub` 绑定已镜像到 canonical identity。受控人类邀请、首次 OIDC 激活和机器主体 API 已上线，Keycloak 专用 `agentcici-provisioner` confidential client 已按最小角色创建；但 Realm 当前无 SMTP，故生产 provisioner 开关明确保持 `false`，不会生成无法收到设密邮件的账户。六服务 healthy、health `UP`、版本 `2.8.20 / 8db900e4efc2`、`x.agentcici.com` 200、匿名 `/auth/me` 401、OIDC 入口正确跳转 SSO。`onechat.agentcici.com` 当前 DNS 不可解析，记录为既有入口风险；Semattice Principal 投影须按其仓库规范另建任务实施。
+- TASK-252 / FEAT-145：AgentCiCi `main` 已发布 `2.8.22 / 645b53f6ea58`，Semattice Principal 投影已发布 `20260727T151437Z-console`。V98/V99 建立并回填 HUMAN/SERVICE Principal、Keycloak identity mirror、责任人、幂等操作与机器 scope；生产 Flyway V98/V99 成功。服务交换端点为 `/openapi/v1/official/service-token`，缺少 Bearer 为 401、feature flag 关闭时为 403；Semattice 只接受短期 OACT 并本地 JWKS 验签，不接受原始 Keycloak service token。人类 `provisioning` 与机器 `machine-provisioning` 已解耦且默认关闭：生产仅存在 provisioner Client ID，未保存其密钥，Realm 也未配置 SMTP，因此未开启任何账户自动创建或真实交换。六服务 healthy、backend health `UP`、`x.agentcici.com` 200、匿名 `/auth/me` 401。`onechat.agentcici.com` DNS 不可解析，作为既有入口风险保留。
 
 - TASK-251 / FEAT-144 与 TASK-248 / FEAT-141 已发布生产 `2.8.19 / 99d4cc3cb206`。Flyway V97 成功回填全部历史账户的 `UYYYYXXXXXXXX` 公共编号，并为新账户维持格式、唯一与不可变约束；生产库 `public_id` 空值与格式不匹配均为 0。平台“注册用户”目录保持一账户一行，并只读展示公共编号及已加入组织。六服务健康、Nginx 校验通过，生产 IP/SNI 的 onechat/x HTTPS 均为 200，匿名 `/auth/me` 为 401。真实受权平台会话的目录列展示仍待后续复核。
 
