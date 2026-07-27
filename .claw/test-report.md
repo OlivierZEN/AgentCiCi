@@ -4,10 +4,10 @@ Total output lines: 6804
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-26T14:05:27Z
+updated_at: 2026-07-27T15:27:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-26T14:05:27Z
+last_run_at: 2026-07-27T15:27:00Z
 last_run_status: passed
 ---
 
@@ -25,6 +25,7 @@ last_run_status: passed
 - `fresh-postgresql-v99`：一次性 PostgreSQL 16 执行 V1 至 V99 后 PrincipalIdentityGovernanceIntegrationTest 通过；确认 service_principal_scope 已创建，新增 HUMAN Principal 和 legacy Keycloak binding mirror 均保持兼容。临时容器 cici-feat145-pg 已删除。
 - `semattice-principal-projection`：Semattice Go 全量测试、vet、module verify、Linux amd64 CGO-free 构建和 diff check 通过；不可变 release `/opt/semattice/releases/20260727T151437Z-console` 后服务 active、edge health 为 200、匿名 console API 与 capability invoke 均为预期 401、Nginx 校验通过。
 - `exchange-route-correction`：2.8.21 发布后发现生产 Nginx 未代理 /public 前缀，公网 POST 落入前端为 405，而 backend loopback 为预期 401。未越权修改不在 TASK-252 范围内的 Nginx 配置；端点改为既有安全代理前缀 /openapi/v1/official/service-token，前置 token-isolation filter 与 controller 同步更新，compile 与定向安全测试再次通过。
+- `production-2.8.22`：backend/frontend ACR index digest 分别为 `sha256:b30ee3a7045668e810f4bc02f8d84097c869d667620f7ae834aef419c9787928`、`sha256:5be82d0316eb08a7104b3d6c79ae07e02c6d52075a7c9c1fb20e9d1c26f8da96`；发布前备份为 `/opt/cici/backups/20260727-232515-before-2.8.22`。六容器 healthy，backend health 为 UP，版本为 `2.8.22 / 645b53f6ea58`，Flyway V98/V99 均为 true；匿名 auth/me 为 401，服务交换端点缺 Bearer 为 401、带任意 Bearer 在 feature flag 关闭时为 403，证明公网代理与 fail-closed 边界生效。Keycloak discovery 继续为 200；未配置 SMTP、OACT signing 或受权 service client，未开启 provisioner/机器交换。
 - `frontend`：`npm run build` 通过；仅有既有 Vite 大 chunk 提示。
 
 ## TASK-251 - 全局用户公共编号
