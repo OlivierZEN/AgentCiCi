@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-29T12:25:00Z
+updated_at: 2026-07-29T12:35:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,13 +17,13 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-254 - company_id 迁移完整性审计与遗留修复
 
-- status: `review`
+- status: `done`
 - priority: `critical`
 - owner_role: `backend-agent`
 - spec_path: `docs/specs/FEAT-147-company-id-completeness-audit.md`
 - task_status_path: `.claw/tasks/TASK-254.md`
 - assignment_path: `.claw/assignments/TASK-254.yaml`
-- next_action: 等待 PostgreSQL 测试库可用时补跑账单集成测试；未经用户授权不合并主线或发布生产。
+- next_action: 已发布 `2.8.25 / 105cc666a958`；本地 PostgreSQL 恢复后可补跑账单集成测试。
 
 ### TASK-253 - 计费用量公司成员查询修复
 
