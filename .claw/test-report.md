@@ -4,14 +4,19 @@ Total output lines: 6804
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-27T15:51:00Z
+updated_at: 2026-07-29T12:03:22Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-27T15:51:00Z
-last_run_status: passed
+last_run_at: 2026-07-29T12:03:22Z
+last_run_status: partial
 ---
 
 # Test Report
+
+## TASK-253 - 计费用量公司成员查询修复
+
+- `static/backend-compile`：`rg` 只命中 `member.company.id`，`mvn -q -Dmaven.repo.local=../.m2 -DskipTests compile` 和 `git diff --check` 通过。
+- `backend-integration-limit`：`mvn -q -Dmaven.repo.local=../.m2 -Dtest=AdminBillingIntegrationTest test` 未进入测试方法。Spring Boot 的 Flyway 初始化连接 `localhost:5432` 被拒绝；未修改 PostgreSQL、历史迁移或执行 repair。该测试的账单总览断言覆盖本次构建者席位查询，需在可用测试数据库复跑。
 
 ## TASK-252 - FEAT-145 统一 Principal 身份与治理
 

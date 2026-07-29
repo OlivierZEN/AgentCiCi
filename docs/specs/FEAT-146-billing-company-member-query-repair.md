@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-146
 title: 计费用量公司成员查询修复
-status: active
+status: review
 owner_role: backend-agent
 task_ids: TASK-253
 related_decisions: FEAT-037, FEAT-135 company_id 统一
 related_issues: 组织管理端计费用量页 JPQL UnknownPathException
-updated_at: 2026-07-29T12:00:09Z
+updated_at: 2026-07-29T12:03:22Z
 updated_by: MANAGER-001
 ---
 
@@ -46,4 +46,6 @@ updated_by: MANAGER-001
 
 ## 实现进展
 
-- 当前状态：已确认根因，待实现。
+- 当前状态：已完成实现并进入 review。
+- 构建者席位统计保留原有公司、活跃状态及 OWNER/ORG_ADMIN 角色条件，仅将实体路径改为 `member.company.id`。
+- 现有组织管理员账单总览集成测试已明确命名为公司成员席位回归；本机 PostgreSQL 未运行，测试在 Spring/Flyway 启动前被拒绝连接，待可用测试数据库复跑。
