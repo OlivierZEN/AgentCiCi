@@ -1,0 +1,48 @@
+task_id: TASK-253
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-29T12:00:09Z
+expires_at: none
+spec_path: docs/specs/FEAT-146-billing-company-member-query-repair.md
+task_status_path: .claw/tasks/TASK-253.md
+branch: codex/TASK-253-billing-company-query
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/billing/**
+  - backend/src/test/java/com/codehouse/ciciassistant/billing/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/developers/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+scope_files:
+  - backend/src/main/java/com/codehouse/ciciassistant/billing/service/BillingUsageMeteringService.java
+  - backend/src/test/java/com/codehouse/ciciassistant/billing/AdminBillingIntegrationTest.java
+  - docs/specs/FEAT-146-billing-company-member-query-repair.md
+  - .claw/tasks/TASK-253.md
+  - .claw/assignments/TASK-253.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+touch_policy: exclusive
+shared_contracts:
+  - GET /admin/billing/overview
+  - UserEntity.company and company_member role/status filtering
+  - organization-admin billing subscription seat count
+task_boundary:
+  - "修复计费构建者席位统计中的过期 UserEntity.org JPQL 路径。"
+  - "以组织管理员账单总览集成测试防止回归。"
+  - "不修改计费规则、数据库、前端、主线或生产环境。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
+signature: "MANAGER-001; user reported the production billing page JPQL error on 2026-07-29."

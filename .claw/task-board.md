@@ -15,6 +15,16 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-253 - 计费用量公司成员查询修复
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `backend-agent`
+- spec_path: `docs/specs/FEAT-146-billing-company-member-query-repair.md`
+- task_status_path: `.claw/tasks/TASK-253.md`
+- assignment_path: `.claw/assignments/TASK-253.yaml`
+- next_action: 将构建者席位统计切换到当前 `UserEntity.company` 关联，并验证组织管理员账单总览。
+
 ### TASK-252 - 统一 Principal 身份与治理模型设计
 
 - status: `in_progress`

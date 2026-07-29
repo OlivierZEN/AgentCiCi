@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-27T15:51:00Z
+updated_at: 2026-07-29T12:00:09Z
 updated_by: MANAGER-001
 phase: identity-architecture-implementation
-active_task: TASK-252
-next_action: "为首个受控机器主体指定公司、服务名与人类 PRIMARY 责任人，完成 OACT exchange；配置受管 SMTP 后再开启人类邀请灰度。"
+active_task: TASK-253
+next_action: "修复组织管理端计费用量页的过期 UserEntity.org JPQL 路径；未获授权不合并主线或发布生产。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-253 / FEAT-146：用户报告组织管理端 `/admin/billing` 加载失败。截图中的 `UnknownPathException` 已定位为 `BillingUsageMeteringService.activeBuilderSeatUsers` 仍引用迁移前 `member.org.id`，但当前 `UserEntity` 只映射 `company`。本任务仅改为 `member.company.id` 并用组织管理员账单总览回归覆盖；不修改计费口径、数据、前端、主线或生产环境。
 
 - TASK-252 / FEAT-145：AgentCiCi `main` 已发布 `2.8.24 / 58a96d618207`，Semattice Principal 投影已发布 `20260727T151437Z-console`。V98/V99 建立并回填 HUMAN/SERVICE Principal、Keycloak identity mirror、责任人、幂等操作与机器 scope；生产 Flyway V98/V99 成功。服务交换端点为 `/openapi/v1/official/service-token`，缺少 Bearer 为 401、feature flag 关闭时为 403；Semattice 只接受短期 OACT 并本地 JWKS 验签，不接受原始 Keycloak service token。人类 provisioning 与 service-token-exchange 由 Compose 显式传入且保持 `false`；机器 `machine-provisioning` 已启用，provisioner secret 已仅写入部署环境，Client Credentials 管理令牌实测成功（300 秒），但尚未创建任何机器主体。Realm 仍无 SMTP，故未开启人类邀请。六服务 healthy、backend health `UP`、`x.agentcici.com` 200、匿名 `/auth/me` 401、OACT JWKS 200。`onechat.agentcici.com` DNS 不可解析，作为既有入口风险保留。
 
