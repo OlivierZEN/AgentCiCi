@@ -1,17 +1,18 @@
-task_id: TASK-253
+task_id: TASK-254
 assignee: MANAGER-001
 assigned_by: MANAGER-001
-status: completed
-assigned_at: 2026-07-29T12:00:09Z
+status: active
+assigned_at: 2026-07-29T12:10:00Z
 expires_at: none
-spec_path: docs/specs/FEAT-146-billing-company-member-query-repair.md
-task_status_path: .claw/tasks/TASK-253.md
-branch: codex/TASK-253-billing-company-query
+spec_path: docs/specs/FEAT-147-company-id-completeness-audit.md
+task_status_path: .claw/tasks/TASK-254.md
+branch: codex/TASK-254-company-id-completeness
 pr_url: n/a
 scope_mode: task_bounded_broad_code
 allowed_write_roots:
   - backend/src/main/java/com/codehouse/ciciassistant/billing/**
   - backend/src/test/java/com/codehouse/ciciassistant/billing/**
+  - scripts/**
   - docs/specs/**
   - .claw/tasks/**
   - .claw/assignments/**
@@ -26,7 +27,12 @@ protected_paths:
 scope_files:
   - backend/src/main/java/com/codehouse/ciciassistant/billing/service/BillingUsageMeteringService.java
   - backend/src/test/java/com/codehouse/ciciassistant/billing/AdminBillingIntegrationTest.java
-  - docs/specs/FEAT-146-billing-company-member-query-repair.md
+  - scripts/e2e-local-business.sh
+  - scripts/verify-qdrant-stack.sh
+  - scripts/seed-demo-environment.py
+  - docs/specs/FEAT-147-company-id-completeness-audit.md
+  - .claw/tasks/TASK-254.md
+  - .claw/assignments/TASK-254.yaml
   - .claw/tasks/TASK-253.md
   - .claw/assignments/TASK-253.yaml
   - .claw/task-board.md
@@ -34,15 +40,16 @@ scope_files:
   - .claw/test-report.md
 touch_policy: exclusive
 shared_contracts:
-  - GET /admin/billing/overview
-  - UserEntity.company and company_member role/status filtering
-  - organization-admin billing subscription seat count
+  - company_id physical schema after Flyway V94
+  - companyId authentication and tenant context contract
+  - Qdrant company_id payload/filter contract
+  - organization-admin billing overview seat count
 task_boundary:
-  - "修复计费构建者席位统计中的过期 UserEntity.org JPQL 路径。"
-  - "以组织管理员账单总览集成测试防止回归。"
-  - "不修改计费规则、数据库、前端、主线或生产环境。"
+  - "完成 AgentCiCi 当前可执行 company_id 遗留项审计并修复账单与运维脚本。"
+  - "保留历史迁移、迁移验证和前端历史响应兼容。"
+  - "不修改数据、前端、Semattice、主线或生产环境。"
 change_manifest_required: true
 preflight_required: true
 local_login_required: true
 identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
-signature: "MANAGER-001; user reported the production billing page JPQL error on 2026-07-29."
+signature: "MANAGER-001; user requested a comprehensive company_id completion audit on 2026-07-29."

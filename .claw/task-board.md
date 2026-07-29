@@ -15,15 +15,25 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
-### TASK-253 - 计费用量公司成员查询修复
+### TASK-254 - company_id 迁移完整性审计与遗留修复
 
 - status: `in_progress`
+- priority: `critical`
+- owner_role: `backend-agent`
+- spec_path: `docs/specs/FEAT-147-company-id-completeness-audit.md`
+- task_status_path: `.claw/tasks/TASK-254.md`
+- assignment_path: `.claw/assignments/TASK-254.yaml`
+- next_action: 修复账单 JPQL 与 E2E、Qdrant smoke、演示 SQL 中的顶层企业旧字段，并以静态扫描验证。
+
+### TASK-253 - 计费用量公司成员查询修复
+
+- status: `canceled`
 - priority: `critical`
 - owner_role: `backend-agent`
 - spec_path: `docs/specs/FEAT-146-billing-company-member-query-repair.md`
 - task_status_path: `.claw/tasks/TASK-253.md`
 - assignment_path: `.claw/assignments/TASK-253.yaml`
-- next_action: 将构建者席位统计切换到当前 `UserEntity.company` 关联，并验证组织管理员账单总览。
+- next_action: 已由 TASK-254 完整性审计替代；不单独合并该分支。
 
 ### TASK-252 - 统一 Principal 身份与治理模型设计
 
