@@ -6,7 +6,7 @@
 set -euo pipefail
 
 BASE_URL="${BASE_URL:-http://127.0.0.1:8080}"
-ORG_ID="${E2E_ORG_ID:-demo-org}"
+COMPANY_ID="${E2E_COMPANY_ID:-demo-org}"
 MOBILE="${E2E_MOBILE:-13900009999}"
 MARKER="E2E_RAG_MARKER_$(date +%s)_${RANDOM}"
 
@@ -30,7 +30,7 @@ curl -sf "${BASE_URL}/actuator/health" >/dev/null || {
 echo "==> Login"
 LOGIN_JSON="$(curl -sf -X POST "${BASE_URL}/auth/password/login" \
   -H 'Content-Type: application/json' \
-  -d "{\"orgId\":\"${ORG_ID}\",\"mobile\":\"${MOBILE}\",\"password\":\"${E2E_PASSWORD:-szyd1234}\"}")"
+  -d "{\"companyId\":\"${COMPANY_ID}\",\"mobile\":\"${MOBILE}\",\"password\":\"${E2E_PASSWORD:-szyd1234}\"}")"
 TOKEN="$(echo "${LOGIN_JSON}" | python3 -c "import json,sys; print(json.load(sys.stdin)['data']['token'])")"
 AUTH=( -H "Authorization: Bearer ${TOKEN}" )
 
@@ -101,5 +101,5 @@ print("OK: ragContext chunks=", len(ctx), "; marker_hit=", marker in text)
 
 echo ""
 echo "=== E2E business acceptance PASSED ==="
-echo "Recorded test login: orgId=${ORG_ID} mobile=${MOBILE}"
+echo "Recorded test login: companyId=${COMPANY_ID} mobile=${MOBILE}"
 echo "Note: default MOBILE must stay aligned with README / AI助手实现设计方案.md §8.3 and app.auth.bootstrap-admin-mobiles (ORG_ADMIN required for KB writes)."

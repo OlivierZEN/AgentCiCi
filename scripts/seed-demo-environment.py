@@ -27,7 +27,7 @@ ROOT = Path(os.environ.get("CLOUDCC_PROJECT_ROOT", Path(__file__).resolve().pare
 CLOUDCC = Path("/Users/owenmacbook/.agents/skills/cc-customization-expert-msapi/tools/bin/cloudcc")
 DEFAULT_SSH_KEY = Path("/Volumes/AISpace/datafiles/ecs-key/cc-cici-ecs.pem")
 DEFAULT_REMOTE = "root@47.97.119.160"
-AGENT_ORG_ID = "org2sva14i4udjmi2t4s"
+AGENT_COMPANY_ID = "org2sva14i4udjmi2t4s"
 CLOUDCC_ORG_ID = "org0720f814430017229"
 BATCH = "TASK-203-DEMO-V2"
 NEW_PIPELINE_BATCH = "TASK-203-NEW-PIPELINE-R1"
@@ -1054,15 +1054,15 @@ def build_agent_sql(ids: dict[str, dict[str, str]]) -> str:
     account_id_list = ", ".join(sql_quote(value) for value in ids["accounts"].values())
     statements: list[str] = [
         "BEGIN;",
-        f"DELETE FROM customer_workbench_recommendation WHERE org_id = {sql_quote(AGENT_ORG_ID)} AND public_id LIKE 'task203_v2_%';",
-        f"DELETE FROM customer_workbench_recommendation WHERE org_id = {sql_quote(AGENT_ORG_ID)} AND public_id LIKE 'task172_v1_%' AND status = 'PENDING';",
-        f"DELETE FROM customer_dynamic_signal WHERE org_id = {sql_quote(AGENT_ORG_ID)} AND crm_account_id IN ({account_id_list});",
-        f"DELETE FROM customer_memory_item WHERE org_id = {sql_quote(AGENT_ORG_ID)} AND crm_account_id IN ({account_id_list});",
-        f"DELETE FROM customer_interaction_asset WHERE org_id = {sql_quote(AGENT_ORG_ID)} AND batch_id IN (SELECT id FROM customer_interaction_batch WHERE org_id = {sql_quote(AGENT_ORG_ID)} AND public_id LIKE 'task203_v2_%');",
-        f"DELETE FROM customer_interaction_event WHERE org_id = {sql_quote(AGENT_ORG_ID)} AND (public_id LIKE 'task203_v2_%' OR public_id LIKE 'task172_v1_%');",
-        f"DELETE FROM customer_interaction_batch WHERE org_id = {sql_quote(AGENT_ORG_ID)} AND public_id LIKE 'task203_v2_%';",
-        f"DELETE FROM customer_score_snapshot WHERE org_id = {sql_quote(AGENT_ORG_ID)} AND crm_account_id IN ({account_id_list});",
-        f"DELETE FROM customer_workbench_snapshot WHERE org_id = {sql_quote(AGENT_ORG_ID)} AND crm_account_id IN ({account_id_list});",
+        f"DELETE FROM customer_workbench_recommendation WHERE company_id = {sql_quote(AGENT_COMPANY_ID)} AND public_id LIKE 'task203_v2_%';",
+        f"DELETE FROM customer_workbench_recommendation WHERE company_id = {sql_quote(AGENT_COMPANY_ID)} AND public_id LIKE 'task172_v1_%' AND status = 'PENDING';",
+        f"DELETE FROM customer_dynamic_signal WHERE company_id = {sql_quote(AGENT_COMPANY_ID)} AND crm_account_id IN ({account_id_list});",
+        f"DELETE FROM customer_memory_item WHERE company_id = {sql_quote(AGENT_COMPANY_ID)} AND crm_account_id IN ({account_id_list});",
+        f"DELETE FROM customer_interaction_asset WHERE company_id = {sql_quote(AGENT_COMPANY_ID)} AND batch_id IN (SELECT id FROM customer_interaction_batch WHERE company_id = {sql_quote(AGENT_COMPANY_ID)} AND public_id LIKE 'task203_v2_%');",
+        f"DELETE FROM customer_interaction_event WHERE company_id = {sql_quote(AGENT_COMPANY_ID)} AND (public_id LIKE 'task203_v2_%' OR public_id LIKE 'task172_v1_%');",
+        f"DELETE FROM customer_interaction_batch WHERE company_id = {sql_quote(AGENT_COMPANY_ID)} AND public_id LIKE 'task203_v2_%';",
+        f"DELETE FROM customer_score_snapshot WHERE company_id = {sql_quote(AGENT_COMPANY_ID)} AND crm_account_id IN ({account_id_list});",
+        f"DELETE FROM customer_workbench_snapshot WHERE company_id = {sql_quote(AGENT_COMPANY_ID)} AND crm_account_id IN ({account_id_list});",
     ]
     first_archives: dict[str, tuple[str, str, str]] = {}
     source_types = ["WECHAT", "PHONE", "MEETING", "EMAIL", "CUSTOMER_FEEDBACK", "CRM_TASK", "CRM_EVENT"]
@@ -1094,9 +1094,9 @@ def build_agent_sql(ids: dict[str, dict[str, str]]) -> str:
         }
         statements.append(
             "INSERT INTO customer_workbench_snapshot "
-            "(public_id, org_id, crm_account_id, account_name, owner_name, segment, health_score, progress_score, "
+            "(public_id, company_id, crm_account_id, account_name, owner_name, segment, health_score, progress_score, "
             "risk_count, next_action_count, snapshot_json, created_at, updated_at) VALUES "
-            f"({sql_quote(f'task203_v2_snap_{idx:03d}')}, {sql_quote(AGENT_ORG_ID)}, {sql_quote(account_id)}, "
+            f"({sql_quote(f'task203_v2_snap_{idx:03d}')}, {sql_quote(AGENT_COMPANY_ID)}, {sql_quote(account_id)}, "
             f"{sql_quote(account.name)}, {sql_quote(CRM_OWNER_NAME)}, {sql_quote(customer_mode)}, "
             f"{account.health}, {account.progress}, {len(account.risks)}, {len(account.next_actions)}, "
             f"{sql_quote(json_text(snapshot))}, now(), now());"
@@ -1110,10 +1110,10 @@ def build_agent_sql(ids: dict[str, dict[str, str]]) -> str:
         pending_count = 1 if account.key in {"a04", "a11", "a12", "a15"} else 0
         statements.append(
             "INSERT INTO customer_score_snapshot "
-            "(org_id, crm_account_id, health_score, health_dimension_score, expansion_score, renewal_score, "
+            "(company_id, crm_account_id, health_score, health_dimension_score, expansion_score, renewal_score, "
             "relationship_score, risk_score, net_change_30d, active_signal_count, pending_signal_count, "
             "calculation_version, calculated_at, created_at, updated_at) VALUES "
-            f"({sql_quote(AGENT_ORG_ID)}, {sql_quote(account_id)}, {account.health}, {account.health}, {expansion_score}, "
+            f"({sql_quote(AGENT_COMPANY_ID)}, {sql_quote(account_id)}, {account.health}, {account.health}, {expansion_score}, "
             f"{renewal_score}, {relationship_score}, {risk_score}, {net_change}, {active_count}, {pending_count}, "
             f"'task203-demo-v2', now(), now(), now());"
         )
@@ -1163,19 +1163,19 @@ def build_agent_sql(ids: dict[str, dict[str, str]]) -> str:
             }
             statements.append(
                 "INSERT INTO customer_interaction_batch "
-                "(public_id, org_id, crm_account_id, created_by, source_type, occurred_at, subject, narration_text, "
+                "(public_id, company_id, crm_account_id, created_by, source_type, occurred_at, subject, narration_text, "
                 "pasted_text, status, combined_text, analysis_json, error_message, confirmed_event_id, created_at, updated_at) VALUES "
-                f"({sql_quote(batch_id)}, {sql_quote(AGENT_ORG_ID)}, {sql_quote(account_id)}, {sql_quote(AGENT_USER_ID)}, "
+                f"({sql_quote(batch_id)}, {sql_quote(AGENT_COMPANY_ID)}, {sql_quote(account_id)}, {sql_quote(AGENT_USER_ID)}, "
                 f"{sql_quote(source)}, {sql_quote(occurred_text)}, {sql_quote(account.name + '互动归档 ' + str(event_idx))}, "
                 f"{sql_quote(interaction)}, '', 'CONFIRMED', {sql_quote(interaction)}, {sql_quote(json_text(analysis))}, '', "
                 f"{sql_quote(event_id)}, now(), now());"
             )
             statements.append(
                 "INSERT INTO customer_interaction_event "
-                "(public_id, org_id, crm_account_id, crm_contact_id, source_type, occurred_at, subject, raw_summary, "
+                "(public_id, company_id, crm_account_id, crm_contact_id, source_type, occurred_at, subject, raw_summary, "
                 "ai_summary, sentiment, intent_tags, lifecycle_area, source_batch_id, analysis_json, evidence_count, "
                 "analysis_version, created_at, updated_at) VALUES "
-                f"({sql_quote(event_id)}, {sql_quote(AGENT_ORG_ID)}, {sql_quote(account_id)}, "
+                f"({sql_quote(event_id)}, {sql_quote(AGENT_COMPANY_ID)}, {sql_quote(account_id)}, "
                 f"{sql_quote(contact_id)}, {sql_quote(source)}, {sql_quote(occurred_text)}, "
                 f"{sql_quote(account.name + '客户互动摘要 ' + str(event_idx))}, {sql_quote(interaction)}, "
                 f"{sql_quote(interaction)}, {sql_quote(sentiment)}, {sql_quote(json_text(account.tags))}, "
@@ -1183,9 +1183,9 @@ def build_agent_sql(ids: dict[str, dict[str, str]]) -> str:
             )
             statements.append(
                 "INSERT INTO customer_memory_item "
-                "(public_id, org_id, crm_account_id, source_event_id, source_batch_id, memory_type, content, status, "
+                "(public_id, company_id, crm_account_id, source_event_id, source_batch_id, memory_type, content, status, "
                 "confidence, occurred_at, valid_until, evidence_json, created_at, updated_at) VALUES "
-                f"({sql_quote(memory_id)}, {sql_quote(AGENT_ORG_ID)}, {sql_quote(account_id)}, {sql_quote(event_id)}, "
+                f"({sql_quote(memory_id)}, {sql_quote(AGENT_COMPANY_ID)}, {sql_quote(account_id)}, {sql_quote(event_id)}, "
                 f"{sql_quote(batch_id)}, {sql_quote(memory_types[(global_event_index - 1) % len(memory_types)])}, "
                 f"{sql_quote(interaction)}, {sql_quote(memory_status)}, {confidence}, {sql_quote(occurred_text)}, "
                 f"{sql_quote((now + timedelta(days=180)).isoformat())}, {sql_quote(json_text(evidence))}, now(), now());"
@@ -1194,10 +1194,10 @@ def build_agent_sql(ids: dict[str, dict[str, str]]) -> str:
             valid_until = now - timedelta(days=1) if signal_status == "EXPIRED" else now + timedelta(days=120)
             statements.append(
                 "INSERT INTO customer_dynamic_signal "
-                "(public_id, org_id, crm_account_id, source_event_id, source_batch_id, source_type, dimension, direction, "
+                "(public_id, company_id, crm_account_id, source_event_id, source_batch_id, source_type, dimension, direction, "
                 "impact, confidence, title, rationale, evidence_quote, status, occurred_at, valid_until, content_fingerprint, "
                 "model_version, created_at, updated_at) VALUES "
-                f"({sql_quote(signal_id)}, {sql_quote(AGENT_ORG_ID)}, {sql_quote(account_id)}, {sql_quote(event_id)}, "
+                f"({sql_quote(signal_id)}, {sql_quote(AGENT_COMPANY_ID)}, {sql_quote(account_id)}, {sql_quote(event_id)}, "
                 f"{sql_quote(batch_id)}, {sql_quote(source)}, {sql_quote(dimension)}, {sql_quote(direction)}, "
                 f"{8 if direction == 'NEGATIVE' else 6}, {confidence}, {sql_quote(account.tags[0])}, "
                 f"{sql_quote(account.summary)}, {sql_quote(interaction)}, {sql_quote(signal_status)}, {sql_quote(occurred_text)}, "
@@ -1246,11 +1246,11 @@ def build_agent_sql(ids: dict[str, dict[str, str]]) -> str:
         }]
         statements.append(
             "INSERT INTO customer_workbench_recommendation "
-            "(public_id, org_id, crm_account_id, recommendation_type, title, rationale, confidence, status, crm_payload, "
+            "(public_id, company_id, crm_account_id, recommendation_type, title, rationale, confidence, status, crm_payload, "
             "applied_crm_id, version, target_object, target_record_id, evidence_json, dismissal_reason, confirmed_by, "
             "confirmed_at, applied_at, last_error_code, last_error_message, source_event_id, source_batch_id, action_key, "
             "trigger_type, valid_until, created_at, updated_at) VALUES "
-            f"({sql_quote(f'task203_v2_action_{action_index:03d}')}, {sql_quote(AGENT_ORG_ID)}, {sql_quote(account_id)}, "
+            f"({sql_quote(f'task203_v2_action_{action_index:03d}')}, {sql_quote(AGENT_COMPANY_ID)}, {sql_quote(account_id)}, "
             f"{sql_quote(action_type)}, {sql_quote(title)}, {sql_quote(rationale)}, 0.88, 'PENDING', "
             f"{sql_quote(json_text(payload))}, NULL, 0, {sql_quote(target_object)}, {sql_quote(target_record_id)}, "
             f"{sql_quote(json_text(evidence_json))}, NULL, NULL, NULL, NULL, NULL, NULL, {sql_quote(event_id)}, "
@@ -1260,13 +1260,13 @@ def build_agent_sql(ids: dict[str, dict[str, str]]) -> str:
     statements.extend(
         [
             "COMMIT;",
-            f"SELECT 'snapshots=' || count(*) FROM customer_workbench_snapshot WHERE org_id = {sql_quote(AGENT_ORG_ID)};",
-            f"SELECT 'batches=' || count(*) FROM customer_interaction_batch WHERE org_id = {sql_quote(AGENT_ORG_ID)} AND public_id LIKE 'task203_v2_%';",
-            f"SELECT 'events=' || count(*) FROM customer_interaction_event WHERE org_id = {sql_quote(AGENT_ORG_ID)} AND public_id LIKE 'task203_v2_%';",
-            f"SELECT 'memories=' || count(*) FROM customer_memory_item WHERE org_id = {sql_quote(AGENT_ORG_ID)} AND public_id LIKE 'task203_v2_%';",
-            f"SELECT 'dynamic_signals=' || count(*) FROM customer_dynamic_signal WHERE org_id = {sql_quote(AGENT_ORG_ID)} AND public_id LIKE 'task203_v2_%';",
-            f"SELECT 'score_snapshots=' || count(*) FROM customer_score_snapshot WHERE org_id = {sql_quote(AGENT_ORG_ID)} AND crm_account_id IN ({account_id_list});",
-            f"SELECT 'recommendations=' || count(*) FROM customer_workbench_recommendation WHERE org_id = {sql_quote(AGENT_ORG_ID)} AND public_id LIKE 'task203_v2_%';",
+            f"SELECT 'snapshots=' || count(*) FROM customer_workbench_snapshot WHERE company_id = {sql_quote(AGENT_COMPANY_ID)};",
+            f"SELECT 'batches=' || count(*) FROM customer_interaction_batch WHERE company_id = {sql_quote(AGENT_COMPANY_ID)} AND public_id LIKE 'task203_v2_%';",
+            f"SELECT 'events=' || count(*) FROM customer_interaction_event WHERE company_id = {sql_quote(AGENT_COMPANY_ID)} AND public_id LIKE 'task203_v2_%';",
+            f"SELECT 'memories=' || count(*) FROM customer_memory_item WHERE company_id = {sql_quote(AGENT_COMPANY_ID)} AND public_id LIKE 'task203_v2_%';",
+            f"SELECT 'dynamic_signals=' || count(*) FROM customer_dynamic_signal WHERE company_id = {sql_quote(AGENT_COMPANY_ID)} AND public_id LIKE 'task203_v2_%';",
+            f"SELECT 'score_snapshots=' || count(*) FROM customer_score_snapshot WHERE company_id = {sql_quote(AGENT_COMPANY_ID)} AND crm_account_id IN ({account_id_list});",
+            f"SELECT 'recommendations=' || count(*) FROM customer_workbench_recommendation WHERE company_id = {sql_quote(AGENT_COMPANY_ID)} AND public_id LIKE 'task203_v2_%';",
         ]
     )
     return "\n".join(statements) + "\n"
@@ -1358,7 +1358,7 @@ def main() -> int:
         raise SystemExit("--crm-only, --agent-only and --new-pipeline-only cannot be used together")
     if not CLOUDCC.exists():
         raise SystemExit(f"CloudCC CLI not found: {CLOUDCC}")
-    print(f"Target AgentCiCi org: {AGENT_ORG_ID}")
+    print(f"Target AgentCiCi company: {AGENT_COMPANY_ID}")
     print(f"Target CloudCC org: {CLOUDCC_ORG_ID}")
     print(f"Demo batch: {BATCH}")
     print("Planned records: " + ", ".join(f"{key}={value}" for key, value in planned_counts().items()))

@@ -36,7 +36,7 @@ class AdminBillingIntegrationTest {
     private BillingUsageMeteringService billingUsageMeteringService;
 
     @Test
-    void companyAdminCanReadOwnBillingChainAndRealtimeUsageDebitsCredits() throws Exception {
+    void companyAdminCanReadBillingOverviewWithCompanyMemberSeatCountAndRealtimeUsageDebitsCredits() throws Exception {
         String token = registerAdminToken();
 
         MvcResult overviewResult = mockMvc.perform(get("/admin/billing/overview")

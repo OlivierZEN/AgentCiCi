@@ -4,14 +4,21 @@ Total output lines: 6804
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-27T15:51:00Z
+updated_at: 2026-07-29T12:25:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-27T15:51:00Z
-last_run_status: passed
+last_run_at: 2026-07-29T12:25:00Z
+last_run_status: partial
 ---
 
 # Test Report
+
+## TASK-254 - company_id 迁移完整性审计与遗留修复
+
+- `identity/assignment`：`check-assignment.py` 与 `dev-login.py` 均返回 `allowed`；MANAGER-001 的 SSH 持钥、Git 身份、任务分支及账单/脚本/状态文件范围已验证。
+- `static-audit`：账单 Java、账单测试、E2E、Qdrant smoke 和演示 SQL 的定向扫描未发现 `member.org`、`org_id`、`orgId`、`AGENT_ORG_ID` 或 `ORG_ID` 遗留。全仓非迁移、非测试、非前端运行路径扫描仅剩历史设计文档与 CloudCC 内置技能文档的外部 `orgId` 契约，未作为 AgentCiCi 顶层企业字段修改。
+- `syntax-and-compile`：`bash -n scripts/e2e-local-business.sh scripts/verify-qdrant-stack.sh`、Python AST 解析 `scripts/seed-demo-environment.py`、`mvn -q -Dmaven.repo.local=../.m2 -DskipTests compile` 和 `git diff --check` 通过。
+- `integration-limit`：`nc -z 127.0.0.1 5432` 返回不可达；为避免将环境连接失败误报为功能结果，未执行会在 Flyway/Hikari 初始化阶段阻塞的 `AdminBillingIntegrationTest`。数据库恢复后应补跑该定向测试，验证组织管理员计费用量页面。
 
 ## TASK-252 - FEAT-145 统一 Principal 身份与治理
 
