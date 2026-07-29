@@ -31,12 +31,12 @@ VEC_JSON="$(python3 -c "print('[' + ','.join(['0.01']*${DIM}) + ']')")"
 echo "Upserting smoke point ${PID} ..."
 curl -sf -X PUT "${BASE}/collections/${COL}/points?wait=true" \
   -H 'Content-Type: application/json' \
-  -d "{\"points\":[{\"id\":\"${PID}\",\"vector\":${VEC_JSON},\"payload\":{\"org_id\":\"org-smoke\",\"knowledge_base_id\":\"kb-a\",\"content\":\"smoke test chunk qdrant\"}}]}"
+  -d "{\"points\":[{\"id\":\"${PID}\",\"vector\":${VEC_JSON},\"payload\":{\"company_id\":\"company-smoke\",\"knowledge_base_id\":\"kb-a\",\"content\":\"smoke test chunk qdrant\"}}]}"
 
-echo "Searching with org + knowledge_base_id match any ..."
+echo "Searching with company + knowledge_base_id match any ..."
 RES="$(curl -sf -X POST "${BASE}/collections/${COL}/points/search" \
   -H 'Content-Type: application/json' \
-  -d "{\"vector\":${VEC_JSON},\"limit\":3,\"filter\":{\"must\":[{\"key\":\"org_id\",\"match\":{\"value\":\"org-smoke\"}},{\"key\":\"knowledge_base_id\",\"match\":{\"any\":[\"kb-a\",\"kb-b\"]}}]},\"with_payload\":true}")"
+  -d "{\"vector\":${VEC_JSON},\"limit\":3,\"filter\":{\"must\":[{\"key\":\"company_id\",\"match\":{\"value\":\"company-smoke\"}},{\"key\":\"knowledge_base_id\",\"match\":{\"any\":[\"kb-a\",\"kb-b\"]}}]},\"with_payload\":true}")"
 
 if ! echo "${RES}" | grep -q "smoke test chunk qdrant"; then
   echo "Unexpected search response:"

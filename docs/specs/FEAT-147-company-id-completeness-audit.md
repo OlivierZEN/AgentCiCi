@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-147
 title: company_id 迁移完整性审计与遗留修复
-status: active
+status: review
 owner_role: backend-agent
 task_ids: TASK-254
 related_decisions: FEAT-135 company_id 统一
 related_issues: UserEntity.org JPQL 与运维脚本仍引用 org_id/orgId
-updated_at: 2026-07-29T12:10:00Z
+updated_at: 2026-07-29T12:25:00Z
 updated_by: MANAGER-001
 ---
 
@@ -27,7 +27,7 @@ updated_by: MANAGER-001
 - 将本地 E2E 登录脚本请求及其变量统一为 `companyId`/`E2E_COMPANY_ID`。
 - 将 Qdrant smoke 的 payload/filter 统一为运行时客户端使用的 `company_id`。
 - 将生产演示数据脚本的变量和 SQL 列从 `AGENT_ORG_ID`/`org_id` 统一为 `AGENT_COMPANY_ID`/`company_id`。
-- 使用源码扫描、脚本语法校验、Python 编译和后端编译验证。
+- 使用源码扫描、shell 语法、Python AST 解析和后端编译验证。
 
 ### Out Of Scope
 
@@ -50,7 +50,7 @@ updated_by: MANAGER-001
 
 - 当前可执行 Java、shell、Python 源码中不再存在未标注的顶层企业 `org_id`/`orgId` 引用。
 - 账单席位统计保留公司、ACTIVE 与 OWNER/ORG_ADMIN 过滤条件，且不再访问 `UserEntity.org`。
-- shell 语法、Python 编译、后端编译和静态扫描通过。
+- shell 语法、Python AST 解析、后端编译和静态扫描通过。
 - 有 PostgreSQL 测试库时，组织管理员账单总览集成测试可通过；当前不可用时如实记录，不修改数据库环境。
 
 ## 风险与回滚
@@ -59,4 +59,6 @@ updated_by: MANAGER-001
 
 ## 实现进展
 
-- 当前状态：已完成范围审计和任务授权，待实现。
+- 当前状态：实现完成，等待数据库可用时补跑组织管理员计费用量集成测试。
+- 已修复 `member.company.id`、`E2E_COMPANY_ID`/`companyId`、Qdrant `company_id` 和演示 SQL 的 `company_id`。
+- 定向扫描未发现可执行路径残留；Flyway V94、迁移回归测试和前端 `orgId` 旧响应归一均已复核为有意保留。

@@ -490,7 +490,7 @@ public class BillingUsageMeteringService {
         Long count = entityManager.createQuery("""
                         select count(member)
                         from UserEntity member
-                        where member.org.id = :companyId
+                        where member.company.id = :companyId
                           and member.memberStatus = :memberStatus
                           and member.roleCode in :builderRoles
                         """, Long.class)
