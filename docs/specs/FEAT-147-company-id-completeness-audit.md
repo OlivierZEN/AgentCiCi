@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-147
 title: company_id 迁移完整性审计与遗留修复
-status: review
+status: verified
 owner_role: backend-agent
 task_ids: TASK-254
 related_decisions: FEAT-135 company_id 统一
 related_issues: UserEntity.org JPQL 与运维脚本仍引用 org_id/orgId
-updated_at: 2026-07-29T12:25:00Z
+updated_at: 2026-07-29T12:35:00Z
 updated_by: MANAGER-001
 ---
 
@@ -59,6 +59,7 @@ updated_by: MANAGER-001
 
 ## 实现进展
 
-- 当前状态：实现完成，等待数据库可用时补跑组织管理员计费用量集成测试。
+- 当前状态：已合并主线并发布生产 `2.8.25 / 105cc666a958`；本地数据库恢复后仍应补跑组织管理员计费用量集成测试。
 - 已修复 `member.company.id`、`E2E_COMPANY_ID`/`companyId`、Qdrant `company_id` 和演示 SQL 的 `company_id`。
 - 定向扫描未发现可执行路径残留；Flyway V94、迁移回归测试和前端 `orgId` 旧响应归一均已复核为有意保留。
+- 发布前质量门、ACR 不可变镜像和 Git tag 已完成；生产六容器健康、backend health 为 `UP`、版本接口与 `x.agentcici.com` smoke 通过。

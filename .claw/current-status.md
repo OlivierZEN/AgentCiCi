@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-29T12:25:00Z
+updated_at: 2026-07-29T12:35:00Z
 updated_by: MANAGER-001
 phase: identity-architecture-implementation
 active_task: TASK-254
-next_action: "等待 PostgreSQL 测试库可用时补跑 TASK-254 账单集成测试；未获授权不合并主线或发布生产。"
+next_action: "TASK-254 已发布；数据库可用时补跑其账单集成测试，并继续处理用户后续需求。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-254 / FEAT-147：全面审计并修复当前可执行的 company_id 遗留：账单席位 JPQL 改为 `member.company.id`，本地 E2E 登录改用 `E2E_COMPANY_ID`/`companyId`，Qdrant smoke 与生产演示 SQL 改用 `company_id`。运行时定向扫描已无旧顶层企业字段，shell 语法、Python AST 解析及 backend compile 通过。Flyway 历史、迁移验证及前端旧响应 `orgId` 兼容保持不动；本机 PostgreSQL `127.0.0.1:5432` 不可达，账单集成测试待数据库可用时补跑。TASK-253 已被本任务替代，不单独合并。
+- TASK-254 / FEAT-147：全面审计并修复当前可执行的 company_id 遗留：账单席位 JPQL 改为 `member.company.id`，本地 E2E 登录改用 `E2E_COMPANY_ID`/`companyId`，Qdrant smoke 与生产演示 SQL 改用 `company_id`。主线 `105cc666a958` 已发布生产 `2.8.25`；发布前四项备份非空，六服务健康，backend health `UP`、版本接口、Nginx、`x.agentcici.com` 和匿名 `401` 边界均通过。Flyway 历史、迁移验证及前端旧响应 `orgId` 兼容保持不动；本机 PostgreSQL `127.0.0.1:5432` 不可达，账单集成测试待数据库可用时补跑。TASK-253 已被本任务替代，不单独合并。
 
 - TASK-252 / FEAT-145：AgentCiCi `main` 已发布 `2.8.24 / 58a96d618207`，Semattice Principal 投影已发布 `20260727T151437Z-console`。V98/V99 建立并回填 HUMAN/SERVICE Principal、Keycloak identity mirror、责任人、幂等操作与机器 scope；生产 Flyway V98/V99 成功。服务交换端点为 `/openapi/v1/official/service-token`，缺少 Bearer 为 401、feature flag 关闭时为 403；Semattice 只接受短期 OACT 并本地 JWKS 验签，不接受原始 Keycloak service token。人类 provisioning 与 service-token-exchange 由 Compose 显式传入且保持 `false`；机器 `machine-provisioning` 已启用，provisioner secret 已仅写入部署环境，Client Credentials 管理令牌实测成功（300 秒），但尚未创建任何机器主体。Realm 仍无 SMTP，故未开启人类邀请。六服务 healthy、backend health `UP`、`x.agentcici.com` 200、匿名 `/auth/me` 401、OACT JWKS 200。`onechat.agentcici.com` DNS 不可解析，作为既有入口风险保留。
 
