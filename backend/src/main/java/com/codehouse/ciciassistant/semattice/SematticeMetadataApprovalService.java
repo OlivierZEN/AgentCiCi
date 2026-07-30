@@ -8,6 +8,7 @@ import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.common.error.ResourceNotFoundException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -47,7 +48,7 @@ public class SematticeMetadataApprovalService {
                     (approval_id, company_id, subject_type, subject_id, summary, requester_member_id, state, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, 'PENDING', ?, ?)
                 """, value.approvalId(), companyId, value.subjectType(), value.subjectId(), value.summary(),
-                requesterMemberId, now, now);
+                requesterMemberId, Timestamp.from(now), Timestamp.from(now));
         return value;
     }
 
@@ -67,7 +68,8 @@ public class SematticeMetadataApprovalService {
                 UPDATE semattice_metadata_approval
                    SET state = 'APPROVED', approver_member_id = ?, approved_at = ?, expires_at = ?, updated_at = ?
                  WHERE approval_id = ? AND company_id = ? AND state = 'PENDING'
-                """, approverMemberId, now, expiresAt, now, pending.approvalId(), companyId);
+                """, approverMemberId, Timestamp.from(now), Timestamp.from(expiresAt), Timestamp.from(now),
+                pending.approvalId(), companyId);
         if (updated != 1) {
             throw new ConflictException("审批请求已被其他操作更新，请刷新后重试");
         }
@@ -82,7 +84,7 @@ public class SematticeMetadataApprovalService {
                  WHERE company_id = ? AND requester_member_id = ?
                    AND state = 'APPROVED' AND expires_at > ?
                  ORDER BY approved_at ASC
-                """, String.class, companyId, requesterMemberId, Instant.now());
+                """, String.class, companyId, requesterMemberId, Timestamp.from(Instant.now()));
     }
 
     @Transactional(readOnly = true)
