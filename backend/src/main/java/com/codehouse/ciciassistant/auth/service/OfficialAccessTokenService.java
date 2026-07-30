@@ -7,7 +7,9 @@ import com.codehouse.ciciassistant.auth.domain.SematticeProvisioningBindingEntit
 import com.codehouse.ciciassistant.auth.domain.SematticeProvisioningBindingRepository;
 import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
+import com.codehouse.ciciassistant.semattice.SematticeMetadataApprovalService;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.JwtBuilder;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
@@ -36,6 +38,7 @@ public class OfficialAccessTokenService {
 
     private final AccountExternalIdentityRepository identityRepository;
     private final SematticeProvisioningBindingRepository bindingRepository;
+    private final SematticeMetadataApprovalService metadataApprovalService;
     private final boolean enabled;
     private final String issuer;
     private final String keyId;
@@ -45,6 +48,7 @@ public class OfficialAccessTokenService {
 
     public OfficialAccessTokenService(AccountExternalIdentityRepository identityRepository,
                                       SematticeProvisioningBindingRepository bindingRepository,
+                                      SematticeMetadataApprovalService metadataApprovalService,
                                       @Value("${app.auth.official-access.enabled:false}") boolean enabled,
                                       @Value("${app.auth.official-access.issuer:}") String issuer,
                                       @Value("${app.auth.official-access.key-id:}") String keyId,
@@ -53,6 +57,7 @@ public class OfficialAccessTokenService {
                                       @Value("${app.auth.official-access.ttl-seconds:600}") long ttlSeconds) {
         this.identityRepository = identityRepository;
         this.bindingRepository = bindingRepository;
+        this.metadataApprovalService = metadataApprovalService;
         this.enabled = enabled;
         this.issuer = trim(issuer);
         this.keyId = trim(keyId);
@@ -72,7 +77,8 @@ public class OfficialAccessTokenService {
     }
 
     public IssuedToken issueForSematticeConsole(UserEntity member) {
-        return issueForSemattice(member, sematticeConsoleScopesFor(member));
+        return issueForSemattice(member, sematticeConsoleScopesFor(member),
+                metadataApprovalService.approvedIdsForRequester(member.getCompany().getId(), member.getId()));
     }
 
     /**
@@ -124,6 +130,10 @@ public class OfficialAccessTokenService {
     }
 
     private IssuedToken issueForSemattice(UserEntity member, List<String> issuedScopes) {
+        return issueForSemattice(member, issuedScopes, List.of());
+    }
+
+    private IssuedToken issueForSemattice(UserEntity member, List<String> issuedScopes, List<String> approvals) {
         requireEnabled();
         if (!UserEntity.STATUS_ACTIVE.equals(member.getMemberStatus())
                 || !"ACTIVE".equalsIgnoreCase(member.getCompany().getStatus())) {
@@ -139,7 +149,7 @@ public class OfficialAccessTokenService {
         Instant now = Instant.now();
         Instant expiresAt = now.plusSeconds(ttlSeconds);
         String membershipVersion = membershipVersion(member);
-        String token = Jwts.builder()
+        JwtBuilder builder = Jwts.builder()
                 .header().keyId(keyId).and()
                 .issuer(issuer)
                 // The official token subject is the immutable AgentCiCi Principal. The
@@ -160,9 +170,12 @@ public class OfficialAccessTokenService {
                 .claim("membership_version", membershipVersion)
                 .id(UUID.randomUUID().toString())
                 .issuedAt(Date.from(now))
-                .expiration(Date.from(expiresAt))
-                .signWith(privateKey, Jwts.SIG.RS256)
-                .compact();
+                .expiration(Date.from(expiresAt));
+        List<String> verifiedApprovals = approvals == null ? List.of() : approvals.stream().filter(OfficialAccessTokenService::hasText).distinct().toList();
+        if (!verifiedApprovals.isEmpty()) {
+            builder.claim("approvals", verifiedApprovals);
+        }
+        String token = builder.signWith(privateKey, Jwts.SIG.RS256).compact();
         return new IssuedToken(token, expiresAt, binding.getSematticeTenantId(), member.getCompany().getId(), issuedScopes);
     }
 

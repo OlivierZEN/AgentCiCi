@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-30T09:00:00Z
+updated_at: 2026-07-30T14:30:00Z
 updated_by: MANAGER-001
 phase: identity-architecture-implementation
-active_task: TASK-255
-next_action: "修复 /app 未登录态自动进入 OIDC/SSO；未获授权不合并主线或发布生产。"
+active_task: TASK-256
+next_action: "发布双人元数据审批凭据，并为 DEV Autopilot 完成 Semattice 初始模型与仿真项目联调。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-256 / FEAT-149：用户已授权由 DEV Autopilot 补齐 Semattice 元数据、用户角色、权限和审批环境。正在新增同租户双人审批事实与 OACT `approvals` claim；该 claim 仅向原发起人签发，并受 15 分钟有效期约束。
 
 - TASK-255 / FEAT-148：用户反馈 AgentCiCi 点击登录后停留在统一账号中间页。已确认 `AssistantApp` 只在按钮点击时调用既有 OIDC 入口；本任务会让无会话 `/app` 自动跳转至 `/auth/oidc/login`，保留 OIDC/CloudCC 回调票据处理和手动回退，不改后端或生产。
 

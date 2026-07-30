@@ -15,6 +15,16 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-256 - Semattice 元数据独立审批凭据
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `backend-agent`
+- spec_path: `docs/specs/FEAT-149-semattice-metadata-approval-credentials.md`
+- task_status_path: `n/a`
+- assignment_path: `n/a`
+- next_action: 实现审批事实、OACT approvals claim、生产发布并为 DEV Autopilot 发布首个元数据版本。
+
 ### TASK-255 - 应用未登录态自动跳转 SSO
 
 - status: `in_progress`
