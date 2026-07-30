@@ -15,6 +15,16 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-255 - 应用未登录态自动跳转 SSO
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `frontend-agent`
+- spec_path: `docs/specs/FEAT-148-app-auto-oidc-redirect.md`
+- task_status_path: `.claw/tasks/TASK-255.md`
+- assignment_path: `.claw/assignments/TASK-255.yaml`
+- next_action: 为 `/app` 无会话状态添加一次性 OIDC 自动跳转，并验证回调票据不被抢占。
+
 ### TASK-254 - company_id 迁移完整性审计与遗留修复
 
 - status: `done`

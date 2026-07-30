@@ -1,0 +1,48 @@
+task_id: TASK-255
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-30T09:00:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-148-app-auto-oidc-redirect.md
+task_status_path: .claw/tasks/TASK-255.md
+branch: codex/TASK-255-app-auto-oidc-redirect
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - frontend/src/assistant/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/developers/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+scope_files:
+  - frontend/src/assistant/AssistantApp.tsx
+  - frontend/src/assistant/oidcAutoRedirect.ts
+  - frontend/src/assistant/oidcAutoRedirect.test.ts
+  - docs/specs/FEAT-148-app-auto-oidc-redirect.md
+  - .claw/tasks/TASK-255.md
+  - .claw/assignments/TASK-255.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+touch_policy: exclusive
+shared_contracts:
+  - /auth/oidc/login canonical-host and state-cookie contract
+  - oidc_ticket completion callback contract
+  - CloudCC SSO ticket consumption contract
+task_boundary:
+  - "未登录 /app 自动进入既有 OIDC 登录入口。"
+  - "保留回调票据处理和手动登录回退。"
+  - "不合并主线、不发布生产环境，除非用户明确授权。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
+signature: "MANAGER-001; user requested automatic SSO redirection from the AgentCiCi login page on 2026-07-30."
