@@ -13,6 +13,7 @@ import com.codehouse.ciciassistant.auth.domain.UserAccountEntity;
 import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.auth.service.OfficialAccessTokenService;
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
+import com.codehouse.ciciassistant.semattice.SematticeMetadataApprovalService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import java.security.KeyFactory;
@@ -33,6 +34,7 @@ class OfficialAccessTokenServiceTest {
         KeyPair keys = KeyPairGenerator.getInstance("RSA").generateKeyPair();
         AccountExternalIdentityRepository identityRepository = org.mockito.Mockito.mock(AccountExternalIdentityRepository.class);
         SematticeProvisioningBindingRepository bindingRepository = org.mockito.Mockito.mock(SematticeProvisioningBindingRepository.class);
+        SematticeMetadataApprovalService approvalService = org.mockito.Mockito.mock(SematticeMetadataApprovalService.class);
         UserAccountEntity account = new UserAccountEntity("13902400999");
         CompanyEntity company = new CompanyEntity("orgaaaaaaaaaaaaaaaaa", "测试公司", "ACTIVE");
         UserEntity member = new UserEntity(company, account, "OWNER");
@@ -44,9 +46,11 @@ class OfficialAccessTokenServiceTest {
 
         when(identityRepository.findByAccount_Id(account.getId())).thenReturn(Optional.of(identity));
         when(bindingRepository.findByCompanyId(company.getId())).thenReturn(Optional.of(binding));
+        when(approvalService.approvedIdsForRequester(company.getId(), member.getId())).thenReturn(List.of("approval-1"));
         OfficialAccessTokenService service = new OfficialAccessTokenService(
                 identityRepository,
                 bindingRepository,
+                approvalService,
                 true,
                 "https://x.agentcici.com",
                 "oact-test-1",
@@ -72,8 +76,14 @@ class OfficialAccessTokenServiceTest {
         assertThat(claims.get("keycloak_subject", String.class)).isEqualTo("keycloak-user-subject");
         assertThat(claims.get("scope", String.class)).isEqualTo("metadata.version.read record.read");
         assertThat(issued.scopes()).containsExactly("metadata.version.read", "record.read");
-        assertThat(service.issueForSematticeConsole(member).scopes())
+        OfficialAccessTokenService.IssuedToken consoleToken = service.issueForSematticeConsole(member);
+        assertThat(consoleToken.scopes())
                 .containsExactly("metadata.version.read", "record.read", "audit.read");
+        Claims consoleClaims = Jwts.parser().verifyWith(KeyFactory.getInstance("RSA").generatePublic(new RSAPublicKeySpec(
+                        ((RSAPrivateCrtKey) keys.getPrivate()).getModulus(),
+                        ((RSAPrivateCrtKey) keys.getPrivate()).getPublicExponent())))
+                .build().parseSignedClaims(consoleToken.token()).getPayload();
+        assertThat(consoleClaims.get("approvals", List.class)).containsExactly("approval-1");
         assertThat(claims.get("membership_version", String.class)).isNotBlank();
         assertThat(service.jwks().get("keys")).isNotNull();
         assertThat(issued.expiresAt()).isAfter(claims.getIssuedAt().toInstant());
@@ -84,12 +94,14 @@ class OfficialAccessTokenServiceTest {
         KeyPair keys = KeyPairGenerator.getInstance("RSA").generateKeyPair();
         AccountExternalIdentityRepository identityRepository = org.mockito.Mockito.mock(AccountExternalIdentityRepository.class);
         SematticeProvisioningBindingRepository bindingRepository = org.mockito.Mockito.mock(SematticeProvisioningBindingRepository.class);
+        SematticeMetadataApprovalService approvalService = org.mockito.Mockito.mock(SematticeMetadataApprovalService.class);
         UserAccountEntity account = new UserAccountEntity("13902400998");
         UserEntity member = new UserEntity(new CompanyEntity("orgbbbbbbbbbbbbbbbbb", "测试公司", "ACTIVE"), account, "OWNER");
         when(identityRepository.findByAccount_Id(account.getId())).thenReturn(Optional.empty());
         OfficialAccessTokenService service = new OfficialAccessTokenService(
                 identityRepository,
                 bindingRepository,
+                approvalService,
                 true,
                 "https://x.agentcici.com",
                 "oact-test-1",
@@ -108,6 +120,7 @@ class OfficialAccessTokenServiceTest {
         OfficialAccessTokenService service = new OfficialAccessTokenService(
                 org.mockito.Mockito.mock(AccountExternalIdentityRepository.class),
                 org.mockito.Mockito.mock(SematticeProvisioningBindingRepository.class),
+                org.mockito.Mockito.mock(SematticeMetadataApprovalService.class),
                 true,
                 "https://x.agentcici.com",
                 "oact-test-1",
