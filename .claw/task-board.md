@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-29T12:35:00Z
+updated_at: 2026-07-30T09:10:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,13 +17,13 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-255 - 应用未登录态自动跳转 SSO
 
-- status: `in_progress`
+- status: `review`
 - priority: `critical`
 - owner_role: `frontend-agent`
 - spec_path: `docs/specs/FEAT-148-app-auto-oidc-redirect.md`
 - task_status_path: `.claw/tasks/TASK-255.md`
 - assignment_path: `.claw/assignments/TASK-255.yaml`
-- next_action: 为 `/app` 无会话状态添加一次性 OIDC 自动跳转，并验证回调票据不被抢占。
+- next_action: 定向测试与生产构建已通过；等待用户授权合并主线或发布生产。
 
 ### TASK-254 - company_id 迁移完整性审计与遗留修复
 

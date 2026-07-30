@@ -4,14 +4,21 @@ Total output lines: 6804
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-29T12:35:00Z
+updated_at: 2026-07-30T09:10:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-29T12:35:00Z
-last_run_status: partial
+last_run_at: 2026-07-30T09:10:00Z
+last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-255 - 应用未登录态自动跳转 SSO
+
+- `identity/assignment`：MANAGER-001 的 SSH 持钥、Git 身份、任务分支与前端/状态文件范围经 `dev-login.py` 和 `check-assignment.py` 验证为 `allowed`。
+- `frontend-focused`：`npm test -- --run src/assistant/oidcAutoRedirect.test.ts` 通过（1 文件 / 5 tests），覆盖普通 guest 自动跳转、OIDC/CloudCC 回调票据保护、登录提交、已有会话和已尝试重定向保护。
+- `frontend-build/static`：`npm run build` 与 `git diff --check` 通过；构建仅有既有 Vite chunk-size warning。
+- `release-limit`：未修改后端、Keycloak、部署配置或生产环境；等待用户明确授权主线合并和生产发布。
 
 ## TASK-254 - company_id 迁移完整性审计与遗留修复
 

@@ -41,6 +41,7 @@ import {
 } from "./workbenchSessions";
 import { isMeetingMinutesStartCommand } from "./meetingMinutesCommand";
 import { appendMeetingTranscriptSegment, speakerDisplayName } from "./meetingTranscript";
+import { shouldAutoStartOidcLogin } from "./oidcAutoRedirect";
 
 const FRONT_LOGIN_MODE_CONFIG: FrontLoginMode = "login_mode2";
 const FRONT_LOGIN_USER_MODE_CONFIG: LoginMode = "agent";
@@ -1343,6 +1344,7 @@ export default function AssistantApp() {
   const composerInputRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
   const chatLoadingStaleTimerRef = useRef<number | null>(null);
   const cloudccSsoAttemptedRef = useRef(false);
+  const oidcAutoRedirectAttemptedRef = useRef(false);
   const { listening, speechSupported, start: startAsrSession, stop: stopAsrSession, abort: abortAsrSession } = useAsrVoiceInput();
   const activeConversationIdRef = useRef("");
   const workspaceTabRef = useRef<WorkspaceTab>("workbench");
@@ -2535,6 +2537,20 @@ export default function AssistantApp() {
     const returnTo = `${window.location.pathname}${window.location.search}`;
     window.location.assign(`/auth/oidc/login?return_to=${encodeURIComponent(returnTo)}`);
   };
+
+  useEffect(() => {
+    if (!shouldAutoStartOidcLogin({
+      hasAuth: Boolean(auth?.token),
+      authStatus,
+      loginSubmitting,
+      redirectAttempted: oidcAutoRedirectAttemptedRef.current,
+      search: window.location.search,
+    })) {
+      return;
+    }
+    oidcAutoRedirectAttemptedRef.current = true;
+    startUnifiedLogin();
+  }, [auth?.token, authStatus, loginSubmitting]);
 
   const login = async () => {
     if (loginSubmitting) {
