@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-30T09:10:00Z
+updated_at: 2026-07-30T14:30:00Z
 updated_by: MANAGER-001
 phase: identity-architecture-implementation
-active_task: TASK-255
-next_action: "TASK-255 已完成实现与验证，等待用户授权合并主线或发布生产。"
+active_task: TASK-256
+next_action: "发布双人元数据审批凭据，并为 DEV Autopilot 完成 Semattice 初始模型与仿真项目联调。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-256 / FEAT-149：用户已授权由 DEV Autopilot 补齐 Semattice 元数据、用户角色、权限和审批环境。正在新增同租户双人审批事实与 OACT `approvals` claim；该 claim 仅向原发起人签发，并受 15 分钟有效期约束。
 
 - TASK-255 / FEAT-148：用户反馈 AgentCiCi 点击登录后停留在统一账号中间页。现已让无会话应用页一次性自动跳转至既有 `/auth/oidc/login`，保留 OIDC/CloudCC 回调票据处理和手动回退。定向前端测试 5/5、生产构建和 diff 检查通过；未改后端或生产，等待合并/发布授权。
 
