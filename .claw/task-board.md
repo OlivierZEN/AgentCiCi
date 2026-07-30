@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-29T12:35:00Z
+updated_at: 2026-07-30T15:00:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,13 +17,13 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-256 - Semattice 元数据独立审批凭据
 
-- status: `in_progress`
+- status: `done`
 - priority: `critical`
 - owner_role: `backend-agent`
 - spec_path: `docs/specs/FEAT-149-semattice-metadata-approval-credentials.md`
 - task_status_path: `n/a`
 - assignment_path: `n/a`
-- next_action: 实现审批事实、OACT approvals claim、生产发布并为 DEV Autopilot 发布首个元数据版本。
+- next_action: 已发布 `2.8.27 / fa9a843dd143`；同人自审 403、第二管理员批准、OACT claim、元数据发布及 DEV Autopilot 真实写入闭环均已在线验证。
 
 ### TASK-255 - 应用未登录态自动跳转 SSO
 

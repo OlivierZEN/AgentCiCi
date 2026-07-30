@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-30T14:30:00Z
+updated_at: 2026-07-30T15:00:00Z
 updated_by: MANAGER-001
 phase: identity-architecture-implementation
-active_task: TASK-256
-next_action: "发布双人元数据审批凭据，并为 DEV Autopilot 完成 Semattice 初始模型与仿真项目联调。"
+active_task: TASK-255
+next_action: "TASK-256 已完成生产验收；继续独立处理 TASK-255 的未登录态 SSO 入口。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-256 / FEAT-149：用户已授权由 DEV Autopilot 补齐 Semattice 元数据、用户角色、权限和审批环境。正在新增同租户双人审批事实与 OACT `approvals` claim；该 claim 仅向原发起人签发，并受 15 分钟有效期约束。
+- TASK-256 / FEAT-149：已发布生产 `2.8.27 / fa9a843dd143`。同租户双人元数据审批事实与 OACT `approvals` claim 已上线；同一管理员自审批为 403，另一有效管理员批准后，原发起人 OACT 成功发布 DEV Autopilot 首个 Semattice 元数据版本。版本含 5 个对象、37 个字段；`DAS-DEMO` 演示项目、需求、任务、工时和变更均已写入，独立应用真实需求/任务与变更确认闭环通过。
 
 - TASK-255 / FEAT-148：用户反馈 AgentCiCi 点击登录后停留在统一账号中间页。已确认 `AssistantApp` 只在按钮点击时调用既有 OIDC 入口；本任务会让无会话 `/app` 自动跳转至 `/auth/oidc/login`，保留 OIDC/CloudCC 回调票据处理和手动回退，不改后端或生产。
 
