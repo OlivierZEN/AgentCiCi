@@ -4,14 +4,20 @@ Total output lines: 6804
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-31T04:10:00Z
+updated_at: 2026-07-31T14:20:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-31T04:10:00Z
+last_run_at: 2026-07-31T14:20:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-260 - 研发项目名称自然语言提取修复
+
+- `backend-focused`：`mvn -q -Dtest=SematticeProjectDeliveryWriteToolServiceTest test` 通过，新增断言覆盖“现在创建一个研发项目名称叫：AgentCiCi企业级智能体平台”完整提取及确认指令。
+- `backend-compile/static`：`mvn -q -DskipTests compile` 与 `git diff --check` 通过。
+- `production-2.8.33`：发布前四类备份非空；backend/frontend 切换为 2.8.33 后六容器健康，health `UP`、版本接口为 `2.8.33 / b680c961b8f6`。线上原句返回完整项目名草案，未执行写入。
 
 ## TASK-259 - 研发交付产品经理确认式创建项目、需求与任务
 
