@@ -467,6 +467,9 @@ public class ToolOrchestratorService {
     }
 
     private String resolveInvocationType(String canonicalToolName, List<String> normalizedDirectToolNames) {
+        if (canonicalToolName == null || canonicalToolName.isBlank()) {
+            return "unknown";
+        }
         if (TOOL_MEMORY_REMEMBER.equals(canonicalToolName) || TOOL_MEMORY_FORGET.equals(canonicalToolName)) {
             return "memory_builtin";
         }

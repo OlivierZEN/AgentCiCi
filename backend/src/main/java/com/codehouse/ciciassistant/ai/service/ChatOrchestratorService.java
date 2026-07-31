@@ -495,9 +495,10 @@ public class ChatOrchestratorService {
         if (!modeDecision.suppressesTools() && !planExec.active()) {
             appendConfirmedPendingEmailBodyToolResult(
                     messages, companyId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
-            appendForcedSematticeProjectDeliveryToolResult(
-                    messages, companyId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
         }
+        boolean forcedProjectDeliveryQuery = !modeDecision.suppressesTools() && !planExec.active()
+                && appendForcedSematticeProjectDeliveryToolResult(
+                messages, companyId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
         Optional<String> forcedCrmProductSalesAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty() : appendForcedCrmProductSalesToolResult(
                 messages, companyId, userId, sessionId, skillContext, toolCallTraces, runId, question);
         Optional<String> scheduleCadenceClarification = scheduleCadenceClarification(question);
@@ -505,7 +506,7 @@ public class ChatOrchestratorService {
                 ? resolveMaxToolRounds(skillContext.maxToolCalls())
                 : Math.min(resolveMaxToolRounds(skillContext.maxToolCalls()), modeDecision.budget().maxToolRounds());
         String answer = forcedCrmProductSalesAnswer.orElseGet(() -> scheduleCadenceClarification.orElseGet(() -> runToolLoop(
-                modelName, messages, tools, companyId, userId, sessionId,
+                modelName, messages, forcedProjectDeliveryQuery ? List.of() : tools, companyId, userId, sessionId,
                 showThinking, skillContext, maxToolRounds, modelCredentials, modelCallTraces, toolCallTraces, runId)));
         try {
             agentPlanExecCanaryService.completeSynthesis(planExec, clipForTrace(answer, 1024));
@@ -779,9 +780,10 @@ public class ChatOrchestratorService {
                 if (!modeDecision.suppressesTools() && !planExec.active()) {
                     appendConfirmedPendingEmailBodyToolResult(
                             messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
-                    appendForcedSematticeProjectDeliveryToolResult(
-                            messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
                 }
+                boolean forcedProjectDeliveryQuery = !modeDecision.suppressesTools() && !planExec.active()
+                        && appendForcedSematticeProjectDeliveryToolResult(
+                        messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
                 Optional<String> forcedCrmProductSalesAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty() : appendForcedCrmProductSalesToolResult(
                         messages, companyId, userId, sessionId, skillContext, toolCallTraces, runId, question);
                 Optional<String> scheduleCadenceClarification = scheduleCadenceClarification(question);
@@ -790,7 +792,7 @@ public class ChatOrchestratorService {
                         : Math.min(resolveMaxToolRounds(skillContext.maxToolCalls()), modeDecision.budget().maxToolRounds());
                 boolean pendingApprovalsUsed = forcedCrmProductSalesAnswer.isEmpty() && scheduleCadenceClarification.isEmpty()
                         && resolveToolCalls(
-                        modelName, messages, tools, companyId, userId, sessionId,
+                        modelName, messages, forcedProjectDeliveryQuery ? List.of() : tools, companyId, userId, sessionId,
                         showThinking, skillContext, emitter, maxToolRounds, modelCredentials, modelCallTraces,
                         toolCallTraces, runId);
                 if (pendingApprovalsUsed) {
@@ -1466,7 +1468,7 @@ public class ChatOrchestratorService {
      * Project-delivery facts must be fetched before the model starts its tool-planning round. This
      * prevents the product-manager agent from falling back to a generic “I cannot access projects” answer.
      */
-    private void appendForcedSematticeProjectDeliveryToolResult(
+    private boolean appendForcedSematticeProjectDeliveryToolResult(
             List<Map<String, Object>> messages,
             String companyId,
             String userId,
@@ -1477,7 +1479,7 @@ public class ChatOrchestratorService {
             String runId,
             String question) {
         if (!isSematticeProjectDeliveryFactQuestion(skillContext, question)) {
-            return;
+            return false;
         }
         executeAndAppendSyntheticToolCall(
                 messages,
@@ -1496,6 +1498,7 @@ public class ChatOrchestratorService {
                 "content", "The Semattice live-delivery query has completed. Answer the user in concise Chinese using its tool result. "
                         + "Do not claim that you cannot access the project-management system and do not invent facts beyond the result."
         ));
+        return true;
     }
 
     static boolean isSematticeProjectDeliveryFactQuestion(ResolvedSkillContext skillContext, String question) {
