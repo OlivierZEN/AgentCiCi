@@ -34,6 +34,7 @@ import com.codehouse.ciciassistant.ops.service.AuditService;
 import com.codehouse.ciciassistant.kb.service.KbAccessControlService;
 import com.codehouse.ciciassistant.security.service.SafetyGatewayService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryToolService;
+import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryWriteToolService;
 import com.codehouse.ciciassistant.skill.service.SkillPromptAssembler;
 import com.codehouse.ciciassistant.skill.service.SkillResolverService;
 import com.codehouse.ciciassistant.skill.service.BuiltinSkillDocumentService;
@@ -496,18 +497,21 @@ public class ChatOrchestratorService {
             appendConfirmedPendingEmailBodyToolResult(
                     messages, companyId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
         }
-        boolean forcedProjectDeliveryQuery = !modeDecision.suppressesTools() && !planExec.active()
+        Optional<String> forcedProjectDeliveryWriteAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty()
+                : appendForcedSematticeProjectDeliveryWriteAnswer(
+                messages, companyId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
+        boolean forcedProjectDeliveryQuery = forcedProjectDeliveryWriteAnswer.isEmpty() && !modeDecision.suppressesTools() && !planExec.active()
                 && appendForcedSematticeProjectDeliveryToolResult(
                 messages, companyId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
-        Optional<String> forcedCrmProductSalesAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty() : appendForcedCrmProductSalesToolResult(
+        Optional<String> forcedCrmProductSalesAnswer = forcedProjectDeliveryWriteAnswer.isPresent() || modeDecision.suppressesTools() || planExec.active() ? Optional.empty() : appendForcedCrmProductSalesToolResult(
                 messages, companyId, userId, sessionId, skillContext, toolCallTraces, runId, question);
         Optional<String> scheduleCadenceClarification = scheduleCadenceClarification(question);
         int maxToolRounds = modeDecision.mode() == AgentRuntimeModeRouter.Mode.LEGACY_REACT
                 ? resolveMaxToolRounds(skillContext.maxToolCalls())
                 : Math.min(resolveMaxToolRounds(skillContext.maxToolCalls()), modeDecision.budget().maxToolRounds());
-        String answer = forcedCrmProductSalesAnswer.orElseGet(() -> scheduleCadenceClarification.orElseGet(() -> runToolLoop(
+        String answer = forcedProjectDeliveryWriteAnswer.orElseGet(() -> forcedCrmProductSalesAnswer.orElseGet(() -> scheduleCadenceClarification.orElseGet(() -> runToolLoop(
                 modelName, messages, forcedProjectDeliveryQuery ? List.of() : tools, companyId, userId, sessionId,
-                showThinking, skillContext, maxToolRounds, modelCredentials, modelCallTraces, toolCallTraces, runId)));
+                showThinking, skillContext, maxToolRounds, modelCredentials, modelCallTraces, toolCallTraces, runId))));
         try {
             agentPlanExecCanaryService.completeSynthesis(planExec, clipForTrace(answer, 1024));
         } catch (RuntimeException ex) {
@@ -781,16 +785,19 @@ public class ChatOrchestratorService {
                     appendConfirmedPendingEmailBodyToolResult(
                             messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
                 }
-                boolean forcedProjectDeliveryQuery = !modeDecision.suppressesTools() && !planExec.active()
+                Optional<String> forcedProjectDeliveryWriteAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty()
+                        : appendForcedSematticeProjectDeliveryWriteAnswer(
+                        messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
+                boolean forcedProjectDeliveryQuery = forcedProjectDeliveryWriteAnswer.isEmpty() && !modeDecision.suppressesTools() && !planExec.active()
                         && appendForcedSematticeProjectDeliveryToolResult(
                         messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
-                Optional<String> forcedCrmProductSalesAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty() : appendForcedCrmProductSalesToolResult(
+                Optional<String> forcedCrmProductSalesAnswer = forcedProjectDeliveryWriteAnswer.isPresent() || modeDecision.suppressesTools() || planExec.active() ? Optional.empty() : appendForcedCrmProductSalesToolResult(
                         messages, companyId, userId, sessionId, skillContext, toolCallTraces, runId, question);
                 Optional<String> scheduleCadenceClarification = scheduleCadenceClarification(question);
                 int maxToolRounds = modeDecision.mode() == AgentRuntimeModeRouter.Mode.LEGACY_REACT
                         ? resolveMaxToolRounds(skillContext.maxToolCalls())
                         : Math.min(resolveMaxToolRounds(skillContext.maxToolCalls()), modeDecision.budget().maxToolRounds());
-                boolean pendingApprovalsUsed = forcedCrmProductSalesAnswer.isEmpty() && scheduleCadenceClarification.isEmpty()
+                boolean pendingApprovalsUsed = forcedProjectDeliveryWriteAnswer.isEmpty() && forcedCrmProductSalesAnswer.isEmpty() && scheduleCadenceClarification.isEmpty()
                         && resolveToolCalls(
                         modelName, messages, forcedProjectDeliveryQuery ? List.of() : tools, companyId, userId, sessionId,
                         showThinking, skillContext, emitter, maxToolRounds, modelCredentials, modelCallTraces,
@@ -812,7 +819,9 @@ public class ChatOrchestratorService {
 
                 safeSendPhase(emitter, "generating", modelName);
                 String finalText;
-                if (forcedCrmProductSalesAnswer.isPresent()) {
+                if (forcedProjectDeliveryWriteAnswer.isPresent()) {
+                    finalText = forcedProjectDeliveryWriteAnswer.get();
+                } else if (forcedCrmProductSalesAnswer.isPresent()) {
                     finalText = forcedCrmProductSalesAnswer.get();
                 } else if (scheduleCadenceClarification.isPresent()) {
                     finalText = scheduleCadenceClarification.get();
@@ -1499,6 +1508,69 @@ public class ChatOrchestratorService {
                         + "Do not claim that you cannot access the project-management system and do not invent facts beyond the result."
         ));
         return true;
+    }
+
+    /**
+     * Creation is server-routed rather than model-selected. A draft is side-effect free; a write is
+     * possible only when the current user message matches one of the explicit confirmation forms.
+     */
+    private Optional<String> appendForcedSematticeProjectDeliveryWriteAnswer(
+            List<Map<String, Object>> messages,
+            String companyId,
+            String userId,
+            String sessionId,
+            ResolvedSkillContext skillContext,
+            SseEmitter emitter,
+            List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces,
+            String runId,
+            String question) {
+        if (skillContext == null || !"dev-autopilot-pm".equalsIgnoreCase(skillContext.agentId())
+                || !skillContext.allowedToolNames().contains(SematticeProjectDeliveryWriteToolService.TOOL_NAME)) {
+            return Optional.empty();
+        }
+        Optional<SematticeProjectDeliveryWriteToolService.CreateIntent> confirmed =
+                SematticeProjectDeliveryWriteToolService.confirmedIntent(question);
+        if (confirmed.isEmpty()) {
+            return SematticeProjectDeliveryWriteToolService.draftResponse(question);
+        }
+        String toolResult = executeAndAppendSyntheticToolCall(
+                messages,
+                companyId,
+                userId,
+                sessionId,
+                skillContext,
+                emitter,
+                toolCallTraces,
+                runId,
+                SematticeProjectDeliveryWriteToolService.TOOL_NAME,
+                confirmed.get().toArguments(TOOL_RESULT_OBJECT_MAPPER),
+                "auto_semattice_delivery_create_");
+        return Optional.of(formatProjectDeliveryWriteResult(toolResult));
+    }
+
+    private static String formatProjectDeliveryWriteResult(String toolResult) {
+        try {
+            JsonNode result = TOOL_RESULT_OBJECT_MAPPER.readTree(toolResult);
+            if (!"SUCCESS".equals(result.path("status").asText())) {
+                return "未创建研发交付记录：" + result.path("message").asText("Semattice 未返回成功回执。")
+                        + " 请核对确认格式或父级编号后重试。";
+            }
+            String object = result.path("object_api_name").asText();
+            String label = switch (object) {
+                case "dev_project" -> "项目";
+                case "dev_requirement" -> "需求";
+                case "dev_task" -> "任务";
+                default -> "研发交付记录";
+            };
+            String subject = result.path("name").asText(result.path("title").asText(""));
+            String code = result.path("code").asText("");
+            String recordId = result.path("record_id").asText("");
+            return "已在 Semattice 创建" + label + "：" + subject
+                    + (code.isBlank() ? "" : "（" + code + "）")
+                    + "。记录 ID：" + recordId + "。";
+        } catch (Exception exception) {
+            return "Semattice 已执行创建请求，但回执解析失败；请在 DEV Autopilot 项目列表中核对结果。";
+        }
     }
 
     static boolean isSematticeProjectDeliveryFactQuestion(ResolvedSkillContext skillContext, String question) {

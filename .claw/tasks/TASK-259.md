@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-259
 status: in_progress
-updated_at: 2026-07-31T03:00:00Z
+updated_at: 2026-07-31T03:20:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: backend-agent
@@ -21,4 +21,5 @@ spec_path: docs/specs/FEAT-152-dev-autopilot-pm-confirmed-record-creation.md
 
 ## Evidence
 
-- 待补充定向测试、编译、生产版本与真实 Semattice 记录回读证据。
+- 已通过定向 JUnit、后端编译、差异检查和任务范围授权检查。
+- 待生产发布后验证：草案不写入，项目/需求/任务三类确认写入及 Semattice 真实回读。

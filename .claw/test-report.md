@@ -4,14 +4,21 @@ Total output lines: 6804
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-29T12:35:00Z
+updated_at: 2026-07-31T03:20:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-29T12:35:00Z
-last_run_status: partial
+last_run_at: 2026-07-31T03:20:00Z
+last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-259 - 研发交付产品经理确认式创建项目、需求与任务
+
+- `identity/assignment`：MANAGER-001 的 SSH 持钥、Git 身份、任务分支和全部实现/测试/状态路径均由 `dev-login.py` 与 `check-assignment.py` 返回 `allowed`。
+- `backend-focused`：`mvn -q -Dtest=SematticeProjectDeliveryToolServiceTest,SematticeProjectDeliveryWriteToolServiceTest,ToolOrchestratorServiceTest test` 通过。覆盖无确认仅返回项目草案、精确确认调用 `runtime.record.create`、OACT Bearer 传递、租户参数拒绝和既有原生工具回归。
+- `backend-compile/static`：`mvn -q -DskipTests compile` 与 `git diff --check` 通过。
+- `state-validation`：本任务前端和任务状态格式已通过任务范围检查；全量 `validate-state.py` 仍报告既有历史规格/任务板格式债务，未改写不在本任务范围内的历史文档。
 
 ## TASK-257 - DEV Autopilot 启动器入口
 

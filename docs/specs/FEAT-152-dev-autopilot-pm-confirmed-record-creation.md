@@ -2,7 +2,7 @@
 kind: feature-spec
 feature_id: FEAT-152
 title: DEV Autopilot 产品经理确认式研发记录创建
-status: in_progress
+status: in_implementation
 owner_role: backend-agent
 task_ids: TASK-259
 related_decisions: "OACT 同租户边界；对话写入必须明确确认"

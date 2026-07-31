@@ -32,6 +32,7 @@ scope_files:
   - backend/src/main/java/com/codehouse/ciciassistant/semattice/SematticeProjectDeliveryToolService.java
   - backend/src/main/java/com/codehouse/ciciassistant/semattice/SematticeProjectDeliveryWriteToolService.java
   - backend/src/main/java/com/codehouse/ciciassistant/skill/service/SkillResolverService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/tool/service/BuiltinToolCatalog.java
   - backend/src/test/java/com/codehouse/ciciassistant/ai/service/ToolOrchestratorServiceTest.java
   - backend/src/test/java/com/codehouse/ciciassistant/semattice/SematticeProjectDeliveryWriteToolServiceTest.java
   - docs/specs/FEAT-152-dev-autopilot-pm-confirmed-record-creation.md

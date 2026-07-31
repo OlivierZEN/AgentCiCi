@@ -4,6 +4,7 @@ import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService;
 import com.codehouse.ciciassistant.crmanalysis.service.CrmProductSalesAnalysisToolService;
 import com.codehouse.ciciassistant.email.service.EmailToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryToolService;
+import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryWriteToolService;
 import com.codehouse.ciciassistant.tool.tavily.TavilyToolService;
 import com.codehouse.ciciassistant.userworkflow.service.AssistantScheduleToolService;
 import java.util.List;
@@ -27,6 +28,8 @@ public final class BuiltinToolCatalog {
                     CrmProductSalesAnalysisToolService.toolDescription(), "低风险", "crm"),
             new ToolCatalogItem(SematticeProjectDeliveryToolService.TOOL_NAME, "研发交付数据查询",
                     SematticeProjectDeliveryToolService.toolDescription(), "低风险", "project_delivery"),
+            new ToolCatalogItem(SematticeProjectDeliveryWriteToolService.TOOL_NAME, "研发交付记录创建",
+                    "仅由研发交付产品经理在用户明确确认后调用，创建同租户项目、需求或任务。", "中风险", "project_delivery"),
             new ToolCatalogItem("get_pending_approvals", "审批待办拉取", "读取 CloudCC / OA 当前待审批项目。", "中风险", "approval"),
             new ToolCatalogItem(EmailToolService.TOOL_LIST_INBOX, "邮件收件箱",
                     "读取当前用户邮箱最近邮件摘要。", "低风险", "email"),
