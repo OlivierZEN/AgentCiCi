@@ -2044,3 +2044,9 @@ last_run_status: partial
   - Archive/score: archive detail returned confirmation text, analysis and memory; seven sources and all five score dimensions were visible through authenticated APIs.
 - Browser limitation:
   - The in-app browser could not resolve `onechat.agentcici.com` (`ERR_NAME_NOT_RESOLVED`). No safety interstitial was bypassed; the same Owen/SalesA identity was verified over IP-resolved HTTPS API instead. This is the existing workstation DNS risk, not an application or data failure.
+## TASK-258 - 研发交付产品经理 Semattice 实时检索
+
+- 定向后端测试：`SematticeProjectDeliveryToolServiceTest` 与 `ToolOrchestratorServiceTest` 通过；后端编译和 `git diff --check` 通过。
+- 线上能力验收：生产 OACT 调用 `runtime.record.query` 返回 `DAS-DEMO:星轨移动销售助手:执行中`。
+- 线上对话验收：生产 `dev-autopilot-pm` 对“现在有哪些项目在执行”返回项目 35% 进度、2 项进行中任务、5.5 小时工时和 2 项变更；通用无法访问提示为 false。
+- 发布：`2.8.31 / 5c8953a3284d`；发布前备份四项均非空，backend/frontend healthy，后端 health `UP`、Nginx 校验及 `https://x.agentcici.com/` 200 通过。

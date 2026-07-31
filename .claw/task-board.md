@@ -17,13 +17,13 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-258 - 研发交付产品经理实时项目检索
 
-- status: `in_progress`
+- status: `done`
 - priority: `critical`
 - owner_role: `backend-agent`
 - spec_path: `docs/specs/FEAT-151-semattice-project-delivery-agent-live-retrieval.md`
 - task_status_path: `.claw/tasks/TASK-258.md`
 - assignment_path: `.claw/assignments/TASK-258.yaml`
-- next_action: 为研发交付产品经理接入受当前登录成员 OACT 约束的 Semattice 只读查询，并以 `DAS-DEMO` 在线验证。
+- next_action: 已发布 `2.8.31` 并以 `DAS-DEMO` 真实对话验收；后续可按同一工具扩展指定项目筛选。
 
 ### TASK-257 - DEV Autopilot 启动器入口
 
