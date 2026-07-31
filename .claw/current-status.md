@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-31T01:10:00Z
+updated_at: 2026-07-31T03:00:00Z
 updated_by: MANAGER-001
 phase: identity-architecture-implementation
-active_task: TASK-255
-next_action: "继续 TASK-255 的 /app 无会话 OIDC 自动跳转实现与回调验证。"
+active_task: TASK-259
+next_action: "实现研发交付产品经理的确认式 Semattice 项目、需求、任务创建闭环。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-259 / FEAT-152：用户明确要求研发交付产品经理拥有创建项目、需求与任务记录的权限。该能力采用“草案—用户精确确认—服务端合成写入—Semattice 回执”的边界：模型不拥有自由写工具，当前成员短期 OACT 是唯一身份/租户来源。待完成本地定向测试、发布和线上三类真实记录闭环验证。
 
 - TASK-258 / FEAT-151：已发布生产 `2.8.31 / 5c8953a3284d`。研发交付产品经理使用当前登录成员的短期 OACT 读取同租户 Semattice 已发布研发交付对象；`dev-autopilot-pm` 不再被降级为默认 CiCi，项目事实问题会先执行只读查询再总结。生产真实对话已返回 `DAS-DEMO / 星轨移动销售助手`（执行中、35%）、2 个进行中任务、5.5 小时已登记工时及 2 项确认变更；不含“无法直接访问”通用回退。`2.8.29` 的空工具名异常和 `2.8.30` 的自定义智能体降级均已由 `2.8.31` 覆盖。
 

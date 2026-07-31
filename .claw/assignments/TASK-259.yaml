@@ -1,0 +1,56 @@
+task_id: TASK-259
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-31T03:00:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-152-dev-autopilot-pm-confirmed-record-creation.md
+task_status_path: .claw/tasks/TASK-259.md
+branch: codex/TASK-259-dev-autopilot-pm-create
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/**
+  - backend/src/main/java/com/codehouse/ciciassistant/semattice/**
+  - backend/src/main/java/com/codehouse/ciciassistant/skill/**
+  - backend/src/test/java/com/codehouse/ciciassistant/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/developers/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+scope_files:
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/service/ToolOrchestratorService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/semattice/SematticeProjectDeliveryToolService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/semattice/SematticeProjectDeliveryWriteToolService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/skill/service/SkillResolverService.java
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/service/ToolOrchestratorServiceTest.java
+  - backend/src/test/java/com/codehouse/ciciassistant/semattice/SematticeProjectDeliveryWriteToolServiceTest.java
+  - docs/specs/FEAT-152-dev-autopilot-pm-confirmed-record-creation.md
+  - .claw/tasks/TASK-259.md
+  - .claw/assignments/TASK-259.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+touch_policy: exclusive
+shared_contracts:
+  - AgentCiCi official access token and tenant-binding contract
+  - Semattice published runtime record capability contract
+  - Agent tool authorization, safety gateway and audit contract
+task_boundary:
+  - "让研发交付产品经理创建同租户项目、需求与任务。"
+  - "写入必须由服务端精确确认门禁触发，并可验证真实 Semattice 回执。"
+  - "不开放删除、任意更新、跨租户参数或模型自主写入。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
+signature: "MANAGER-001; user requested the R&D delivery product manager create project, requirement and task records on 2026-07-31."
