@@ -15,6 +15,16 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-260 - 研发项目名称自然语言提取修复
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `backend-agent`
+- spec_path: `n/a`
+- task_status_path: `.claw/tasks/TASK-260.md`
+- assignment_path: `.claw/assignments/TASK-260.yaml`
+- next_action: 修正“项目名称叫/为/是”表达的项目名称提取，并回归线上草案。
+
 ### TASK-259 - 研发交付产品经理确认式创建项目、需求与任务
 
 - status: `done`

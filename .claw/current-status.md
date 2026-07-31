@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-31T04:10:00Z
+updated_at: 2026-07-31T14:15:00Z
 updated_by: MANAGER-001
 phase: identity-architecture-implementation
-active_task: TASK-255
-next_action: "继续 TASK-255 的 /app 无会话 OIDC 自动跳转实现与回调验证。"
+active_task: TASK-260
+next_action: "修复研发项目名称自然语言提取，并完成线上草案验证。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-260：用户报告“现在创建一个研发项目名称叫：AgentCiCi企业级智能体平台”被解析为“研发”。根因是项目草案正则把“研发项目”前缀当作名称；本任务只修复名称提取及测试，保留确认写入门禁。
 
 - TASK-259 / FEAT-152：已发布生产 `2.8.32 / 2e42ed3ec926`。研发交付产品经理现具备同租户项目、需求、任务创建能力，采用“草案—用户精确确认—服务端合成写入—Semattice 回执”边界；模型不拥有自由写工具，当前成员短期 OACT 是唯一身份/租户来源。持久化智能体提示词已同步这一规则。线上已验证未确认请求只返回草案，随后创建 `DAS-00B30667 / 棕榈地`、`REQ-02F5F798 / 项目启动工作台` 和任务“搭建项目启动页”，智能体实时查询及 Semattice 父子 UUID 回读均正确。发布前四类备份非空，六容器健康，backend health `UP`、版本接口为 2.8.32。
 

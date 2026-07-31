@@ -1,0 +1,43 @@
+task_id: TASK-260
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-31T14:15:00Z
+expires_at: none
+spec_path: n/a
+task_status_path: .claw/tasks/TASK-260.md
+branch: codex/TASK-260-project-name-intent-parser
+pr_url: n/a
+scope_mode: exact_files
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/semattice/**
+  - backend/src/test/java/com/codehouse/ciciassistant/semattice/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+scope_files:
+  - backend/src/main/java/com/codehouse/ciciassistant/semattice/SematticeProjectDeliveryWriteToolService.java
+  - backend/src/test/java/com/codehouse/ciciassistant/semattice/SematticeProjectDeliveryWriteToolServiceTest.java
+  - .claw/tasks/TASK-260.md
+  - .claw/assignments/TASK-260.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/developers/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+touch_policy: exclusive
+shared_contracts:
+  - DEV Autopilot confirmed-write safety contract
+task_boundary:
+  - "正确提取“项目名称叫/为/是”的完整中文项目名称。"
+  - "保留明确确认后才写入的安全边界。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
+signature: "MANAGER-001; user reported a project name intent parsing defect on 2026-07-31."
