@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-31T00:25:00Z
+updated_at: 2026-07-31T01:10:00Z
 updated_by: MANAGER-001
 phase: identity-architecture-implementation
-active_task: TASK-257
-next_action: "在 AI 应用启动器中增加 DEV Autopilot 外部入口并完成生产验证。"
+active_task: TASK-255
+next_action: "继续 TASK-255 的 /app 无会话 OIDC 自动跳转实现与回调验证。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-257 / FEAT-150：已在助手工作台的 AI 应用启动器增加“DEV Autopilot / 研发交付”外部入口。它复用现有菜单语汇，在当前页跳转至 `https://x.agentcici.com/devautopilot/`，不复制应用业务数据或改变认证契约；定向测试、32 个前端测试文件（199 tests）和生产构建通过，待主线发布后完成公网健康与已登录桌面会话验收。
+- TASK-257 / FEAT-150：已发布生产 `2.8.28 / f2814efc3a07`。助手工作台的 AI 应用启动器现有“DEV Autopilot / 研发交付”外部入口；它复用当前菜单语汇，在当前页跳转至 `https://x.agentcici.com/devautopilot/`，不复制应用业务数据或改变认证契约。定向测试、32 个前端测试文件（199 tests）、生产构建、六容器健康、版本接口与两个公网入口均通过；无用户凭据的生产浏览器按预期处于统一登录边界，未伪造已登录会话。
 
 - TASK-256 / FEAT-149：已发布生产 `2.8.27 / fa9a843dd143`。同租户双人元数据审批事实与 OACT `approvals` claim 已上线；同一管理员自审批为 403，另一有效管理员批准后，原发起人 OACT 成功发布 DEV Autopilot 首个 Semattice 元数据版本。版本含 5 个对象、37 个字段；`DAS-DEMO` 演示项目、需求、任务、工时和变更均已写入，独立应用真实需求/任务与变更确认闭环通过。
 
