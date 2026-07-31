@@ -4,8 +4,8 @@ version: 4
 updated_at: 2026-07-31T01:10:00Z
 updated_by: MANAGER-001
 phase: identity-architecture-implementation
-active_task: TASK-255
-next_action: "继续 TASK-255 的 /app 无会话 OIDC 自动跳转实现与回调验证。"
+active_task: TASK-258
+next_action: "为研发交付产品经理接入同租户 Semattice 实时项目检索并在线验证。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-258 / FEAT-151：用户反馈生产“研发交付产品经理”没有检索 Semattice，而是退回通用 CiCi 能力说明。当前任务会以当前登录成员的短期 OACT 调用同租户已发布研发交付对象，向该智能体提供受控的只读项目、需求、任务、工时和变更查询；不允许模型传入租户或令牌，也不新增写入能力。
 
 - TASK-257 / FEAT-150：已发布生产 `2.8.28 / f2814efc3a07`。助手工作台的 AI 应用启动器现有“DEV Autopilot / 研发交付”外部入口；它复用当前菜单语汇，在当前页跳转至 `https://x.agentcici.com/devautopilot/`，不复制应用业务数据或改变认证契约。定向测试、32 个前端测试文件（199 tests）、生产构建、六容器健康、版本接口与两个公网入口均通过；无用户凭据的生产浏览器按预期处于统一登录边界，未伪造已登录会话。
 
