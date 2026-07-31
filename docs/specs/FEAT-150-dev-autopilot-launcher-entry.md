@@ -2,10 +2,10 @@
 kind: feature-spec
 feature_id: FEAT-150
 title: DEV Autopilot AI 应用入口
-status: active
+status: complete
 owner_role: frontend-agent
 task_ids: TASK-257
-updated_at: 2026-07-31T00:25:00Z
+updated_at: 2026-07-31T01:10:00Z
 updated_by: MANAGER-001
 ---
 
@@ -34,4 +34,5 @@ updated_by: MANAGER-001
 
 - 启动器数据中新增 `dev-autopilot` 外部应用，使用既有菜单项和主题样式，未新增独立页面或样式分支。
 - 外部项有明确的 `externalUrl`；点击时关闭菜单并在当前页跳转，查询参数不会把它误识别为 AgentCiCi 内置应用。
-- 定向测试覆盖入口名称、辅助标签、标识和目标 URL；全量前端回归与生产构建已通过。生产验收将确认已登录桌面会话中的真实菜单与跳转。
+- 定向测试覆盖入口名称、辅助标签、标识和目标 URL；全量前端回归与生产构建已通过。
+- 已以 `2.8.28 / f2814efc3a07` 发布。新版前端资源及两个公网入口已验证；无用户凭据时，浏览器保留在统一账号登录边界，已登录用户可直接在 AI 应用菜单完成最终视觉点击验收。

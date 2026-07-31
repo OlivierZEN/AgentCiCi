@@ -18,7 +18,7 @@ last_run_status: partial
 - `identity/assignment`：MANAGER-001 的 SSH 持钥、Git 身份、`codex/TASK-257-dev-autopilot-launcher-entry` 分支以及菜单、测试、规格与状态文件范围均经 `dev-login.py` / `check-assignment.py` 返回 `allowed`。
 - `frontend-focused`：`npm test -- --run src/assistant/AssistantApp.test.ts` 通过（1 文件 / 1 test），覆盖“DEV Autopilot / 研发交付 / 研”与固定独立应用 URL。
 - `frontend-regression/build`：`npm test` 通过（32 文件 / 199 tests）；`npm run build` 和 `git diff --check` 通过。构建仅输出既有 Vite 大 bundle 提示。
-- `production-pending`：将在用户授权的生产发布后确认镜像、后端健康、独立应用公网目标以及受保护桌面启动器的真实点击跳转；不伪造已登录会话。
+- `production-2.8.28`：主线提交 `f2814efc3a07` 与 annotated tag `2.8.28` 已推送；backend/frontend ACR index digest 分别为 `sha256:18c2794a28050552c0797e48cec507637b4de72d1036f3529f18b16a291ef31a` / `sha256:9f20dd10b58b467c6265aeab0037eb1c272cdf4791139ea81387ea4188d3b0a1`。发布前备份 `/opt/cici/backups/20260731-090547-before-2.8.28-task257` 的 env、PostgreSQL、KB、Qdrant 均非空；只重建 backend/frontend，六容器健康，backend `health=UP`、版本为 `2.8.28 / f2814efc3a07`、Nginx 校验成功。新版前端静态资源含 DEV Autopilot；`https://x.agentcici.com/` 和 `https://x.agentcici.com/devautopilot/` 均为 200，匿名 `/auth/me` 为预期 401。生产浏览器无会话时正确显示统一登录边界；没有伪造用户凭据，已登录菜单的最终视觉点击验收交由正常业务会话完成。
 
 ## TASK-254 - company_id 迁移完整性审计与遗留修复
 
