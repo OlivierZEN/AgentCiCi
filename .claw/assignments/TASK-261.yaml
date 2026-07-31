@@ -1,13 +1,13 @@
 task_id: TASK-261
 assignee: MANAGER-001
 assigned_by: MANAGER-001
-status: active
+status: completed
 assigned_at: 2026-07-31T14:23:38Z
 expires_at: none
 spec_path: docs/specs/FEAT-153-llm-delivery-create-intent-understanding.md
 task_status_path: .claw/tasks/TASK-261.md
 branch: codex/TASK-261-llm-create-intent-understanding
-pr_url: n/a
+pr_url: merged-to-main
 scope_mode: exact_files
 allowed_write_roots:
   - backend/src/main/java/com/codehouse/ciciassistant/ai/service/**
@@ -47,4 +47,3 @@ preflight_required: true
 local_login_required: true
 identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
 signature: "MANAGER-001; user required model-first semantic understanding for delivery creation on 2026-07-31."
-

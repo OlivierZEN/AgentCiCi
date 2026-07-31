@@ -4,10 +4,10 @@ Total output lines: 6804
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-31T14:30:08Z
+updated_at: 2026-07-31T14:39:02Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-31T14:30:08Z
+last_run_at: 2026-07-31T14:39:02Z
 last_run_status: passed
 ---
 
@@ -18,7 +18,11 @@ last_run_status: passed
 - `identity/assignment`：MANAGER-001 的 SSH 持钥、Git 身份、任务分支和三份实现/测试路径经 `dev-login.py` 与 `check-assignment.py` 返回 `allowed`。
 - `backend-focused`：`mvn -q -Dtest=SematticeProjectDeliveryWriteToolServiceTest,ChatOrchestratorServiceModelIdentityTest test` 通过。创建候选覆盖截图原句和“名称叫”表达，确认消息不进入草案路由；模型指令断言完整语义理解、不得正则抽取、零工具/零写入及精确确认格式。
 - `backend-package/static`：`mvn -q -DskipTests package` 与 `git diff --check` 通过。
-- `production`：待下一修订版本发布后补充真实模型响应、Semattice 零写入与健康检查证据。
+- `release-2.8.34`：dry-run 与正式发布成功；Git tag/commit 为 `2.8.34 / 84c814b19fe0`。backend/frontend ACR index digest 分别为 `sha256:57fe1b7207af855c42e07607c7e8b1433871b9b53b4d13fef82ae3611c5e3320`、`sha256:b91a5b46391f74d24551fd8d2c667dd4440951486cdc885548f8bcbe94fce5d3`。
+- `production-backup/deploy`：发布前备份 `/opt/cici/backups/20260731-223300-before-2.8.34-task261-model-intent` 的 env、PostgreSQL、KB、Qdrant 均非空；只强制重建 backend/frontend，四个状态服务容器 ID 保持不变。六容器健康，health `UP`，版本为 `2.8.34 / 84c814b19fe0`，Nginx 校验通过，近期启动错误为 0。
+- `public-smoke`：`https://x.agentcici.com/` 与 `/devautopilot/` 为 200，匿名 `/auth/me` 为预期 401。
+- `live-model-understanding`：目标租户受权会话用截图原句“帮我创建一个新项目：AgentCiCi企业级智能体平台”得到完整项目名和精确确认文本；响应模型为 `onekeytoken/auto`。生产 Trace 为 `model_call_count=1`、`tool_call_count=0`、`WAITING_CONFIRMATION`，证明答复来自模型且未执行工具。
+- `semattice-zero-write`：使用当前成员短期 OACT 调用线上 `runtime.record.query` 成功，`dev_project` 共 2 条，目标名称 `AgentCiCi企业级智能体平台` 为 0 条；未输出或保存可复用令牌。
 
 ## TASK-260 - 研发项目名称自然语言提取修复
 
