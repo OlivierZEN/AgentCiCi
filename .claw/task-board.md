@@ -15,6 +15,16 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-257 - DEV Autopilot 启动器入口
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `frontend-agent`
+- spec_path: `docs/specs/FEAT-150-dev-autopilot-launcher-entry.md`
+- task_status_path: `.claw/tasks/TASK-257.md`
+- assignment_path: `.claw/assignments/TASK-257.yaml`
+- next_action: 在 AI 应用启动器中增加外部研发交付入口，并验证当前页跳转。
+
 ### TASK-256 - Semattice 元数据独立审批凭据
 
 - status: `done`

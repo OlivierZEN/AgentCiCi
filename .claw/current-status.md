@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-30T15:00:00Z
+updated_at: 2026-07-31T00:10:00Z
 updated_by: MANAGER-001
 phase: identity-architecture-implementation
-active_task: TASK-255
-next_action: "TASK-256 已完成生产验收；继续独立处理 TASK-255 的未登录态 SSO 入口。"
+active_task: TASK-257
+next_action: "在 AI 应用启动器中增加 DEV Autopilot 外部入口并完成生产验证。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-257 / FEAT-150：用户要求将 DEV Autopilot 放入助手工作台的 AI 应用启动器。入口会复用当前菜单语汇并跳转至 `https://x.agentcici.com/devautopilot/`，不复制应用业务数据或改变认证契约。
 
 - TASK-256 / FEAT-149：已发布生产 `2.8.27 / fa9a843dd143`。同租户双人元数据审批事实与 OACT `approvals` claim 已上线；同一管理员自审批为 403，另一有效管理员批准后，原发起人 OACT 成功发布 DEV Autopilot 首个 Semattice 元数据版本。版本含 5 个对象、37 个字段；`DAS-DEMO` 演示项目、需求、任务、工时和变更均已写入，独立应用真实需求/任务与变更确认闭环通过。
 
