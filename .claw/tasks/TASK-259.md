@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-259
-status: in_progress
-updated_at: 2026-07-31T03:20:00Z
+status: done
+updated_at: 2026-07-31T04:10:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: backend-agent
@@ -21,5 +21,5 @@ spec_path: docs/specs/FEAT-152-dev-autopilot-pm-confirmed-record-creation.md
 
 ## Evidence
 
-- 已通过定向 JUnit、后端编译、差异检查和任务范围授权检查。
-- 待生产发布后验证：草案不写入，项目/需求/任务三类确认写入及 Semattice 真实回读。
+- 已发布生产 `2.8.32 / 2e42ed3ec926`；backend/frontend 与四个基础服务均健康，`/actuator/health=UP`、版本接口返回 2.8.32。
+- 线上验证：未确认的“现在创建一个棕榈地的研发项目”只返回草案；确认后依次创建 `DAS-00B30667`、`REQ-02F5F798` 和“搭建项目启动页”。智能体实时查询及 Semattice 记录回读均确认父子关系正确。

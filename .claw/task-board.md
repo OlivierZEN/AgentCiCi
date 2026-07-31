@@ -17,13 +17,13 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-259 - 研发交付产品经理确认式创建项目、需求与任务
 
-- status: `in_progress`
+- status: `done`
 - priority: `critical`
 - owner_role: `backend-agent`
 - spec_path: `docs/specs/FEAT-152-dev-autopilot-pm-confirmed-record-creation.md`
 - task_status_path: `.claw/tasks/TASK-259.md`
 - assignment_path: `.claw/assignments/TASK-259.yaml`
-- next_action: 实现服务器确认门禁和 Semattice 写入服务，之后用线上项目、需求、任务记录完成闭环验证。
+- next_action: 已发布 `2.8.32 / 2e42ed3ec926` 并完成线上项目、需求、任务创建及回读闭环；后续更新/工时能力必须沿用确认门禁。
 
 ### TASK-258 - 研发交付产品经理实时项目检索
 

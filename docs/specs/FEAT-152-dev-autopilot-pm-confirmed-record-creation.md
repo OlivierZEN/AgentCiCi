@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-152
 title: DEV Autopilot 产品经理确认式研发记录创建
-status: in_implementation
+status: verified
 owner_role: backend-agent
 task_ids: TASK-259
 related_decisions: "OACT 同租户边界；对话写入必须明确确认"
 related_issues: none
-updated_at: 2026-07-31T03:00:00Z
+updated_at: 2026-07-31T04:10:00Z
 updated_by: MANAGER-001
 ---
 
@@ -72,9 +72,11 @@ updated_by: MANAGER-001
 
 ## 实现进展
 
-- 已开始，待完成代码、生产智能体提示词和真实项目/需求/任务闭环验证。
+- 已发布 AgentCiCi `2.8.32 / 2e42ed3ec926`。生产有效工具集含只读查询和受控创建；创建工具在平台治理中为 enabled，但不在模型 function schema 中。
+- 线上验证先返回“棕榈地”项目草案，确认后实际创建 `DAS-00B30667`；随后创建 `REQ-02F5F798 / 项目启动工作台` 与任务“搭建项目启动页”。Semattice 直接回读确认需求 `project_id` 和任务 `project_id` / `requirement_id` 均指向正确记录。
+- 智能体随后实时查询并正确汇总该项目、1 条需求和 1 条任务。
 
 ## 交接说明
 
-- 先查看 `SematticeProjectDeliveryToolService`、`ChatOrchestratorService` 和本任务卡。
-- 生产验证必须使用 `org5nszpgj99jaysxv6y` 对应的线上 Semattice 租户，且不得记录可复用令牌。
+- 后续扩展更新、工时或变更写入时，应复用同一服务端确认门禁，不能把写工具暴露给模型。
+- 生产验证使用 `org5nszpgj99jaysxv6y` 对应的线上 Semattice 租户，且未记录可复用令牌。
