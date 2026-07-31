@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-153
 title: 研发交付创建意图的大模型语义理解
-status: approved
+status: implemented
 owner_role: backend-agent
 task_ids: TASK-261
 related_decisions: "模型负责自然语言语义；服务端负责权限、确认与写入"
 related_issues: none
-updated_at: 2026-07-31T14:23:38Z
+updated_at: 2026-07-31T14:30:08Z
 updated_by: MANAGER-001
 ---
 
@@ -78,3 +78,9 @@ updated_by: MANAGER-001
 - 以 AgentCiCi 下一修订版本发布 backend；frontend 无业务改动时仍沿用统一版本镜像流程。
 - 若模型草案链路异常，回滚应用镜像；不得通过恢复正则字段提取绕开模型。
 
+## 实现进展
+
+- 未确认创建消息不再由 `draftResponse` 或项目名正则生成答案；服务端只宽泛识别创建候选，不抽取业务字段。
+- 阻塞和流式聊天均在创建草案轮次追加模型专用语义契约、跳过实时事实查询并禁用工具，最终答复由当前智能体模型生成。
+- 精确确认仍由服务端解析并合成内部 Semattice 写入，写工具没有进入模型 function schema。
+- 定向 JUnit、聊天编排回归、后端 package 和静态差异检查已通过；生产发布与真实模型验证待完成。

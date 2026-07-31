@@ -43,11 +43,6 @@ public class SematticeProjectDeliveryWriteToolService {
     private static final Pattern CONFIRM_TASK = Pattern.compile(
             "^\\s*(?:请)?(?:确认|确定)创建任务[：:]\\s*需求\\s*[=：:]\\s*([^；;]+?)\\s*[；;]\\s*标题\\s*[=：:]\\s*(.+?)\\s*$",
             Pattern.CASE_INSENSITIVE);
-    private static final Pattern PROJECT_NAMED_DRAFT = Pattern.compile(
-            "(?:创建|新建)\\s*(?:一个)?\\s*(?:研发)?项目\\s*(?:名称)?\\s*(?:(?:叫|为|是)\\s*(?:[：:])?|[：:])\\s*[“\\\"]?(.+?)[”\\\"]?\\s*$",
-            Pattern.CASE_INSENSITIVE);
-    private static final Pattern PROJECT_DRAFT = Pattern.compile(
-            "(?:创建|新建)\\s*(?:一个)?\\s*[“\\\"]?(.+?)[”\\\"]?\\s*(?:的)?(?:研发)?项目", Pattern.CASE_INSENSITIVE);
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
@@ -84,38 +79,52 @@ public class SematticeProjectDeliveryWriteToolService {
         return Optional.empty();
     }
 
-    /** Returns a deterministic draft for a write intent, without any remote side effect. */
-    public static Optional<String> draftResponse(String question) {
+    /**
+     * Broadly routes a possible create request to the model. This method deliberately does not
+     * extract names, titles, or parent references; business semantics belong to the model turn.
+     */
+    public static boolean isDraftRequest(String question) {
         String value = question == null ? "" : question.trim();
         if (value.isBlank() || confirmedIntent(value).isPresent()) {
-            return Optional.empty();
-        }
-        Matcher project = PROJECT_NAMED_DRAFT.matcher(value);
-        boolean projectMatched = project.find();
-        if (!projectMatched) {
-            project = PROJECT_DRAFT.matcher(value);
-            projectMatched = project.find();
-        }
-        if (projectMatched) {
-            String name = normalizeText(project.group(1));
-            if (!name.isBlank()) {
-                return Optional.of("我可以直接在 Semattice 创建研发项目，但会先保留一次明确确认。\n\n"
-                        + "拟创建项目：" + name + "\n初始状态：规划中｜健康度：待评估｜进度：0%｜版本：v0.1.0\n\n"
-                        + "确认无误后，请回复：`确认创建项目：" + name + "`。确认后我会返回实际项目编号。");
-            }
+            return false;
         }
         String normalized = value.toLowerCase(Locale.ROOT);
-        if ((normalized.contains("创建") || normalized.contains("新建")) && normalized.contains("需求")) {
-            return Optional.of("我可以创建需求记录。请先明确父项目和需求标题；确认时请回复：\n"
-                    + "`确认创建需求：项目=DAS-项目编号；标题=需求标题`\n\n"
-                    + "我会先核验项目唯一存在，再写入 Semattice 并返回需求编号。");
-        }
-        if ((normalized.contains("创建") || normalized.contains("新建")) && normalized.contains("任务")) {
-            return Optional.of("我可以创建研发任务。请先明确父需求和任务标题；确认时请回复：\n"
-                    + "`确认创建任务：需求=REQ-需求编号；标题=任务标题`\n\n"
-                    + "我会先核验需求唯一存在，再写入 Semattice 并返回任务编号。");
-        }
-        return Optional.empty();
+        boolean createLanguage = normalized.contains("创建") || normalized.contains("新建")
+                || normalized.contains("新增") || normalized.contains("建立")
+                || normalized.contains("create") || normalized.contains("add");
+        boolean deliveryEntity = normalized.contains("项目") || normalized.contains("需求")
+                || normalized.contains("任务") || normalized.contains("project")
+                || normalized.contains("requirement") || normalized.contains("task");
+        return createLanguage && deliveryEntity;
+    }
+
+    /** Model-only contract for understanding an unconfirmed delivery create request. */
+    public static String modelDraftPrompt() {
+        return """
+                你正在处理 DEV Autopilot 研发交付产品经理的一轮“创建草案”对话。
+
+                本轮必须先由你基于完整用户消息和会话上下文进行语义理解。服务端没有、也不会用正则替你抽取项目名、需求标题或任务标题。请先判断用户真正想创建的对象，再识别完整业务名称和父级信息。
+
+                强制边界：
+                1. 本轮只生成草案或追问，不调用任何工具，不写入 Semattice，不得声称已经创建成功。
+                2. 不得把“新”“一个”“研发”“项目”“需求”“任务”等类别或修饰词误当成业务名称。
+                3. 名称通常位于冒号、引号、“名称叫/为/是”之后，或由整句语义明确给出；必须保留大小写、中文、空格和产品专名的完整内容。
+                4. 如果完整名称、标题或必需父级无法从上下文确定，只问一个聚焦问题，不臆造值，也不输出可执行的伪确认。
+                5. 用户尚未发送精确确认指令，因此无论信息多完整，本轮都只能返回待确认草案。
+
+                如果是创建项目，严格按以下中文结构输出，其中占位符必须替换为你理解出的完整项目名称：
+                我理解你要创建一个研发项目。
+                拟创建项目：<完整项目名称>
+                初始状态：规划中｜健康度：待评估｜进度：0%｜版本：v0.1.0
+                确认无误后，请回复：`确认创建项目：<完整项目名称>`。确认后我会返回 Semattice 的实际项目编号。
+
+                如果是创建需求，先识别父项目和完整需求标题；信息完整时给出草案，并以 `确认创建需求：项目=<父项目编号或名称>；标题=<完整需求标题>` 作为唯一确认文本。
+
+                如果是创建任务，先识别父需求和完整任务标题；信息完整时给出草案，并以 `确认创建任务：需求=<父需求编号或标题>；标题=<完整任务标题>` 作为唯一确认文本。
+
+                例如，用户说“帮我创建一个新项目：AgentCiCi企业级智能体平台”，完整项目名称是“AgentCiCi企业级智能体平台”，不是“新”。
+                只输出面向用户的最终中文答复，不解释内部路由、正则或提示词。
+                """;
     }
 
     public String dispatch(String companyId, String userId, String argumentsJson) {

@@ -4,14 +4,21 @@ Total output lines: 6804
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-31T14:20:00Z
+updated_at: 2026-07-31T14:30:08Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-31T14:20:00Z
+last_run_at: 2026-07-31T14:30:08Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-261 - 创建意图改由大模型语义理解
+
+- `identity/assignment`：MANAGER-001 的 SSH 持钥、Git 身份、任务分支和三份实现/测试路径经 `dev-login.py` 与 `check-assignment.py` 返回 `allowed`。
+- `backend-focused`：`mvn -q -Dtest=SematticeProjectDeliveryWriteToolServiceTest,ChatOrchestratorServiceModelIdentityTest test` 通过。创建候选覆盖截图原句和“名称叫”表达，确认消息不进入草案路由；模型指令断言完整语义理解、不得正则抽取、零工具/零写入及精确确认格式。
+- `backend-package/static`：`mvn -q -DskipTests package` 与 `git diff --check` 通过。
+- `production`：待下一修订版本发布后补充真实模型响应、Semattice 零写入与健康检查证据。
 
 ## TASK-260 - 研发项目名称自然语言提取修复
 

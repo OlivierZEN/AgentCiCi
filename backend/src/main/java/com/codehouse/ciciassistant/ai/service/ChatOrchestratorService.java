@@ -500,17 +500,22 @@ public class ChatOrchestratorService {
         Optional<String> forcedProjectDeliveryWriteAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty()
                 : appendForcedSematticeProjectDeliveryWriteAnswer(
                 messages, companyId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
-        boolean forcedProjectDeliveryQuery = forcedProjectDeliveryWriteAnswer.isEmpty() && !modeDecision.suppressesTools() && !planExec.active()
+        boolean projectDeliveryCreateDraftRequested = forcedProjectDeliveryWriteAnswer.isEmpty()
+                && !modeDecision.suppressesTools() && !planExec.active()
+                && appendSematticeProjectDeliveryCreateDraftPrompt(messages, skillContext, question);
+        boolean forcedProjectDeliveryQuery = forcedProjectDeliveryWriteAnswer.isEmpty()
+                && !projectDeliveryCreateDraftRequested && !modeDecision.suppressesTools() && !planExec.active()
                 && appendForcedSematticeProjectDeliveryToolResult(
                 messages, companyId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
-        Optional<String> forcedCrmProductSalesAnswer = forcedProjectDeliveryWriteAnswer.isPresent() || modeDecision.suppressesTools() || planExec.active() ? Optional.empty() : appendForcedCrmProductSalesToolResult(
+        Optional<String> forcedCrmProductSalesAnswer = forcedProjectDeliveryWriteAnswer.isPresent()
+                || projectDeliveryCreateDraftRequested || modeDecision.suppressesTools() || planExec.active() ? Optional.empty() : appendForcedCrmProductSalesToolResult(
                 messages, companyId, userId, sessionId, skillContext, toolCallTraces, runId, question);
         Optional<String> scheduleCadenceClarification = scheduleCadenceClarification(question);
         int maxToolRounds = modeDecision.mode() == AgentRuntimeModeRouter.Mode.LEGACY_REACT
                 ? resolveMaxToolRounds(skillContext.maxToolCalls())
                 : Math.min(resolveMaxToolRounds(skillContext.maxToolCalls()), modeDecision.budget().maxToolRounds());
         String answer = forcedProjectDeliveryWriteAnswer.orElseGet(() -> forcedCrmProductSalesAnswer.orElseGet(() -> scheduleCadenceClarification.orElseGet(() -> runToolLoop(
-                modelName, messages, forcedProjectDeliveryQuery ? List.of() : tools, companyId, userId, sessionId,
+                modelName, messages, forcedProjectDeliveryQuery || projectDeliveryCreateDraftRequested ? List.of() : tools, companyId, userId, sessionId,
                 showThinking, skillContext, maxToolRounds, modelCredentials, modelCallTraces, toolCallTraces, runId))));
         try {
             agentPlanExecCanaryService.completeSynthesis(planExec, clipForTrace(answer, 1024));
@@ -788,16 +793,22 @@ public class ChatOrchestratorService {
                 Optional<String> forcedProjectDeliveryWriteAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty()
                         : appendForcedSematticeProjectDeliveryWriteAnswer(
                         messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
-                boolean forcedProjectDeliveryQuery = forcedProjectDeliveryWriteAnswer.isEmpty() && !modeDecision.suppressesTools() && !planExec.active()
+                boolean projectDeliveryCreateDraftRequested = forcedProjectDeliveryWriteAnswer.isEmpty()
+                        && !modeDecision.suppressesTools() && !planExec.active()
+                        && appendSematticeProjectDeliveryCreateDraftPrompt(messages, skillContext, question);
+                boolean forcedProjectDeliveryQuery = forcedProjectDeliveryWriteAnswer.isEmpty()
+                        && !projectDeliveryCreateDraftRequested && !modeDecision.suppressesTools() && !planExec.active()
                         && appendForcedSematticeProjectDeliveryToolResult(
                         messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
-                Optional<String> forcedCrmProductSalesAnswer = forcedProjectDeliveryWriteAnswer.isPresent() || modeDecision.suppressesTools() || planExec.active() ? Optional.empty() : appendForcedCrmProductSalesToolResult(
+                Optional<String> forcedCrmProductSalesAnswer = forcedProjectDeliveryWriteAnswer.isPresent()
+                        || projectDeliveryCreateDraftRequested || modeDecision.suppressesTools() || planExec.active() ? Optional.empty() : appendForcedCrmProductSalesToolResult(
                         messages, companyId, userId, sessionId, skillContext, toolCallTraces, runId, question);
                 Optional<String> scheduleCadenceClarification = scheduleCadenceClarification(question);
                 int maxToolRounds = modeDecision.mode() == AgentRuntimeModeRouter.Mode.LEGACY_REACT
                         ? resolveMaxToolRounds(skillContext.maxToolCalls())
                         : Math.min(resolveMaxToolRounds(skillContext.maxToolCalls()), modeDecision.budget().maxToolRounds());
-                boolean pendingApprovalsUsed = forcedProjectDeliveryWriteAnswer.isEmpty() && forcedCrmProductSalesAnswer.isEmpty() && scheduleCadenceClarification.isEmpty()
+                boolean pendingApprovalsUsed = forcedProjectDeliveryWriteAnswer.isEmpty()
+                        && !projectDeliveryCreateDraftRequested && forcedCrmProductSalesAnswer.isEmpty() && scheduleCadenceClarification.isEmpty()
                         && resolveToolCalls(
                         modelName, messages, forcedProjectDeliveryQuery ? List.of() : tools, companyId, userId, sessionId,
                         showThinking, skillContext, emitter, maxToolRounds, modelCredentials, modelCallTraces,
@@ -1510,10 +1521,7 @@ public class ChatOrchestratorService {
         return true;
     }
 
-    /**
-     * Creation is server-routed rather than model-selected. A draft is side-effect free; a write is
-     * possible only when the current user message matches one of the explicit confirmation forms.
-     */
+    /** A confirmed write is server-routed and possible only for the exact confirmation forms. */
     private Optional<String> appendForcedSematticeProjectDeliveryWriteAnswer(
             List<Map<String, Object>> messages,
             String companyId,
@@ -1531,7 +1539,7 @@ public class ChatOrchestratorService {
         Optional<SematticeProjectDeliveryWriteToolService.CreateIntent> confirmed =
                 SematticeProjectDeliveryWriteToolService.confirmedIntent(question);
         if (confirmed.isEmpty()) {
-            return SematticeProjectDeliveryWriteToolService.draftResponse(question);
+            return Optional.empty();
         }
         String toolResult = executeAndAppendSyntheticToolCall(
                 messages,
@@ -1546,6 +1554,26 @@ public class ChatOrchestratorService {
                 confirmed.get().toArguments(TOOL_RESULT_OBJECT_MAPPER),
                 "auto_semattice_delivery_create_");
         return Optional.of(formatProjectDeliveryWriteResult(toolResult));
+    }
+
+    /**
+     * A broad server-side route prevents create requests from being mistaken for live-data queries;
+     * the model itself receives the full conversation and owns all semantic field understanding.
+     */
+    private boolean appendSematticeProjectDeliveryCreateDraftPrompt(
+            List<Map<String, Object>> messages,
+            ResolvedSkillContext skillContext,
+            String question) {
+        if (skillContext == null || !"dev-autopilot-pm".equalsIgnoreCase(skillContext.agentId())
+                || !skillContext.allowedToolNames().contains(SematticeProjectDeliveryWriteToolService.TOOL_NAME)
+                || !SematticeProjectDeliveryWriteToolService.isDraftRequest(question)) {
+            return false;
+        }
+        messages.add(Map.of(
+                "role", "system",
+                "content", SematticeProjectDeliveryWriteToolService.modelDraftPrompt()
+        ));
+        return true;
     }
 
     private static String formatProjectDeliveryWriteResult(String toolResult) {

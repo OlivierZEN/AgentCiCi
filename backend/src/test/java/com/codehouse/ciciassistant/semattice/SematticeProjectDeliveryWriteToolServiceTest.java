@@ -27,10 +27,12 @@ class SematticeProjectDeliveryWriteToolServiceTest {
 
     @Test
     void returnsDraftUntilExactProjectConfirmationThenCreatesWithDelegatedToken() throws Exception {
-        assertThat(SematticeProjectDeliveryWriteToolService.draftResponse("现在创建一个棕榈地的研发项目"))
-                .hasValueSatisfying(value -> assertThat(value).contains("确认创建项目：棕榈地"));
+        assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest("现在创建一个棕榈地的研发项目"))
+                .isTrue();
         assertThat(SematticeProjectDeliveryWriteToolService.confirmedIntent("确认创建项目：棕榈地"))
                 .hasValueSatisfying(intent -> assertThat(intent.operation()).isEqualTo("create_project"));
+        assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest("确认创建项目：棕榈地"))
+                .isFalse();
 
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
@@ -57,14 +59,26 @@ class SematticeProjectDeliveryWriteToolServiceTest {
     }
 
     @Test
-    void extractsCompleteProjectNameWhenUserSaysProjectNameIs() {
-        assertThat(SematticeProjectDeliveryWriteToolService.draftResponse(
-                "现在创建一个研发项目名称叫：AgentCiCi企业级智能体平台"))
-                .hasValueSatisfying(value -> {
-                    assertThat(value).contains("拟创建项目：AgentCiCi企业级智能体平台");
-                    assertThat(value).contains("确认创建项目：AgentCiCi企业级智能体平台");
-                    assertThat(value).doesNotContain("确认创建项目：研发");
-                });
+    void routesNaturalCreateLanguageWithoutExtractingBusinessNames() {
+        assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest(
+                "现在创建一个研发项目名称叫：AgentCiCi企业级智能体平台")).isTrue();
+        assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest(
+                "帮我创建一个新项目：AgentCiCi企业级智能体平台")).isTrue();
+        assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest(
+                "新增需求：为 AgentCiCi 企业级智能体平台提供组织级智能体治理")).isTrue();
+        assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest("现在有哪些项目在执行"))
+                .isFalse();
+    }
+
+    @Test
+    void modelDraftPromptRequiresFullSemanticUnderstandingAndNoWrite() {
+        String prompt = SematticeProjectDeliveryWriteToolService.modelDraftPrompt();
+
+        assertThat(prompt).contains("基于完整用户消息和会话上下文进行语义理解");
+        assertThat(prompt).contains("服务端没有、也不会用正则替你抽取项目名");
+        assertThat(prompt).contains("完整项目名称是“AgentCiCi企业级智能体平台”，不是“新”");
+        assertThat(prompt).contains("不调用任何工具，不写入 Semattice");
+        assertThat(prompt).contains("确认创建项目：<完整项目名称>");
     }
 
     @Test
