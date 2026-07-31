@@ -130,7 +130,8 @@ public class SkillResolverService {
         List<SkillDefinitionEntity> entities = pinnedSkillRefs.isEmpty()
                 ? resolveSkillEntities(companyId, agentId, effectiveSkillCodes)
                 : List.of();
-        if (!evaluationMode && pinnedSkillRefs.isEmpty() && entities.isEmpty() && !"cici-system".equals(agentId)) {
+        if (!evaluationMode && pinnedSkillRefs.isEmpty() && entities.isEmpty()
+                && !"cici-system".equals(agentId) && !isDevAutopilotProductManager(agentId)) {
             agentId = "cici-system";
             capability = agentCapabilityResolverService.resolve(companyId, agentId, List.of());
             publishedRuntimeBinding = resolvePublishedRuntimeBinding(companyId, agentId);
