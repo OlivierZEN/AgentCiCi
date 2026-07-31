@@ -1,0 +1,46 @@
+task_id: TASK-257
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-31T00:10:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-150-dev-autopilot-launcher-entry.md
+task_status_path: .claw/tasks/TASK-257.md
+branch: codex/TASK-257-dev-autopilot-launcher-entry
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - frontend/src/assistant/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/developers/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+scope_files:
+  - frontend/src/assistant/AssistantApp.tsx
+  - frontend/src/assistant/AssistantApp.test.ts
+  - docs/specs/FEAT-150-dev-autopilot-launcher-entry.md
+  - .claw/tasks/TASK-257.md
+  - .claw/assignments/TASK-257.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+touch_policy: exclusive
+shared_contracts:
+  - AgentCiCi authenticated browser session contract
+  - DEV Autopilot independent deployment URL contract
+task_boundary:
+  - "在 AI应用启动器中增加 DEV Autopilot 外部入口。"
+  - "点击后同页跳转到已部署 DEV Autopilot。"
+  - "不更改认证、后台或 Semattice 契约。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
+signature: "MANAGER-001; user requested DEV Autopilot entry in the AgentCiCi AI application launcher on 2026-07-31."

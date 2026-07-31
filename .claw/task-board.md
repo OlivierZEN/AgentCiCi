@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-30T15:00:00Z
+updated_at: 2026-07-31T00:25:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,16 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-257 - DEV Autopilot 启动器入口
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `frontend-agent`
+- spec_path: `docs/specs/FEAT-150-dev-autopilot-launcher-entry.md`
+- task_status_path: `.claw/tasks/TASK-257.md`
+- assignment_path: `.claw/assignments/TASK-257.yaml`
+- next_action: 合并主线、发布生产并复核独立应用跳转目标。
 
 ### TASK-256 - Semattice 元数据独立审批凭据
 

@@ -13,6 +13,13 @@ last_run_status: partial
 
 # Test Report
 
+## TASK-257 - DEV Autopilot 启动器入口
+
+- `identity/assignment`：MANAGER-001 的 SSH 持钥、Git 身份、`codex/TASK-257-dev-autopilot-launcher-entry` 分支以及菜单、测试、规格与状态文件范围均经 `dev-login.py` / `check-assignment.py` 返回 `allowed`。
+- `frontend-focused`：`npm test -- --run src/assistant/AssistantApp.test.ts` 通过（1 文件 / 1 test），覆盖“DEV Autopilot / 研发交付 / 研”与固定独立应用 URL。
+- `frontend-regression/build`：`npm test` 通过（32 文件 / 199 tests）；`npm run build` 和 `git diff --check` 通过。构建仅输出既有 Vite 大 bundle 提示。
+- `production-pending`：将在用户授权的生产发布后确认镜像、后端健康、独立应用公网目标以及受保护桌面启动器的真实点击跳转；不伪造已登录会话。
+
 ## TASK-254 - company_id 迁移完整性审计与遗留修复
 
 - `identity/assignment`：`check-assignment.py` 与 `dev-login.py` 均返回 `allowed`；MANAGER-001 的 SSH 持钥、Git 身份、任务分支及账单/脚本/状态文件范围已验证。
