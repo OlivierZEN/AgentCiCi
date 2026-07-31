@@ -23,3 +23,4 @@ spec_path: docs/specs/FEAT-152-dev-autopilot-pm-confirmed-record-creation.md
 
 - 已发布生产 `2.8.32 / 2e42ed3ec926`；backend/frontend 与四个基础服务均健康，`/actuator/health=UP`、版本接口返回 2.8.32。
 - 线上验证：未确认的“现在创建一个棕榈地的研发项目”只返回草案；确认后依次创建 `DAS-00B30667`、`REQ-02F5F798` 和“搭建项目启动页”。智能体实时查询及 Semattice 记录回读均确认父子关系正确。
+- 线上目标智能体的持久化系统提示词已同步为确认式创建规则。

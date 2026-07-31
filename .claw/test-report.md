@@ -21,6 +21,7 @@ last_run_status: passed
 - `state-validation`：本任务前端和任务状态格式已通过任务范围检查；全量 `validate-state.py` 仍报告既有历史规格/任务板格式债务，未改写不在本任务范围内的历史文档。
 - `production-2.8.32`：backend/frontend 不可变镜像均已 inspect；发布前备份的 `acr.env`、PostgreSQL、KB、Qdrant 均非空。仅重建 backend/frontend，六容器健康，`/actuator/health` 为 `UP`，版本接口为 `2.8.32 / 2e42ed3ec926`。
 - `live-confirmation-gate`：线上受权会话对“现在创建一个棕榈地的研发项目”仅返回草案与精确确认指令；“确认创建项目：棕榈地”创建 `DAS-00B30667`。继续确认创建 `REQ-02F5F798 / 项目启动工作台` 与“搭建项目启动页”均成功。智能体实时查询显示 1 个需求、1 个任务；Semattice 回读确认需求 `project_id`、任务 `project_id` / `requirement_id` 均指向刚创建记录。未输出或保存可复用令牌。
+- `agent-configuration`：目标租户 `dev-autopilot-pm` 的持久化系统提示词已更新为确认式创建规则；更新结果为单条命中，不含凭据或令牌。
 
 ## TASK-257 - DEV Autopilot 启动器入口
 

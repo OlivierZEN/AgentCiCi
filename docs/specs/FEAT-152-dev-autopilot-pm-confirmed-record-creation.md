@@ -73,6 +73,7 @@ updated_by: MANAGER-001
 ## 实现进展
 
 - 已发布 AgentCiCi `2.8.32 / 2e42ed3ec926`。生产有效工具集含只读查询和受控创建；创建工具在平台治理中为 enabled，但不在模型 function schema 中。
+- 目标租户 `dev-autopilot-pm` 的持久化系统提示词已同步为确认式创建策略，避免历史“只读”表述与运行时策略冲突。
 - 线上验证先返回“棕榈地”项目草案，确认后实际创建 `DAS-00B30667`；随后创建 `REQ-02F5F798 / 项目启动工作台` 与任务“搭建项目启动页”。Semattice 直接回读确认需求 `project_id` 和任务 `project_id` / `requirement_id` 均指向正确记录。
 - 智能体随后实时查询并正确汇总该项目、1 条需求和 1 条任务。
 
