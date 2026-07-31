@@ -13,6 +13,7 @@ import com.codehouse.ciciassistant.mcp.service.McpServerService;
 import com.codehouse.ciciassistant.memory.service.UserMemoryService;
 import com.codehouse.ciciassistant.platform.service.PlatformGovernanceService;
 import com.codehouse.ciciassistant.security.service.SafetyGatewayService;
+import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryToolService;
 import com.codehouse.ciciassistant.skill.service.SkillApiToolService;
 import com.codehouse.ciciassistant.tool.service.BuiltinToolCatalog;
 import com.codehouse.ciciassistant.tool.tavily.TavilyToolService;
@@ -50,6 +51,7 @@ class ToolOrchestratorServiceTest {
                 tavily,
                 governance,
                 skillApi,
+                mock(SematticeProjectDeliveryToolService.class),
                 allowSafetyGateway(),
                 objectMapper
         );
@@ -91,7 +93,7 @@ class ToolOrchestratorServiceTest {
         ToolOrchestratorService orchestrator = new ToolOrchestratorService(
                 mcp, mock(CloudccOpenApiService.class), mock(CrmProductSalesAnalysisToolService.class),
                 mock(EmailToolService.class), mock(UserMemoryService.class), mock(TavilyToolService.class),
-                governance, skillApi, allowSafetyGateway(), new ObjectMapper().findAndRegisterModules());
+                governance, skillApi, mock(SematticeProjectDeliveryToolService.class), allowSafetyGateway(), new ObjectMapper().findAndRegisterModules());
         orchestrator.setAssistantScheduleToolService(schedules);
 
         assertThat(orchestrator.getToolDefinitions("org-1", List.of("tavily_search"), List.of()))

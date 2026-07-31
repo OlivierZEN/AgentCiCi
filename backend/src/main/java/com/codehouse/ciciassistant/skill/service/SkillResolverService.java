@@ -9,6 +9,7 @@ import com.codehouse.ciciassistant.agent.service.AgentWorkflowSkillRefService;
 import com.codehouse.ciciassistant.ai.service.ChatSessionStateService;
 import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService;
 import com.codehouse.ciciassistant.platform.service.PlatformGovernanceService;
+import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryToolService;
 import com.codehouse.ciciassistant.skill.domain.AgentSkillBindingEntity;
 import com.codehouse.ciciassistant.skill.domain.AgentSkillBindingRepository;
 import com.codehouse.ciciassistant.skill.domain.SkillDefinitionEntity;
@@ -149,6 +150,9 @@ public class SkillResolverService {
         String agentSystemPrompt = agentDef.map(AgentDefinitionEntity::getSystemPrompt)
                 .filter(s -> s != null && !s.isBlank())
                 .orElse(null);
+        if (isDevAutopilotProductManager(agentId)) {
+            agentSystemPrompt = appendProjectDeliveryRetrievalPolicy(agentSystemPrompt);
+        }
         String agentModel = agentDef.map(AgentDefinitionEntity::getModel)
                 .filter(s -> s != null && !s.isBlank())
                 .orElse(null);
@@ -184,7 +188,11 @@ public class SkillResolverService {
                         item.referenceMode()
                 ))
                 .toList();
-        List<String> agentDirectToolNames = List.copyOf(ToolNameNormalizer.canonicalizeAll(capability.agentDirectToolNames()));
+        LinkedHashSet<String> directTools = new LinkedHashSet<>(ToolNameNormalizer.canonicalizeAll(capability.agentDirectToolNames()));
+        if (isDevAutopilotProductManager(agentId)) {
+            directTools.add(SematticeProjectDeliveryToolService.TOOL_NAME);
+        }
+        List<String> agentDirectToolNames = List.copyOf(directTools);
         List<String> skillDeclaredToolNames = pinnedSkillRefs.isEmpty()
                 ? List.copyOf(capability.skillDeclaredToolNames())
                 : List.copyOf(ToolNameNormalizer.canonicalizeAll(
@@ -346,6 +354,20 @@ public class SkillResolverService {
         toolNames.addAll(CICI_DEFAULT_DISCOVERY_TOOLS);
         toolNames.addAll(ToolNameNormalizer.canonicalizeAll(
                 List.of(TavilyToolService.TOOL_SEARCH, TavilyToolService.TOOL_EXTRACT)));
+    }
+
+    private static boolean isDevAutopilotProductManager(String agentId) {
+        return "dev-autopilot-pm".equalsIgnoreCase(agentId);
+    }
+
+    private static String appendProjectDeliveryRetrievalPolicy(String prompt) {
+        String policy = "你是 DEV Autopilot 的研发交付产品经理。只要用户询问项目、需求、任务、工时、进度或变更的当前事实，"
+                + "必须先调用 semattice_project_delivery_query，并仅依据其返回的 Semattice 实时数据总结。"
+                + "若工具失败，要如实说明 Semattice 检索失败；不得声称无法访问项目管理系统，也不得编造项目事实。";
+        if (prompt == null || prompt.isBlank()) {
+            return policy;
+        }
+        return prompt + "\n\n" + policy;
     }
 
     private static List<String> splitCsv(String raw) {

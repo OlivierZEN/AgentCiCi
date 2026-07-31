@@ -8,6 +8,7 @@ import com.codehouse.ciciassistant.mcp.service.McpServerService;
 import com.codehouse.ciciassistant.mcp.service.McpServerService.ResolvedTool;
 import com.codehouse.ciciassistant.platform.service.PlatformGovernanceService;
 import com.codehouse.ciciassistant.security.service.SafetyGatewayService;
+import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryToolService;
 import com.codehouse.ciciassistant.skill.service.SkillApiToolService;
 import com.codehouse.ciciassistant.tool.service.ToolNameNormalizer;
 import com.codehouse.ciciassistant.tool.tavily.TavilyToolService;
@@ -46,6 +47,7 @@ public class ToolOrchestratorService {
     private final TavilyToolService tavilyToolService;
     private final PlatformGovernanceService platformGovernanceService;
     private final SkillApiToolService skillApiToolService;
+    private final SematticeProjectDeliveryToolService sematticeProjectDeliveryToolService;
     private final SafetyGatewayService safetyGatewayService;
     private final ObjectMapper objectMapper;
     private AssistantScheduleToolService assistantScheduleToolService;
@@ -58,6 +60,7 @@ public class ToolOrchestratorService {
                                    TavilyToolService tavilyToolService,
                                    PlatformGovernanceService platformGovernanceService,
                                    SkillApiToolService skillApiToolService,
+                                   SematticeProjectDeliveryToolService sematticeProjectDeliveryToolService,
                                    SafetyGatewayService safetyGatewayService,
                                    ObjectMapper objectMapper) {
         this.mcpServerService = mcpServerService;
@@ -68,6 +71,7 @@ public class ToolOrchestratorService {
         this.tavilyToolService = tavilyToolService;
         this.platformGovernanceService = platformGovernanceService;
         this.skillApiToolService = skillApiToolService;
+        this.sematticeProjectDeliveryToolService = sematticeProjectDeliveryToolService;
         this.safetyGatewayService = safetyGatewayService;
         this.objectMapper = objectMapper;
     }
@@ -116,6 +120,9 @@ public class ToolOrchestratorService {
                 CrmProductSalesAnalysisToolService.toolDescription(),
                 CrmProductSalesAnalysisToolService.toolSchema(objectMapper),
                 companyId);
+        addBuiltInTool(result, normalizedAllowedToolNames, SematticeProjectDeliveryToolService.TOOL_NAME,
+                SematticeProjectDeliveryToolService.toolDescription(),
+                SematticeProjectDeliveryToolService.toolSchema(objectMapper), companyId);
 
         // Memory built-in tools (always available, no skill restriction)
         result.add(buildMemoryRememberTool());
@@ -268,6 +275,9 @@ public class ToolOrchestratorService {
         // Native built-in tools
         if (CrmProductSalesAnalysisToolService.TOOL_NAME.equals(canonicalToolName)) {
             return crmProductSalesAnalysisToolService.dispatch(companyId, userId, argumentsJson);
+        }
+        if (SematticeProjectDeliveryToolService.TOOL_NAME.equals(canonicalToolName)) {
+            return sematticeProjectDeliveryToolService.dispatch(companyId, userId, safeArgumentsJson);
         }
         if (CloudccOpenApiService.toolName().equals(canonicalToolName)) {
             return safeToolResult(companyId, userId, canonicalToolName,

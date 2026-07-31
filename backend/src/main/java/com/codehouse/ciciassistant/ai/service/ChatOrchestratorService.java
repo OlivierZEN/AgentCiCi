@@ -33,6 +33,7 @@ import com.codehouse.ciciassistant.model.service.ModelProviderService;
 import com.codehouse.ciciassistant.ops.service.AuditService;
 import com.codehouse.ciciassistant.kb.service.KbAccessControlService;
 import com.codehouse.ciciassistant.security.service.SafetyGatewayService;
+import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryToolService;
 import com.codehouse.ciciassistant.skill.service.SkillPromptAssembler;
 import com.codehouse.ciciassistant.skill.service.SkillResolverService;
 import com.codehouse.ciciassistant.skill.service.BuiltinSkillDocumentService;
@@ -494,6 +495,8 @@ public class ChatOrchestratorService {
         if (!modeDecision.suppressesTools() && !planExec.active()) {
             appendConfirmedPendingEmailBodyToolResult(
                     messages, companyId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
+            appendForcedSematticeProjectDeliveryToolResult(
+                    messages, companyId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
         }
         Optional<String> forcedCrmProductSalesAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty() : appendForcedCrmProductSalesToolResult(
                 messages, companyId, userId, sessionId, skillContext, toolCallTraces, runId, question);
@@ -775,6 +778,8 @@ public class ChatOrchestratorService {
                         withRunId(trustedMemoryRuntimeContextService.traceMetadata(), runId)));
                 if (!modeDecision.suppressesTools() && !planExec.active()) {
                     appendConfirmedPendingEmailBodyToolResult(
+                            messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
+                    appendForcedSematticeProjectDeliveryToolResult(
                             messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
                 }
                 Optional<String> forcedCrmProductSalesAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty() : appendForcedCrmProductSalesToolResult(
@@ -1455,6 +1460,58 @@ public class ChatOrchestratorService {
                 arguments.get(),
                 "auto_crm_sales_");
         return Optional.of(crmProductSalesAnswerFormatter.formatJson(toolResult));
+    }
+
+    /**
+     * Project-delivery facts must be fetched before the model starts its tool-planning round. This
+     * prevents the product-manager agent from falling back to a generic “I cannot access projects” answer.
+     */
+    private void appendForcedSematticeProjectDeliveryToolResult(
+            List<Map<String, Object>> messages,
+            String companyId,
+            String userId,
+            String sessionId,
+            ResolvedSkillContext skillContext,
+            SseEmitter emitter,
+            List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces,
+            String runId,
+            String question) {
+        if (!isSematticeProjectDeliveryFactQuestion(skillContext, question)) {
+            return;
+        }
+        executeAndAppendSyntheticToolCall(
+                messages,
+                companyId,
+                userId,
+                sessionId,
+                skillContext,
+                emitter,
+                toolCallTraces,
+                runId,
+                SematticeProjectDeliveryToolService.TOOL_NAME,
+                "{\"focus\":\"overview\"}",
+                "auto_semattice_delivery_");
+        messages.add(Map.of(
+                "role", "system",
+                "content", "The Semattice live-delivery query has completed. Answer the user in concise Chinese using its tool result. "
+                        + "Do not claim that you cannot access the project-management system and do not invent facts beyond the result."
+        ));
+    }
+
+    static boolean isSematticeProjectDeliveryFactQuestion(ResolvedSkillContext skillContext, String question) {
+        if (skillContext == null || !"dev-autopilot-pm".equalsIgnoreCase(skillContext.agentId())
+                || !skillContext.allowedToolNames().contains(SematticeProjectDeliveryToolService.TOOL_NAME)) {
+            return false;
+        }
+        String normalized = question == null ? "" : question.trim().toLowerCase(Locale.ROOT);
+        if (normalized.isBlank()) {
+            return false;
+        }
+        return normalized.contains("项目") || normalized.contains("需求") || normalized.contains("任务")
+                || normalized.contains("工时") || normalized.contains("进度") || normalized.contains("变更")
+                || normalized.contains("迭代") || normalized.contains("交付") || normalized.contains("执行中")
+                || normalized.contains("进行中") || normalized.contains("project") || normalized.contains("requirement")
+                || normalized.contains("task") || normalized.contains("worklog") || normalized.contains("change");
     }
 
     private Optional<PendingEmailState> pendingEmailFromState(String companyId, String sessionId) {
