@@ -43,6 +43,9 @@ public class SematticeProjectDeliveryWriteToolService {
     private static final Pattern CONFIRM_TASK = Pattern.compile(
             "^\\s*(?:请)?(?:确认|确定)创建任务[：:]\\s*需求\\s*[=：:]\\s*([^；;]+?)\\s*[；;]\\s*标题\\s*[=：:]\\s*(.+?)\\s*$",
             Pattern.CASE_INSENSITIVE);
+    private static final Pattern PROJECT_NAMED_DRAFT = Pattern.compile(
+            "(?:创建|新建)\\s*(?:一个)?\\s*(?:研发)?项目\\s*(?:名称)?\\s*(?:(?:叫|为|是)\\s*(?:[：:])?|[：:])\\s*[“\\\"]?(.+?)[”\\\"]?\\s*$",
+            Pattern.CASE_INSENSITIVE);
     private static final Pattern PROJECT_DRAFT = Pattern.compile(
             "(?:创建|新建)\\s*(?:一个)?\\s*[“\\\"]?(.+?)[”\\\"]?\\s*(?:的)?(?:研发)?项目", Pattern.CASE_INSENSITIVE);
 
@@ -87,8 +90,13 @@ public class SematticeProjectDeliveryWriteToolService {
         if (value.isBlank() || confirmedIntent(value).isPresent()) {
             return Optional.empty();
         }
-        Matcher project = PROJECT_DRAFT.matcher(value);
-        if (project.find()) {
+        Matcher project = PROJECT_NAMED_DRAFT.matcher(value);
+        boolean projectMatched = project.find();
+        if (!projectMatched) {
+            project = PROJECT_DRAFT.matcher(value);
+            projectMatched = project.find();
+        }
+        if (projectMatched) {
             String name = normalizeText(project.group(1));
             if (!name.isBlank()) {
                 return Optional.of("我可以直接在 Semattice 创建研发项目，但会先保留一次明确确认。\n\n"

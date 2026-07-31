@@ -57,6 +57,17 @@ class SematticeProjectDeliveryWriteToolServiceTest {
     }
 
     @Test
+    void extractsCompleteProjectNameWhenUserSaysProjectNameIs() {
+        assertThat(SematticeProjectDeliveryWriteToolService.draftResponse(
+                "现在创建一个研发项目名称叫：AgentCiCi企业级智能体平台"))
+                .hasValueSatisfying(value -> {
+                    assertThat(value).contains("拟创建项目：AgentCiCi企业级智能体平台");
+                    assertThat(value).contains("确认创建项目：AgentCiCi企业级智能体平台");
+                    assertThat(value).doesNotContain("确认创建项目：研发");
+                });
+    }
+
+    @Test
     void rejectsCallerSuppliedTenantBeforeAnyRemoteCall() throws Exception {
         SematticeProjectDeliveryWriteToolService service = new SematticeProjectDeliveryWriteToolService(
                 RestClient.builder(), objectMapper, mock(UserRepository.class), mock(OfficialAccessTokenService.class),
