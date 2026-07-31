@@ -209,13 +209,14 @@ type PublishedAgentPayload = {
 type WorkbenchMetric = { label: string; value: string };
 
 type AiApplication = {
-  code: "meeting-minutes" | "customer-insight" | "data-insight" | "zhiwei-portrait" | "customer-workbench";
+  code: "meeting-minutes" | "customer-insight" | "data-insight" | "zhiwei-portrait" | "customer-workbench" | "dev-autopilot";
   name: string;
   shortName: string;
   status: string;
   summary: string;
   description: string;
   meta: string;
+  externalUrl?: string;
 };
 
 type WorkbenchOverviewItem = {
@@ -722,7 +723,9 @@ const WORKBENCH_METRICS_DEFAULT: WorkbenchMetric[] = [
   { label: "待跟进", value: "—" },
 ];
 
-const AI_APPLICATIONS: AiApplication[] = [
+export const DEV_AUTOPILOT_URL = "https://x.agentcici.com/devautopilot/";
+
+export const AI_APPLICATIONS: AiApplication[] = [
   {
     code: "meeting-minutes",
     name: "AI 听记",
@@ -751,6 +754,16 @@ const AI_APPLICATIONS: AiApplication[] = [
     meta: "CRM 洞察 · 业务闭环",
   },
   {
+    code: "dev-autopilot",
+    name: "DEV Autopilot",
+    shortName: "研",
+    status: "研发交付",
+    summary: "需求澄清、任务制定、变更与工时汇总。",
+    description: "进入研发交付自驱系统，由产品经理智能体协同完成需求到交付的闭环。",
+    meta: "研发交付 · AI 驱动",
+    externalUrl: DEV_AUTOPILOT_URL,
+  },
+  {
     code: "data-insight",
     name: "数据洞察",
     shortName: "数",
@@ -770,10 +783,15 @@ const AI_APPLICATIONS: AiApplication[] = [
   },
 ];
 
+export function isExternalAiApplication(application: AiApplication) {
+  return Boolean(application.externalUrl);
+}
+
 function aiApplicationCodeFromLocation(): AiApplication["code"] | "" {
   if (typeof window === "undefined") return "";
   const code = new URLSearchParams(window.location.search).get("aiApp")?.trim();
-  return AI_APPLICATIONS.some((item) => item.code === code) ? (code as AiApplication["code"]) : "";
+  const application = AI_APPLICATIONS.find((item) => item.code === code);
+  return application && !isExternalAiApplication(application) ? application.code : "";
 }
 
 function cloudccSsoTicketFromLocation() {
@@ -3958,6 +3976,11 @@ export default function AssistantApp() {
                   type="button"
                   className={`cici-ai-apps-flyout__item${isActive ? " is-active" : ""}`}
                   onClick={() => {
+                    if (app.externalUrl) {
+                      setAiAppsMenuOpen(false);
+                      window.location.assign(app.externalUrl);
+                      return;
+                    }
                     setActiveAiAppCode(app.code);
                     setWorkspaceTab("aiApps");
                     setAiAppsMenuOpen(false);

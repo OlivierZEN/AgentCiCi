@@ -5,7 +5,7 @@ title: DEV Autopilot AI 应用入口
 status: active
 owner_role: frontend-agent
 task_ids: TASK-257
-updated_at: 2026-07-31T00:10:00Z
+updated_at: 2026-07-31T00:25:00Z
 updated_by: MANAGER-001
 ---
 
@@ -29,3 +29,9 @@ updated_by: MANAGER-001
 2. 点击入口后当前页面跳转至 `https://x.agentcici.com/devautopilot/`。
 3. 既有内置应用仍在当前工作台内切换，未受影响。
 4. 定向前端测试、生产构建和桌面端交互验证通过。
+
+## 实施记录
+
+- 启动器数据中新增 `dev-autopilot` 外部应用，使用既有菜单项和主题样式，未新增独立页面或样式分支。
+- 外部项有明确的 `externalUrl`；点击时关闭菜单并在当前页跳转，查询参数不会把它误识别为 AgentCiCi 内置应用。
+- 定向测试覆盖入口名称、辅助标签、标识和目标 URL；全量前端回归与生产构建已通过。生产验收将确认已登录桌面会话中的真实菜单与跳转。

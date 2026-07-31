@@ -24,7 +24,7 @@ protected_paths:
   - infrastructure/**
 scope_files:
   - frontend/src/assistant/AssistantApp.tsx
-  - frontend/src/assistant/AssistantApp.test.tsx
+  - frontend/src/assistant/AssistantApp.test.ts
   - docs/specs/FEAT-150-dev-autopilot-launcher-entry.md
   - .claw/tasks/TASK-257.md
   - .claw/assignments/TASK-257.yaml
