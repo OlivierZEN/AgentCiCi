@@ -13,6 +13,7 @@ allowed_write_roots:
   - backend/src/main/java/com/codehouse/ciciassistant/ai/**
   - backend/src/main/java/com/codehouse/ciciassistant/agent/**
   - backend/src/main/java/com/codehouse/ciciassistant/semattice/**
+  - backend/src/main/java/com/codehouse/ciciassistant/skill/**
   - backend/src/main/java/com/codehouse/ciciassistant/tool/**
   - backend/src/test/java/com/codehouse/ciciassistant/**
   - docs/specs/**
