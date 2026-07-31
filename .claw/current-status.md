@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-31T14:20:00Z
+updated_at: 2026-07-31T14:23:38Z
 updated_by: MANAGER-001
 phase: identity-architecture-implementation
-active_task: TASK-255
-next_action: "继续 TASK-255 的 /app 无会话 OIDC 自动跳转实现与回调验证。"
+active_task: TASK-261
+next_action: "将未确认创建请求改为真实模型语义理解，并以截图原句完成生产在线验证。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-261 / FEAT-153：用户指出创建请求应先由大模型理解。已验证当前草案路径由服务端正则直接生成答复，导致“帮我创建一个新项目：AgentCiCi企业级智能体平台”被截为“新”。本任务改为模型理解完整自然语言，服务端仅保留权限、精确确认与 Semattice 写入门禁。
 
 - TASK-260：已发布生产 `2.8.33 / b680c961b8f6`。项目草案现优先识别“研发项目名称叫/为/是：”等自然表达，不再将“研发”前缀当作名称。线上以用户截图原句验证，完整提取 `AgentCiCi企业级智能体平台` 并仅返回确认草案；确认写入门禁保持不变。
 

@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-31T01:10:00Z
+updated_at: 2026-07-31T14:23:38Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,16 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-261 - 创建意图改由大模型语义理解
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `backend-agent`
+- spec_path: `docs/specs/FEAT-153-llm-delivery-create-intent-understanding.md`
+- task_status_path: `.claw/tasks/TASK-261.md`
+- assignment_path: `.claw/assignments/TASK-261.yaml`
+- next_action: 移除服务端草案名称正则提取，由真实模型理解截图原句并生成完整确认草案。
 
 ### TASK-260 - 研发项目名称自然语言提取修复
 
