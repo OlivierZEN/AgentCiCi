@@ -4,14 +4,24 @@ Total output lines: 6804
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-31T14:39:02Z
+updated_at: 2026-08-01T15:46:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-31T14:39:02Z
+last_run_at: 2026-08-01T15:46:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-262 - DEV Autopilot 受治理机器身份生产验收
+
+- `backend-focused`：机器主体管理服务定向测试与发布基线随 `2.8.38` 通过；生产 backend/frontend 均为 `2.8.38` 且 healthy，Flyway 主体治理表已可回读。
+- `identity-readback`：产品总监全局 mobile 精确为 `18611892001`，account/member、OWNER/ACTIVE 与两台 SERVICE 的 PRIMARY owner 一致；两台 SERVICE 均为 ACTIVE，public ID 与 client ID 稳定。
+- `lifecycle-e2e`：审批 `f1591286-71bb-49ed-b874-80a7c7640fa9` 下执行开发者 Semattice 投影暂停/恢复与 AgentCiCi 主体暂停/恢复；两次暂停后的 CLI 均失败，两次恢复后的 `tasks get` 均成功。
+- `credential-rotation`：生产轮换开发者 client secret；旧 secret 无法取得 Keycloak token，新 secret 可取得 token、交换 OACT 并读取任务；`/opt/devautopilot/secrets/developer.env` 保持 `root:root 0600`，未输出 secret/token。
+- `negative-authorization`：开发者创建项目与读取主体目录均为 HTTP 403；永久撤销能力由定向测试覆盖，未对当前生产开发者执行不可逆操作。
+- `edge-regression`：发现 frontend 只用基础 Compose 重建后未监听 443；恢复 `docker-compose.acr.ssl.yml` 后 80/443 均监听，版本化 Nginx 配置 `nginx -t` 通过，公网 `/devautopilot/` 与 `/devautopilot/api/health` 均为 HTTP 200，OACT JWKS 为 200。
+- `state-validator`：TASK-262/FEAT-154 与完成任务上限未产生错误；仓库级校验仍因大量既有历史规格 frontmatter/status、旧 active/done 卡片和 README/AGENTS 技能块缺失而失败，本任务未扩散修复这些无关历史状态。
 
 ## TASK-261 - 创建意图改由大模型语义理解
 

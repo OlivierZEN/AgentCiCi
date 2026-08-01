@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-01T13:39:26Z
+updated_at: 2026-08-01T15:46:00Z
 updated_by: MANAGER-001
-phase: identity-architecture-implementation
+phase: identity-delivery-complete
 active_task: TASK-262
-next_action: "实现 FEAT-154 的机器主体生命周期管理，并以目标租户完成 DEV Autopilot 产品经理和开发者机器主体开户。"
+next_action: "TASK-262 已完成；保持 2.8.38、机器主体生命周期与 DEV Autopilot HTTPS 入口的生产监控。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-262 / FEAT-154：用户已授权完成 DEV Autopilot 研发身份体系。现有服务主体创建、PRIMARY 人类负责人、一次性 Keycloak secret 和短时 OACT 基线保持不变；本任务补齐查询、轮换、暂停、恢复、撤销、负责人移交和脱敏审计，随后创建产品经理与开发者机器主体并联调 Semattice/CLI。
+- TASK-262 / FEAT-154：已发布生产 `2.8.38` 并完成 DEV Autopilot 研发身份体系。全局用户 `18611892001` 绑定产品总监 HUMAN；产品经理和开发者 SERVICE 均以其为 PRIMARY 人类负责人。管理端已具备查询、密钥轮换、暂停、恢复、永久撤销、负责人移交和脱敏审计；开发者主体在 AgentCiCi 暂停时 CLI 被拒绝，恢复后可用，轮换后旧 secret 失效、新 secret 可完成短时 OACT 与任务读取。HTTPS 入口曾因仅使用基础 Compose 重建而丢失 443，已恢复 SSL override，并将 `/devautopilot/` 动态代理固化到两份版本化 Nginx 配置；公网健康为 200。
 
 - TASK-261 / FEAT-153：已发布生产 `2.8.34 / 84c814b19fe0`。未确认创建请求现由 `onekeytoken/auto` 理解完整自然语言并生成草案，服务端不再正则抽取名称；截图原句正确得到 `AgentCiCi企业级智能体平台`。Trace 显示模型调用 1 次、工具调用 0 次、`WAITING_CONFIRMATION`；Semattice 同名项目计数为 0。精确确认后的 OACT 同租户写入门禁保持不变。
 

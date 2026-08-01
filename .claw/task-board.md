@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-01T13:39:26Z
+updated_at: 2026-08-01T15:46:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,16 +14,6 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
-
-### TASK-262 - DEV Autopilot 受治理机器身份生命周期
-
-- status: `in_progress`
-- priority: `critical`
-- owner_role: `backend-agent`
-- spec_path: `docs/specs/FEAT-154-dev-autopilot-governed-service-identities.md`
-- task_status_path: `.claw/tasks/TASK-262.md`
-- assignment_path: `.claw/assignments/TASK-262.yaml`
-- next_action: 补齐机器主体查询、密钥轮换、暂停、恢复、撤销、负责人移交和审计，并用于 DEV Autopilot 线上身份开户。
 
 ### TASK-261 - 创建意图改由大模型语义理解
 
@@ -1340,6 +1330,16 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Completed Tasks
 
+### TASK-262 - DEV Autopilot 受治理机器身份生命周期
+
+- status: `done`
+- priority: `critical`
+- owner_role: `backend-agent`
+- spec_path: `docs/specs/FEAT-154-dev-autopilot-governed-service-identities.md`
+- task_status_path: `.claw/tasks/TASK-262.md`
+- assignment_path: `.claw/assignments/TASK-262.yaml`
+- next_action: 已以 `2.8.38` 上线；产品总监、产品经理和开发者主体已开户，生命周期、旧密钥失效、CLI 恢复与 HTTPS 入口均完成生产验收。
+
 ### TASK-242 - 顶层租户 company_id 统一
 
 - status: `done`
@@ -1547,28 +1547,6 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - assignment_path: `.claw/assignments/TASK-130.yaml`
 - blocked_by: `none`
 - next_action: `none`; production releases now use `docs/production-release-runbook.md` and `scripts/release-acr.sh` for one canonical version across ACR tags, Git tag, backend metadata, frontend badge, and deploy env.
-
-### TASK-129 - Admin login organization-selection alignment
-
-- status: `done`
-- priority: `high`
-- owner_role: `project-manager`
-- spec_path: `docs/specs/FEAT-024-account-tenant-lifecycle-and-data-retention.md`
-- task_status_path: `.claw/tasks/TASK-129.md`
-- assignment_path: `.claw/assignments/TASK-129.yaml`
-- blocked_by: `none`
-- next_action: `none`; `/admin/login` now removes the orgId field, supports organization selection after account login, and passed desktop/mobile QA.
-
-### TASK-127 - Merge remaining local branches into the current branch
-
-- status: `done`
-- priority: `high`
-- owner_role: `project-manager`
-- spec_path: `docs/specs/FEAT-047-local-branch-integration-pass.md`
-- task_status_path: `.claw/tasks/TASK-127.md`
-- assignment_path: `.claw/assignments/TASK-127.yaml`
-- blocked_by: `none`
-- next_action: `none`; remaining local branches are integrated and the dirty worktree has been restored on `codex/TASK-124-feat-046-platform-tenant-provisioning`.
 
 ## Maintenance Rules
 

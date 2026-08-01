@@ -1,7 +1,7 @@
 ---
 kind: task-archive
 version: 4
-updated_at: 2026-05-21T10:18:00Z
+updated_at: 2026-08-01T15:46:00Z
 updated_by: MANAGER-001
 archive_status: active
 ---
@@ -12,6 +12,8 @@ Historical task cards have been removed from the hot board. Keep details in task
 
 ## Archived Tasks
 
+- TASK-129 — done — Admin login organization-selection alignment; `/admin/login` supports organization selection after account login and passed desktop/mobile QA.
+- TASK-127 — done — Merge remaining local branches into the current branch; historical branch integration and worktree restoration completed.
 - TASK-126 — done — Recover missing FEAT-041 spec
 - TASK-125 — done — Restore database rename to agentcici
 - TASK-123 — done — OpenAPI CloudCC token override and key typing

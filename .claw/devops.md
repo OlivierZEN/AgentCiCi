@@ -1,12 +1,21 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-26T14:05:27Z
+updated_at: 2026-08-01T15:46:00Z
 updated_by: MANAGER-001
 status: active
 ---
 
 # DevOps
+
+## 2026-08-01 TASK-262 / DEV Autopilot 研发身份与 HTTPS 入口
+
+- 当前生产应用版本为 `2.8.38`；`cici-backend` 与 `cici-frontend` 均须保持 healthy。
+- 生产启动 frontend 必须同时使用基础和 SSL override：`docker compose --env-file acr.env -f docker-compose.acr.yml -f docker-compose.acr.ssl.yml up -d --no-deps frontend`。只使用基础 Compose 会移除 443 映射并把 SSL 配置替换为 HTTP 配置。
+- `/devautopilot/` 由版本化 `deploy/nginx.cici.conf` 与 `deploy/nginx.cici.ssl.conf` 动态解析同一 Docker 网络中的 `dev-autopilot:4177`；应用缺失时只让该路由失败，不阻断 AgentCiCi Nginx 启动。
+- 开发者生产凭据位于 `/opt/devautopilot/secrets/developer.env`，必须为 `root:root 0600`。轮换只通过产品总监管理 API 获取一次性新 secret，原子替换文件后验证旧 secret 失败、新 secret 与 CLI 成功；禁止在终端、工单或 Git 中输出值。
+- 生产生命周期演练和密钥轮换前均创建 `0600` 备份；当前轮换前备份为 `/opt/devautopilot/secrets/developer.env.backup.20260801T153334Z-before-lifecycle-rotation`。
+- 健康检查：`https://x.agentcici.com/devautopilot/api/health` 应返回 `status=ok`、`mode=integrated`；`https://x.agentcici.com/.well-known/agentcici-oact-jwks.json` 应返回一枚 `kid=agentcici-oact-20260724` 的 RS256 公钥。
 
 ## CloudCC Embedded Asset
 

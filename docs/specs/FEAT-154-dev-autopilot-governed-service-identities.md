@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-154
 title: DEV Autopilot 受治理机器身份生命周期
-status: approved
+status: implemented
 owner_role: backend-agent
 task_ids: TASK-262
 related_decisions: "AgentCiCi 是全局 Principal 与凭据权威；Semattice 只保存租户投影和授权事实"
 related_issues: none
-updated_at: 2026-08-01T13:39:26Z
+updated_at: 2026-08-01T15:46:00Z
 updated_by: MANAGER-001
 ---
 
@@ -72,5 +72,4 @@ DEV Autopilot 需要一个由人类产品总监负责的产品经理机器主体
 
 ## 实现进展
 
-- 已完成现状审计和契约批准，等待 TASK-262 实现与生产验证。
-
+- 已随 AgentCiCi `2.8.38` 上线并通过 TASK-262 生产验收：两台 SERVICE 已由产品总监负责，查询/轮换/暂停/恢复/撤销/移交/审计齐备，旧 secret 失效与暂停阻断 CLI 均已验证。
