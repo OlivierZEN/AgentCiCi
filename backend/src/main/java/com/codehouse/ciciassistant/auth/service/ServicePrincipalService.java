@@ -3,6 +3,7 @@ package com.codehouse.ciciassistant.auth.service;
 import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.auth.domain.UserRepository;
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
+import com.codehouse.ciciassistant.platform.service.PlatformAuditService;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -24,15 +25,18 @@ public class ServicePrincipalService {
     private final JdbcTemplate jdbcTemplate;
     private final UserRepository userRepository;
     private final KeycloakIdentityProvisioningService keycloak;
+    private final PlatformAuditService audit;
     private final List<String> sematticeAllowedScopes;
 
     public ServicePrincipalService(JdbcTemplate jdbcTemplate,
                                    UserRepository userRepository,
                                    KeycloakIdentityProvisioningService keycloak,
+                                   PlatformAuditService audit,
                                    @Value("${app.auth.official-access.semattice-scopes:}") List<String> sematticeAllowedScopes) {
         this.jdbcTemplate = jdbcTemplate;
         this.userRepository = userRepository;
         this.keycloak = keycloak;
+        this.audit = audit;
         this.sematticeAllowedScopes = sematticeAllowedScopes == null ? List.of() : sematticeAllowedScopes.stream()
                 .filter(scope -> scope != null && !scope.isBlank()).map(String::trim).distinct().toList();
     }
@@ -88,7 +92,189 @@ public class ServicePrincipalService {
         result.put("scopes", scopes);
         result.put("ownerMemberId", owner.getId());
         result.put("credentialNotice", "clientSecret 仅本次返回；请立即写入受管密钥库，系统不会保存或再次显示。");
+        audit(companyId, owner.getAccountId(), "created", principalId, "机器账户已创建，密钥仅返回一次");
         return result;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> list(String companyId) {
+        return jdbcTemplate.query("""
+                SELECT p.id, p.display_name, p.lifecycle_status, sp.public_id, sp.service_kind,
+                       sp.client_id, sp.token_audience, sp.last_rotated_at, sp.created_at,
+                       owner.owner_principal_id, owner.company_member_id,
+                       account.public_id AS owner_public_id, account.display_name AS owner_display_name
+                FROM service_principal sp
+                JOIN principal p ON p.id = sp.principal_id
+                JOIN LATERAL (
+                    SELECT candidate.*
+                    FROM service_principal_owner candidate
+                    WHERE candidate.service_principal_id = sp.principal_id
+                      AND candidate.owner_role = 'PRIMARY'
+                    ORDER BY (candidate.owner_status = 'ACTIVE') DESC, candidate.assigned_at DESC
+                    LIMIT 1
+                ) owner ON TRUE
+                JOIN company_member member ON member.id = owner.company_member_id
+                JOIN user_account account ON account.id = owner.owner_principal_id
+                WHERE member.company_id = ?
+                ORDER BY sp.created_at, p.id
+                """, (rs, rowNum) -> {
+            Map<String, Object> item = new LinkedHashMap<>();
+            String principalId = rs.getString("id");
+            item.put("principalId", principalId);
+            item.put("publicId", rs.getString("public_id"));
+            item.put("displayName", rs.getString("display_name"));
+            item.put("principalType", "SERVICE");
+            item.put("lifecycleStatus", rs.getString("lifecycle_status"));
+            item.put("serviceKind", rs.getString("service_kind"));
+            item.put("clientId", rs.getString("client_id"));
+            item.put("tokenAudience", rs.getString("token_audience"));
+            item.put("scopes", scopes(principalId));
+            item.put("lastRotatedAt", rs.getObject("last_rotated_at", Instant.class));
+            item.put("createdAt", rs.getObject("created_at", Instant.class));
+            item.put("ownerPrincipalId", rs.getString("owner_principal_id"));
+            item.put("ownerMemberId", rs.getString("company_member_id"));
+            item.put("ownerPublicId", rs.getString("owner_public_id"));
+            item.put("ownerDisplayName", rs.getString("owner_display_name"));
+            return item;
+        }, companyId);
+    }
+
+    @Transactional
+    public Map<String, Object> rotateSecret(String companyId, String actorMemberId, String principalId) {
+        UserEntity actor = requireActiveMember(companyId, actorMemberId, "只有有效的人类成员可以轮换机器账户密钥");
+        GovernedService service = requireGoverned(companyId, principalId);
+        if (!"ACTIVE".equals(service.lifecycleStatus())) {
+            throw new ForbiddenException("只有有效机器账户可以轮换密钥");
+        }
+        String secret = keycloak.rotateServiceClientSecret(service.clientId());
+        Instant now = Instant.now();
+        jdbcTemplate.update("UPDATE service_principal SET last_rotated_at=?, updated_at=? WHERE principal_id=?", now, now, principalId);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("principalId", principalId);
+        result.put("clientId", service.clientId());
+        result.put("clientSecret", secret);
+        result.put("lastRotatedAt", now);
+        result.put("credentialNotice", "clientSecret 仅本次返回；旧密钥已失效，请立即更新受管密钥库。");
+        audit(companyId, actor.getAccountId(), "credential_rotated", principalId, "机器账户密钥已轮换");
+        return result;
+    }
+
+    @Transactional
+    public Map<String, Object> suspend(String companyId, String actorMemberId, String principalId) {
+        UserEntity actor = requireActiveMember(companyId, actorMemberId, "只有有效的人类成员可以暂停机器账户");
+        GovernedService service = requireGoverned(companyId, principalId);
+        if ("REVOKED".equals(service.lifecycleStatus())) {
+            throw new ForbiddenException("已撤销机器账户不能暂停");
+        }
+        if (!"SUSPENDED".equals(service.lifecycleStatus())) {
+            keycloak.setServiceClientEnabled(service.clientId(), false);
+            Instant now = Instant.now();
+            jdbcTemplate.update("UPDATE principal SET lifecycle_status='SUSPENDED', suspended_at=?, updated_at=? WHERE id=?", now, now, principalId);
+            audit(companyId, actor.getAccountId(), "suspended", principalId, "机器账户已暂停");
+        }
+        return requireView(companyId, principalId);
+    }
+
+    @Transactional
+    public Map<String, Object> activate(String companyId, String actorMemberId, String principalId) {
+        UserEntity actor = requireActiveMember(companyId, actorMemberId, "只有有效的人类成员可以恢复机器账户");
+        GovernedService service = requireGoverned(companyId, principalId);
+        if (!"SUSPENDED".equals(service.lifecycleStatus())) {
+            throw new ForbiddenException("只有已暂停机器账户可以恢复");
+        }
+        keycloak.setServiceClientEnabled(service.clientId(), true);
+        Instant now = Instant.now();
+        jdbcTemplate.update("UPDATE principal SET lifecycle_status='ACTIVE', suspended_at=NULL, updated_at=? WHERE id=?", now, principalId);
+        audit(companyId, actor.getAccountId(), "activated", principalId, "机器账户已恢复");
+        return requireView(companyId, principalId);
+    }
+
+    @Transactional
+    public Map<String, Object> revoke(String companyId, String actorMemberId, String principalId) {
+        UserEntity actor = requireActiveMember(companyId, actorMemberId, "只有有效的人类成员可以撤销机器账户");
+        GovernedService service = requireGoverned(companyId, principalId);
+        if (!"REVOKED".equals(service.lifecycleStatus())) {
+            keycloak.setServiceClientEnabled(service.clientId(), false);
+            Instant now = Instant.now();
+            jdbcTemplate.update("UPDATE principal SET lifecycle_status='REVOKED', suspended_at=NULL, revoked_at=?, updated_at=? WHERE id=?", now, now, principalId);
+            jdbcTemplate.update("UPDATE principal_identity SET binding_status='REVOKED', updated_at=? WHERE principal_id=?", now, principalId);
+            jdbcTemplate.update("UPDATE service_principal_owner SET owner_status='REVOKED', revoked_at=? WHERE service_principal_id=? AND owner_status<>'REVOKED'", now, principalId);
+            audit(companyId, actor.getAccountId(), "revoked", principalId, "机器账户已永久撤销");
+        }
+        return requireView(companyId, principalId);
+    }
+
+    @Transactional
+    public Map<String, Object> transferOwner(String companyId, String actorMemberId, String principalId, String newOwnerMemberId) {
+        UserEntity actor = requireActiveMember(companyId, actorMemberId, "只有有效的人类成员可以移交机器账户负责人");
+        UserEntity newOwner = requireActiveMember(companyId, newOwnerMemberId, "新负责人必须是同组织有效人类成员");
+        GovernedService service = requireGoverned(companyId, principalId);
+        if ("REVOKED".equals(service.lifecycleStatus())) {
+            throw new ForbiddenException("已撤销机器账户不能移交负责人");
+        }
+        Instant now = Instant.now();
+        jdbcTemplate.update("""
+                UPDATE service_principal_owner
+                SET owner_status='REVOKED', revoked_at=?
+                WHERE service_principal_id=? AND owner_role='PRIMARY' AND owner_status='ACTIVE'
+                """, now, principalId);
+        jdbcTemplate.update("""
+                INSERT INTO service_principal_owner(service_principal_id,owner_principal_id,company_member_id,owner_role,owner_status,assigned_at)
+                VALUES (?, ?, ?, 'PRIMARY', 'ACTIVE', ?)
+                ON CONFLICT(service_principal_id,owner_principal_id,company_member_id) DO UPDATE
+                SET owner_role='PRIMARY',owner_status='ACTIVE',assigned_at=excluded.assigned_at,revoked_at=NULL
+                """, principalId, newOwner.getAccountId(), newOwner.getId(), now);
+        audit(companyId, actor.getAccountId(), "owner_transferred", principalId,
+                "机器账户负责人已移交给 " + newOwner.getAccountId());
+        return requireView(companyId, principalId);
+    }
+
+    private UserEntity requireActiveMember(String companyId, String memberId, String message) {
+        UserEntity member = userRepository.findByIdAndCompany_Id(required(memberId, "memberId"), companyId)
+                .orElseThrow(() -> new ForbiddenException(message));
+        if (!UserEntity.STATUS_ACTIVE.equals(member.getMemberStatus())) {
+            throw new ForbiddenException(message);
+        }
+        return member;
+    }
+
+    private GovernedService requireGoverned(String companyId, String principalId) {
+        List<GovernedService> matches = jdbcTemplate.query("""
+                SELECT sp.client_id,p.lifecycle_status
+                FROM service_principal sp
+                JOIN principal p ON p.id=sp.principal_id
+                WHERE sp.principal_id=?
+                  AND EXISTS (
+                    SELECT 1 FROM service_principal_owner owner
+                    JOIN company_member member ON member.id=owner.company_member_id
+                    WHERE owner.service_principal_id=sp.principal_id AND member.company_id=?
+                  )
+                """, (rs, rowNum) -> new GovernedService(rs.getString("client_id"), rs.getString("lifecycle_status")),
+                required(principalId, "principalId"), companyId);
+        if (matches.size() != 1) {
+            throw new ForbiddenException("机器账户不存在或不属于当前组织");
+        }
+        return matches.get(0);
+    }
+
+    private Map<String, Object> requireView(String companyId, String principalId) {
+        return list(companyId).stream().filter(item -> principalId.equals(item.get("principalId"))).findFirst()
+                .orElseThrow(() -> new ForbiddenException("机器账户不存在或不属于当前组织"));
+    }
+
+    private List<String> scopes(String principalId) {
+        return jdbcTemplate.queryForList("""
+                SELECT scope_code FROM service_principal_scope
+                WHERE service_principal_id=? ORDER BY scope_code
+                """, String.class, principalId);
+    }
+
+    private void audit(String companyId, String actorPrincipalId, String action, String principalId, String detail) {
+        audit.log(companyId, actorPrincipalId, "ORG_ADMIN", "service_principal." + action,
+                "service_principal", principalId, detail);
+    }
+
+    private record GovernedService(String clientId, String lifecycleStatus) {
     }
 
     private static String required(String value, String field) {

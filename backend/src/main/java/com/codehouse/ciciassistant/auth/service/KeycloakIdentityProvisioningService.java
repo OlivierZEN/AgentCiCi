@@ -169,6 +169,79 @@ public class KeycloakIdentityProvisioningService {
         }
     }
 
+    /** Rotates a confidential client's secret and returns the replacement exactly once. */
+    public String rotateServiceClientSecret(String clientId) {
+        requireMachineProvisioning();
+        try {
+            String token = obtainAdminToken();
+            String internalId = requireServiceClient(token, clientId);
+            HttpRequest request = adminRequest("/clients/" + encode(internalId) + "/client-secret", token)
+                    .POST(HttpRequest.BodyPublishers.noBody()).build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            String secret = response.statusCode() == 200
+                    ? trim(objectMapper.readTree(response.body()).path("value").asText()) : "";
+            if (secret.isBlank()) {
+                throw new IllegalStateException("Keycloak 机器账户密钥轮换失败");
+            }
+            return secret;
+        } catch (Exception ex) {
+            if (ex instanceof IllegalArgumentException illegalArgumentException) {
+                throw illegalArgumentException;
+            }
+            throw new IllegalStateException("Keycloak 机器账户密钥轮换失败", ex);
+        }
+    }
+
+    /** Enables or disables a governed confidential client without exposing its credentials. */
+    public void setServiceClientEnabled(String clientId, boolean enabled) {
+        requireMachineProvisioning();
+        try {
+            String token = obtainAdminToken();
+            String internalId = requireServiceClient(token, clientId);
+            HttpRequest read = adminRequest("/clients/" + encode(internalId), token).GET().build();
+            HttpResponse<String> readResponse = httpClient.send(read, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            if (readResponse.statusCode() != 200) {
+                throw new IllegalStateException("Keycloak 机器账户读取失败");
+            }
+            JsonNode representation = objectMapper.readTree(readResponse.body());
+            if (!(representation instanceof com.fasterxml.jackson.databind.node.ObjectNode object)) {
+                throw new IllegalStateException("Keycloak 机器账户响应无效");
+            }
+            object.put("enabled", enabled);
+            HttpRequest update = adminRequest("/clients/" + encode(internalId), token)
+                    .header("Content-Type", "application/json")
+                    .PUT(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(object), StandardCharsets.UTF_8))
+                    .build();
+            HttpResponse<Void> updateResponse = httpClient.send(update, HttpResponse.BodyHandlers.discarding());
+            if (updateResponse.statusCode() != 204) {
+                throw new IllegalStateException(enabled ? "Keycloak 机器账户恢复失败" : "Keycloak 机器账户暂停失败");
+            }
+        } catch (Exception ex) {
+            if (ex instanceof IllegalArgumentException illegalArgumentException) {
+                throw illegalArgumentException;
+            }
+            throw new IllegalStateException("Keycloak 机器账户状态变更失败", ex);
+        }
+    }
+
+    private void requireMachineProvisioning() {
+        if (!machineProvisioningEnabled) {
+            throw new IllegalStateException("统一身份机器账户开通尚未启用");
+        }
+    }
+
+    private String requireServiceClient(String token, String clientId) throws Exception {
+        String normalized = trim(clientId);
+        if (normalized.isBlank()) {
+            throw new IllegalArgumentException("clientId is required");
+        }
+        String internalId = findClientInternalId(token, normalized);
+        if (internalId == null || internalId.isBlank()) {
+            throw new IllegalArgumentException("Keycloak 机器账户不存在");
+        }
+        return internalId;
+    }
+
     private String obtainAdminToken() throws Exception {
         HttpRequest request = HttpRequest.newBuilder(URI.create(issuer + "/protocol/openid-connect/token"))
                 .timeout(Duration.ofSeconds(15))
