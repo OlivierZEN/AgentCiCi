@@ -48,7 +48,7 @@ public class ServicePrincipalTokenExchangeService {
     private ServiceContext resolveActiveContext(KeycloakOidcLoginService.ServiceAccessToken source) {
         List<ServiceContext> matches = jdbcTemplate.query("""
                 SELECT sp.principal_id, owner.owner_principal_id, sp.client_id,
-                       binding.sematrice_tenant_id, member.company_id
+                       binding.semattice_tenant_id, member.company_id
                 FROM service_principal sp
                 JOIN principal p ON p.id = sp.principal_id
                 JOIN principal_identity identity_record ON identity_record.principal_id = sp.principal_id
@@ -71,10 +71,10 @@ public class ServicePrincipalTokenExchangeService {
                   AND member.member_status = 'ACTIVE'
                   AND c.status = 'ACTIVE'
                   AND binding.state = 'PROVISIONED'
-                  AND binding.sematrice_tenant_id IS NOT NULL
+                  AND binding.semattice_tenant_id IS NOT NULL
                 """, (rs, rowNum) -> new ServiceContext(
                         rs.getString("principal_id"), rs.getString("owner_principal_id"),
-                        rs.getString("client_id"), rs.getString("sematrice_tenant_id"),
+                        rs.getString("client_id"), rs.getString("semattice_tenant_id"),
                         rs.getString("company_id")),
                 keycloak.issuer(), source.subject(), source.clientId(), source.clientId(), OfficialAccessTokenService.SEMATTICE_AUDIENCE);
         if (matches.size() != 1) {
