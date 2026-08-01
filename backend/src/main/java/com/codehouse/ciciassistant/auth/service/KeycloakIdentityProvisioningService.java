@@ -192,6 +192,25 @@ public class KeycloakIdentityProvisioningService {
         }
     }
 
+    /** Removes a just-created client when the authoritative database transaction cannot be persisted. */
+    public void deleteServiceClient(String clientId) {
+        requireMachineProvisioning();
+        try {
+            String token = obtainAdminToken();
+            String internalId = requireServiceClient(token, clientId);
+            HttpRequest request = adminRequest("/clients/" + encode(internalId), token).DELETE().build();
+            HttpResponse<Void> response = httpClient.send(request, HttpResponse.BodyHandlers.discarding());
+            if (response.statusCode() != 204) {
+                throw new IllegalStateException("Keycloak 机器账户补偿删除失败");
+            }
+        } catch (Exception ex) {
+            if (ex instanceof IllegalArgumentException illegalArgumentException) {
+                throw illegalArgumentException;
+            }
+            throw new IllegalStateException("Keycloak 机器账户补偿删除失败", ex);
+        }
+    }
+
     /** Enables or disables a governed confidential client without exposing its credentials. */
     public void setServiceClientEnabled(String clientId, boolean enabled) {
         requireMachineProvisioning();

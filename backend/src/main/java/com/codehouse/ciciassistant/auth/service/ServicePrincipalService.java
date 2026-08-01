@@ -5,6 +5,7 @@ import com.codehouse.ciciassistant.auth.domain.UserRepository;
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.platform.service.PlatformAuditService;
 import java.security.SecureRandom;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -62,27 +63,37 @@ public class ServicePrincipalService {
                 .createServiceClient(clientId, targetAudience);
         String principalId = UUID.randomUUID().toString();
         String publicId = "S" + java.time.Year.now().getValue() + randomSuffix(8);
-        Instant now = Instant.now();
-        jdbcTemplate.update("""
-                INSERT INTO principal (id, principal_type, lifecycle_status, display_name, created_by_principal_id, created_at, updated_at)
-                VALUES (?, 'SERVICE', 'ACTIVE', ?, ?, ?, ?)
-                """, principalId, name, owner.getAccountId(), now, now);
-        jdbcTemplate.update("""
-                INSERT INTO service_principal (principal_id, public_id, service_kind, client_id, credential_mode, token_audience, created_at, updated_at)
-                VALUES (?, ?, ?, ?, 'CLIENT_SECRET', ?, ?, ?)
-                """, principalId, publicId, kind, clientId, targetAudience, now, now);
-        jdbcTemplate.update("""
-                INSERT INTO principal_identity (id, principal_id, provider, identity_type, issuer, subject, keycloak_client_id, binding_status, created_at, updated_at, last_verified_at)
-                VALUES (?, ?, 'KEYCLOAK', 'SERVICE_ACCOUNT', ?, ?, ?, 'ACTIVE', ?, ?, ?)
-                """, UUID.randomUUID().toString(), principalId, keycloak.issuer(), credentials.subject(), clientId, now, now, now);
-        jdbcTemplate.update("""
-                INSERT INTO service_principal_owner (service_principal_id, owner_principal_id, company_member_id, owner_role, owner_status, assigned_at)
-                VALUES (?, ?, ?, 'PRIMARY', 'ACTIVE', ?)
-                """, principalId, owner.getAccountId(), owner.getId(), now);
-        scopes.forEach(scope -> jdbcTemplate.update("""
-                INSERT INTO service_principal_scope (service_principal_id, scope_code, created_at)
-                VALUES (?, ?, ?)
-                """, principalId, scope, now));
+        Timestamp now = Timestamp.from(Instant.now());
+        try {
+            jdbcTemplate.update("""
+                    INSERT INTO principal (id, principal_type, lifecycle_status, display_name, created_by_principal_id, created_at, updated_at)
+                    VALUES (?, 'SERVICE', 'ACTIVE', ?, ?, ?, ?)
+                    """, principalId, name, owner.getAccountId(), now, now);
+            jdbcTemplate.update("""
+                    INSERT INTO service_principal (principal_id, public_id, service_kind, client_id, credential_mode, token_audience, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, 'CLIENT_SECRET', ?, ?, ?)
+                    """, principalId, publicId, kind, clientId, targetAudience, now, now);
+            jdbcTemplate.update("""
+                    INSERT INTO principal_identity (id, principal_id, provider, identity_type, issuer, subject, keycloak_client_id, binding_status, created_at, updated_at, last_verified_at)
+                    VALUES (?, ?, 'KEYCLOAK', 'SERVICE_ACCOUNT', ?, ?, ?, 'ACTIVE', ?, ?, ?)
+                    """, UUID.randomUUID().toString(), principalId, keycloak.issuer(), credentials.subject(), clientId, now, now, now);
+            jdbcTemplate.update("""
+                    INSERT INTO service_principal_owner (service_principal_id, owner_principal_id, company_member_id, owner_role, owner_status, assigned_at)
+                    VALUES (?, ?, ?, 'PRIMARY', 'ACTIVE', ?)
+                    """, principalId, owner.getAccountId(), owner.getId(), now);
+            scopes.forEach(scope -> jdbcTemplate.update("""
+                    INSERT INTO service_principal_scope (service_principal_id, scope_code, created_at)
+                    VALUES (?, ?, ?)
+                    """, principalId, scope, now));
+            audit(companyId, owner.getAccountId(), "created", principalId, "机器账户已创建，密钥仅返回一次");
+        } catch (RuntimeException persistenceFailure) {
+            try {
+                keycloak.deleteServiceClient(clientId);
+            } catch (RuntimeException compensationFailure) {
+                persistenceFailure.addSuppressed(compensationFailure);
+            }
+            throw persistenceFailure;
+        }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("principalId", principalId);
         result.put("publicId", publicId);
@@ -92,7 +103,6 @@ public class ServicePrincipalService {
         result.put("scopes", scopes);
         result.put("ownerMemberId", owner.getId());
         result.put("credentialNotice", "clientSecret 仅本次返回；请立即写入受管密钥库，系统不会保存或再次显示。");
-        audit(companyId, owner.getAccountId(), "created", principalId, "机器账户已创建，密钥仅返回一次");
         return result;
     }
 
@@ -129,8 +139,8 @@ public class ServicePrincipalService {
             item.put("clientId", rs.getString("client_id"));
             item.put("tokenAudience", rs.getString("token_audience"));
             item.put("scopes", scopes(principalId));
-            item.put("lastRotatedAt", rs.getObject("last_rotated_at", Instant.class));
-            item.put("createdAt", rs.getObject("created_at", Instant.class));
+            item.put("lastRotatedAt", toInstant(rs.getTimestamp("last_rotated_at")));
+            item.put("createdAt", toInstant(rs.getTimestamp("created_at")));
             item.put("ownerPrincipalId", rs.getString("owner_principal_id"));
             item.put("ownerMemberId", rs.getString("company_member_id"));
             item.put("ownerPublicId", rs.getString("owner_public_id"));
@@ -147,13 +157,14 @@ public class ServicePrincipalService {
             throw new ForbiddenException("只有有效机器账户可以轮换密钥");
         }
         String secret = keycloak.rotateServiceClientSecret(service.clientId());
-        Instant now = Instant.now();
+        Instant occurredAt = Instant.now();
+        Timestamp now = Timestamp.from(occurredAt);
         jdbcTemplate.update("UPDATE service_principal SET last_rotated_at=?, updated_at=? WHERE principal_id=?", now, now, principalId);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("principalId", principalId);
         result.put("clientId", service.clientId());
         result.put("clientSecret", secret);
-        result.put("lastRotatedAt", now);
+        result.put("lastRotatedAt", occurredAt);
         result.put("credentialNotice", "clientSecret 仅本次返回；旧密钥已失效，请立即更新受管密钥库。");
         audit(companyId, actor.getAccountId(), "credential_rotated", principalId, "机器账户密钥已轮换");
         return result;
@@ -168,7 +179,7 @@ public class ServicePrincipalService {
         }
         if (!"SUSPENDED".equals(service.lifecycleStatus())) {
             keycloak.setServiceClientEnabled(service.clientId(), false);
-            Instant now = Instant.now();
+            Timestamp now = Timestamp.from(Instant.now());
             jdbcTemplate.update("UPDATE principal SET lifecycle_status='SUSPENDED', suspended_at=?, updated_at=? WHERE id=?", now, now, principalId);
             audit(companyId, actor.getAccountId(), "suspended", principalId, "机器账户已暂停");
         }
@@ -183,7 +194,7 @@ public class ServicePrincipalService {
             throw new ForbiddenException("只有已暂停机器账户可以恢复");
         }
         keycloak.setServiceClientEnabled(service.clientId(), true);
-        Instant now = Instant.now();
+        Timestamp now = Timestamp.from(Instant.now());
         jdbcTemplate.update("UPDATE principal SET lifecycle_status='ACTIVE', suspended_at=NULL, updated_at=? WHERE id=?", now, principalId);
         audit(companyId, actor.getAccountId(), "activated", principalId, "机器账户已恢复");
         return requireView(companyId, principalId);
@@ -195,7 +206,7 @@ public class ServicePrincipalService {
         GovernedService service = requireGoverned(companyId, principalId);
         if (!"REVOKED".equals(service.lifecycleStatus())) {
             keycloak.setServiceClientEnabled(service.clientId(), false);
-            Instant now = Instant.now();
+            Timestamp now = Timestamp.from(Instant.now());
             jdbcTemplate.update("UPDATE principal SET lifecycle_status='REVOKED', suspended_at=NULL, revoked_at=?, updated_at=? WHERE id=?", now, now, principalId);
             jdbcTemplate.update("UPDATE principal_identity SET binding_status='REVOKED', updated_at=? WHERE principal_id=?", now, principalId);
             jdbcTemplate.update("UPDATE service_principal_owner SET owner_status='REVOKED', revoked_at=? WHERE service_principal_id=? AND owner_status<>'REVOKED'", now, principalId);
@@ -212,7 +223,7 @@ public class ServicePrincipalService {
         if ("REVOKED".equals(service.lifecycleStatus())) {
             throw new ForbiddenException("已撤销机器账户不能移交负责人");
         }
-        Instant now = Instant.now();
+        Timestamp now = Timestamp.from(Instant.now());
         jdbcTemplate.update("""
                 UPDATE service_principal_owner
                 SET owner_status='REVOKED', revoked_at=?
@@ -272,6 +283,10 @@ public class ServicePrincipalService {
     private void audit(String companyId, String actorPrincipalId, String action, String principalId, String detail) {
         audit.log(companyId, actorPrincipalId, "ORG_ADMIN", "service_principal." + action,
                 "service_principal", principalId, detail);
+    }
+
+    private static Instant toInstant(Timestamp value) {
+        return value == null ? null : value.toInstant();
     }
 
     private record GovernedService(String clientId, String lifecycleStatus) {
