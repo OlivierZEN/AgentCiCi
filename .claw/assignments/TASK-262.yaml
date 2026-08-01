@@ -1,0 +1,47 @@
+task_id: TASK-262
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-08-01T13:39:26Z
+expires_at: none
+spec_path: docs/specs/FEAT-154-dev-autopilot-governed-service-identities.md
+task_status_path: .claw/tasks/TASK-262.md
+branch: codex/TASK-262-dev-autopilot-service-identities
+pr_url: n/a
+scope_mode: exact_files
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/**
+  - backend/src/test/java/com/codehouse/ciciassistant/auth/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+scope_files:
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/service/KeycloakIdentityProvisioningService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/service/ServicePrincipalService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/api/AdminServicePrincipalController.java
+  - backend/src/test/java/com/codehouse/ciciassistant/auth/service/ServicePrincipalServiceTest.java
+  - docs/specs/FEAT-154-dev-autopilot-governed-service-identities.md
+  - .claw/tasks/TASK-262.md
+  - .claw/assignments/TASK-262.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/developers/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+touch_policy: exclusive
+shared_contracts:
+  - AgentCiCi unified Principal and service OACT contract
+  - Keycloak client-credentials boundary
+  - Semattice short-lived OACT trust contract
+task_boundary:
+  - "补齐机器主体查询、轮换、暂停、恢复、撤销和负责人移交，不保存任何 reusable secret。"
+  - "保持组织隔离、组织管理员门禁、一次性 secret 返回和脱敏审计。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
+signature: "MANAGER-001; user authorized the complete DEV Autopilot identity system on 2026-08-01."
+

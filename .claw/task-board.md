@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-31T14:39:02Z
+updated_at: 2026-08-01T13:39:26Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,16 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-262 - DEV Autopilot 受治理机器身份生命周期
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `backend-agent`
+- spec_path: `docs/specs/FEAT-154-dev-autopilot-governed-service-identities.md`
+- task_status_path: `.claw/tasks/TASK-262.md`
+- assignment_path: `.claw/assignments/TASK-262.yaml`
+- next_action: 补齐机器主体查询、密钥轮换、暂停、恢复、撤销、负责人移交和审计，并用于 DEV Autopilot 线上身份开户。
 
 ### TASK-261 - 创建意图改由大模型语义理解
 

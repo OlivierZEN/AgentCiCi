@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-31T14:39:02Z
+updated_at: 2026-08-01T13:39:26Z
 updated_by: MANAGER-001
 phase: identity-architecture-implementation
-active_task: TASK-255
-next_action: "继续 TASK-255 的 /app 无会话 OIDC 自动跳转实现与回调验证。"
+active_task: TASK-262
+next_action: "实现 FEAT-154 的机器主体生命周期管理，并以目标租户完成 DEV Autopilot 产品经理和开发者机器主体开户。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-262 / FEAT-154：用户已授权完成 DEV Autopilot 研发身份体系。现有服务主体创建、PRIMARY 人类负责人、一次性 Keycloak secret 和短时 OACT 基线保持不变；本任务补齐查询、轮换、暂停、恢复、撤销、负责人移交和脱敏审计，随后创建产品经理与开发者机器主体并联调 Semattice/CLI。
 
 - TASK-261 / FEAT-153：已发布生产 `2.8.34 / 84c814b19fe0`。未确认创建请求现由 `onekeytoken/auto` 理解完整自然语言并生成草案，服务端不再正则抽取名称；截图原句正确得到 `AgentCiCi企业级智能体平台`。Trace 显示模型调用 1 次、工具调用 0 次、`WAITING_CONFIRMATION`；Semattice 同名项目计数为 0。精确确认后的 OACT 同租户写入门禁保持不变。
 
