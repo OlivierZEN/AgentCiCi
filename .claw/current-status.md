@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-03T11:05:03Z
+updated_at: 2026-08-03T12:30:50Z
 updated_by: MANAGER-001
-phase: post-release-monitoring
-active_task: TASK-255
-next_action: "TASK-263 已完成；继续跟踪既有 TASK-255 登录自动跳转，不扩展本次 SERVICE 执行边界。"
+phase: production-identity-roster-update
+active_task: TASK-264
+next_action: "更新 Oliver、大乔、悟空权威显示名，创建后羿 SERVICE 并同步 Semattice 开发者角色与组织投影。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-264 / FEAT-156：用户要求把研发身份花名收敛为 Oliver（产品总监）、大乔（产品经理）、悟空（现有开发者），并新增后羿开发者 SERVICE。已只读核对线上三名既有主体、三个角色和研发交付部归属；尚未执行生产写入。
 
 - TASK-263 / FEAT-155：已发布生产 `2.8.40 / f4011a8a3b79`。研发交付产品经理显式绑定 `semattice_project_delivery_query`、`semattice_project_delivery_create` 和标准 Skill `semattice-project-delivery-management`；Agent→SERVICE Principal `742daca1-ce58-49cc-9e53-530444ba1c47` 使用 `PRIMARY_OWNER` 委托和最小 scope OACT，产品总监 HUMAN 只提供委托与确认上下文。线上查询返回 Semattice 实时项目，未确认创建 Trace 工具数 0，明确确认后 SERVICE 创建 `DAS-941C43CF`；Semattice 审计的 query/create actor 均为 SERVICE，记录 owner 为“DEV Autopilot 产品经理”。三端公网健康均为 200。
 

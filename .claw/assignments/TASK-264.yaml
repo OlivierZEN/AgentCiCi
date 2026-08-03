@@ -1,0 +1,43 @@
+task_id: TASK-264
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-08-03T12:30:50Z
+expires_at: none
+spec_path: docs/specs/FEAT-156-dev-autopilot-identity-roster.md
+task_status_path: .claw/tasks/TASK-264.md
+branch: main
+pr_url: n/a
+scope_mode: exact_files
+allowed_write_roots:
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+scope_files:
+  - docs/specs/FEAT-156-dev-autopilot-identity-roster.md
+  - .claw/tasks/TASK-264.md
+  - .claw/assignments/TASK-264.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+protected_paths:
+  - .claw/developers/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+touch_policy: exclusive
+shared_contracts:
+  - AgentCiCi unified Principal and service OACT contract
+  - Keycloak client-credentials boundary
+  - Semattice short-lived OACT, Principal projection and RBAC contract
+task_boundary:
+  - "只变更指定四名研发身份的显示名、第二开发者开户、现有开发者角色与组织投影。"
+  - "不修改其他同租户成员、角色定义、权限包、数据范围、对象策略或研发业务数据。"
+  - "一次性 secret 只写入生产 root-only 受管文件，不进入仓库、日志或审计。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
+signature: "MANAGER-001; user authorized the DEV Autopilot identity roster rename and a second developer SERVICE on 2026-08-03."
+

@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-03T11:05:03Z
+updated_at: 2026-08-03T12:30:50Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,16 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-264 - DEV Autopilot 研发身份花名与新增开发者
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `integration-agent`
+- spec_path: `docs/specs/FEAT-156-dev-autopilot-identity-roster.md`
+- task_status_path: `.claw/tasks/TASK-264.md`
+- assignment_path: `.claw/assignments/TASK-264.yaml`
+- next_action: 更新权威显示名，创建后羿 SERVICE，同步 Semattice 开发者角色与组织投影并完成线上回读。
 
 ### TASK-261 - 创建意图改由大模型语义理解
 
