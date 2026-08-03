@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-155
 title: DEV Autopilot 产品经理显式能力与 SERVICE 执行身份
-status: in_progress
+status: verified
 owner_role: backend-agent
 task_ids: TASK-263
 related_decisions: "Tool/Skill 是可审计能力事实；SERVICE 是数据操作主体；HUMAN 只提供委托、确认与审批上下文"
 related_issues: none
-updated_at: 2026-08-03T10:29:14Z
+updated_at: 2026-08-03T11:05:03Z
 updated_by: MANAGER-001
 ---
 
@@ -109,6 +109,16 @@ agent_service_principal_binding
 5. 删除或禁用执行主体绑定、owner 失效、SERVICE 暂停或 scope 不足时请求失败关闭，且不会回退成人类身份。
 6. AgentCiCi Trace 和 Semattice 审计可证明有效 actor 为 SERVICE，owner/delegator 为产品总监 HUMAN；响应与日志不泄露 token/secret。
 7. 定向单元测试、迁移回归、后端构建、生产发布及线上真实查询/确认写入验证通过。
+
+## 实施与生产验收
+
+- V101 已持久化两项 Tool、Agent→SERVICE 绑定和 `PRIMARY_OWNER` 委托策略；平台标准 Skill `semattice-project-delivery-management` 已同步并以 `always-on` 显式绑定。
+- 运行时固定 Agent ID 的隐藏 Tool/Prompt 注入已移除，确定性读写路由只接受解析后的显式能力；所有工具调用统一携带当前 `agentId`。
+- 查询仅申请 `runtime.record.read`；确认式创建申请 `runtime.record.read` 与 `runtime.record.create`。任一 SERVICE、owner、身份镜像、租户投影或 scope 校验失败均失败关闭，不回退 HUMAN。
+- 生产 Agent API 回读为 2 个正式 Tool、1 个正式 Skill 和 SERVICE Principal `742daca1-ce58-49cc-9e53-530444ba1c47`。
+- 线上查询返回 4 个既有项目和 1 个执行中项目；未确认创建草案的 Trace 工具数为 0，精确确认后由 SERVICE 创建 `DAS-941C43CF / SERVICE Principal 执行链路验收 20260803`。
+- Semattice `audit_event` 的 `runtime.record.query` 与 `runtime.record.create` actor 均为上述 SERVICE Principal；记录 owner 为“DEV Autopilot 产品经理”。
+- 最终生产版本为 `2.8.40 / f4011a8a3b79`，AgentCiCi、DEV Autopilot 与 Semattice 公网健康检查均为 HTTP 200。
 
 ## 风险与回滚
 

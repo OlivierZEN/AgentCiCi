@@ -1,7 +1,7 @@
 task_id: TASK-263
 assignee: MANAGER-001
 assigned_by: MANAGER-001
-status: active
+status: completed
 assigned_at: 2026-08-03T10:29:14Z
 expires_at: none
 spec_path: docs/specs/FEAT-155-dev-autopilot-explicit-capabilities-and-service-execution.md
@@ -36,6 +36,7 @@ scope_files:
   - backend/src/main/java/com/codehouse/ciciassistant/skill/service/SkillResolverService.java
   - backend/src/main/resources/db/migration/V101__agent_service_principal_execution_binding.sql
   - backend/src/test/java/com/codehouse/ciciassistant/agent/service/AgentServicePrincipalExecutionServiceTest.java
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorServiceModelIdentityTest.java
   - backend/src/test/java/com/codehouse/ciciassistant/ai/service/ToolOrchestratorServiceTest.java
   - backend/src/test/java/com/codehouse/ciciassistant/auth/OfficialAccessTokenServiceTest.java
   - backend/src/test/java/com/codehouse/ciciassistant/semattice/SematticeProjectDeliveryToolServiceTest.java

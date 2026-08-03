@@ -1,17 +1,25 @@
-Warning: truncated output (original token count: 180621)
-Total output lines: 6804
-
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-01T15:46:00Z
+updated_at: 2026-08-03T11:05:03Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-08-01T15:46:00Z
+last_run_at: 2026-08-03T11:05:03Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-263 - 显式 Tool/Skill 与 SERVICE 执行生产验收
+
+- `focused/backend`：`ChatOrchestratorServiceModelIdentityTest`、Agent SERVICE 授权、Semattice 读写 Tool、Tool 编排、OACT、Skill Resolver 等聚焦测试通过；编译、test-compile、package 与 `git diff --check` 通过。
+- `migration`：独立 PostgreSQL 16 从 V1 正向迁移至 V101，共 97 项迁移成功；身份治理集成测试通过。
+- `full-suite-diagnostic`：325 项测试中 2 项既有非本任务失败（并发 workspace create 返回 500/200 而非 200/409；旧 Skill governance fixture 预期 200 实得 401），0 error、3 skipped；TASK-263 聚焦与迁移回归均通过，未虚报全量绿色。
+- `state-validation`：TASK-263/FEAT-155 与 assignment 无新增 finding；全仓校验仍因既有 hot-index 超长、历史时间格式、旧完成任务仍位于 Active Tasks 和旧规格状态/frontmatter 债务退出 1，本任务未越界改写无关历史记录。
+- `explicit-bindings`：生产 API 回读产品经理 Agent 的 2 个 Tool、1 个 always-on Skill 和 SERVICE 执行主体；未输出 client secret、JWT 或 OACT。
+- `query-e2e`：对“现在有哪些项目在执行”真实调用查询 Tool，返回 4 个项目、1 个执行中项目、2 个活跃任务和 8.0 小时；Trace 完成且 AgentCiCi 委托审计指向产品经理 SERVICE。
+- `write-e2e`：未确认消息由大模型生成完整草案，Trace 工具数 0；精确确认后工具数 1，创建 `DAS-941C43CF`。Semattice `runtime.record.create` actor 为 `742daca1-ce58-49cc-9e53-530444ba1c47`，记录 owner 为“DEV Autopilot 产品经理”。
+- `release/public`：最终版本 `2.8.40 / f4011a8a3b79`；backend/frontend healthy，状态服务容器 ID 不变，health `UP`、Nginx 有效；AgentCiCi 根路径、DEV Autopilot 和 Semattice health 均为 HTTP 200。
 
 ## TASK-262 - DEV Autopilot 受治理机器身份生产验收
 

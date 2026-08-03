@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-03T10:29:14Z
+updated_at: 2026-08-03T11:05:03Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,16 +14,6 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
-
-### TASK-263 - 产品经理显式 Tool/Skill 与 SERVICE 执行链路
-
-- status: `in_progress`
-- priority: `critical`
-- owner_role: `backend-agent`
-- spec_path: `docs/specs/FEAT-155-dev-autopilot-explicit-capabilities-and-service-execution.md`
-- task_status_path: `.claw/tasks/TASK-263.md`
-- assignment_path: `.claw/assignments/TASK-263.yaml`
-- next_action: 完成显式能力、Agent→SERVICE 执行绑定、委托式 OACT、测试与生产闭环。
 
 ### TASK-261 - 创建意图改由大模型语义理解
 
@@ -1339,6 +1329,16 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-263 - 产品经理显式 Tool/Skill 与 SERVICE 执行链路
+
+- status: `done`
+- priority: `critical`
+- owner_role: `backend-agent`
+- spec_path: `docs/specs/FEAT-155-dev-autopilot-explicit-capabilities-and-service-execution.md`
+- task_status_path: `.claw/tasks/TASK-263.md`
+- assignment_path: `.claw/assignments/TASK-263.yaml`
+- next_action: 已发布 `2.8.40 / f4011a8a3b79`；正式 Tool/Skill、SERVICE 执行、HUMAN 委托/确认及 Semattice 双侧审计闭环均通过。
 
 ### TASK-262 - DEV Autopilot 受治理机器身份生命周期
 

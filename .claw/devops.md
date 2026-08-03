@@ -1,12 +1,22 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-01T15:46:00Z
+updated_at: 2026-08-03T11:05:03Z
 updated_by: MANAGER-001
 status: active
 ---
 
 # DevOps
+
+## 2026-08-03 TASK-263 / 产品经理正式能力与 SERVICE 执行
+
+- 当前生产版本 `2.8.40 / f4011a8a3b79`；backend/frontend ACR index digest 分别为 `sha256:878940d5438dddce050adf1a495795b05b94059f13f78e63a7c62413fd322d1d`、`sha256:956d3834725d2dc75ed7be288d4b968be60bc29411aa888d7f007a6ec8ad112d`。
+- `2.8.39 / 3d91cbdd583a` 首次发布 V101 与正式绑定；线上验收发现普通工具分支漏传 `agentId` 后按失败关闭返回 400，修复与回归测试后由 `2.8.40` 覆盖。
+- 备份：`/opt/cici/backups/20260803-184554-before-2.8.39-task263` 包含 env、PostgreSQL、KB、Qdrant；补丁发布备份为 `/opt/cici/backups/20260803-105546-before-2.8.40-task263-patch`。
+- 部署仅 pull/force-recreate backend/frontend；database `a18b6aae...`、Redis `b9b34aaf...`、RabbitMQ `c02ab1c...`、Qdrant `8a2cf4be...` 容器 ID 保持不变。
+- 运行：backend/frontend healthy，health `UP`，版本接口为 `2.8.40 / f4011a8a3b79`，Nginx 配置有效，Flyway V101 成功。
+- 公网：`https://x.agentcici.com/`、`https://x.agentcici.com/devautopilot/`、`https://semattice.agentcici.com/healthz` 均为 200。
+- 回滚：应用可切回 `2.8.39`，V101 新增表可保留；但 `2.8.39` 不满足普通工具携带 Agent 身份的线上契约，不应作为正常运行目标。已由 SERVICE 创建的业务记录保留审计，不自动删除。
 
 ## 2026-08-01 TASK-262 / DEV Autopilot 研发身份与 HTTPS 入口
 
