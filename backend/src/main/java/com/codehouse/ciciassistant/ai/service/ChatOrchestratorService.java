@@ -1419,23 +1419,14 @@ public class ChatOrchestratorService {
             String toolName,
             String arguments,
             ResolvedSkillContext skillContext) {
-        if (AssistantScheduleToolService.TOOL_NAME.equals(ToolNameNormalizer.canonicalize(toolName))) {
-            return toolOrchestratorService.executeTool(
-                    companyId,
-                    userId,
-                    toolName,
-                    arguments,
-                    skillContext.allowedToolNames(),
-                    skillContext.agentDirectToolNames(),
-                    skillContext.agentId());
-        }
         return toolOrchestratorService.executeTool(
                 companyId,
                 userId,
                 toolName,
                 arguments,
                 skillContext.allowedToolNames(),
-                skillContext.agentDirectToolNames());
+                skillContext.agentDirectToolNames(),
+                skillContext.agentId());
     }
 
     static Optional<String> scheduleCadenceClarification(String question) {

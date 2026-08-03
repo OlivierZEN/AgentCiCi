@@ -769,6 +769,9 @@ class ChatOrchestratorServiceModelIdentityTest {
                 .contains("产品 Top 5")
                 .doesNotContain("internal-product-id", "{\"status\"");
         verifyNoInteractions(fixture.aliyunBailianClient);
+        verify(fixture.toolOrchestratorService, times(2)).executeTool(
+                eq("demo-org"), eq("sales-a"), eq(CrmProductSalesAnalysisToolService.TOOL_NAME),
+                anyString(), anyList(), anyList(), eq("agent-cici"));
 
         ArgumentCaptor<ChatMessageEntity> persisted = ArgumentCaptor.forClass(ChatMessageEntity.class);
         verify(fixture.chatMessageRepository, times(4)).save(persisted.capture());
@@ -869,7 +872,7 @@ class ChatOrchestratorServiceModelIdentityTest {
                     .thenReturn(List.of());
             when(toolOrchestratorService.executeTool(
                     eq("demo-org"), eq("sales-a"), eq(CrmProductSalesAnalysisToolService.TOOL_NAME),
-                    anyString(), anyList(), anyList())).thenReturn(rawCrmResult);
+                    anyString(), anyList(), anyList(), eq("agent-cici"))).thenReturn(rawCrmResult);
             when(runtimeContextPromptService.current()).thenReturn(runtimeContext);
             when(runtimeContextPromptService.buildPromptBlock(runtimeContext)).thenReturn("[runtime]");
             when(runtimeContextPromptService.toPayload(runtimeContext)).thenReturn(Map.of());
