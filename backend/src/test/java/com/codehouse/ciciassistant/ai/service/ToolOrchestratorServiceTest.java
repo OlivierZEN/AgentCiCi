@@ -108,6 +108,31 @@ class ToolOrchestratorServiceTest {
         verify(schedules).dispatch("org-1", "user-1", "agent-1", "{\"cadence\":\"每天 09:00\",\"task\":\"搜索美国 K12\"}");
     }
 
+    @Test
+    void dispatchesSematticeQueryWithTheResolvedAgentExecutionContext() {
+        McpServerService mcp = mock(McpServerService.class);
+        PlatformGovernanceService governance = mock(PlatformGovernanceService.class);
+        SkillApiToolService skillApi = mock(SkillApiToolService.class);
+        SematticeProjectDeliveryToolService query = mock(SematticeProjectDeliveryToolService.class);
+        when(governance.isRuntimeToolEnabled("org-1", SematticeProjectDeliveryToolService.TOOL_NAME)).thenReturn(true);
+        when(query.dispatch("org-1", "user-1", "dev-autopilot-pm", "{\"focus\":\"overview\"}"))
+                .thenReturn("{\"status\":\"SUCCESS\",\"execution_principal_type\":\"SERVICE\"}");
+
+        ToolOrchestratorService orchestrator = new ToolOrchestratorService(
+                mcp, mock(CloudccOpenApiService.class), mock(CrmProductSalesAnalysisToolService.class),
+                mock(EmailToolService.class), mock(UserMemoryService.class), mock(TavilyToolService.class),
+                governance, skillApi, query, mock(SematticeProjectDeliveryWriteToolService.class),
+                allowSafetyGateway(), new ObjectMapper().findAndRegisterModules());
+
+        String result = orchestrator.executeTool(
+                "org-1", "user-1", SematticeProjectDeliveryToolService.TOOL_NAME,
+                "{\"focus\":\"overview\"}", List.of(SematticeProjectDeliveryToolService.TOOL_NAME),
+                List.of(SematticeProjectDeliveryToolService.TOOL_NAME), "dev-autopilot-pm");
+
+        assertThat(result).contains("SERVICE");
+        verify(query).dispatch("org-1", "user-1", "dev-autopilot-pm", "{\"focus\":\"overview\"}");
+    }
+
     private SafetyGatewayService allowSafetyGateway() {
         SafetyGatewayService safetyGateway = mock(SafetyGatewayService.class);
         when(safetyGateway.checkToolCall(anyString(), anyString(), anyString(), anyString()))

@@ -285,6 +285,24 @@ public class SkillDefinitionService {
                     "MEDIUM"
             ),
             new BuiltinSkillSpec(
+                    "semattice-project-delivery-management",
+                    "Semattice 研发交付管理",
+                    "通过受治理机器身份读取和确认式创建研发项目、需求与任务。",
+                    "你是 DEV Autopilot 的研发交付产品经理。只要用户询问项目、需求、任务、工时、进度或变更的当前事实，"
+                            + "必须先调用 semattice_project_delivery_query，并仅依据其返回的 Semattice 实时数据总结。"
+                            + "若工具失败，要如实说明 Semattice 检索失败；不得声称无法访问项目管理系统，也不得编造项目事实。"
+                            + "你可以创建同租户的项目、需求和任务：先基于完整对话生成草案，只有用户发送服务端规定的精确确认指令后，"
+                            + "才由 semattice_project_delivery_create 受控执行；没有 Semattice 成功回执时不得声称创建成功。"
+                            + "所有 Semattice 数据操作由本 Agent 显式绑定的 SERVICE Principal 执行；登录人只提供委托、确认或审批上下文。",
+                    String.join(",",
+                            "semattice_project_delivery_query",
+                            "semattice_project_delivery_create"),
+                    null,
+                    "创建、变更或其他写入动作必须获得明确的人类确认；机器执行身份、责任人或权限不完整时失败关闭。",
+                    "事实回答注明来自 Semattice 实时数据；创建答复只有在收到实际记录编号后才可标记成功。",
+                    "HIGH"
+            ),
+            new BuiltinSkillSpec(
                     "web-search",
                     "Web 搜索",
                     "面向公开互联网的搜索与正文抽取能力，返回带 URL 的结构化来源。",
@@ -332,6 +350,9 @@ public class SkillDefinitionService {
                     DefaultBinding.alwaysOn("knowledge-first"),
                     DefaultBinding.alwaysOn("safe-handoff"),
                     DefaultBinding.alwaysOn("approval-assistant")
+            ),
+            "dev-autopilot-pm", List.of(
+                    DefaultBinding.alwaysOn("semattice-project-delivery-management")
             )
     );
 

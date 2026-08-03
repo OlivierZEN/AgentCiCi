@@ -1,9 +1,7 @@
 package com.codehouse.ciciassistant.semattice;
 
-import com.codehouse.ciciassistant.auth.domain.UserEntity;
-import com.codehouse.ciciassistant.auth.domain.UserRepository;
+import com.codehouse.ciciassistant.agent.service.AgentServicePrincipalExecutionService;
 import com.codehouse.ciciassistant.auth.service.OfficialAccessTokenService;
-import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
@@ -27,7 +25,7 @@ import org.springframework.web.server.ResponseStatusException;
  *
  * <p>This tool is intentionally not exposed in the model function schema. Chat orchestration calls it
  * only after an exact user confirmation, and Semattice derives actor and tenant from the current
- * member's OACT.</p>
+ * Agent's governed SERVICE OACT. The logged-in human only supplies delegation and confirmation context.</p>
  */
 @Service
 public class SematticeProjectDeliveryWriteToolService {
@@ -46,19 +44,16 @@ public class SematticeProjectDeliveryWriteToolService {
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
-    private final UserRepository userRepository;
-    private final OfficialAccessTokenService officialAccessTokenService;
+    private final AgentServicePrincipalExecutionService executionPrincipalService;
     private final String baseUrl;
 
     public SematticeProjectDeliveryWriteToolService(RestClient.Builder restClientBuilder,
                                                     ObjectMapper objectMapper,
-                                                    UserRepository userRepository,
-                                                    OfficialAccessTokenService officialAccessTokenService,
+                                                    AgentServicePrincipalExecutionService executionPrincipalService,
                                                     @Value("${app.semattice.base-url:}") String baseUrl) {
         this.restClient = restClientBuilder.build();
         this.objectMapper = objectMapper;
-        this.userRepository = userRepository;
-        this.officialAccessTokenService = officialAccessTokenService;
+        this.executionPrincipalService = executionPrincipalService;
         this.baseUrl = baseUrl == null ? "" : baseUrl.replaceAll("/+$", "");
     }
 
@@ -127,7 +122,7 @@ public class SematticeProjectDeliveryWriteToolService {
                 """;
     }
 
-    public String dispatch(String companyId, String userId, String argumentsJson) {
+    public String dispatch(String companyId, String userId, String agentId, String argumentsJson) {
         if (baseUrl.isBlank()) {
             return failure("SEMATTICE_UNAVAILABLE", "Semattice 服务未配置，无法创建研发交付记录。");
         }
@@ -135,11 +130,16 @@ public class SematticeProjectDeliveryWriteToolService {
         if (intent.isEmpty()) {
             return failure("INVALID_ARGUMENTS", "创建操作只允许项目、需求或任务的受控最小字段。");
         }
-        UserEntity member = userRepository.findByIdAndCompany_Id(userId, companyId)
-                .orElseThrow(() -> new ForbiddenException("当前成员不属于请求的公司"));
-        OfficialAccessTokenService.IssuedToken token = officialAccessTokenService.issueForSemattice(member);
+        AgentServicePrincipalExecutionService.ExecutionAuthorization authorization =
+                executionPrincipalService.authorizeSemattice(
+                        companyId,
+                        userId,
+                        agentId,
+                        List.of("runtime.record.read", "runtime.record.create"),
+                        "semattice_project_delivery_create");
+        OfficialAccessTokenService.IssuedToken token = authorization.token();
         try {
-            return objectMapper.writeValueAsString(create(intent.get(), member, token));
+            return objectMapper.writeValueAsString(create(intent.get(), authorization, token));
         } catch (RestClientException exception) {
             return failure("SEMATTICE_UNAVAILABLE", "Semattice 创建请求失败，请稍后重试；未将失败伪装为已创建。");
         } catch (ResponseStatusException exception) {
@@ -149,9 +149,13 @@ public class SematticeProjectDeliveryWriteToolService {
         }
     }
 
-    private Map<String, Object> create(CreateIntent intent, UserEntity member,
+    private Map<String, Object> create(CreateIntent intent,
+                                       AgentServicePrincipalExecutionService.ExecutionAuthorization authorization,
                                        OfficialAccessTokenService.IssuedToken token) {
-        String actor = actorName(member);
+        String actor = normalizeText(authorization.servicePrincipalDisplayName());
+        if (actor.isBlank()) {
+            actor = "DEV Autopilot 产品经理";
+        }
         Map<String, Object> data = new LinkedHashMap<>();
         String objectApiName;
         String code;
@@ -209,6 +213,9 @@ public class SematticeProjectDeliveryWriteToolService {
         result.put("object_api_name", objectApiName);
         result.put("record_id", record.path("record_id").asText());
         result.put("created_at", Instant.now().toString());
+        result.put("execution_principal_type", "SERVICE");
+        result.put("execution_principal", actor);
+        result.put("delegation_policy", authorization.delegationPolicy());
         if (!code.isBlank()) {
             result.put("code", code);
         }
@@ -320,16 +327,6 @@ public class SematticeProjectDeliveryWriteToolService {
 
     private static String newCode(String prefix) {
         return prefix + "-" + UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase(Locale.ROOT);
-    }
-
-    private static String actorName(UserEntity member) {
-        if (member.getAccount() != null && !normalizeText(member.getAccount().getDisplayName()).isBlank()) {
-            return normalizeText(member.getAccount().getDisplayName());
-        }
-        if (!normalizeText(member.getNickname()).isBlank()) {
-            return normalizeText(member.getNickname());
-        }
-        return "当前产品经理";
     }
 
     private static String normalizeText(String value) {

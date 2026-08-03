@@ -9,6 +9,7 @@ import com.codehouse.ciciassistant.agent.service.AgentDefinitionService;
 import com.codehouse.ciciassistant.agent.service.AgentEvaluationService;
 import com.codehouse.ciciassistant.agent.service.AgentEvaluationControlPlaneService;
 import com.codehouse.ciciassistant.agent.service.AgentProductionReadinessService;
+import com.codehouse.ciciassistant.agent.service.AgentServicePrincipalExecutionService;
 import com.codehouse.ciciassistant.agent.service.AgentSkillBindingService;
 import com.codehouse.ciciassistant.auth.RoleCodes;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
@@ -40,6 +41,7 @@ public class AgentDefinitionController {
     private final AgentSkillBindingService agentSkillBindingService;
     private final AgentAccessControlService accessControlService;
     private final AgentProductionReadinessService productionReadinessService;
+    private final AgentServicePrincipalExecutionService executionPrincipalService;
     private final AgentEvaluationService agentEvaluationService;
     private final AgentEvaluationControlPlaneService evaluationControlPlaneService;
     private final ObjectMapper objectMapper;
@@ -48,6 +50,7 @@ public class AgentDefinitionController {
                                      AgentSkillBindingService agentSkillBindingService,
                                      AgentAccessControlService accessControlService,
                                      AgentProductionReadinessService productionReadinessService,
+                                     AgentServicePrincipalExecutionService executionPrincipalService,
                                      AgentEvaluationService agentEvaluationService,
                                      AgentEvaluationControlPlaneService evaluationControlPlaneService,
                                      ObjectMapper objectMapper) {
@@ -55,6 +58,7 @@ public class AgentDefinitionController {
         this.agentSkillBindingService = agentSkillBindingService;
         this.accessControlService = accessControlService;
         this.productionReadinessService = productionReadinessService;
+        this.executionPrincipalService = executionPrincipalService;
         this.agentEvaluationService = agentEvaluationService;
         this.evaluationControlPlaneService = evaluationControlPlaneService;
         this.objectMapper = objectMapper;
@@ -227,6 +231,32 @@ public class AgentDefinitionController {
         ));
     }
 
+    @GetMapping("/{agentId}/execution-principal")
+    public ApiResponse<Map<String, Object>> getExecutionPrincipal(@PathVariable String agentId) {
+        String companyId = TenantContext.requireCompanyId();
+        accessControlService.require(companyId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.VIEW);
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("agentId", agentId);
+        payload.put("binding", executionPrincipalService.findBinding(companyId, agentId).orElse(null));
+        return ApiResponse.ok(payload);
+    }
+
+    @PutMapping("/{agentId}/execution-principal")
+    public ApiResponse<Map<String, Object>> configureExecutionPrincipal(
+            @PathVariable String agentId,
+            @Valid @RequestBody ConfigureExecutionPrincipalRequest request) {
+        String companyId = TenantContext.requireCompanyId();
+        String userId = requireUserId();
+        accessControlService.require(companyId, userId, TenantContext.getRoles(), agentId, AgentPermission.EDIT);
+        AgentServicePrincipalExecutionService.BindingView binding = executionPrincipalService.configure(
+                companyId,
+                agentId,
+                request.servicePrincipalId(),
+                request.enabled() == null || request.enabled(),
+                userId);
+        return ApiResponse.ok(Map.of("agentId", agentId, "binding", binding));
+    }
+
     @PutMapping("/{agentId}/publish-configs")
     public ApiResponse<Map<String, Object>> replacePublishConfigs(@PathVariable String agentId,
                                                                    @Valid @RequestBody ReplacePublishConfigsRequest request) {
@@ -392,6 +422,8 @@ public class AgentDefinitionController {
         payload.put("channels", detail.channels());
         payload.put("publishConfigs", detail.publishConfigs());
         payload.put("skillBindings", agentSkillBindingService.listBindings(companyId, detail.definition().getAgentId()));
+        payload.put("executionPrincipal", executionPrincipalService
+                .findBinding(companyId, detail.definition().getAgentId()).orElse(null));
         return payload;
     }
 
@@ -531,6 +563,12 @@ public class AgentDefinitionController {
     }
 
     public record ReplacePublishConfigsRequest(Map<String, Object> publishConfigs) {
+    }
+
+    public record ConfigureExecutionPrincipalRequest(
+            @NotBlank String servicePrincipalId,
+            Boolean enabled
+    ) {
     }
 
     public record VersionActionRequest(Integer versionNo) {

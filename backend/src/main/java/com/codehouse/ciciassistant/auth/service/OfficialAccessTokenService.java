@@ -91,6 +91,18 @@ public class OfficialAccessTokenService {
                                                 String tenantId,
                                                 String companyId,
                                                 List<String> requestedScopes) {
+        return issueForSematticeService(principalId, ownerPrincipalId, clientId, tenantId, companyId,
+                requestedScopes, null, null);
+    }
+
+    public IssuedToken issueForSematticeService(String principalId,
+                                                String ownerPrincipalId,
+                                                String clientId,
+                                                String tenantId,
+                                                String companyId,
+                                                List<String> requestedScopes,
+                                                String delegatedByPrincipalId,
+                                                String delegationPolicy) {
         requireEnabled();
         requireUuid(principalId, "service principal");
         requireUuid(ownerPrincipalId, "service owner");
@@ -107,7 +119,7 @@ public class OfficialAccessTokenService {
 
         Instant now = Instant.now();
         Instant expiresAt = now.plusSeconds(ttlSeconds);
-        String token = Jwts.builder()
+        JwtBuilder builder = Jwts.builder()
                 .header().keyId(keyId).and()
                 .issuer(issuer)
                 .subject(principalId)
@@ -120,7 +132,15 @@ public class OfficialAccessTokenService {
                 .claim("client_id", clientId)
                 .claim("scope", String.join(" ", issuedScopes))
                 .claim("actor_type", "service")
-                .claim("authorized_party", "agentcici")
+                .claim("authorized_party", "agentcici");
+        if (hasText(delegatedByPrincipalId)) {
+            requireUuid(delegatedByPrincipalId, "delegating principal");
+            builder.claim("delegated_by_principal_id", delegatedByPrincipalId);
+        }
+        if (hasText(delegationPolicy)) {
+            builder.claim("delegation_policy", delegationPolicy.trim());
+        }
+        String token = builder
                 .id(UUID.randomUUID().toString())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(expiresAt))

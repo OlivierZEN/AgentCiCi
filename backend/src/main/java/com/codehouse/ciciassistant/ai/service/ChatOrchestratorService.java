@@ -1532,7 +1532,7 @@ public class ChatOrchestratorService {
             List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces,
             String runId,
             String question) {
-        if (skillContext == null || !"dev-autopilot-pm".equalsIgnoreCase(skillContext.agentId())
+        if (skillContext == null
                 || !skillContext.allowedToolNames().contains(SematticeProjectDeliveryWriteToolService.TOOL_NAME)) {
             return Optional.empty();
         }
@@ -1564,7 +1564,7 @@ public class ChatOrchestratorService {
             List<Map<String, Object>> messages,
             ResolvedSkillContext skillContext,
             String question) {
-        if (skillContext == null || !"dev-autopilot-pm".equalsIgnoreCase(skillContext.agentId())
+        if (skillContext == null
                 || !skillContext.allowedToolNames().contains(SematticeProjectDeliveryWriteToolService.TOOL_NAME)
                 || !SematticeProjectDeliveryWriteToolService.isDraftRequest(question)) {
             return false;
@@ -1602,7 +1602,7 @@ public class ChatOrchestratorService {
     }
 
     static boolean isSematticeProjectDeliveryFactQuestion(ResolvedSkillContext skillContext, String question) {
-        if (skillContext == null || !"dev-autopilot-pm".equalsIgnoreCase(skillContext.agentId())
+        if (skillContext == null
                 || !skillContext.allowedToolNames().contains(SematticeProjectDeliveryToolService.TOOL_NAME)) {
             return false;
         }

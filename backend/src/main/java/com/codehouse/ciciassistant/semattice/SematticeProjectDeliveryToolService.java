@@ -1,9 +1,7 @@
 package com.codehouse.ciciassistant.semattice;
 
-import com.codehouse.ciciassistant.auth.domain.UserEntity;
-import com.codehouse.ciciassistant.auth.domain.UserRepository;
+import com.codehouse.ciciassistant.agent.service.AgentServicePrincipalExecutionService;
 import com.codehouse.ciciassistant.auth.service.OfficialAccessTokenService;
-import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
@@ -33,24 +31,21 @@ public class SematticeProjectDeliveryToolService {
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
-    private final UserRepository userRepository;
-    private final OfficialAccessTokenService officialAccessTokenService;
+    private final AgentServicePrincipalExecutionService executionPrincipalService;
     private final String baseUrl;
 
     public SematticeProjectDeliveryToolService(RestClient.Builder restClientBuilder,
                                                ObjectMapper objectMapper,
-                                               UserRepository userRepository,
-                                               OfficialAccessTokenService officialAccessTokenService,
+                                               AgentServicePrincipalExecutionService executionPrincipalService,
                                                @Value("${app.semattice.base-url:}") String baseUrl) {
         this.restClient = restClientBuilder.build();
         this.objectMapper = objectMapper;
-        this.userRepository = userRepository;
-        this.officialAccessTokenService = officialAccessTokenService;
+        this.executionPrincipalService = executionPrincipalService;
         this.baseUrl = baseUrl == null ? "" : baseUrl.replaceAll("/+$", "");
     }
 
     public static String toolDescription() {
-        return "读取当前登录成员所在租户的 Semattice 研发交付数据（项目、需求、任务、工时和变更）。"
+        return "使用当前 Agent 显式绑定的 SERVICE Principal 读取同公司的 Semattice 研发交付数据（项目、需求、任务、工时和变更）。"
                 + "涉及项目状态、进度、工时、需求、任务或变更事实时必须先调用；"
                 + "只读，不接受租户、成员或令牌参数，不能创建或修改记录。";
     }
@@ -67,22 +62,31 @@ public class SematticeProjectDeliveryToolService {
                 "required", List.of()));
     }
 
-    public String dispatch(String companyId, String userId, String argumentsJson) {
+    public String dispatch(String companyId, String userId, String agentId, String argumentsJson) {
         if (baseUrl.isBlank()) {
             return failure("SEMATTICE_UNAVAILABLE", "Semattice 服务未配置，无法读取研发交付数据。");
         }
         if (!validArguments(argumentsJson)) {
             return failure("INVALID_ARGUMENTS", "只允许可选的 focus 参数，且不能指定租户、成员或令牌。");
         }
-        UserEntity member = userRepository.findByIdAndCompany_Id(userId, companyId)
-                .orElseThrow(() -> new ForbiddenException("当前成员不属于请求的公司"));
-        OfficialAccessTokenService.IssuedToken token = officialAccessTokenService.issueForSemattice(member);
+        AgentServicePrincipalExecutionService.ExecutionAuthorization authorization =
+                executionPrincipalService.authorizeSemattice(
+                        companyId,
+                        userId,
+                        agentId,
+                        List.of("runtime.record.read"),
+                        "semattice_project_delivery_query");
+        OfficialAccessTokenService.IssuedToken token = authorization.token();
         try {
             Map<String, List<Map<String, Object>>> recordsByObject = new LinkedHashMap<>();
             for (String objectName : DELIVERY_OBJECTS) {
                 recordsByObject.put(objectName, queryObject(objectName, token));
             }
-            return objectMapper.writeValueAsString(buildSummary(recordsByObject));
+            Map<String, Object> summary = buildSummary(recordsByObject);
+            summary.put("execution_principal_type", "SERVICE");
+            summary.put("execution_principal", authorization.servicePrincipalDisplayName());
+            summary.put("delegation_policy", authorization.delegationPolicy());
+            return objectMapper.writeValueAsString(summary);
         } catch (RestClientException exception) {
             return failure("SEMATTICE_UNAVAILABLE", "Semattice 实时检索失败，请稍后重试。");
         } catch (Exception exception) {

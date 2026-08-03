@@ -281,10 +281,10 @@ public class ToolOrchestratorService {
             return crmProductSalesAnalysisToolService.dispatch(companyId, userId, argumentsJson);
         }
         if (SematticeProjectDeliveryToolService.TOOL_NAME.equals(canonicalToolName)) {
-            return sematticeProjectDeliveryToolService.dispatch(companyId, userId, safeArgumentsJson);
+            return sematticeProjectDeliveryToolService.dispatch(companyId, userId, currentAgentId, safeArgumentsJson);
         }
         if (SematticeProjectDeliveryWriteToolService.TOOL_NAME.equals(canonicalToolName)) {
-            return sematticeProjectDeliveryWriteToolService.dispatch(companyId, userId, safeArgumentsJson);
+            return sematticeProjectDeliveryWriteToolService.dispatch(companyId, userId, currentAgentId, safeArgumentsJson);
         }
         if (CloudccOpenApiService.toolName().equals(canonicalToolName)) {
             return safeToolResult(companyId, userId, canonicalToolName,

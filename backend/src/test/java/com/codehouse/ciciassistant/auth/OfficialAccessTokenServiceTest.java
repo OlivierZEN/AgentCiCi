@@ -133,7 +133,7 @@ class OfficialAccessTokenServiceTest {
         OfficialAccessTokenService.IssuedToken issued = service.issueForSematticeService(
                 principalId, ownerPrincipalId, "agentcici-data-sync",
                 "33333333-3333-4333-8333-333333333333", "orgaaaaaaaaaaaaaaaaa",
-                List.of("record.read"));
+                List.of("record.read"), ownerPrincipalId, "PRIMARY_OWNER");
         Claims claims = Jwts.parser().verifyWith(KeyFactory.getInstance("RSA").generatePublic(new RSAPublicKeySpec(
                         ((RSAPrivateCrtKey) keys.getPrivate()).getModulus(),
                         ((RSAPrivateCrtKey) keys.getPrivate()).getPublicExponent())))
@@ -144,6 +144,8 @@ class OfficialAccessTokenServiceTest {
         assertThat(claims.get("owner_principal_id", String.class)).isEqualTo(ownerPrincipalId);
         assertThat(claims.get("client_id", String.class)).isEqualTo("agentcici-data-sync");
         assertThat(claims.get("actor_type", String.class)).isEqualTo("service");
+        assertThat(claims.get("delegated_by_principal_id", String.class)).isEqualTo(ownerPrincipalId);
+        assertThat(claims.get("delegation_policy", String.class)).isEqualTo("PRIMARY_OWNER");
         assertThat(claims.get("scope", String.class)).isEqualTo("record.read");
         assertThatThrownBy(() -> service.issueForSematticeService(
                 principalId, ownerPrincipalId, "agentcici-data-sync", "tenant", "company", List.of("audit.read")))
