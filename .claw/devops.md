@@ -1041,6 +1041,11 @@ status: active
     - Verified API smoke: fixed-password org-admin login succeeded; `/agents=5`, `/skills=15`, `/integrations=4`, `/models/providers=5`, `/me/agents/run-logs=1`; platform-admin smoke returned `/platform/skills=13` and `/platform/tools=13`.
     - Verified publicly with Playwright: `https://agentcici.com/` title `AI 治理平台 | 企业 AI 客户运营套件`; `https://autoservice.agentcici.com/` title `AgentCiCi`.
 
+## DEV Autopilot 研发身份凭据运维
+
+- DEV Autopilot 研发身份凭据：悟空使用 `/opt/devautopilot/secrets/developer.env`，后羿使用 `/opt/devautopilot/secrets/developer-houyi.env`；两者必须保持 `root:root 0600`。任何轮换都应通过 AgentCiCi 受治理机器主体 API，且不得把 secret/OACT 写入日志或 Git。
+- DEV Autopilot 生产显式 allowlist 为 `dev-autopilot-developer,dev-autopilot-developer-houyi`；应用准入不能替代 AgentCiCi active SERVICE/owner 与 Semattice 角色/PDP。
+
 ## Pending Verification
 
 - Latest production release on 2026-07-03:

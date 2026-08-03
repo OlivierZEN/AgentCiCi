@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-03T12:30:50Z
+updated_at: 2026-08-03T12:47:56Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,16 +14,6 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
-
-### TASK-264 - DEV Autopilot 研发身份花名与新增开发者
-
-- status: `in_progress`
-- priority: `critical`
-- owner_role: `integration-agent`
-- spec_path: `docs/specs/FEAT-156-dev-autopilot-identity-roster.md`
-- task_status_path: `.claw/tasks/TASK-264.md`
-- assignment_path: `.claw/assignments/TASK-264.yaml`
-- next_action: 更新权威显示名，创建后羿 SERVICE，同步 Semattice 开发者角色与组织投影并完成线上回读。
 
 ### TASK-261 - 创建意图改由大模型语义理解
 
@@ -1339,6 +1329,16 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-264 - DEV Autopilot 研发身份花名与新增开发者
+
+- status: `done`
+- priority: `critical`
+- owner_role: `integration-agent`
+- spec_path: `docs/specs/FEAT-156-dev-autopilot-identity-roster.md`
+- task_status_path: `.claw/tasks/TASK-264.md`
+- assignment_path: `.claw/assignments/TASK-264.yaml`
+- next_action: 已完成 Oliver、大乔、悟空、后羿权威身份、Semattice 角色/组织投影和多开发者 CLI 生产验收；常规监控。
 
 ### TASK-263 - 产品经理显式 Tool/Skill 与 SERVICE 执行链路
 

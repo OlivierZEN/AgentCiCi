@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-156
 title: DEV Autopilot 研发身份花名与新增开发者
-status: approved
+status: verified
 owner_role: integration-agent
 task_ids: TASK-264
 related_decisions: "AgentCiCi 是全局 Principal 与凭据权威；Semattice 只保存租户投影和授权事实"
 related_issues: none
-updated_at: 2026-08-03T12:30:50Z
+updated_at: 2026-08-03T12:47:56Z
 updated_by: MANAGER-001
 ---
 
@@ -58,4 +58,3 @@ updated_by: MANAGER-001
 - Semattice members/overview 返回 4 members、3 roles、1 organization；四行角色分别为产品总监、产品经理、开发者、开发者。
 - 后羿能读取/领取/更新开发任务并登记工时，不能创建项目或读取身份治理目录。
 - 三个仓库工作树保持 clean；所有触发的项目状态文档完成校验和提交。
-

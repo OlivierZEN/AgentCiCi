@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-03T11:05:03Z
+updated_at: 2026-08-03T12:47:56Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-08-03T11:05:03Z
+last_run_at: 2026-08-03T12:47:56Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-264 - 研发身份花名与新增开发者生产验收
+
+- `identity-authority`：AgentCiCi 权威库事务回读为 Oliver / 大乔 / 悟空 / 后羿，四名 Principal 均 active；产品总监继续绑定全局用户 `18611892001`，三名 SERVICE 的 PRIMARY owner 均为 Oliver。
+- `machine-provisioning`：通过既有受治理管理 API 创建后羿 SERVICE `2678bbfb-a234-4912-bfef-47d912ce9e34`，public ID `S2026XS877MF3`，client `dev-autopilot-developer-houyi`；一次性 secret 原子写入 `/opt/devautopilot/secrets/developer-houyi.env`，保持 `root:root 0600`，未输出到终端、日志或 Git。
+- `approval-and-projection`：独立审批 `9e5783ea-7713-462f-8388-24b763eca4a0` 由不同于申请人的组织管理员批准；四名 Principal 均经短时 OACT 同步 Semattice，后羿绑定现有开发者角色与研发交付部 primary membership。
+- `console-api`：使用真实短时控制台 Session 调用 Semattice members/overview，精确返回 Oliver、大乔、悟空、后羿以及 4 members / 3 roles / 1 organization / 5 objects / 42 fields。
+- `cli-e2e`：悟空和后羿各自机器凭据执行 DEV Autopilot `tasks list --human` 成功；大乔产品经理凭据返回退出码 3、`FORBIDDEN`。公网 DEV Autopilot health 为 HTTP 200、`mode=integrated`。
+- `state-validation`：TASK-264 新增文件与写入范围有效，`git diff --check` 通过；全仓状态 validator 仍因早于本任务的 hot-index 超长、旧任务状态/时间格式和历史规格 frontmatter 债务退出 1，本任务未越界修复无关历史。
 
 ## TASK-263 - 显式 Tool/Skill 与 SERVICE 执行生产验收
 
