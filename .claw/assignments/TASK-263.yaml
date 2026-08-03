@@ -1,0 +1,69 @@
+task_id: TASK-263
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-08-03T10:29:14Z
+expires_at: none
+spec_path: docs/specs/FEAT-155-dev-autopilot-explicit-capabilities-and-service-execution.md
+task_status_path: .claw/tasks/TASK-263.md
+branch: main
+pr_url: n/a
+scope_mode: exact_files
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/**
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/**
+  - backend/src/main/java/com/codehouse/ciciassistant/semattice/**
+  - backend/src/main/java/com/codehouse/ciciassistant/skill/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/test/java/com/codehouse/ciciassistant/agent/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/test/java/com/codehouse/ciciassistant/auth/**
+  - backend/src/test/java/com/codehouse/ciciassistant/semattice/**
+  - backend/src/test/java/com/codehouse/ciciassistant/skill/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+scope_files:
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/api/AgentDefinitionController.java
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentServicePrincipalExecutionService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/service/ToolOrchestratorService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/service/OfficialAccessTokenService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/semattice/SematticeProjectDeliveryToolService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/semattice/SematticeProjectDeliveryWriteToolService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/skill/service/SkillDefinitionService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/skill/service/SkillResolverService.java
+  - backend/src/main/resources/db/migration/V101__agent_service_principal_execution_binding.sql
+  - backend/src/test/java/com/codehouse/ciciassistant/agent/service/AgentServicePrincipalExecutionServiceTest.java
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/service/ToolOrchestratorServiceTest.java
+  - backend/src/test/java/com/codehouse/ciciassistant/auth/service/OfficialAccessTokenServiceTest.java
+  - backend/src/test/java/com/codehouse/ciciassistant/semattice/SematticeProjectDeliveryToolServiceTest.java
+  - backend/src/test/java/com/codehouse/ciciassistant/semattice/SematticeProjectDeliveryWriteToolServiceTest.java
+  - backend/src/test/java/com/codehouse/ciciassistant/skill/service/SkillResolverServiceTest.java
+  - docs/specs/FEAT-155-dev-autopilot-explicit-capabilities-and-service-execution.md
+  - .claw/tasks/TASK-263.md
+  - .claw/assignments/TASK-263.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+protected_paths:
+  - .claw/developers/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+touch_policy: exclusive
+shared_contracts:
+  - Agent Builder explicit Tool/Skill binding contract
+  - AgentCiCi unified Principal and SERVICE OACT contract
+  - Semattice short-lived OACT and capability authorization contract
+task_boundary:
+  - "将研发交付能力注册并显式绑定为正式 Tool/Skill，移除按 Agent ID 的隐藏注入。"
+  - "由产品经理 SERVICE Principal 执行 Semattice 请求；HUMAN 仅提供委托、确认和审批上下文，任何失败不得回退为 HUMAN OACT。"
+  - "保持创建工具的服务端精确确认门禁，不开放模型自由写入。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
+signature: "MANAGER-001; user authorized explicit Tool/Skill binding and product-manager SERVICE execution on 2026-08-03."

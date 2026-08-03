@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-01T15:46:00Z
+updated_at: 2026-08-03T10:29:14Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,16 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-263 - 产品经理显式 Tool/Skill 与 SERVICE 执行链路
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `backend-agent`
+- spec_path: `docs/specs/FEAT-155-dev-autopilot-explicit-capabilities-and-service-execution.md`
+- task_status_path: `.claw/tasks/TASK-263.md`
+- assignment_path: `.claw/assignments/TASK-263.yaml`
+- next_action: 完成显式能力、Agent→SERVICE 执行绑定、委托式 OACT、测试与生产闭环。
 
 ### TASK-261 - 创建意图改由大模型语义理解
 

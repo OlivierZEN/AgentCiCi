@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-01T15:46:00Z
+updated_at: 2026-08-03T10:29:14Z
 updated_by: MANAGER-001
-phase: identity-delivery-complete
-active_task: TASK-262
-next_action: "TASK-262 已完成；保持 2.8.38、机器主体生命周期与 DEV Autopilot HTTPS 入口的生产监控。"
+phase: explicit-capability-service-execution
+active_task: TASK-263
+next_action: "完成研发交付产品经理显式 Tool/Skill、Agent→SERVICE Principal 绑定与 HUMAN 委托/确认上下文，并发布生产验收。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-263 / FEAT-155：已确认当前产品经理 Agent 的 Semattice 能力来自固定 Agent ID 的隐藏 Tool/Prompt 注入，管理面实际为 Tool 0、Skill 0，且在线查询/创建使用登录成员 HUMAN OACT。目标改为显式持久化 2 个平台内置 Tool 和平台标准 Skill，并将 Agent 绑定至既有产品经理 SERVICE Principal `742daca1-ce58-49cc-9e53-530444ba1c47`；产品总监 HUMAN 只提供 PRIMARY owner 委托、确认和审批上下文，任何机器身份校验失败不得回退成人类执行。
 
 - TASK-262 / FEAT-154：已发布生产 `2.8.38` 并完成 DEV Autopilot 研发身份体系。全局用户 `18611892001` 绑定产品总监 HUMAN；产品经理和开发者 SERVICE 均以其为 PRIMARY 人类负责人。管理端已具备查询、密钥轮换、暂停、恢复、永久撤销、负责人移交和脱敏审计；开发者主体在 AgentCiCi 暂停时 CLI 被拒绝，恢复后可用，轮换后旧 secret 失效、新 secret 可完成短时 OACT 与任务读取。HTTPS 入口曾因仅使用基础 Compose 重建而丢失 443，已恢复 SSL override，并将 `/devautopilot/` 动态代理固化到两份版本化 Nginx 配置；公网健康为 200。
 
