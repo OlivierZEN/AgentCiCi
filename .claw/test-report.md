@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-04T15:18:04Z
+updated_at: 2026-08-04T15:34:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-08-04T15:18:04Z
+last_run_at: 2026-08-04T15:34:00Z
 last_run_status: passed
 ---
 
@@ -31,6 +31,7 @@ last_run_status: passed
 - `frontend-focused`：`npm --prefix frontend test -- --run src/assistant/oidcAutoRedirect.test.ts` 通过（1 file / 5 tests）；普通 guest 触发跳转，OIDC/CloudCC 回调票据、已有会话、登录提交和重复尝试均不触发。
 - `frontend-build`：`npm --prefix frontend run build` 通过；仅保留既有 bundle 大小提示。
 - `diff-check`：`git diff --check` 通过。
+- `production-2.8.46`：Git tag/commit 为 `2.8.46 / 42d81ceccd46`；backend/frontend ACR index digest 为 `sha256:d75441e1aaa11f83bafff1b1062723757b8ad8ef9443ae4b88ea393bb8215d5a` / `sha256:9b3c8ab956756817648694cfa705431f2c670ca2aa0386d0a38ac37b60bb9e7a`。发布前备份 `/opt/cici/backups/20260804-233209-before-2.8.46` 的环境、PostgreSQL、KB、Qdrant 均非空；仅重建 backend/frontend，六服务 healthy，`/actuator/health=UP`、版本接口为 `2.8.46 / 42d81ceccd46`、Nginx 配置通过。`https://x.agentcici.com/`=200、HTTP 根路径=301、匿名 `/auth/me`=401；`onechat.agentcici.com` DNS 仍不可解析，未作为发布成功判定。
 
 ## TASK-252 - 公司切换会话隔离（发布前）
 
