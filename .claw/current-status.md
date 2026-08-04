@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-04T15:18:04Z
+updated_at: 2026-08-04T15:34:00Z
 updated_by: MANAGER-001
-phase: tenant-isolation-cache-hotfix-production
-active_task: TASK-252
-next_action: "由受权成员刷新到 2.8.45 后复核公司 A→B→A 页面；未配置 CloudCC 的租户需先完成管理端集成配置。"
+phase: oidc-auto-redirect-production
+active_task: TASK-255
+next_action: "由正常业务未登录会话复核 /app 自动进入统一登录与 OIDC 回调；onechat.agentcici.com 的 DNS 解析风险需单独修复。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- 生产已发布 `2.8.46 / 42d81ceccd46`：包含 TASK-255 的 `/app` 未登录自动 OIDC 跳转。backend/frontend 不可变 ACR digest 分别为 `sha256:d75441e1aaa11f83bafff1b1062723757b8ad8ef9443ae4b88ea393bb8215d5a` / `sha256:9b3c8ab956756817648694cfa705431f2c670ca2aa0386d0a38ac37b60bb9e7a`；发布前备份 `/opt/cici/backups/20260804-233209-before-2.8.46` 的环境、PostgreSQL、知识库与 Qdrant 均非空。仅重建 backend/frontend，六容器 healthy，`/actuator/health=UP`、版本接口返回 `2.8.46` 与该提交、Nginx 校验通过、`x.agentcici.com` HTTPS=200、HTTP=301、匿名 `/auth/me`=401。`onechat.agentcici.com` 仍无法 DNS 解析，未作为发布成功依据。
 
 - TASK-265 / FEAT-157：DEV Autopilot 产品经理评审能力已完成生产闭环。`dev-autopilot-pm` 显式绑定 query/create/review 三个 Tool、always-on Skill 与产品经理 SERVICE Principal；第三方开发者 CLI 已完成设计驳回/批准、进度与工时、阻塞上报/解除、制品提交、完成申请和最终批准。正式任务 `019fcc18-756f-7782-a9e7-bf34e9c94670` 最终为 `已完成 / 100% / revision 13`；哪吒休息态与产品经理冒用开发者 CLI 的负向边界均通过。
 
