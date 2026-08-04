@@ -23,7 +23,7 @@ last_run_status: passed
 - `backend-focused`：`mvn -q -f backend/pom.xml -Dmaven.repo.local=backend/.m2 -Dtest=CloudccAccessTokenServiceTest test` 通过（3 tests）；覆盖当前用户 session 校验、并发 token 合并，以及 Token JSON 使用 `orgId` 且不含旧 `companyId`。
 - `backend-compile`：`mvn -q -f backend/pom.xml -Dmaven.repo.local=backend/.m2 -DskipTests compile` 通过。
 - `frontend`：`npm --prefix frontend test -- --run src/assistant/AssistantApp.test.ts` 与 `npm --prefix frontend run build` 通过；仅保留既有 bundle-size 提示。
-- `migration`：V104 是只追加的 JSONB 正向迁移，优先复制旧配置键，次选提取发现 URL 的 `orgId`；不改 `integration_app.company_id`、不删除旧键。尚未发布或执行生产迁移。
+- `production-2.8.44`：Git tag/commit 为 `2.8.44 / 4690e58cc154`；backend/frontend ACR index digest 为 `sha256:28fe55de36010179b92a4203eabca6998030e9fbefc40f0da660cad5bf9a6b68` / `sha256:0c73ece9d1c2846bd2d616323bdf633f49643fefbfa52e54b8caee3b8afd7996`。发布前备份 `/opt/cici/backups/20260804-220929-before-2.8.44-cloudcc-orgid` 的 env、PostgreSQL、KB、Qdrant 均非空；仅重建 backend/frontend，六容器 healthy，health=UP、版本正确、Nginx 通过、`x.agentcici.com`=200、匿名 `/auth/me`=401。V104=true，CloudCC 集成 5/6 已有 `orgId`；未配置的香港大学保留为未配置状态，未伪造凭据或连通结果。
 
 ## TASK-265 - DEV Autopilot 研发交付评审 Tool（发布前）
 
