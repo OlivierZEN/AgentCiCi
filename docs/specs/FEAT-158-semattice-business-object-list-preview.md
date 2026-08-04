@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-158
 title: AgentCiCi AI表格业务对象实时列表
-status: implementation
+status: repair
 owner_role: fullstack-agent
 task_ids: TASK-266
 related_decisions: none
-related_issues: none
-updated_at: 2026-08-04T16:10:00Z
+related_issues: ISSUE-2026-08-05-ai-table-auth-header
+updated_at: 2026-08-05T00:00:00Z
 updated_by: MANAGER-001
 ---
 
@@ -45,7 +45,7 @@ AgentCiCi 左侧入口已命名为“AI表格”。用户已确认高保真桌�
 
 ## 安全与权限边界
 
-- 浏览器仅调用同源 AgentCiCi API，使用既有登录 Cookie；不能传入公司、租户、用户或 OACT。
+- 浏览器仅通过既有 `authFetch(LS_ASSISTANT_TOKEN, ...)` 调用同源 AgentCiCi API，复用当前会话 Bearer Token；不能传入公司、租户、用户或 OACT。不得改用仅依赖 Cookie 的裸 `fetch`，否则请求会在 AgentCiCi 鉴权层返回 `Authentication required`。
 - 本地 Vite 与两份生产 Nginx 配置必须将 `/ai-table(/|$)` 精确代理至后端，且该规则优先于 SPA 的 `try_files` 回退。
 - 后端从 `TenantContext` 取得当前公司和成员，调用 `AuthService.issueSematticeOfficialAccess` 取得 60–600 秒短期 OACT。
 - `GET /ai-table/catalog` 调用 `metadata.version.get-current`。`GET /ai-table/objects/{objectApiName}/records` 先读取目录验证对象与字段，再调用 `runtime.record.query`。

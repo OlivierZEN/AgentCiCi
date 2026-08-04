@@ -10,6 +10,12 @@ status: active
 
 ## Open Issues
 
+- ISSUE-2026-08-05-ai-table-auth-header:
+  - Symptom: 已登录用户在 `https://x.agentcici.com/app` 打开 AI表格时，目录请求显示 `Authentication required`，无法读取业务对象。
+  - Verified root cause: `AiTableBusinessObjectList` 对 `/ai-table/catalog` 和记录查询使用裸 `fetch`，仅设置 `credentials: same-origin`；用户端的实际登录态由 `LS_ASSISTANT_TOKEN` 中的 Bearer Token 提供。该请求没有 `Authorization`，被 AgentCiCi 鉴权层拒绝，未进入 OACT 签发或数据平台调用。
+  - Resolution: TASK-266 统一改用 `authFetch`，保持既有 Token 更新重试语义和同源请求边界。
+  - Status: in_progress.
+
 - ISSUE-2026-07-24-oidc-state-cross-origin:
   - Symptom: 用户完成 Keycloak SSO 后，`https://x.agentcici.com/auth/oidc/callback` 返回 `Invalid OIDC login state`，无法进入系统。
   - Verified root cause: `agentcici.com/auth/oidc/login` 与 `x.agentcici.com/auth/oidc/login` 均创建 host-only `CICI_OIDC_STATE` Cookie，但 Keycloak client 的 redirect URI 固定为 `https://x.agentcici.com/auth/oidc/callback`。从主站域发起时 Cookie 不会发送到 `x`，state 比较在读取 Redis 事务前失败。

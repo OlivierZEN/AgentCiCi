@@ -17,13 +17,13 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-266 - AI表格业务对象实时列表
 
-- status: `done`
+- status: `in_progress`
 - priority: `high`
 - owner_role: `frontend-agent`
 - spec_path: `docs/specs/FEAT-158-semattice-business-object-list-preview.md`
 - task_status_path: `.claw/tasks/TASK-266.md`
 - assignment_path: `.claw/assignments/TASK-266.yaml`
-- next_action: 已发布 `2.8.48 / 3bde866470b3`；成员可在 AI表格中按自身权限回读实际对象与记录。
+- next_action: 修复已确认的 Bearer 会话未透传缺陷，完成定向验证后重新发布生产。
 
 ### TASK-265 - DEV Autopilot 研发交付评审 Tool
 

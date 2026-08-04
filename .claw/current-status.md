@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-04T15:39:00Z
+updated_at: 2026-08-05T00:00:00Z
 updated_by: MANAGER-001
-phase: ai-table-live-production
-active_task: none
-next_action: "TASK-266 已发布生产 2.8.48；等待有成员会话的用户回读其实际 AI表格数据。onechat.agentcici.com 的 DNS 解析风险仍需单独修复。"
+phase: ai-table-authentication-repair
+active_task: TASK-266
+next_action: "修复已确认的 AI表格 Bearer 会话透传缺陷，完成定向验证后发布新的不可变生产版本。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-266 / FEAT-158：已发布生产 `2.8.48 / 3bde866470b3`。AI表格现由 AgentCiCi 服务端基于当前会话成员签发短期 OACT，读取已发布对象目录和严格授权的记录查询结果；浏览器不持有 OACT、租户或公司标识。桌面鎏金账房和现有 8 个主题结构保持不变，具备游标分页、受索引约束的查询、以不可逆偏好 scope 隔离的列偏好、刷新、详情与 loading/empty/error/permission 状态，不包含写入、批量、导出或移动端。Vite 与两份生产 Nginx 的 `/ai-table` 精确代理已补齐；x HTTPS 虚拟主机匿名调用返回 401 JSON，而非 SPA fallback。backend/frontend ACR digest 为 `sha256:7bcea486aac0612e168208b08698cf1297e4290512fc6639f3150d8ddb0d60ad` / `sha256:3f1666e3a1c54d9cce51f2659c20589fe2a5851dd06d803030288064fa4deac0`，发布前四类备份位于 `/opt/cici/backups/20260805-000608-before-2.8.48-ai-table-live` 且均非空。六容器 healthy、backend health=UP、版本/Nginx/x HTTPS/HTTP 均通过；生产 OACT scopes 含 metadata/record read。当前会话无受权成员 Cookie 或测试账号，未伪造真实记录回读；成员登录后即可按其权限读取实际数据。
+- TASK-266 / FEAT-158：生产 `2.8.48` 的 AI表格在真实用户端返回 `Authentication required`。代码审计已确认目录/记录请求绕过应用统一 `authFetch`，只发送同源 Cookie；当前工作台的登录态实际使用 Bearer Token，因此请求在 AgentCiCi 鉴权层被拒绝，尚未进入 OACT 或数据平台调用。任务已恢复为进行中，修复将复用统一会话请求并保持浏览器不接触 OACT、租户或公司标识；桌面鎏金账房和受控主题结构不变。
 
 ## Snapshot
 

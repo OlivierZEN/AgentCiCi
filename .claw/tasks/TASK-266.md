@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-266
-status: done
-updated_at: 2026-08-04T16:10:00Z
+status: in_progress
+updated_at: 2026-08-05T00:00:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -17,19 +17,20 @@ spec_path: docs/specs/FEAT-158-semattice-business-object-list-preview.md
 - 用户已确认高保真 UI 形态，并授权生产实现及线上发布。
 - 已确认数据平台提供已发布元数据读取与带对象/字段/记录范围授权的记录查询能力。
 - 已完成真实只读对象目录、记录查询、游标分页、已索引文本前缀查询、成员隔离列偏好和同源 API 代理实现。
-- 已发布生产 `2.8.48 / 3bde866470b3`；backend/frontend 均为新不可变镜像，六容器健康，AI表格匿名入口在 HTTPS x 虚拟主机按设计返回 401 JSON。
+- 已复现用户截图中的 `Authentication required`，并确认不是 Semattice 或 OACT 拒绝。
+- 已确认前端 `AiTableBusinessObjectList` 直接使用 `fetch(..., { credentials: "same-origin" })`，而工作台认证 API 使用 `authFetch(LS_ASSISTANT_TOKEN, ...)` 追加 Bearer Token；目录请求因此缺少 `Authorization` 并被 AgentCiCi 鉴权层拒绝。
 - Blocked: none
 
 ## Scope
 
 - 在 AgentCiCi 用户端实现真实、只读的 AI表格对象目录和记录列表。
-- 后端以当前用户短期 OACT 调用数据平台，前端只调用同源 AgentCiCi API；Vite/Nginx 必须将 `/ai-table` 精确代理至后端。
+- 后端以当前用户短期 OACT 调用数据平台，前端通过既有 `authFetch` 调用同源 AgentCiCi API；Vite/Nginx 必须将 `/ai-table` 精确代理至后端。
 - 完成服务端游标分页、受索引约束的查询、列配置持久化、详情以及完整异常状态。
 - 维持桌面端多主题高保真结构；不实现写入、批量、导出或移动端。
 
 ## Next Action
 
-- 已完成。后续可由拥有成员会话的用户在 AI表格中回读其被授权的实际业务对象与记录；不应使用共享凭据或演示数据替代。
+- 将目录和记录查询接入现有 Bearer 会话请求器，补充定向回归，发布新的不可变生产版本并做鉴权边界与线上健康验收。
 
 ## Verification
 
