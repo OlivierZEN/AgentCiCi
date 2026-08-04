@@ -7,7 +7,7 @@ owner_role: project-manager
 task_ids: TASK-252
 related_decisions: FEAT-136 Keycloak 统一身份与官方应用访问令牌, FEAT-144 全局用户公共编号
 related_issues: none
-updated_at: 2026-08-04T13:35:00Z
+updated_at: 2026-08-04T13:45:00Z
 updated_by: MANAGER-001
 ---
 
@@ -33,6 +33,7 @@ AgentCiCi 是主体、公司成员、责任人和跨应用开户的治理中心�
 - 机器 service account 的人类责任人、维护人、最小权限、轮换和移交治理。
 - Keycloak realm/client、令牌 claim、内部控制面 API、事件、迁移、审计、安全和验收设计。
 - 已认证前端在公司切换后的租户状态隔离：会话、工作台消息、智能体运行态、技能/快捷指令、知识库选择和异步请求均不得跨 `company_id` 复用。
+- CloudCC CRM 集成的外部组织标识语义收敛：AgentCiCi `company_id` 与 CloudCC `orgId` 必须分离，Token 请求严格遵循 CloudCC `orgId` 契约。
 
 ### Out Of Scope
 
@@ -97,6 +98,36 @@ AgentCiCi 是主体、公司成员、责任人和跨应用开户的治理中心�
 - 在公司 A 的消息请求、SSE 或工作台加载尚未完成时切换至公司 B，随后到达的公司 A 响应不改变公司 B 的列表、消息、运行态或加载提示。
 - 切换后发送消息时，前端只传递当前公司令牌；后端以当前 `company_id` 保存和读取，历史记录不删除。
 - 现有登录、OIDC、CloudCC SSO、会话列表和工作台桌面交互回归通过。
+
+## CloudCC CRM 组织 ID 契约
+
+### 边界与问题
+
+`integration_app.company_id` 是 AgentCiCi 的租户外键，用于定位当前租户的集成记录，必须继续保存 AgentCiCi `company_id`。CloudCC 的 Token API 则要求独立的外部组织标识 `orgId`。旧配置在 `config_json.companyId` 中错误保存 CloudCC 组织 ID，且 Token 请求同样发送 `companyId`；这会与 AgentCiCi 租户 ID 混淆，也不符合 CloudCC `/api/cauth/token` 的请求契约。
+
+### 目标配置与运行时请求
+
+```json
+{
+  "orgId": "<CloudCC organization id>",
+  "orgapi_switch_address": "<CloudCC gateway discovery URL or direct gateway>",
+  "clientId": "<CloudCC client id>",
+  "secretKey": "<CloudCC secret key>"
+}
+```
+
+- 运行时使用当前 JWT 的 AgentCiCi `company_id` 查询 `integration_app`；不得把它发送给 CloudCC。
+- CloudCC Token 请求体必须使用 `orgId`，并包含 `username`、`safetyMark`、`clientId`、`secretKey` 与 `grant_type=password`。
+- 网关发现地址中的 `orgId` 只用于定位网关；它不替代受控配置中的 `orgId`，但迁移可在安全格式校验后从该 URL 提取缺失值。
+- API 日志、管理端展示、测试报告均不得回显 `secretKey` 或 accessToken。
+
+### 兼容、迁移与验收
+
+1. 新代码优先读取 `config.orgId`，仅在该字段缺失时兼容读取历史 `config.companyId`。
+2. Flyway 正向迁移将旧 `config.companyId` 复制至 `config.orgId`，保留旧字段以支持尚未切换的调用方；不触碰 `integration_app.company_id`。
+3. 集成管理 API 的写入与展示只使用 `orgId`；保存时不得再写入旧配置字段。
+4. 对已启用且凭据完整的租户，测试应断言请求 JSON 使用 `orgId`、不包含 CloudCC 配置 `companyId`，并验证网关解析与 Token 缓存回归。
+5. 缺失 `orgId` 的集成必须返回可诊断的“CloudCC orgId 未配置”状态，不能拼出 `null/api/cauth/token` 或将外部错误掩盖为连接成功。
 
 ## 目标架构
 

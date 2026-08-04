@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-252
 status: in_progress
-updated_at: 2026-08-04T13:39:00Z
+updated_at: 2026-08-04T13:45:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: project-manager
@@ -15,7 +15,7 @@ spec_path: docs/specs/FEAT-145-unified-principal-identity-governance.md
 ## Current State
 
 - Status: `in_progress`
-- Next action: 已发布并完成基础线上验收；请由已登录用户复核公司 A→B→A 的工作台消息、会话历史和 CRM 数据均随当前组织变化。旧 `company_id` 的浏览器缓存、异步响应、SSE 和工作台状态不得显示或写回新公司页面；不删除任何历史会话数据。
+- Next action: 修复 CloudCC CRM 的 `orgId` 配置/请求契约并迁移既有配置，然后完成生产连通性验收；公司切换的 A→B→A 页面回读仍待受权用户复核。旧 `company_id` 的浏览器缓存、异步响应、SSE 和工作台状态不得显示或写回新公司页面；不删除任何历史会话数据。
 - Deployment scope: `deploy/docker-compose.acr.yml` 仅用于把独立 Keycloak provisioner 配置传入 backend；不修改服务拓扑、网络或证书。
 - Blocked: 无。Keycloak Realm SMTP 已配置，人工 provisioning 已在受控部署环境启用；本次只修复邀请/重绑闭环，不创建未获业务授权的机器主体。
 
@@ -45,6 +45,7 @@ spec_path: docs/specs/FEAT-145-unified-principal-identity-governance.md
 - 紧急缺陷设计（2026-08-04）：已确认后端会话和消息按 JWT `company_id` 查询，实际风险位于 `AssistantApp` 浏览器内存：工作台默认 session ID 跨公司可碰撞，缓存以 agent/session 而非 company 分区，且公司切换不清空旧状态或拒绝旧异步响应。规格已补齐“切换即失效、缓存 company 分区、旧响应静默丢弃、终止旧流”的实现与验收契约；本次不删除或迁移历史聊天数据。
 - 紧急缺陷实现（2026-08-04）：`AssistantApp` 在认证载荷的 `companyId` 变化时递增内存作用域版本并清空会话、消息、工作台运行态、知识库、技能、快捷指令、监控与智能体投影；浏览器消息/工作台缓存使用 `companyId::sessionOrAgentId`，不改变 API/session ID。会话、工作台、知识库、智能体、技能、快捷指令与监控异步加载仅能在原作用域回写；旧公司流式回调会静默丢弃。`workbenchSessions` 定向测试和前端 TypeScript/Vite 生产构建通过，等待生产发布验收。
 - 生产发布（2026-08-04）：`2.8.43 / 45b942c06b86` 的 backend/frontend 不可变镜像已推送并发布；index digest 分别为 `sha256:9fcfa8f2c72a5cb80ea6f5cdc68f7dd3a384bb590aed5fbbecb3c5a576e14610`、`sha256:8ad594eea01883e1e87901158c58bc3423d49bcb65738c2d65cf2f505f24d2f5`。发布前备份 `/opt/cici/backups/20260804-213816-before-2.8.43-company-switch-isolation` 的环境、PostgreSQL、知识库、Qdrant 均非空；仅重建 backend/frontend，六容器 healthy，`/system/version` 回读为 `2.8.43 / 45b942c06b86`，Nginx 通过，`x.agentcici.com`=200、匿名 `/auth/me`=401。线上前端工件含公司缓存键标记；受权用户的 A→B→A 页面回归仍作为人工验收项。
+- CloudCC CRM 契约确认（2026-08-04）：CloudCC Token API 使用 `orgId`，实际 `POST /api/cauth/token` 已在受权凭据下返回 HTTP 200/result=true（未记录 token 或 secret）。当前 AgentCiCi 后端错误读取/发送配置 `companyId`；盘点显示多个租户还缺少该外部组织 ID 配置。规格与任务范围已扩展为“读新兼容旧、写新字段、Flyway 正向回填、请求使用 orgId、管理端收敛与脱敏连通性验证”，且明确不改 `integration_app.company_id`。
 
 ## Handoff
 

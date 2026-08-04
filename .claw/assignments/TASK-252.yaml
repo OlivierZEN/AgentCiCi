@@ -12,10 +12,12 @@ scope_mode: task_bounded_broad_code
 allowed_write_roots:
   - backend/src/main/java/com/codehouse/ciciassistant/auth/**
   - backend/src/main/java/com/codehouse/ciciassistant/company/**
+  - backend/src/main/java/com/codehouse/ciciassistant/integration/**
   - backend/src/main/resources/db/migration/**
   - backend/src/main/resources/**
   - backend/src/test/java/com/codehouse/ciciassistant/auth/**
   - backend/src/test/java/com/codehouse/ciciassistant/company/**
+  - backend/src/test/java/com/codehouse/ciciassistant/integration/**
   - frontend/src/**
   - deploy/docker-compose.acr.yml
   - docs/specs/**
@@ -43,6 +45,7 @@ task_boundary:
   - "实现 FEAT-145 的 AgentCiCi 主数据、受控人类邀请、Keycloak 绑定、机器主体与人类责任治理。"
   - "实现必要的 API、迁移、测试、运行配置和官方应用契约；保持 UUID、issuer+sub、company_id 与既有 OACT/JWKS 的兼容边界。"
   - "允许按生产 release runbook 构建、推送、发布和验收；Semattice 的独立实现须在其仓库另建任务并遵循其项目规范。"
+  - "修复 CloudCC CRM 集成的组织 ID 配置语义：AgentCiCi 租户外键仍为 company_id；CloudCC 配置与 Token 请求统一使用 orgId，允许正向迁移和兼容旧 companyId 读取。"
 change_manifest_required: true
 preflight_required: true
 local_login_required: true
