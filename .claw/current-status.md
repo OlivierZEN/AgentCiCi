@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-04T13:37:00Z
+updated_at: 2026-08-04T13:39:00Z
 updated_by: MANAGER-001
 phase: production-company-switch-isolation-release
 active_task: TASK-252
-next_action: "发布并复核公司切换后的浏览器会话隔离；正常公司管理员邀请的新成员仍应在完成 Keycloak 邮箱验证和设置密码后才激活。"
+next_action: "由受权用户复核公司 A→B→A 的工作台消息与 CRM 数据随当前组织刷新；正常公司管理员邀请的新成员仍应在完成 Keycloak 邮箱验证和设置密码后才激活。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-252 / 公司切换会话隔离：已完成生产待发布的前端修复。AgentCiCi 后端仍以 JWT `company_id` 查询会话；前端现将消息、工作台 session/运行态缓存按 `companyId` 分区，并在组织切换时立即清空所有公司级页面状态、使旧异步/流式响应失效。定向 Vitest 4/4 和 TypeScript/Vite build 均通过；下一步为不可变镜像发布与生产公司 A→B→A 回读，期间不删除或迁移历史聊天数据。
+- TASK-252 / 公司切换会话隔离：已发布生产 `2.8.43 / 45b942c06b86`。AgentCiCi 后端继续以 JWT `company_id` 查询会话；前端消息、工作台 session/运行态缓存现按 `companyId` 分区，组织切换会立即清空公司级页面状态并使旧异步/流式响应失效。定向 Vitest 4/4、TypeScript/Vite build、不可变镜像、发布前四类备份、六容器健康、Nginx、版本接口、前端工件标记、`x.agentcici.com` 200 和匿名 `auth/me` 401 均通过；等待受权用户复核公司 A→B→A 页面内容。
 
 - TASK-252 / FEAT-145：人类邀请修复已发布 `2.8.41 / 3320ed77515d`。Flyway V102 成功，Keycloak Realm SMTP（SSL 465）和人工 provisioning 均为受控启用；既有绑定按远端 `sub` 复核，未激活才重发 Required Actions，已激活不重置密码。远端用户缺失时仅以不可变 public ID、受管 account ID 属性和邮箱同时证明归属后重绑，否则 fail closed；重复邀请不能恢复已停用成员。2026-08-04 已完成历史回填：5 个活跃但未绑定的全局账户均已创建/复用 Keycloak User、写入 issuer+subject 映射并触发邮箱验证与设置密码邮件；当前活跃未绑定数为 0，5/5 初始动作均就绪。另已在用户确认后修复一例重复 Keycloak User 和一例 Keycloak 空邮箱：前者仅将本地 issuer+subject 绑定切换至原可用手机号登录身份，后者补写已验证邮箱并重发初始化邮件；Principal 镜像已同步，未重置密码、未删除用户。backend/frontend healthy，根路径 200，匿名鉴权和服务交换入口均为预期 401。首个新成员的真实邮箱点击/首次 OIDC 激活由正常业务邀请完成，不伪造用户凭据。
 

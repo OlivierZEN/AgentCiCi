@@ -15,7 +15,7 @@ last_run_status: passed
 - `frontend-focused`：`npm test -- --run src/assistant/workbenchSessions.test.ts src/assistant/AssistantApp.test.ts` 通过（2 files / 4 tests）；缓存键测试确认同一工作台 API session 在不同公司形成不同浏览器内存键。
 - `frontend-build`：`npm run build` 通过（TypeScript + Vite）；仅保留既有 bundle 大小提示。
 - `isolation-contract`：认证 `companyId` 切换会递增作用域版本、同步清空公司级内存状态；会话/消息、工作台、知识库、智能体、技能、快捷指令与监控的异步响应在作用域不一致时不回写，工作台流式回调也会丢弃。服务器 API session ID 保持不变，未删除或迁移任何历史会话。
-- `production-pending`：等待不可变前端镜像、发布前备份、容器/公网 smoke，以及受权用户的公司 A→B→A 实际界面复核。
+- `production-2.8.43`：Git tag/commit 为 `2.8.43 / 45b942c06b86`；backend/frontend ACR index digest 为 `sha256:9fcfa8f2c72a5cb80ea6f5cdc68f7dd3a384bb590aed5fbbecb3c5a576e14610` / `sha256:8ad594eea01883e1e87901158c58bc3423d49bcb65738c2d65cf2f505f24d2f5`。发布前备份 `/opt/cici/backups/20260804-213816-before-2.8.43-company-switch-isolation` 的 env、PostgreSQL、KB、Qdrant 均非空；仅重建 backend/frontend，六容器 healthy，backend health=UP、版本接口为 `2.8.43 / 45b942c06b86`、Nginx 配置通过、线上工件含公司缓存键标记、`https://x.agentcici.com/`=200、匿名 `/auth/me`=401。受权用户 A→B→A 实际界面复核待完成，未伪造登录会话。
 
 ## TASK-265 - DEV Autopilot 研发交付评审 Tool（发布前）
 
