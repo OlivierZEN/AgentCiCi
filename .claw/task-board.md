@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-03T12:47:56Z
+updated_at: 2026-08-04T04:10:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,16 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-265 - DEV Autopilot 研发交付评审 Tool
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `backend-agent`
+- spec_path: `docs/specs/FEAT-157-dev-autopilot-delivery-review-tool.md`
+- task_status_path: `.claw/tasks/TASK-265.md`
+- assignment_path: `.claw/assignments/TASK-265.yaml`
+- next_action: 实现产品经理 SERVICE 执行的设计/完成评审 Tool、交付事件查询、显式 Skill 绑定和定向测试。
 
 ### TASK-261 - 创建意图改由大模型语义理解
 

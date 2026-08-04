@@ -1,0 +1,47 @@
+task_id: TASK-265
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-08-04T04:10:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-157-dev-autopilot-delivery-review-tool.md
+task_status_path: .claw/tasks/TASK-265.md
+branch: main
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/**
+  - backend/src/test/java/**
+  - backend/src/main/resources/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+scope_files:
+  - backend/src/main/resources/db/migration/V103__dev_autopilot_delivery_review_tool.sql
+  - docs/specs/FEAT-157-dev-autopilot-delivery-review-tool.md
+  - .claw/tasks/TASK-265.md
+  - .claw/assignments/TASK-265.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+protected_paths:
+  - backend/src/main/resources/db/migration/**
+  - .claw/developers/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+touch_policy: exclusive
+shared_contracts:
+  - AgentCiCi Agent-to-SERVICE Principal execution and PRIMARY_OWNER delegation contract
+  - DEV Autopilot PM review API and task state-machine contract
+  - Semattice short-lived OACT and published delivery-event model
+task_boundary:
+  - "只新增 DEV Autopilot 设计/完成评审 Tool、事件查询、Skill/Tool 显式绑定及其测试。"
+  - "不允许 AgentCiCi 直接修改 Semattice 任务状态；所有评审写入经 DEV Autopilot API。"
+  - "不在参数、日志、仓库或审计中持久化 OACT、client secret 或第三方仓库凭据。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
+signature: "MANAGER-001; user authorized the production-ready third-party coding-agent delivery loop on 2026-08-04."
