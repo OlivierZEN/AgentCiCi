@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-04T14:55:00Z
+updated_at: 2026-08-04T15:05:49Z
 updated_by: MANAGER-001
 phase: tenant-isolation-cache-hotfix-production
 active_task: TASK-252
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-253 与 TASK-255 已按用户授权合并至 `main`。TASK-253 的计费修复此前已由 TASK-254 发布，历史合并未重复引入功能差异；TASK-255 的 `/app` 访客一次性 OIDC 自动跳转、回调票据保护和 5 项定向测试已合并，前端生产构建通过，尚未发布生产。
 
 - TASK-252 / CloudCC CRM orgId 契约：已发布生产 `2.8.44 / 4690e58cc154`。AgentCiCi 租户外键 `integration_app.company_id` 保持不变；CloudCC 配置/Token 请求统一为 `orgId`，兼容读取旧 `config.companyId`。V104 已成功从旧键或网关 URL 回填，6 个 CloudCC 集成中 5 个已有 `orgId`，香港大学仍未配置。定向测试、backend compile、前端 build、不可变镜像、发布前四类备份、六容器健康、V104、Nginx、版本接口、x=200 与匿名 auth=401 均通过；等待受权成员实际 CRM 数据回读。
 

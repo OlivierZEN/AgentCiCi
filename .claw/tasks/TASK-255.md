@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-255
-status: in_progress
-updated_at: 2026-07-30T09:00:00Z
+status: done
+updated_at: 2026-08-04T15:05:49Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: frontend-agent
@@ -14,14 +14,16 @@ spec_path: docs/specs/FEAT-148-app-auto-oidc-redirect.md
 
 ## Current State
 
-- Status: `in_progress`
-- Next action: 为 `/app` 无会话状态添加一次性 OIDC 自动跳转，并覆盖回调票据保护。
+- Status: `done`
+- Next action: 已按用户授权合并主线；未发布生产。
 - Blocked: none
 
 ## Evidence
 
 - `AssistantApp.tsx` 已有 `startUnifiedLogin`，但仅由中间页按钮点击触发。
 - 截图中的会话过期页因此停留在 `/app`，没有自动进入 SSO。
+- 已增加一次性自动跳转决策；普通 guest 自动进入 OIDC，OIDC/CloudCC 回调票据、登录提交和已有会话均不会触发。
+- `oidcAutoRedirect.test.ts` 5/5 与前端生产构建通过；合并时再次复验通过。
 
 ## Scope
 

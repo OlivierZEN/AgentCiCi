@@ -1,14 +1,20 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-04T14:55:00Z
+updated_at: 2026-08-04T15:05:49Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-08-04T14:54:00Z
+last_run_at: 2026-08-04T15:05:49Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-255 - 应用未登录态自动跳转 SSO（合并验证）
+
+- `frontend-focused`：`npm --prefix frontend test -- --run src/assistant/oidcAutoRedirect.test.ts` 通过（1 file / 5 tests）；普通 guest 触发跳转，OIDC/CloudCC 回调票据、已有会话、登录提交和重复尝试均不触发。
+- `frontend-build`：`npm --prefix frontend run build` 通过；仅保留既有 bundle 大小提示。
+- `diff-check`：`git diff --check` 通过。
 
 ## TASK-252 - 公司切换会话隔离（发布前）
 
