@@ -21,7 +21,7 @@ spec_path: docs/specs/FEAT-158-semattice-business-object-list-preview.md
 ## Scope
 
 - 在 AgentCiCi 用户端实现真实、只读的 AI表格对象目录和记录列表。
-- 后端以当前用户短期 OACT 调用数据平台，前端只调用同源 AgentCiCi API。
+- 后端以当前用户短期 OACT 调用数据平台，前端只调用同源 AgentCiCi API；Vite/Nginx 必须将 `/ai-table` 精确代理至后端。
 - 完成服务端游标分页、受索引约束的查询、列配置持久化、详情以及完整异常状态。
 - 维持桌面端多主题高保真结构；不实现写入、批量、导出或移动端。
 

@@ -46,6 +46,7 @@ AgentCiCi 左侧入口已命名为“AI表格”。用户已确认高保真桌�
 ## 安全与权限边界
 
 - 浏览器仅调用同源 AgentCiCi API，使用既有登录 Cookie；不能传入公司、租户、用户或 OACT。
+- 本地 Vite 与两份生产 Nginx 配置必须将 `/ai-table(/|$)` 精确代理至后端，且该规则优先于 SPA 的 `try_files` 回退。
 - 后端从 `TenantContext` 取得当前公司和成员，调用 `AuthService.issueSematticeOfficialAccess` 取得 60–600 秒短期 OACT。
 - `GET /ai-table/catalog` 调用 `metadata.version.get-current`。`GET /ai-table/objects/{objectApiName}/records` 先读取目录验证对象与字段，再调用 `runtime.record.query`。
 - 后端不接受任意上游 capability、字段或过滤表达式；`objectApiName` 仅允许当前已发布目录中的 API 名，查询只会使用后端从元数据选定的已索引文本字段，`limit` 限制为 1–100，`after` 仅透传受约束的游标。
@@ -77,6 +78,7 @@ AgentCiCi 左侧入口已命名为“AI表格”。用户已确认高保真桌�
 - 目录和记录均来自当前用户的已发布租户元数据/记录能力；切换公司后不会复用另一公司的目录、列配置或记录。
 - 关键词查询、游标分页、刷新、表头配置与详情均对真实 API 结果生效。
 - 服务端测试证明：请求不信任浏览器租户/令牌；目录先于记录验证对象；上游请求携带当前用户 OACT；查询只使用已索引文本字段；上游错误不被误映射为数据。
+- 本地 Vite 与两份版本化 Nginx 配置均验证 `/ai-table` 由后端代理，不会回落为 `index.html`。
 - 前端构建、定向/全量测试、桌面浏览器验证、`git diff --check` 与发布 runbook 检查通过。
 - 生产发布使用 `scripts/release-acr.sh`，先完成 dry-run、备份、不可变镜像和健康/版本/公网 smoke；只在受权会话可用时做真实业务数据回读，不伪造用户数据或凭据。
 
