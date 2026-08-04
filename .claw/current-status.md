@@ -4,8 +4,8 @@ version: 4
 updated_at: 2026-08-04T15:39:00Z
 updated_by: MANAGER-001
 phase: ai-table-live-production
-active_task: TASK-266
-next_action: "TASK-266 已获用户授权进入真实数据接入与生产发布：实现当前会话 OACT 的对象目录/记录查询、游标分页和列偏好；onechat.agentcici.com 的 DNS 解析风险仍需单独修复。"
+active_task: none
+next_action: "TASK-266 已发布生产 2.8.48；等待有成员会话的用户回读其实际 AI表格数据。onechat.agentcici.com 的 DNS 解析风险仍需单独修复。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-266 / FEAT-158：用户已确认 AI表格高保真形态，并授权升级为生产可用的真实数据列表及发布。真实实现已完成：AgentCiCi 服务端基于当前会话成员签发短期 OACT，读取已发布对象目录和严格授权的记录查询结果；浏览器不持有 OACT、租户或公司标识。桌面鎏金账房和现有 8 个主题结构保持不变，已具备游标分页、受索引约束的查询、以不可逆偏好 scope 隔离的列偏好、刷新、详情与 loading/empty/error/permission 状态，不包含写入、批量、导出或移动端。Vite 与两份生产 Nginx 的 `/ai-table` 精确代理已补齐，避免 SPA fallback 吞掉 API。聚焦后端、后端编译、前端构建/206 项全量测试与 Compose config 均通过；等待提交与 runbook 发布。
+- TASK-266 / FEAT-158：已发布生产 `2.8.48 / 3bde866470b3`。AI表格现由 AgentCiCi 服务端基于当前会话成员签发短期 OACT，读取已发布对象目录和严格授权的记录查询结果；浏览器不持有 OACT、租户或公司标识。桌面鎏金账房和现有 8 个主题结构保持不变，具备游标分页、受索引约束的查询、以不可逆偏好 scope 隔离的列偏好、刷新、详情与 loading/empty/error/permission 状态，不包含写入、批量、导出或移动端。Vite 与两份生产 Nginx 的 `/ai-table` 精确代理已补齐；x HTTPS 虚拟主机匿名调用返回 401 JSON，而非 SPA fallback。backend/frontend ACR digest 为 `sha256:7bcea486aac0612e168208b08698cf1297e4290512fc6639f3150d8ddb0d60ad` / `sha256:3f1666e3a1c54d9cce51f2659c20589fe2a5851dd06d803030288064fa4deac0`，发布前四类备份位于 `/opt/cici/backups/20260805-000608-before-2.8.48-ai-table-live` 且均非空。六容器 healthy、backend health=UP、版本/Nginx/x HTTPS/HTTP 均通过；生产 OACT scopes 含 metadata/record read。当前会话无受权成员 Cookie 或测试账号，未伪造真实记录回读；成员登录后即可按其权限读取实际数据。
 
 ## Snapshot
 

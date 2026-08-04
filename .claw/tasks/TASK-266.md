@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-266
-status: in_progress
-updated_at: 2026-08-04T16:04:00Z
+status: done
+updated_at: 2026-08-04T16:10:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -17,6 +17,7 @@ spec_path: docs/specs/FEAT-158-semattice-business-object-list-preview.md
 - 用户已确认高保真 UI 形态，并授权生产实现及线上发布。
 - 已确认数据平台提供已发布元数据读取与带对象/字段/记录范围授权的记录查询能力。
 - 已完成真实只读对象目录、记录查询、游标分页、已索引文本前缀查询、成员隔离列偏好和同源 API 代理实现。
+- 已发布生产 `2.8.48 / 3bde866470b3`；backend/frontend 均为新不可变镜像，六容器健康，AI表格匿名入口在 HTTPS x 虚拟主机按设计返回 401 JSON。
 - Blocked: none
 
 ## Scope
@@ -28,9 +29,10 @@ spec_path: docs/specs/FEAT-158-semattice-business-object-list-preview.md
 
 ## Next Action
 
-- 提交实现、运行 ACR dry-run，并按生产 runbook 备份、发布和完成线上健康/受权数据验收。
+- 已完成。后续可由拥有成员会话的用户在 AI表格中回读其被授权的实际业务对象与记录；不应使用共享凭据或演示数据替代。
 
 ## Verification
 
 - 聚焦后端 2 项测试、后端编译、前端构建、前端全量 33 文件/206 项测试、Compose config 与 diff 检查通过。
 - 本机完整后端套件受未配置 PostgreSQL 的既有集成测试阻塞；Playwright CLI 本机 Chromium 对 Vite 地址返回工具环境 500，但 curl 同地址为 200。两项限制均不伪造结果，生产按受权会话继续验收。
+- 生产：发布前四类备份非空；backend/frontend ACR digest 已 inspect；Nginx `-t`、六容器、backend health/version、x HTTPS、HTTP 跳转与 AI表格匿名 401 JSON 均通过。生产 OACT 已启用、数据平台地址已配置，逗号分隔 scopes 包含 `metadata.read` 与 `runtime.record.read`。本会话无受权成员登录 Cookie/测试账号，未伪造真实记录回读。
