@@ -1,0 +1,47 @@
+task_id: TASK-266
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-08-04T15:30:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-158-semattice-business-object-list-preview.md
+task_status_path: .claw/tasks/TASK-266.md
+branch: main
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - frontend/src/assistant/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/developers/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+scope_files:
+  - frontend/src/assistant/AssistantApp.tsx
+  - frontend/src/assistant/AiTableBusinessObjectList.tsx
+  - frontend/src/assistant/cici-ui.css
+  - docs/specs/FEAT-158-semattice-business-object-list-preview.md
+  - .claw/tasks/TASK-266.md
+  - .claw/assignments/TASK-266.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+touch_policy: exclusive
+shared_contracts:
+  - AgentCiCi authenticated desktop workbench shell
+  - current product theme token contract
+task_boundary:
+  - "将 AI表格菜单从外部登录 iframe 改为 AgentCiCi 内置业务对象列表预览。"
+  - "覆盖对象切换、关键词查询、表头设置、刷新反馈、分页与记录详情抽屉。"
+  - "不改动后端、Semattice API、鉴权和移动端。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
+signature: "MANAGER-001; user explicitly requested a high-fidelity HTML UI preview for the AgentCiCi AI表格 menu and tenant business object list on 2026-08-04."

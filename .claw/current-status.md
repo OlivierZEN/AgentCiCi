@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-04T15:18:04Z
+updated_at: 2026-08-04T15:32:00Z
 updated_by: MANAGER-001
 phase: tenant-isolation-cache-hotfix-production
-active_task: TASK-252
-next_action: "由受权成员刷新到 2.8.45 后复核公司 A→B→A 页面；未配置 CloudCC 的租户需先完成管理端集成配置。"
+active_task: TASK-266
+next_action: "等待用户确认 AI表格高保真 UI 的视觉方向和字段结构，再进入真实 Semattice API 接入设计。"
 read_next:
   goals: false
   decisions: false
@@ -19,6 +19,10 @@ read_next:
 # Project Current Status
 
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
+
+## Latest Snapshot
+
+- TASK-266 / FEAT-158：AgentCiCi 用户端左侧入口已改名为“AI表格”，点击后进入内置业务对象列表预览，不再打开外部 CRM 登录 iframe。默认鎏金账房与现有 8 个产品主题共用同一列表结构；已验证对象切换、查询、表头设置、刷新、分页和记录详情抽屉。前端全量测试 33 文件 / 206 tests、生产构建和 diff 检查通过；桌面截图已完成，等待用户确认视觉和字段后再进入真实 API 接入。
 
 ## Snapshot
 

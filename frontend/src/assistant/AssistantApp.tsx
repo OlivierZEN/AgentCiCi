@@ -25,6 +25,7 @@ import MyEmailAccountsModal from "./MyEmailAccountsModal";
 import { CustomerInsightAppPanel } from "./customer-insight/CustomerInsightAppPanel";
 import { DataInsightAppPanel } from "./data-insight/DataInsightAppPanel";
 import { CustomerWorkbenchApp } from "./customer-workbench/CustomerWorkbenchApp";
+import AiTableBusinessObjectList from "./AiTableBusinessObjectList";
 import { ZhiweiPortraitDemoApp } from "./zhiwei-portrait/ZhiweiPortraitDemoApp";
 import {
   appendAssistantDelta,
@@ -4087,13 +4088,13 @@ export default function AssistantApp() {
               setAiAppsMenuOpen(false);
               setWorkspaceTab("crm");
             }}
-            data-menu-label="CRM 系统"
-            aria-label="CRM 系统"
+            data-menu-label="AI表格"
+            aria-label="AI表格"
           >
             <svg viewBox="0 0 24 24">
               <rect x="3" y="4" width="18" height="16" rx="3" />
               <path d="M3 10h18" />
-              <text x="12" y="17" textAnchor="middle" fontSize="6" fill="currentColor" stroke="none">CRM</text>
+              <path d="M7 7h10M7 12h10M7 17h6" />
             </svg>
           </button>
         </div>
@@ -5016,7 +5017,7 @@ export default function AssistantApp() {
         </main>
       ) : workspaceTab === "crm" ? (
         <main className="cici-crm">
-          <iframe className="cici-crm__frame" title="CloudCC CRM" src="https://accounts.cloudcc.cn/#/login" />
+          <AiTableBusinessObjectList />
         </main>
       ) : (
         <>

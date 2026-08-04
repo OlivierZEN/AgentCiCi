@@ -10,6 +10,14 @@ last_run_status: passed
 
 # Test Report
 
+## TASK-266 - AI表格业务对象列表高保真预览
+
+- `frontend-build`：`npm run build` 通过，TypeScript 与 Vite 生产构建成功；仅保留既有 bundle 大小提示。
+- `frontend-full`：`npm test -- --run` 通过，33 个测试文件 / 206 项测试。
+- `diff-check`：`git diff --check` 通过。
+- `browser-desktop`：受控演示登录响应访问 `/app`，点击“AI表格”后验证默认鎏金账房、主题菜单 8 项主题、切换“星河幻境”、对象切换到商机、表头显示隐藏、记录详情抽屉；默认 1200px 截图无横向滚动条。截图为 `.playwright-cli/page-2026-08-04T15-24-34-870Z.png`、`.playwright-cli/page-2026-08-04T15-25-10-245Z.png`。
+- `browser-limit`：本地 backend 未启动，浏览器控制台存在 API 连接失败日志；页面验证使用 Playwright 受控 `/auth/me` 演示响应，未伪造生产凭据或真实 Semattice 数据。
+
 ## TASK-265 - DEV Autopilot 研发交付评审 Tool 生产闭环
 
 - `formal-bindings`：生产数据库回读确认 query/create/review 三个 Tool 均 enabled，Skill `semattice-project-delivery-management` 为 always-on，产品经理 SERVICE Principal 以 `PRIMARY_OWNER` 委托执行。
