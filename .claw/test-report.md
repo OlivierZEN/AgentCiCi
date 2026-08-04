@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-04T03:35:00Z
+updated_at: 2026-08-04T03:42:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-08-04T03:35:00Z
+last_run_at: 2026-08-04T03:42:00Z
 last_run_status: passed
 ---
 
@@ -14,9 +14,11 @@ last_run_status: passed
 
 - `identity-gate`：MANAGER-001 的 SSH 持钥、Git 身份、`TASK-252/main` 与实现、迁移、测试、规格、状态文件范围均由 `dev-login.py` / `check-assignment.py` 验证为 `allowed`。
 - `backend-focused`：`mvn -q -Dmaven.repo.local=.m2 -Dtest=KeycloakIdentityProvisioningServiceTest,PrincipalIdentityGovernanceIntegrationTest test` 通过；覆盖新建用户、失效 remote `sub` 重建并重绑、已存在待激活 User 的邮件重发、同名但 account 属性冲突拒绝，以及已激活用户不发送重置邮件。
+- `member-governance`：`AdminUserServiceTest` 通过，覆盖已停用成员的重复邀请不会恢复成员状态、不会触发 Keycloak 账户处理或发送凭据设置邮件。
 - `backend-compile/static`：`mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` 与 `git diff --check` 通过。
 - `fresh-postgresql-v102`：本机 PostgreSQL 15 临时库从 V1 正向迁移至 V102（98 项）通过；`PrincipalIdentityGovernanceIntegrationTest` 验证新增 HUMAN Principal、legacy Keycloak mirror 与更新同一 `account_external_identity.id` 后的 subject 重绑。测试库和临时登录角色已删除，未接触业务库或生产库。
 - `full-integration-limit`：默认完整 Spring 鉴权测试仍依赖未配置的 `127.0.0.1:5432/agentcici_test`，启动阶段连接超时；已停止该环境重试，不将其误报为本次代码失败。发布前将以生产 Flyway 与受权邀请路径完成实际验收。
+- `production-2.8.41`：Git commit/tag 为 `3320ed77515d / 2.8.41`；backend/frontend ACR manifest 已 inspect。发布前备份 `/opt/cici/backups/20260804-113909-before-2.8.41-invitation-lifecycle` 的环境、PostgreSQL、KB、Qdrant 均非空；仅 backend/frontend 重建，六容器 healthy，backend health `UP`、版本接口为 `2.8.41 / 3320ed77515d`、Flyway V102=true、Nginx 校验通过。`https://x.agentcici.com/` 为 200，匿名 `/auth/me` 与缺 Bearer 的 service-token exchange 为预期 401。Realm SMTP 已脱敏回读为 SSL/465，未输出秘密。
 
 ## TASK-264 - 研发身份花名与新增开发者生产验收
 

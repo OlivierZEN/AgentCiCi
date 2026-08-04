@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-252
 status: in_progress
-updated_at: 2026-08-04T03:35:00Z
+updated_at: 2026-08-04T03:42:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: project-manager
@@ -15,7 +15,7 @@ spec_path: docs/specs/FEAT-145-unified-principal-identity-governance.md
 ## Current State
 
 - Status: `in_progress`
-- Next action: 发布 V102 与邀请恢复逻辑；上线后验证新邀请进入 `PENDING_ACTIVATION`、收到 Keycloak 设置密码/验证邮箱邮件，完成首次 OIDC 登录后才转 `ACTIVE`。不使用或猜测真实被邀请人的凭据。
+- Next action: 已发布 `2.8.41`。正常管理员可邀请首个新成员；该成员应收到 Keycloak “验证邮箱 + 设置密码”邮件，在完成 Required Actions 后首次 OIDC 登录才转为 `ACTIVE`。不使用或猜测真实被邀请人的凭据。
 - Deployment scope: `deploy/docker-compose.acr.yml` 仅用于把独立 Keycloak provisioner 配置传入 backend；不修改服务拓扑、网络或证书。
 - Blocked: 无。Keycloak Realm SMTP 已配置，人工 provisioning 已在受控部署环境启用；本次只修复邀请/重绑闭环，不创建未获业务授权的机器主体。
 
@@ -38,6 +38,7 @@ spec_path: docs/specs/FEAT-145-unified-principal-identity-governance.md
 - 生产 provisioner secret 已按 Keycloak Client Secret rotation 写入 `/opt/cici/deploy/acr.env`，变更前配置备份为 `/opt/cici/backups/20260727-234937-before-machine-provisioning-enable`；backend 已重建且健康。使用该 secret 的 Keycloak `client_credentials` 返回有效 300 秒管理令牌；不输出令牌或密钥。机器开关现为 true，人类邀请和服务交换仍为 false。
 - Keycloak Realm 已受管配置 SMTP；人工 invitation provisioning 已开启。实测 Keycloak 可以向受控收件人发出 `VERIFY_EMAIL` / `UPDATE_PASSWORD` Required Actions 邮件；不记录 SMTP 密码或邮件链接。
 - 已定位并修复邀请的失效绑定缺口：旧实现把本地 `account_external_identity` 的存在直接当作远端用户可用，导致远端 Keycloak User 被删除时成员仍可能被置为 `ACTIVE`。新流程读取远端 `sub`、仅在未激活时重发邮件；远端缺失时严格验证重建/恢复归属，V102 同步修复重绑时 `principal_identity` 镜像主键冲突。
+- 已发布生产 `2.8.41 / 3320ed77515d`，tag 与 ACR 后端/前端不可变镜像均已推送。发布前备份为 `/opt/cici/backups/20260804-113909-before-2.8.41-invitation-lifecycle`，环境、PostgreSQL、知识库与 Qdrant 归档均非空；仅重建 backend/frontend，六容器 healthy，Flyway V102=true，Nginx 校验通过，`https://x.agentcici.com/` 为 200、匿名 `/auth/me` 和 service-token 交换均为预期 401。Keycloak SMTP 配置已脱敏回读；未输出邮件凭据、Keycloak secret、JWT 或激活链接。
 
 ## Handoff
 
