@@ -22,6 +22,7 @@ allowed_write_roots:
   - .claw/assignments/**
   - .claw/task-board.md
   - .claw/current-status.md
+  - .claw/issue-list.md
   - .claw/test-report.md
 protected_paths:
   - .claw/developers/**
@@ -44,6 +45,7 @@ scope_files:
   - .claw/assignments/TASK-266.yaml
   - .claw/task-board.md
   - .claw/current-status.md
+  - .claw/issue-list.md
   - .claw/test-report.md
 touch_policy: exclusive
 shared_contracts:
@@ -56,6 +58,7 @@ task_boundary:
   - "实现对象目录、服务端游标分页、受索引约束的关键词查询、自定义表头持久化、刷新、详情与 loading/empty/error/permission 状态。"
   - "通过 AgentCiCi 服务端以当前用户短期 OACT 调用已发布 Semattice 元数据与只读记录能力；浏览器不接触 OACT、tenant_id 或 company_id。"
   - "为 /ai-table 配置本地 Vite 与生产 Nginx 的精确后端代理，避免 SPA fallback 吞掉受保护 API。"
+  - "修复 AI表格请求未复用当前用户 Bearer 会话的问题，确保对象目录和记录列表通过既有前端鉴权链路访问。"
   - "维持桌面端高保真结构、默认鎏金账房和既有主题切换；不实现新增、编辑、删除、批量操作、导出或移动端适配。"
   - "完成自动化、浏览器与生产 runbook 验收，并按不可变版本发布线上。"
 change_manifest_required: true
