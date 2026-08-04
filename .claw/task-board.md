@@ -107,13 +107,13 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-253 - 计费用量公司成员查询修复
 
-- status: `canceled`
+- status: `done`
 - priority: `critical`
 - owner_role: `backend-agent`
 - spec_path: `docs/specs/FEAT-146-billing-company-member-query-repair.md`
 - task_status_path: `.claw/tasks/TASK-253.md`
 - assignment_path: `.claw/assignments/TASK-253.yaml`
-- next_action: 已由 TASK-254 完整性审计替代；不单独合并该分支。
+- next_action: 已按用户授权合并历史分支；业务修复此前已由 TASK-254 发布，未重复引入功能差异。
 
 ### TASK-252 - 统一 Principal 身份与治理模型设计
 

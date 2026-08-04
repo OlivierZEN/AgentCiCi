@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-253
-status: canceled
-updated_at: 2026-07-29T12:10:00Z
+status: done
+updated_at: 2026-08-04T15:04:32Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: backend-agent
@@ -14,8 +14,8 @@ spec_path: docs/specs/FEAT-146-billing-company-member-query-repair.md
 
 ## Current State
 
-- Status: `canceled`
-- Next action: 已由 TASK-254 的完整 company_id 审计替代；不得单独合并本任务分支。
+- Status: `done`
+- Next action: 用户已授权合并历史分支。修复已被 TASK-254 提前吸收并发布，本次只完成分支历史集成，未重复引入业务差异。
 - Blocked: none
 
 ## Evidence
@@ -28,6 +28,6 @@ spec_path: docs/specs/FEAT-146-billing-company-member-query-repair.md
 - 仅修改计费服务的实体路径与定向回归测试。
 - 不修改计费策略、迁移、前端、主线或生产环境。
 
-## Superseded By
+## Integration Note
 
-- `TASK-254` / `FEAT-147-company-id-completeness-audit.md` 将重新纳入本任务的 JPQL 修复，并补齐当前可执行脚本中的遗留路径。
+- `TASK-254` / `FEAT-147-company-id-completeness-audit.md` 已将同一 JPQL 修复纳入主线并发布；本任务分支于 2026-08-04 按用户要求合并，保留历史追溯。
