@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-04T15:05:49Z
+updated_at: 2026-08-04T15:18:04Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-08-04T15:05:49Z
+last_run_at: 2026-08-04T15:18:04Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-265 - DEV Autopilot 研发交付评审 Tool 生产闭环
+
+- `formal-bindings`：生产数据库回读确认 query/create/review 三个 Tool 均 enabled，Skill `semattice-project-delivery-management` 为 always-on，产品经理 SERVICE Principal 以 `PRIMARY_OWNER` 委托执行。
+- `delivery-e2e`：正式任务 `019fcc18-756f-7782-a9e7-bf34e9c94670` 完成领取、设计 v1 提交、产品经理驳回、设计 v2 提交与批准、40%/90% 进度、1.5h 工时、阻塞上报/解除、commit/test_report 产物、完成申请与批准；最终 `已完成 / 100% / revision 13`。
+- `state-gates`：设计批准前进度上报返回 `DESIGN_REQUIRED`；存在开放阻塞时完成申请返回 `OPEN_BLOCKERS_EXIST`。
+- `identity-boundaries`：哪吒休息态投影无法使用开发者 CLI；产品经理凭据使用开发者 CLI 返回 403。
+- `post-release-smoke`：完成审批后开发者 CLI 仍可回读任务最终状态，AgentCiCi、DEV Autopilot 与 Semattice 生产健康检查通过。
 
 ## TASK-255 - 应用未登录态自动跳转 SSO（合并验证）
 

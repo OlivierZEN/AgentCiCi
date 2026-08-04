@@ -2,10 +2,10 @@
 kind: feature-spec
 feature_id: FEAT-157
 title: DEV Autopilot 研发交付评审 Tool
-status: in_implementation
+status: implemented
 owner_role: backend-agent
 task_id: TASK-265
-updated_at: 2026-08-04T08:00:00Z
+updated_at: 2026-08-04T15:18:04Z
 updated_by: MANAGER-001
 ---
 
@@ -76,5 +76,11 @@ updated_by: MANAGER-001
 - [x] 完成架构与 Tool 契约设计。
 - [x] 实现 query 扩展与 review Tool。
 - [x] 完成 Skill、目录、调度和显式绑定。
-- [ ] 完成生产发布（定向测试、编译和 package 已通过）。
-- [ ] 以第三方开发者 CLI 提交设计、产品经理 SERVICE 批准、继续执行并申请验收完成线上闭环。
+- [x] 完成生产发布、定向测试、编译、package 与运行健康检查。
+- [x] 以第三方开发者 CLI 完成设计提交、产品经理 SERVICE 驳回/批准、继续执行、工时/进度/阻塞/产物上报与完成验收闭环。
+
+## 生产验收结果
+
+- 目标租户的 `dev-autopilot-pm` 已显式绑定 query/create/review 三个正式 Tool、always-on 标准 Skill 与产品经理 SERVICE Principal；HUMAN 只进入委托与审批上下文。
+- 正式任务 `019fcc18-756f-7782-a9e7-bf34e9c94670` 完成两版设计评审、阻塞门禁、交付制品门禁和完成审批，最终状态为 `已完成 / 100% / revision 13`。
+- 哪吒休息态开发者 CLI 和产品经理凭据调用开发者 CLI 均被拒绝，证明角色、主体与可分派状态边界有效。
