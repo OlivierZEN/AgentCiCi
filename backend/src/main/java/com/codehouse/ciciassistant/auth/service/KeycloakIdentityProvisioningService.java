@@ -67,13 +67,11 @@ public class KeycloakIdentityProvisioningService {
 
     public ProvisionResult ensureHumanIdentity(UserAccountEntity account) {
         var existing = identityRepository.findByAccount_Id(account.getId());
-        if (existing.isPresent()) {
-            return new ProvisionResult(true, false, existing.get().getSubject());
-        }
         if (!humanProvisioningEnabled) {
             // Compatibility mode is deliberately explicit and must not be used in production
             // once the Keycloak invitation client has been configured.
-            return new ProvisionResult(false, false, "");
+            return existing.map(identity -> new ProvisionResult(true, false, identity.getSubject()))
+                    .orElseGet(() -> new ProvisionResult(false, false, ""));
         }
         UserAccountEntity current = accountRepository.findById(account.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Global account not found"));
@@ -87,13 +85,44 @@ public class KeycloakIdentityProvisioningService {
         }
         try {
             String adminToken = obtainAdminToken();
-            String subject = findUserId(adminToken, publicId);
-            if (subject == null) {
-                subject = createUser(adminToken, current, publicId, email);
+            if (existing.isPresent()) {
+                KeycloakUser boundUser = readUser(adminToken, existing.get().getSubject());
+                if (boundUser != null) {
+                    boolean activationRequired = requiresActivation(boundUser);
+                    if (activationRequired) {
+                        requireMatchingEmail(boundUser, email);
+                        sendActivationEmail(adminToken, boundUser.subject());
+                    }
+                    return new ProvisionResult(true, activationRequired, boundUser.subject());
+                }
             }
-            identityRepository.save(new AccountExternalIdentityEntity(current, issuer, subject));
-            sendActivationEmail(adminToken, subject);
-            return new ProvisionResult(false, true, subject);
+
+            // A missing local binding, or a binding whose remote subject has been
+            // deleted, can only be recovered through the immutable public ID and
+            // both ownership attributes.  A username or email match alone is not
+            // sufficient evidence to attach a Keycloak user to an AgentCiCi account.
+            KeycloakUser recoveredUser = findUser(adminToken, publicId);
+            boolean created = recoveredUser == null;
+            if (created) {
+                String subject = createUser(adminToken, current, publicId, email);
+                recoveredUser = new KeycloakUser(subject, null);
+            } else {
+                recoveredUser = readUser(adminToken, recoveredUser.subject());
+                requireRecoveredUserOwnership(recoveredUser, current, publicId, email);
+            }
+
+            if (existing.isPresent()) {
+                existing.get().rebind(issuer, recoveredUser.subject());
+                identityRepository.saveAndFlush(existing.get());
+            } else {
+                identityRepository.saveAndFlush(new AccountExternalIdentityEntity(current, issuer, recoveredUser.subject()));
+            }
+
+            boolean activationRequired = created || requiresActivation(recoveredUser);
+            if (activationRequired) {
+                sendActivationEmail(adminToken, recoveredUser.subject());
+            }
+            return new ProvisionResult(existing.isPresent(), activationRequired, recoveredUser.subject());
         } catch (ForbiddenException ex) {
             throw ex;
         } catch (Exception ex) {
@@ -281,14 +310,103 @@ public class KeycloakIdentityProvisioningService {
         return token;
     }
 
-    private String findUserId(String token, String username) throws Exception {
+    private KeycloakUser findUser(String token, String username) throws Exception {
         HttpRequest request = adminRequest("/users?username=" + encode(username) + "&exact=true", token).GET().build();
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         if (response.statusCode() != 200) {
             throw new IllegalStateException("Keycloak 用户查询失败");
         }
         JsonNode users = objectMapper.readTree(response.body());
-        return users.isArray() && !users.isEmpty() ? trim(users.get(0).path("id").asText()) : null;
+        if (!users.isArray() || users.isEmpty()) {
+            return null;
+        }
+        JsonNode user = users.get(0);
+        String subject = trim(user.path("id").asText());
+        if (subject.isBlank()) {
+            throw new IllegalStateException("Keycloak 用户查询响应无 subject");
+        }
+        return new KeycloakUser(subject, user);
+    }
+
+    private KeycloakUser readUser(String token, String subject) throws Exception {
+        HttpRequest request = adminRequest("/users/" + encode(subject), token).GET().build();
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        if (response.statusCode() == 404) {
+            return null;
+        }
+        if (response.statusCode() != 200) {
+            throw new IllegalStateException("Keycloak 用户读取失败");
+        }
+        JsonNode user = objectMapper.readTree(response.body());
+        String returnedSubject = trim(user.path("id").asText());
+        if (returnedSubject.isBlank() || !returnedSubject.equals(subject)) {
+            throw new IllegalStateException("Keycloak 用户读取响应无效");
+        }
+        return new KeycloakUser(returnedSubject, user);
+    }
+
+    private void requireRecoveredUserOwnership(
+            KeycloakUser user,
+            UserAccountEntity account,
+            String publicId,
+            String email) {
+        JsonNode representation = requireRepresentation(user);
+        if (!publicId.equalsIgnoreCase(trim(representation.path("username").asText()))) {
+            throw new IllegalStateException("Keycloak 用户名与全局账号不匹配");
+        }
+        if (!attributeContains(representation, "agentcici_public_id", publicId)
+                || !attributeContains(representation, "agentcici_account_id", account.getId())) {
+            throw new IllegalStateException("Keycloak 用户归属无法安全确认");
+        }
+        requireMatchingEmail(user, email);
+    }
+
+    private boolean requiresActivation(KeycloakUser user) {
+        JsonNode representation = requireRepresentation(user);
+        if (!representation.path("enabled").asBoolean(false)) {
+            throw new IllegalStateException("Keycloak 用户已停用，不能作为邀请身份使用");
+        }
+        if (!representation.path("emailVerified").asBoolean(false)) {
+            return true;
+        }
+        JsonNode requiredActions = representation.path("requiredActions");
+        if (!requiredActions.isArray()) {
+            return false;
+        }
+        for (JsonNode action : requiredActions) {
+            String value = trim(action.asText());
+            if ("VERIFY_EMAIL".equals(value) || "UPDATE_PASSWORD".equals(value)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void requireMatchingEmail(KeycloakUser user, String expectedEmail) {
+        JsonNode representation = requireRepresentation(user);
+        String actualEmail = trim(representation.path("email").asText());
+        if (actualEmail.isBlank() || !actualEmail.equalsIgnoreCase(expectedEmail)) {
+            throw new IllegalStateException("Keycloak 用户邮箱与全局账号不匹配");
+        }
+    }
+
+    private static boolean attributeContains(JsonNode representation, String attributeName, String expectedValue) {
+        JsonNode values = representation.path("attributes").path(attributeName);
+        if (values.isArray()) {
+            for (JsonNode value : values) {
+                if (expectedValue.equals(trim(value.asText()))) {
+                    return true;
+                }
+            }
+        }
+        return expectedValue.equals(trim(values.asText()));
+    }
+
+    private static JsonNode requireRepresentation(KeycloakUser user) {
+        if (user.representation() == null || user.representation().isMissingNode()) {
+            throw new IllegalStateException("Keycloak 用户读取响应无效");
+        }
+        return user.representation();
     }
 
     private String findClientInternalId(String token, String clientId) throws Exception {
@@ -373,6 +491,9 @@ public class KeycloakIdentityProvisioningService {
     }
 
     public record ProvisionResult(boolean alreadyBound, boolean activationRequired, String subject) {
+    }
+
+    private record KeycloakUser(String subject, JsonNode representation) {
     }
 
     public record ServiceClientCredentials(String clientId, String clientSecret, String subject) {

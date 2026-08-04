@@ -57,14 +57,20 @@ public class AdminUserService {
         }
         String normalizedRole = normalizeMemberRole(roleCode);
         UserAccountEntity account = findOrCreateMobileAccount(mobileValue, email, nickname);
+        UserEntity target = userRepository.findByCompany_IdAndAccount_Id(companyId, account.getId()).orElse(null);
+        // A suspension is an explicit governance decision. Re-inviting must not
+        // silently restore it or send a credential-reset message; the existing
+        // restore endpoint remains the deliberate recovery path.
+        if (target != null && UserEntity.STATUS_SUSPENDED.equals(target.getMemberStatus())) {
+            return toRow(target);
+        }
         KeycloakIdentityProvisioningService.ProvisionResult identity = keycloakIdentityProvisioningService
                 .ensureHumanIdentity(account);
-        UserEntity target = userRepository.findByCompany_IdAndAccount_Id(companyId, account.getId())
-                .orElseGet(() -> {
-                    var org = companyRepository.findById(companyId)
-                            .orElseThrow(() -> new IllegalArgumentException("Company not found"));
-                    return new UserEntity(org, account, normalizedRole);
-                });
+        if (target == null) {
+            var org = companyRepository.findById(companyId)
+                    .orElseThrow(() -> new IllegalArgumentException("Company not found"));
+            target = new UserEntity(org, account, normalizedRole);
+        }
         if (!RoleCodes.OWNER.equals(target.getRoleCode())) {
             target.setRoleCode(normalizedRole);
         }

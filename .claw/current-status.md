@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-03T12:47:56Z
+updated_at: 2026-08-04T03:35:00Z
 updated_by: MANAGER-001
-phase: production-identity-roster-verified
-active_task: TASK-264
-next_action: "TASK-264 已完成；常规监控 Principal 生命周期、Semattice PDP 与 DEV Autopilot CLI 审计。"
+phase: production-invitation-lifecycle-repair
+active_task: TASK-252
+next_action: "发布 Keycloak 邀请失效绑定修复；验证新成员只在完成邮箱验证和设置密码后的首次 OIDC 登录激活。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-252 / FEAT-145：正在修复线上人类邀请闭环。Keycloak Realm SMTP 与 AgentCiCi 人工 provisioning 已受控启用；新逻辑会读取既有 `issuer + sub` 的远端 User，未激活才重发 Required Actions，已激活不重置密码。远端用户缺失时仅以不可变 public ID、受管 account ID 属性和邮箱同时证明归属后重绑，否则 fail closed。V102 修复重绑后 `principal_identity` 镜像的主键冲突。待完成不可变镜像发布、Flyway 与受权邀请验收。
 
 - TASK-264 / FEAT-156：研发身份花名已收敛为 Oliver（HUMAN 产品总监）、大乔（SERVICE 产品经理）、悟空和后羿（SERVICE 开发者）。三台 SERVICE 的 PRIMARY owner 均为 Oliver；后羿已复用开发者角色和研发交付部 primary membership。Semattice 已认证控制台回读 4 members / 3 roles / 1 organization / 5 objects / 42 fields，悟空/后羿 CLI 正向与大乔越权负向均通过。后羿凭据只保存在生产 root-only 文件。
 

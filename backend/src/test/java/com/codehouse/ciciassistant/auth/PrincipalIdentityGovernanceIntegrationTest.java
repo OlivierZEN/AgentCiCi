@@ -38,6 +38,13 @@ class PrincipalIdentityGovernanceIntegrationTest {
                     """);
             assertThat(single(statement, "SELECT principal_id || ':' || identity_type FROM principal_identity WHERE issuer = 'https://sso.example/realms/agentcici' AND subject = 'kc-subject'"))
                     .isEqualTo("principal-test-account:HUMAN_USER");
+            statement.executeUpdate("""
+                    UPDATE account_external_identity
+                    SET subject = 'kc-subject-rebound', updated_at = now()
+                    WHERE id = 'principal-test-identity'
+                    """);
+            assertThat(single(statement, "SELECT subject FROM principal_identity WHERE id = 'principal-test-identity'"))
+                    .isEqualTo("kc-subject-rebound");
         }
     }
 

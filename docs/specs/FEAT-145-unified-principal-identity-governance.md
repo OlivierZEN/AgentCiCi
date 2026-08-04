@@ -285,11 +285,14 @@ sequenceDiagram
 
 1. 请求必须包含调用方、目标 `company_id`、邀请角色、至少一个规范化标识、幂等键和明确用途。
 2. 仅一个 `ACTIVE + verified` 的 `principal_login_identifier` 才允许自动命中人类 Principal。
-3. 命中账户且已有有效 Keycloak 绑定时，绝不创建第二个 Keycloak User；无绑定时，只有 Keycloak 侧存在唯一且可证明同一已验证标识时才绑定，否则返回 `IDENTITY_CONFLICT`。
-4. 未命中时先创建本地 `PENDING` 人类 Principal 与 `user_account`，再创建 Keycloak User；Keycloak 成功后写入绑定并继续邀请。失败时保留可恢复操作记录，不能留下 `ACTIVE` 成员。
-5. Keycloak 用户通过 Required Actions 完成验证/设置凭据；服务端不传递或生成长期明文初始密码。
-6. 只有身份激活成功后，成员关系才变为 `ACTIVE`；激活前不得签发可访问业务资源的 OACT。
-7. 相同幂等键返回同一操作结果；不同幂等键不得创建重复成员或重复 Keycloak User。
+3. 命中账户且已有本地 Keycloak 绑定时，先按该 `sub` 读取 Keycloak User。远端用户存在时绝不创建第二个 User；若仍有 `VERIFY_EMAIL` 或 `UPDATE_PASSWORD` Required Action，则重发激活邮件并维持 `PENDING_ACTIVATION`。远端用户已删除时，才进入受控重建/恢复流程。
+4. 恢复失效绑定时，先按不可变 `public_id` 精确查找 Keycloak User；只有 Keycloak `username`、`agentcici_public_id` 属性、`agentcici_account_id` 属性和邮箱均能证明同一全局账户时才可重新绑定。用户名或邮箱单独命中均为 `IDENTITY_CONFLICT`，不得自动合并。
+5. 新建或重建 Keycloak User 后复用同一 `account_external_identity`/`principal_identity` 本地记录更新 `subject`；不得为一个全局账户插入第二条绑定。数据库镜像须以该绑定记录的主键 upsert，保证前向迁移后两张表同步。
+6. 激活邮件只通过 Keycloak 的 `VERIFY_EMAIL` 与 `UPDATE_PASSWORD` Required Actions 发送。系统不生成、保存、展示或通知默认密码；激活链接有效期为 24 小时，重复邀请只在仍未激活时重发。
+7. Keycloak User 已停用、邮箱与当前全局账户不一致、归属属性缺失/冲突、Admin API 不可用或邮件发送失败时，操作 fail closed；不得留下 `ACTIVE` 成员或把同名 Keycloak User 绑给其他账户。
+8. 未命中时先创建本地 `PENDING` 人类 Principal 与 `user_account`，再创建 Keycloak User；Keycloak 成功后写入绑定并继续邀请。失败时保留可恢复操作记录，不能留下 `ACTIVE` 成员。
+9. 只有身份激活成功后，成员关系才变为 `ACTIVE`；激活前不得签发可访问业务资源的 OACT。
+10. 相同幂等键返回同一操作结果；不同幂等键不得创建重复成员或重复 Keycloak User。
 
 ### 撤销规则
 
@@ -449,6 +452,7 @@ Keycloak client_credentials
 
 - 已实现独立的 AgentCiCi Keycloak provisioner 配置入口（默认关闭）；生产启用时使用独立 confidential client，不复用 BFF client。
 - 已实现精确查找/创建 Keycloak User、`issuer + sub` 绑定、`VERIFY_EMAIL` / `UPDATE_PASSWORD` Required Actions 与首次成功 OIDC 登录激活成员；创建失败时本地事务回滚，重试时以 `public_id` 精确查找，避免重复 User。
+- 生产邀请修复：每次受控邀请先读取已绑定 `sub` 的 Keycloak User；未激活用户重发 Required Actions 邮件，已激活用户不触发密码重置。若远端 `sub` 已被删除，只有 `public_id + account_id` 受管属性与邮箱同时一致的用户可恢复绑定，否则创建新用户或安全拒绝。V102 将兼容镜像改为按绑定主键 upsert，使 `subject` 重绑同步到 `principal_identity`。
 - 新公司成员入口已接受邮箱。未启用 provisioner 保持兼容；启用后邮箱必填且成员处于 `PENDING_ACTIVATION`，完成激活前不可获得应用会话。
 - 既有未绑定成员只通过受控邀请或人工确认补齐，不强制重置密码或静默创建重复用户。
 
@@ -474,7 +478,7 @@ Keycloak client_credentials
 
 | 风险 | 控制措施 |
 | --- | --- |
-| Keycloak 创建成功、本地写入失败 | 记录操作与 Keycloak 外部 ID；重试时精确查找并补写绑定，不重复创建。 |
+| Keycloak 创建成功、本地写入失败 | 记录操作与 Keycloak 外部 ID；重试时以 public ID、受管账户属性和邮箱精确确认后补写/重绑同一绑定记录，不重复创建。 |
 | 本地账户创建成功、Keycloak 失败 | Principal/成员保持 PENDING 或 FAILED，不签发 OACT；可重试或由运营取消。 |
 | 手机号/邮箱错绑 | 只允许 verified 且唯一的精确匹配；冲突 fail closed，人工审核。 |
 | 人类离职后机器继续运行 | owner 状态联动、移交窗口、自动暂停和审计告警。 |

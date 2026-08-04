@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-252
 status: in_progress
-updated_at: 2026-07-27T15:42:00Z
+updated_at: 2026-08-04T03:35:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: project-manager
@@ -15,9 +15,9 @@ spec_path: docs/specs/FEAT-145-unified-principal-identity-governance.md
 ## Current State
 
 - Status: `in_progress`
-- Next action: 机器开户已可独立使用；需指定首个服务的 `company_id`、稳定 client/service 名称、精确 scope 与有效人类 PRIMARY owner 后创建并完成 OACT exchange。配置 Realm 受管 SMTP 后，再开启人类邀请灰度。
+- Next action: 发布 V102 与邀请恢复逻辑；上线后验证新邀请进入 `PENDING_ACTIVATION`、收到 Keycloak 设置密码/验证邮箱邮件，完成首次 OIDC 登录后才转 `ACTIVE`。不使用或猜测真实被邀请人的凭据。
 - Deployment scope: `deploy/docker-compose.acr.yml` 仅用于把独立 Keycloak provisioner 配置传入 backend；不修改服务拓扑、网络或证书。
-- Blocked: Keycloak `agentcici` Realm 尚未配置 SMTP；人类 `provisioning` 继续关闭。机器开户已具备 provisioner secret 与受控开关，但首个机器主体需要业务指定目标公司、服务名、scope 与人类 PRIMARY owner，不能由系统自行猜测。
+- Blocked: 无。Keycloak Realm SMTP 已配置，人工 provisioning 已在受控部署环境启用；本次只修复邀请/重绑闭环，不创建未获业务授权的机器主体。
 
 ## Scope
 
@@ -36,6 +36,8 @@ spec_path: docs/specs/FEAT-145-unified-principal-identity-governance.md
 - `a7cd78f88543` 已标记并发布为 `2.8.23`：后端/前端镜像 index digest 分别为 `sha256:82d4278d215ae1ac9adbcace14b9121c7bd9c84c520a2ca17712b560327928b0`、`sha256:0f6e22ebce5cf7e7fb3703ca568152dad4f12e27068b6cf7c70bb83faa3b451a`；发布前备份 `/opt/cici/backups/20260727-233807-before-2.8.23` 包含环境、PostgreSQL、KB 与 Qdrant。六容器均健康，backend `/system/version` 为 `2.8.23 / a7cd78f88543`，匿名边界与 OACT JWKS 均验证通过。
 - `58a96d618207` 已标记并发布为 `2.8.24`：Compose 现显式传递 machine-provisioning 与 service-token-exchange 开关；后端/前端 index digest 分别为 `sha256:d2a1dcad568e3167e327e713c977ad2fc83a40cf1348ac4f46be1174a4f0043e`、`sha256:710971cde48ce1fdc59af837331a79d0eb1a42d428a87fa90bace2a496a49ca8`。备份 `/opt/cici/backups/20260727-234415-before-2.8.24` 完整；六容器健康，backend `/system/version` 为 `2.8.24 / 58a96d618207`，三项受控开关均明确为 false。
 - 生产 provisioner secret 已按 Keycloak Client Secret rotation 写入 `/opt/cici/deploy/acr.env`，变更前配置备份为 `/opt/cici/backups/20260727-234937-before-machine-provisioning-enable`；backend 已重建且健康。使用该 secret 的 Keycloak `client_credentials` 返回有效 300 秒管理令牌；不输出令牌或密钥。机器开关现为 true，人类邀请和服务交换仍为 false。
+- Keycloak Realm 已受管配置 SMTP；人工 invitation provisioning 已开启。实测 Keycloak 可以向受控收件人发出 `VERIFY_EMAIL` / `UPDATE_PASSWORD` Required Actions 邮件；不记录 SMTP 密码或邮件链接。
+- 已定位并修复邀请的失效绑定缺口：旧实现把本地 `account_external_identity` 的存在直接当作远端用户可用，导致远端 Keycloak User 被删除时成员仍可能被置为 `ACTIVE`。新流程读取远端 `sub`、仅在未激活时重发邮件；远端缺失时严格验证重建/恢复归属，V102 同步修复重绑时 `principal_identity` 镜像主键冲突。
 
 ## Handoff
 

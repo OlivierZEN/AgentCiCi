@@ -113,7 +113,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - spec_path: `docs/specs/FEAT-145-unified-principal-identity-governance.md`
 - task_status_path: `.claw/tasks/TASK-252.md`
 - assignment_path: `.claw/assignments/TASK-252.yaml`
-- next_action: 机器 OACT 交换和 Semattice Principal 投影已发布；机器开户与人类邮件邀请已解耦。等待 provisioner client secret、OACT 签名配置、受权 service client 与 Keycloak SMTP 后，分别开启受控灰度并完成真实端到端验收。
+- next_action: SMTP 与人工 provisioning 已就绪；发布 V100 和邀请身份恢复逻辑，验证新成员保持 `PENDING_ACTIVATION` 直至完成 Keycloak 验证邮箱和设置密码后的首次 OIDC 登录。
 
 ### TASK-251 - 全局用户公共编号
 

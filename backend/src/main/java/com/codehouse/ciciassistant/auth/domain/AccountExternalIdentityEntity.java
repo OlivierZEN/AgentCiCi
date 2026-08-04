@@ -61,6 +61,19 @@ public class AccountExternalIdentityEntity {
         return subject;
     }
 
+    /**
+     * Rebinds a local compatibility record after the previously linked Keycloak
+     * user was removed and a new, independently verified user was provisioned.
+     * The database mirror keeps {@code principal_identity} on the same immutable
+     * local identity record; callers must never create a second row for an
+     * account that already has one.
+     */
+    public void rebind(String issuer, String subject) {
+        this.issuer = requireText(issuer, "issuer");
+        this.subject = requireText(subject, "subject");
+        this.updatedAt = Instant.now();
+    }
+
     private static String requireText(String value, String field) {
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException(field + " is required");
