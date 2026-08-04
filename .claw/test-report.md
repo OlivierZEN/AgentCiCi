@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-04T15:34:00Z
+updated_at: 2026-08-04T15:39:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-08-04T15:34:00Z
+last_run_at: 2026-08-04T15:39:00Z
 last_run_status: passed
 ---
 
@@ -17,6 +17,7 @@ last_run_status: passed
 - `diff-check`：`git diff --check` 通过。
 - `browser-desktop`：受控演示登录响应访问 `/app`，点击“AI表格”后验证默认鎏金账房、主题菜单 8 项主题、切换“星河幻境”、对象切换到商机、表头显示隐藏、记录详情抽屉；默认 1200px 截图无横向滚动条。截图为 `.playwright-cli/page-2026-08-04T15-24-34-870Z.png`、`.playwright-cli/page-2026-08-04T15-25-10-245Z.png`。
 - `browser-limit`：本地 backend 未启动，浏览器控制台存在 API 连接失败日志；页面验证使用 Playwright 受控 `/auth/me` 演示响应，未伪造生产凭据或真实 Semattice 数据。
+- `production-2.8.47`：Git tag/commit 为 `2.8.47 / aeeb24f9ea66`；backend/frontend ACR index digest 为 `sha256:28980489578b0bdc50d148941056154833d96c8fc16e5afb0aa8d6dcedeba686` / `sha256:fc36895b5063c30665edbf2a419564d56ff54fa81172318918eec463322133a5`。发布前备份 `/opt/cici/backups/20260804-233730-before-2.8.47` 的环境、PostgreSQL、KB、Qdrant 均非空；仅重建 backend/frontend，六服务 healthy，`/actuator/health=UP`、版本接口为 `2.8.47 / aeeb24f9ea66`、Nginx 配置通过。`https://x.agentcici.com/`=200、HTTP 根路径=301、匿名 `/auth/me`=401；`onechat.agentcici.com` DNS 仍不可解析，未作为发布成功判定。
 
 ## TASK-265 - DEV Autopilot 研发交付评审 Tool 生产闭环
 

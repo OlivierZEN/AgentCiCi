@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-04T15:36:00Z
+updated_at: 2026-08-04T15:39:00Z
 updated_by: MANAGER-001
 phase: ai-table-preview-production
 active_task: TASK-266
-next_action: "完成 2.8.47 发布后，等待用户确认 AI表格高保真 UI 的视觉方向和字段结构，再进入真实 Semattice API 接入设计；onechat.agentcici.com 的 DNS 解析风险需单独修复。"
+next_action: "等待用户确认 AI表格高保真 UI 的视觉方向和字段结构，再进入真实 Semattice API 接入设计；onechat.agentcici.com 的 DNS 解析风险需单独修复。"
 read_next:
   goals: false
   decisions: false
@@ -22,15 +22,15 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-266 / FEAT-158：AgentCiCi 用户端左侧入口已改名为“AI表格”，点击后进入内置业务对象列表预览，不再打开外部 CRM 登录 iframe。默认鎏金账房与现有 8 个产品主题共用同一列表结构；已验证对象切换、查询、表头设置、刷新、分页和记录详情抽屉。前端全量测试 33 文件 / 206 tests、生产构建和 diff 检查通过；桌面截图已完成，等待用户确认视觉和字段后再进入真实 API 接入。
+- TASK-266 / FEAT-158：AgentCiCi 用户端左侧入口已改名为“AI表格”，点击后进入内置业务对象列表预览，不再打开外部 CRM 登录 iframe。默认鎏金账房与现有 8 个产品主题共用同一列表结构；已验证对象切换、查询、表头设置、刷新、分页和记录详情抽屉。前端全量测试 33 文件 / 206 tests、生产构建和 diff 检查通过；桌面截图已完成，并按用户发布指令随 `2.8.47` 上线，等待用户确认视觉和字段后再进入真实 API 接入。
 
 ## Snapshot
 
-- 生产已发布 `2.8.46 / 42d81ceccd46`：包含 TASK-255 的 `/app` 未登录自动 OIDC 跳转。backend/frontend 不可变 ACR digest 分别为 `sha256:d75441e1aaa11f83bafff1b1062723757b8ad8ef9443ae4b88ea393bb8215d5a` / `sha256:9b3c8ab956756817648694cfa705431f2c670ca2aa0386d0a38ac37b60bb9e7a`；发布前备份 `/opt/cici/backups/20260804-233209-before-2.8.46` 的环境、PostgreSQL、知识库与 Qdrant 均非空。仅重建 backend/frontend，六容器 healthy，`/actuator/health=UP`、版本接口返回 `2.8.46` 与该提交、Nginx 校验通过、`x.agentcici.com` HTTPS=200、HTTP=301、匿名 `/auth/me`=401。`onechat.agentcici.com` 仍无法 DNS 解析，未作为发布成功依据。
+- 生产已发布 `2.8.47 / aeeb24f9ea66`：包含 TASK-255 的 `/app` 未登录自动 OIDC 跳转及 TASK-266 的 AI表格业务对象列表预览。backend/frontend 不可变 ACR digest 分别为 `sha256:28980489578b0bdc50d148941056154833d96c8fc16e5afb0aa8d6dcedeba686` / `sha256:fc36895b5063c30665edbf2a419564d56ff54fa81172318918eec463322133a5`；发布前备份 `/opt/cici/backups/20260804-233730-before-2.8.47` 的环境、PostgreSQL、知识库与 Qdrant 均非空。仅重建 backend/frontend，六容器 healthy，`/actuator/health=UP`、版本接口返回 `2.8.47` 与该提交、Nginx 校验通过、`x.agentcici.com` HTTPS=200、HTTP=301、匿名 `/auth/me`=401。`onechat.agentcici.com` 仍无法 DNS 解析，未作为发布成功依据。
 
 - TASK-265 / FEAT-157：DEV Autopilot 产品经理评审能力已完成生产闭环。`dev-autopilot-pm` 显式绑定 query/create/review 三个 Tool、always-on Skill 与产品经理 SERVICE Principal；第三方开发者 CLI 已完成设计驳回/批准、进度与工时、阻塞上报/解除、制品提交、完成申请和最终批准。正式任务 `019fcc18-756f-7782-a9e7-bf34e9c94670` 最终为 `已完成 / 100% / revision 13`；哪吒休息态与产品经理冒用开发者 CLI 的负向边界均通过。
 
-- TASK-253 与 TASK-255 已按用户授权合并至 `main`。TASK-253 的计费修复此前已由 TASK-254 发布，历史合并未重复引入功能差异；TASK-255 的 `/app` 访客一次性 OIDC 自动跳转、回调票据保护和 5 项定向测试已合并，前端生产构建通过，尚未发布生产。
+- TASK-253 与 TASK-255 已按用户授权合并至 `main`。TASK-253 的计费修复此前已由 TASK-254 发布，历史合并未重复引入功能差异；TASK-255 的 `/app` 访客一次性 OIDC 自动跳转、回调票据保护和 5 项定向测试已随 `2.8.47` 发布生产。
 
 - TASK-252 / CloudCC CRM orgId 契约：已发布生产 `2.8.44 / 4690e58cc154`。AgentCiCi 租户外键 `integration_app.company_id` 保持不变；CloudCC 配置/Token 请求统一为 `orgId`，兼容读取旧 `config.companyId`。V104 已成功从旧键或网关 URL 回填，6 个 CloudCC 集成中 5 个已有 `orgId`，香港大学仍未配置。定向测试、backend compile、前端 build、不可变镜像、发布前四类备份、六容器健康、V104、Nginx、版本接口、x=200 与匿名 auth=401 均通过；等待受权成员实际 CRM 数据回读。
 
