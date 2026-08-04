@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-04T03:42:00Z
+updated_at: 2026-08-04T07:23:00Z
 updated_by: MANAGER-001
-phase: production-invitation-lifecycle-released
+phase: production-invitation-lifecycle-backfill-complete
 active_task: TASK-252
-next_action: "按正常公司管理员邀请路径执行首个新成员验收；成员应在完成 Keycloak 邮箱验证和设置密码后的首次 OIDC 登录才激活。"
+next_action: "监控已回填账户的初始化邮件投递和首次 OIDC 登录；正常公司管理员邀请的新成员应在完成 Keycloak 邮箱验证和设置密码后才激活。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-252 / FEAT-145：人类邀请修复已发布 `2.8.41 / 3320ed77515d`。Flyway V102 成功，Keycloak Realm SMTP（SSL 465）和人工 provisioning 均为受控启用；既有绑定按远端 `sub` 复核，未激活才重发 Required Actions，已激活不重置密码。远端用户缺失时仅以不可变 public ID、受管 account ID 属性和邮箱同时证明归属后重绑，否则 fail closed；重复邀请不能恢复已停用成员。backend/frontend healthy，根路径 200，匿名鉴权和服务交换入口均为预期 401。首个新成员的真实邮箱点击/首次 OIDC 激活由正常业务邀请完成，不伪造用户凭据。
+- TASK-252 / FEAT-145：人类邀请修复已发布 `2.8.41 / 3320ed77515d`。Flyway V102 成功，Keycloak Realm SMTP（SSL 465）和人工 provisioning 均为受控启用；既有绑定按远端 `sub` 复核，未激活才重发 Required Actions，已激活不重置密码。远端用户缺失时仅以不可变 public ID、受管 account ID 属性和邮箱同时证明归属后重绑，否则 fail closed；重复邀请不能恢复已停用成员。2026-08-04 已完成历史回填：5 个活跃但未绑定的全局账户均已创建/复用 Keycloak User、写入 issuer+subject 映射并触发邮箱验证与设置密码邮件；当前活跃未绑定数为 0，5/5 初始动作均就绪。backend/frontend healthy，根路径 200，匿名鉴权和服务交换入口均为预期 401。首个新成员的真实邮箱点击/首次 OIDC 激活由正常业务邀请完成，不伪造用户凭据。
 
 - TASK-264 / FEAT-156：研发身份花名已收敛为 Oliver（HUMAN 产品总监）、大乔（SERVICE 产品经理）、悟空和后羿（SERVICE 开发者）。三台 SERVICE 的 PRIMARY owner 均为 Oliver；后羿已复用开发者角色和研发交付部 primary membership。Semattice 已认证控制台回读 4 members / 3 roles / 1 organization / 5 objects / 42 fields，悟空/后羿 CLI 正向与大乔越权负向均通过。后羿凭据只保存在生产 root-only 文件。
 
