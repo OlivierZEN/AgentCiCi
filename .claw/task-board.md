@@ -23,7 +23,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - spec_path: `docs/specs/FEAT-158-semattice-business-object-list-preview.md`
 - task_status_path: `.claw/tasks/TASK-266.md`
 - assignment_path: `.claw/assignments/TASK-266.yaml`
-- next_action: 接入当前会话授权的已发布对象目录与真实只读记录，完成生产发布。
+- next_action: 提交真实数据实现，执行 ACR dry-run 与生产 runbook 发布验收。
 
 ### TASK-265 - DEV Autopilot 研发交付评审 Tool
 

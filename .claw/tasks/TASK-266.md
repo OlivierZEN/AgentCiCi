@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-266
 status: in_progress
-updated_at: 2026-08-04T16:10:00Z
+updated_at: 2026-08-04T16:04:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -16,6 +16,7 @@ spec_path: docs/specs/FEAT-158-semattice-business-object-list-preview.md
 
 - 用户已确认高保真 UI 形态，并授权生产实现及线上发布。
 - 已确认数据平台提供已发布元数据读取与带对象/字段/记录范围授权的记录查询能力。
+- 已完成真实只读对象目录、记录查询、游标分页、已索引文本前缀查询、成员隔离列偏好和同源 API 代理实现。
 - Blocked: none
 
 ## Scope
@@ -27,8 +28,9 @@ spec_path: docs/specs/FEAT-158-semattice-business-object-list-preview.md
 
 ## Next Action
 
-- 在已扩展的授权范围内实现后端桥接与前端真实数据适配，然后完成生产发布验收。
+- 提交实现、运行 ACR dry-run，并按生产 runbook 备份、发布和完成线上健康/受权数据验收。
 
 ## Verification
 
-- 预览阶段的前端构建、全量测试及桌面视觉证据保留为视觉基线；真实链路上线前将重新执行后端、前端、浏览器和生产验证。
+- 聚焦后端 2 项测试、后端编译、前端构建、前端全量 33 文件/206 项测试、Compose config 与 diff 检查通过。
+- 本机完整后端套件受未配置 PostgreSQL 的既有集成测试阻塞；Playwright CLI 本机 Chromium 对 Vite 地址返回工具环境 500，但 curl 同地址为 200。两项限制均不伪造结果，生产按受权会话继续验收。

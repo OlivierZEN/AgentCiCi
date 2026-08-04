@@ -1,22 +1,25 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-04T15:39:00Z
+updated_at: 2026-08-04T16:04:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-08-04T15:39:00Z
+last_run_at: 2026-08-04T16:04:00Z
 last_run_status: passed
 ---
 
 # Test Report
 
-## TASK-266 - AI表格业务对象列表高保真预览
+## TASK-266 - AI表格业务对象实时列表
 
+- `backend-focused`：`mvn -q -Dtest=AiTableDataServiceTest test` 通过（2 tests）。覆盖当前成员短期 OACT、已发布对象目录、无原始租户/令牌浏览器输入、仅使用已索引文本字段的前缀查询、服务端 limit 上限和记录游标回传。
+- `backend-compile`：`mvn -q -DskipTests compile` 通过。
 - `frontend-build`：`npm run build` 通过，TypeScript 与 Vite 生产构建成功；仅保留既有 bundle 大小提示。
 - `frontend-full`：`npm test -- --run` 通过，33 个测试文件 / 206 项测试。
 - `diff-check`：`git diff --check` 通过。
-- `browser-desktop`：受控演示登录响应访问 `/app`，点击“AI表格”后验证默认鎏金账房、主题菜单 8 项主题、切换“星河幻境”、对象切换到商机、表头显示隐藏、记录详情抽屉；默认 1200px 截图无横向滚动条。截图为 `.playwright-cli/page-2026-08-04T15-24-34-870Z.png`、`.playwright-cli/page-2026-08-04T15-25-10-245Z.png`。
-- `browser-limit`：本地 backend 未启动，浏览器控制台存在 API 连接失败日志；页面验证使用 Playwright 受控 `/auth/me` 演示响应，未伪造生产凭据或真实 Semattice 数据。
+- `routing-contract`：两份版本化 Nginx 与 Vite 配置均有 `/ai-table` 后端代理；本地 Vite 请求 `/ai-table/catalog` 返回后端代理连接失败的 `500 text/plain`，不是 SPA `index.html`，证明路由未被 fallback 吞掉。`docker compose -f deploy/docker-compose.acr.yml config` 通过。
+- `browser-limit`：Playwright CLI 的本机 Chromium 对 `127.0.0.1:5174/app` 直接返回工具环境的 `chrome-error`/HTTP 500，而同一地址 curl 为 HTTP 200；已停止无效重试，未把它记录为产品页面失败。先前已确认的桌面高保真截图仍保留为视觉基线；生产将以受权会话完成真实数据回读，不伪造登录或业务数据。
+- `full-backend-limit`：`mvn -q test` 进入既有 `KnowledgeBaseLifecycleIntegrationTest` 后等待未配置的本机 PostgreSQL（Hikari 重复连接），未在本任务中完成全量结果；聚焦测试和编译均通过，发布后按 runbook 验证生产 Flyway/健康与受权业务路径。
 - `production-2.8.47`：Git tag/commit 为 `2.8.47 / aeeb24f9ea66`；backend/frontend ACR index digest 为 `sha256:28980489578b0bdc50d148941056154833d96c8fc16e5afb0aa8d6dcedeba686` / `sha256:fc36895b5063c30665edbf2a419564d56ff54fa81172318918eec463322133a5`。发布前备份 `/opt/cici/backups/20260804-233730-before-2.8.47` 的环境、PostgreSQL、KB、Qdrant 均非空；仅重建 backend/frontend，六服务 healthy，`/actuator/health=UP`、版本接口为 `2.8.47 / aeeb24f9ea66`、Nginx 配置通过。`https://x.agentcici.com/`=200、HTTP 根路径=301、匿名 `/auth/me`=401；`onechat.agentcici.com` DNS 仍不可解析，未作为发布成功判定。
 
 ## TASK-265 - DEV Autopilot 研发交付评审 Tool 生产闭环

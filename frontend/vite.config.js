@@ -12,6 +12,7 @@ export default defineConfig(function (_a) {
             proxy: {
                 "/auth": { target: backendTarget, changeOrigin: true },
                 "/ai": { target: backendTarget, changeOrigin: true, ws: true },
+                "/ai-table": { target: backendTarget, changeOrigin: true },
                 "/ws": { target: backendTarget, changeOrigin: true, ws: true },
                 "/kb": { target: backendTarget, changeOrigin: true },
                 "/data-quality": { target: backendTarget, changeOrigin: true },
