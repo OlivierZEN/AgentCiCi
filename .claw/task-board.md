@@ -15,15 +15,15 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
-### TASK-266 - AI表格业务对象列表高保真预览
+### TASK-266 - AI表格业务对象实时列表
 
-- status: `review`
+- status: `in_progress`
 - priority: `high`
 - owner_role: `frontend-agent`
 - spec_path: `docs/specs/FEAT-158-semattice-business-object-list-preview.md`
 - task_status_path: `.claw/tasks/TASK-266.md`
 - assignment_path: `.claw/assignments/TASK-266.yaml`
-- next_action: 等待用户确认高保真 UI 的视觉方向和字段结构。
+- next_action: 接入当前会话授权的已发布对象目录与真实只读记录，完成生产发布。
 
 ### TASK-265 - DEV Autopilot 研发交付评审 Tool
 

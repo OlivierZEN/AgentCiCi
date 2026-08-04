@@ -3,9 +3,9 @@ kind: current-status
 version: 4
 updated_at: 2026-08-04T15:39:00Z
 updated_by: MANAGER-001
-phase: ai-table-preview-production
+phase: ai-table-live-production
 active_task: TASK-266
-next_action: "等待用户确认 AI表格高保真 UI 的视觉方向和字段结构，再进入真实 Semattice API 接入设计；onechat.agentcici.com 的 DNS 解析风险需单独修复。"
+next_action: "TASK-266 已获用户授权进入真实数据接入与生产发布：实现当前会话 OACT 的对象目录/记录查询、游标分页和列偏好；onechat.agentcici.com 的 DNS 解析风险仍需单独修复。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-266 / FEAT-158：AgentCiCi 用户端左侧入口已改名为“AI表格”，点击后进入内置业务对象列表预览，不再打开外部 CRM 登录 iframe。默认鎏金账房与现有 8 个产品主题共用同一列表结构；已验证对象切换、查询、表头设置、刷新、分页和记录详情抽屉。前端全量测试 33 文件 / 206 tests、生产构建和 diff 检查通过；桌面截图已完成，并按用户发布指令随 `2.8.47` 上线，等待用户确认视觉和字段后再进入真实 API 接入。
+- TASK-266 / FEAT-158：用户已确认 AI表格高保真形态，并授权升级为生产可用的真实数据列表及发布。实现将由 AgentCiCi 服务端基于当前会话成员签发短期 OACT，读取已发布对象目录和严格授权的记录查询结果；浏览器不持有 OACT、租户或公司标识。桌面鎏金账房和现有 8 个主题结构保持不变，范围包括游标分页、受索引约束的查询、列偏好、刷新、详情与明确的 loading/empty/error/permission 状态，不包含写入、批量、导出或移动端。
 
 ## Snapshot
 

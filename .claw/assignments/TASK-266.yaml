@@ -11,6 +11,8 @@ pr_url: n/a
 scope_mode: task_bounded_broad_code
 allowed_write_roots:
   - frontend/src/assistant/**
+  - backend/src/main/java/com/codehouse/ciciassistant/aitable/**
+  - backend/src/test/java/com/codehouse/ciciassistant/aitable/**
   - docs/specs/**
   - .claw/tasks/**
   - .claw/assignments/**
@@ -26,6 +28,9 @@ scope_files:
   - frontend/src/assistant/AssistantApp.tsx
   - frontend/src/assistant/AiTableBusinessObjectList.tsx
   - frontend/src/assistant/cici-ui.css
+  - backend/src/main/java/com/codehouse/ciciassistant/aitable/AiTableDataController.java
+  - backend/src/main/java/com/codehouse/ciciassistant/aitable/AiTableDataService.java
+  - backend/src/test/java/com/codehouse/ciciassistant/aitable/AiTableDataServiceTest.java
   - docs/specs/FEAT-158-semattice-business-object-list-preview.md
   - .claw/tasks/TASK-266.md
   - .claw/assignments/TASK-266.yaml
@@ -36,12 +41,16 @@ touch_policy: exclusive
 shared_contracts:
   - AgentCiCi authenticated desktop workbench shell
   - current product theme token contract
+  - AgentCiCi-to-Semattice official access token boundary
+  - Semattice published metadata and runtime record query capabilities
 task_boundary:
-  - "将 AI表格菜单从外部登录 iframe 改为 AgentCiCi 内置业务对象列表预览。"
-  - "覆盖对象切换、关键词查询、表头设置、刷新反馈、分页与记录详情抽屉。"
-  - "不改动后端、Semattice API、鉴权和移动端。"
+  - "将 AI表格从前端演示预览升级为当前会话成员可读取的真实业务对象与记录列表。"
+  - "实现对象目录、服务端游标分页、受索引约束的关键词查询、自定义表头持久化、刷新、详情与 loading/empty/error/permission 状态。"
+  - "通过 AgentCiCi 服务端以当前用户短期 OACT 调用已发布 Semattice 元数据与只读记录能力；浏览器不接触 OACT、tenant_id 或 company_id。"
+  - "维持桌面端高保真结构、默认鎏金账房和既有主题切换；不实现新增、编辑、删除、批量操作、导出或移动端适配。"
+  - "完成自动化、浏览器与生产 runbook 验收，并按不可变版本发布线上。"
 change_manifest_required: true
 preflight_required: true
 local_login_required: true
 identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
-signature: "MANAGER-001; user explicitly requested a high-fidelity HTML UI preview for the AgentCiCi AI表格 menu and tenant business object list on 2026-08-04."
+signature: "MANAGER-001; user explicitly authorized production implementation and online release of the approved AI table UI on 2026-08-04."
