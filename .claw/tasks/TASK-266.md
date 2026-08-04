@@ -18,7 +18,7 @@ spec_path: docs/specs/FEAT-158-semattice-business-object-list-preview.md
 - 已确认数据平台提供已发布元数据读取与带对象/字段/记录范围授权的记录查询能力。
 - 已完成真实只读对象目录、记录查询、游标分页、已索引文本前缀查询、成员隔离列偏好和同源 API 代理实现。
 - 已复现用户截图中的 `Authentication required`，并确认不是 Semattice 或 OACT 拒绝。
-- 已确认前端 `AiTableBusinessObjectList` 直接使用 `fetch(..., { credentials: "same-origin" })`，而工作台认证 API 使用 `authFetch(LS_ASSISTANT_TOKEN, ...)` 追加 Bearer Token；目录请求因此缺少 `Authorization` 并被 AgentCiCi 鉴权层拒绝。
+- 已将目录和记录查询改为复用 `authFetch(LS_ASSISTANT_TOKEN, ...)`，保留同源 Cookie、Token 刷新重试和现有受保护 API 错误语义。
 - Blocked: none
 
 ## Scope
@@ -30,10 +30,10 @@ spec_path: docs/specs/FEAT-158-semattice-business-object-list-preview.md
 
 ## Next Action
 
-- 将目录和记录查询接入现有 Bearer 会话请求器，补充定向回归，发布新的不可变生产版本并做鉴权边界与线上健康验收。
+- 已通过前端定向 2 项测试、全量 34 文件/208 项测试和生产构建；提交修复后发布新的不可变生产版本并做鉴权边界与线上健康验收。
 
 ## Verification
 
-- 聚焦后端 2 项测试、后端编译、前端构建、前端全量 33 文件/206 项测试、Compose config 与 diff 检查通过。
+- 聚焦后端 2 项测试、后端编译、AI表格鉴权定向 2 项测试、前端构建、前端全量 34 文件/208 项测试、Compose config 与 diff 检查通过。
 - 本机完整后端套件受未配置 PostgreSQL 的既有集成测试阻塞；Playwright CLI 本机 Chromium 对 Vite 地址返回工具环境 500，但 curl 同地址为 200。两项限制均不伪造结果，生产按受权会话继续验收。
 - 生产：发布前四类备份非空；backend/frontend ACR digest 已 inspect；Nginx `-t`、六容器、backend health/version、x HTTPS、HTTP 跳转与 AI表格匿名 401 JSON 均通过。生产 OACT 已启用、数据平台地址已配置，逗号分隔 scopes 包含 `metadata.read` 与 `runtime.record.read`。本会话无受权成员登录 Cookie/测试账号，未伪造真实记录回读。

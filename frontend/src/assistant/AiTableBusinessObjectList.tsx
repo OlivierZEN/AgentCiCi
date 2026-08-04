@@ -15,6 +15,8 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
+import { authFetch } from "../auth/authStorage";
+import { LS_ASSISTANT_TOKEN } from "../constants";
 import { applyProductTheme, PRODUCT_THEMES, type ProductThemeCode } from "../theme/theme";
 
 type AiTableField = {
@@ -62,8 +64,8 @@ type ApiEnvelope<T> = {
   message: string;
 };
 
-async function request<T>(url: string, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(url, { credentials: "same-origin", signal });
+export async function requestAiTable<T>(url: string, signal?: AbortSignal): Promise<T> {
+  const response = await authFetch(LS_ASSISTANT_TOKEN, url, { credentials: "same-origin", signal });
   const body = await response.json().catch(() => null) as ApiEnvelope<T> | null;
   if (!response.ok || !body?.success) {
     throw new Error(body?.message || "业务数据暂时不可用，请稍后重试。");
@@ -149,7 +151,7 @@ export function AiTableBusinessObjectList() {
     const controller = new AbortController();
     setCatalogLoading(true);
     setCatalogError("");
-    void request<Catalog>("/ai-table/catalog", controller.signal)
+    void requestAiTable<Catalog>("/ai-table/catalog", controller.signal)
       .then((nextCatalog) => {
         setCatalog(nextCatalog);
         setActiveApiName((current) => current && nextCatalog.objects.some((object) => object.apiName === current)
@@ -190,7 +192,7 @@ export function AiTableBusinessObjectList() {
     if (appliedQuery) params.set("query", appliedQuery);
     setRecordsLoading(true);
     setRecordsError("");
-    void request<RecordPage>(`/ai-table/objects/${encodeURIComponent(activeObject.apiName)}/records?${params}`, controller.signal)
+    void requestAiTable<RecordPage>(`/ai-table/objects/${encodeURIComponent(activeObject.apiName)}/records?${params}`, controller.signal)
       .then((nextPage) => setRecordPage(nextPage))
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;

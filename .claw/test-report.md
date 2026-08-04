@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-04T16:10:00Z
+updated_at: 2026-08-05T00:00:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-08-04T16:10:00Z
+last_run_at: 2026-08-05T00:00:00Z
 last_run_status: passed
 ---
 
@@ -15,7 +15,8 @@ last_run_status: passed
 - `backend-focused`：`mvn -q -Dtest=AiTableDataServiceTest test` 通过（2 tests）。覆盖当前成员短期 OACT、已发布对象目录、无原始租户/令牌浏览器输入、仅使用已索引文本字段的前缀查询、服务端 limit 上限和记录游标回传。
 - `backend-compile`：`mvn -q -DskipTests compile` 通过。
 - `frontend-build`：`npm run build` 通过，TypeScript 与 Vite 生产构建成功；仅保留既有 bundle 大小提示。
-- `frontend-full`：`npm test -- --run` 通过，33 个测试文件 / 206 项测试。
+- `frontend-auth-header`：`npm test -- src/assistant/AiTableBusinessObjectList.test.ts` 通过（2 tests），验证目录请求复用 `authFetch(LS_ASSISTANT_TOKEN, ...)` 并使受保护 API 的 401 错误可见。
+- `frontend-full`：`npm test` 通过，34 个测试文件 / 208 项测试。
 - `diff-check`：`git diff --check` 通过。
 - `routing-contract`：两份版本化 Nginx 与 Vite 配置均有 `/ai-table` 后端代理；本地 Vite 请求 `/ai-table/catalog` 返回后端代理连接失败的 `500 text/plain`，不是 SPA `index.html`，证明路由未被 fallback 吞掉。`docker compose -f deploy/docker-compose.acr.yml config` 通过。
 - `browser-limit`：Playwright CLI 的本机 Chromium 对 `127.0.0.1:5174/app` 直接返回工具环境的 `chrome-error`/HTTP 500，而同一地址 curl 为 HTTP 200；已停止无效重试，未把它记录为产品页面失败。先前已确认的桌面高保真截图仍保留为视觉基线；生产将以受权会话完成真实数据回读，不伪造登录或业务数据。
