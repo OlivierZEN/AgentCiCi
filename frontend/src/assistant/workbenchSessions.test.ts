@@ -26,6 +26,11 @@ describe("workbenchSessions", () => {
       .toBe("company-b::workbench:cici-system");
   });
 
+  it("does not let a default workbench state reuse the unscoped cache key", () => {
+    expect(buildCompanyScopedCacheKey("company-a", "cici-system"))
+      .not.toBe(buildCompanyScopedCacheKey(undefined, "cici-system"));
+  });
+
   it("keeps chronological recent history and trims blanks", () => {
     const lines = pickRecentHistoryLines(
       [

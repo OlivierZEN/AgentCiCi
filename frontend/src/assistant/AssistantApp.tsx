@@ -809,16 +809,19 @@ function isCustomerWorkbenchEmbedLocation() {
   return code === "customer-workbench" && ["crm", "embedded", "true"].includes(embed);
 }
 
-function createInitialWorkbenchMessages() {
+function createInitialWorkbenchMessages(companyId?: string) {
   return Object.fromEntries(
-    WORKBENCH_DOCK_AGENTS.map((agent) => [agent.key, agent.messages.map((message) => ({ ...message }))]),
+    WORKBENCH_DOCK_AGENTS.map((agent) => [
+      buildCompanyScopedCacheKey(companyId, agent.key),
+      agent.messages.map((message) => ({ ...message })),
+    ]),
   ) as Record<string, ChatBubble[]>;
 }
 
-function createInitialWorkbenchRuntime() {
+function createInitialWorkbenchRuntime(companyId?: string) {
   return Object.fromEntries(
     WORKBENCH_DOCK_AGENTS.map((agent) => [
-      agent.key,
+      buildCompanyScopedCacheKey(companyId, agent.key),
       {
         ...agent.stateMachine,
         thoughts: [...agent.stateMachine.thoughts],
@@ -1326,8 +1329,8 @@ export default function AssistantApp() {
   const [conversationListNotice, setConversationListNotice] = useState("");
   const [conversationHistoryLoadingId, setConversationHistoryLoadingId] = useState("");
   const [workbenchDockAgents, setWorkbenchDockAgents] = useState<WorkbenchDockAgent[]>(WORKBENCH_DOCK_AGENTS);
-  const [workbenchMessagesByAgent, setWorkbenchMessagesByAgent] = useState<Record<string, ChatBubble[]>>(createInitialWorkbenchMessages);
-  const [workbenchRuntimeByAgent, setWorkbenchRuntimeByAgent] = useState<Record<string, WorkbenchStateMachine>>(createInitialWorkbenchRuntime);
+  const [workbenchMessagesByAgent, setWorkbenchMessagesByAgent] = useState<Record<string, ChatBubble[]>>(() => createInitialWorkbenchMessages(auth?.companyId));
+  const [workbenchRuntimeByAgent, setWorkbenchRuntimeByAgent] = useState<Record<string, WorkbenchStateMachine>>(() => createInitialWorkbenchRuntime(auth?.companyId));
   const [activeWorkbenchSessionIdByAgent, setActiveWorkbenchSessionIdByAgent] = useState<Record<string, string>>({});
   const [openWorkbenchSessionMenuId, setOpenWorkbenchSessionMenuId] = useState("");
   const [workbenchMetrics, setWorkbenchMetrics] = useState<WorkbenchMetric[]>(WORKBENCH_METRICS_DEFAULT);
@@ -1370,7 +1373,7 @@ export default function AssistantApp() {
   const [activeMonitorLogId, setActiveMonitorLogId] = useState("");
   const [monitorSearchText, setMonitorSearchText] = useState("");
 
-  const resetCompanyScopedUiState = () => {
+  const resetCompanyScopedUiState = (companyId: string) => {
     if (chatLoadingStaleTimerRef.current !== null) {
       window.clearTimeout(chatLoadingStaleTimerRef.current);
       chatLoadingStaleTimerRef.current = null;
@@ -1392,8 +1395,8 @@ export default function AssistantApp() {
     setQuickCommandsByAgent({});
     setQuickCommandsLoadingByAgent({});
     setActiveWorkbenchSessionIdByAgent({});
-    setWorkbenchMessagesByAgent(createInitialWorkbenchMessages());
-    setWorkbenchRuntimeByAgent(createInitialWorkbenchRuntime());
+    setWorkbenchMessagesByAgent(createInitialWorkbenchMessages(companyId));
+    setWorkbenchRuntimeByAgent(createInitialWorkbenchRuntime(companyId));
     setWorkbenchMetrics(WORKBENCH_METRICS_DEFAULT);
     setWorkbenchOverviewItems([]);
     setMonitorRunLogs([]);
@@ -1414,7 +1417,7 @@ export default function AssistantApp() {
     const next = { companyId: nextCompanyId, generation: current.generation + 1 };
     companyScopeRef.current = next;
     if (nextCompanyId) {
-      resetCompanyScopedUiState();
+      resetCompanyScopedUiState(nextCompanyId);
     }
     return next;
   };
@@ -2104,7 +2107,7 @@ export default function AssistantApp() {
     if (auth && authStatus === "authenticated") {
       void loadKbs();
     }
-  }, [auth?.token, authStatus]);
+  }, [auth?.companyId, auth?.token, authStatus]);
 
   useEffect(() => {
     if (!auth && FRONT_LOGIN_USER_MODE_CONFIG === "agent" && FRONT_LOGIN_MODE_CONFIG === "login_mode2") {
@@ -2130,7 +2133,7 @@ export default function AssistantApp() {
       setAgentSkillBindingsFailedByAgent({});
       setActiveSkillCodeByAgent({});
     }
-  }, [auth?.token, authStatus]);
+  }, [auth?.companyId, auth?.token, authStatus]);
 
   useEffect(() => {
     if (auth) {
@@ -2141,7 +2144,7 @@ export default function AssistantApp() {
       setCompanies([]);
       setCompanyMenuOpen(false);
     }
-  }, [auth?.token, authStatus]);
+  }, [auth?.companyId, auth?.token, authStatus]);
 
   useEffect(() => {
     if (!auth?.token) {
@@ -2169,7 +2172,7 @@ export default function AssistantApp() {
     return () => {
       cancelled = true;
     };
-  }, [auth?.token]);
+  }, [auth?.companyId, auth?.token]);
 
   useEffect(() => {
     if (!auth) return;
@@ -2197,7 +2200,7 @@ export default function AssistantApp() {
       setConversationListNotice("");
       setActiveConversationId("");
     }
-  }, [auth?.token, authStatus]);
+  }, [auth?.companyId, auth?.token, authStatus]);
 
   useEffect(() => {
     activeConversationIdRef.current = activeConversationId;
@@ -2242,6 +2245,7 @@ export default function AssistantApp() {
     if (!auth || authStatus !== "authenticated" || !sessionStreamActive) {
       return;
     }
+    const streamScope = companyScopeRef.current;
     let stopped = false;
     let controller: AbortController | null = null;
 
@@ -2253,12 +2257,18 @@ export default function AssistantApp() {
           await streamSessionUpdates(
             auth.token,
             async (event) => {
+              if (!isCurrentCompanyScope(streamScope)) {
+                return;
+              }
               const sessionId = event.sessionId?.trim();
               if (!sessionId) {
                 return;
               }
               setConversationListNotice((current) => (current === "实时同步连接已断开，正在重连..." ? "" : current));
               await loadConversationThreads(activeConversationIdRef.current || sessionId);
+              if (!isCurrentCompanyScope(streamScope)) {
+                return;
+              }
               if (
                 workspaceTabRef.current === "workbench" ||
                 workspaceTabRef.current === "monitor" ||
@@ -2292,7 +2302,13 @@ export default function AssistantApp() {
 
     const timer = window.setInterval(() => {
       void (async () => {
+        if (!isCurrentCompanyScope(streamScope)) {
+          return;
+        }
         await loadConversationThreads();
+        if (!isCurrentCompanyScope(streamScope)) {
+          return;
+        }
         if (
           workspaceTabRef.current !== "workbench" &&
           workspaceTabRef.current !== "monitor" &&
@@ -2309,7 +2325,7 @@ export default function AssistantApp() {
       controller?.abort();
       window.clearInterval(timer);
     };
-  }, [auth?.token, authStatus, sessionStreamActive]);
+  }, [auth?.companyId, auth?.token, authStatus, sessionStreamActive]);
 
   const conversationsByAgent = useMemo(() => {
     const map = new Map<string, ConversationThread[]>();
@@ -2361,7 +2377,7 @@ export default function AssistantApp() {
       return;
     }
     void loadConversationMessages(activeConversationId, true);
-  }, [activeConversationId, auth?.token, authStatus, workspaceTab]);
+  }, [activeConversationId, auth?.companyId, auth?.token, authStatus, workspaceTab]);
 
   useEffect(() => {
     if (workspaceTab === "workbench" || workspaceTab === "monitor" || workspaceTab === "crm" || workspaceTab === "settings" || workspaceTab === "profile") {
@@ -2428,7 +2444,7 @@ export default function AssistantApp() {
       return;
     }
     void loadAgentSkillBindings(activeWorkbenchAgentId, auth.token);
-  }, [activeWorkbenchAgentId, activeWorkbenchSkillBindingsLoaded, activeWorkbenchSkillLoadFailed, auth?.token, authStatus, workspaceTab]);
+  }, [activeWorkbenchAgentId, activeWorkbenchSkillBindingsLoaded, activeWorkbenchSkillLoadFailed, auth?.companyId, auth?.token, authStatus, workspaceTab]);
 
   useEffect(() => {
     if (!auth?.token || authStatus !== "authenticated" || workspaceTab !== "workbench" || !quickCommandMenuOpen) {
@@ -2438,7 +2454,7 @@ export default function AssistantApp() {
       return;
     }
     void loadQuickCommands(activeWorkbenchAgentId, auth.token);
-  }, [activeWorkbenchAgentId, auth?.token, authStatus, quickCommandMenuOpen, quickCommandsByAgent, workspaceTab]);
+  }, [activeWorkbenchAgentId, auth?.companyId, auth?.token, authStatus, quickCommandMenuOpen, quickCommandsByAgent, workspaceTab]);
   const activeKbNames = kbs.filter((kb) => selectedKbIds.includes(kb.id)).map((kb) => kb.name).join(", ") || "未选择";
   const userInitial = getDisplayInitial(me?.displayName || me?.nickname || me?.mobile || "我", "我");
   const currentCompanyName = me?.companyName || auth?.companyName || auth?.companyId || "当前组织";
@@ -2557,7 +2573,7 @@ export default function AssistantApp() {
     void loadWorkbenchAgents(auth.token);
     void loadWorkbenchStats(auth.token);
     void loadMonitorRunLogs(auth.token);
-  }, [auth?.token, authStatus, workspaceTab]);
+  }, [auth?.companyId, auth?.token, authStatus, workspaceTab]);
 
   useEffect(() => {
     if (workspaceTab !== "monitor" || !auth?.token || authStatus !== "authenticated" || !monitorSelectedLog?.traceId) {
@@ -2565,7 +2581,7 @@ export default function AssistantApp() {
       return;
     }
     void loadMonitorTraceDetail(monitorSelectedLog.traceId, auth.token);
-  }, [auth?.token, authStatus, monitorSelectedLog?.traceId, workspaceTab]);
+  }, [auth?.companyId, auth?.token, authStatus, monitorSelectedLog?.traceId, workspaceTab]);
 
   useEffect(() => {
     if (workspaceTab !== "workbench") {
@@ -2587,7 +2603,7 @@ export default function AssistantApp() {
       setWorkbenchThoughtIndex((current) => current + 1);
     }, 1800);
     return () => window.clearInterval(timer);
-  }, [activeWorkbenchAgentCacheKey, activeWorkbenchKey, activeWorkbenchSessionId, auth?.token, authStatus, workspaceTab]);
+  }, [activeWorkbenchAgentCacheKey, activeWorkbenchKey, activeWorkbenchSessionId, auth?.companyId, auth?.token, authStatus, workspaceTab]);
 
   useEffect(() => {
     if (!openWorkbenchSessionMenuId) {
@@ -3447,7 +3463,11 @@ export default function AssistantApp() {
             }));
           }
           setApprovalPageHtml(buildPendingApprovalsHtml(event.payload));
-          setTimeout(() => setApprovalDrawerOpen(true), 24);
+          window.setTimeout(() => {
+            if (isCurrentCompanyScope(requestScope)) {
+              setApprovalDrawerOpen(true);
+            }
+          }, 24);
           renderedApproval = true;
           // Keep streaming visible in chat; approval drawer is an auxiliary surface.
           suppress = false;
@@ -3720,21 +3740,35 @@ export default function AssistantApp() {
       return;
     }
     const prefixBeforeSpeech = input;
+    const requestScope = companyScopeRef.current;
     await startAsrSession({
       token: auth.token,
       getPrefix: () => prefixBeforeSpeech,
       onLiveText: (full) => {
-        setInput(full);
+        if (isCurrentCompanyScope(requestScope)) {
+          setInput(full);
+        }
       },
-      onNotice: setSpeechNotice,
+      onNotice: (message) => {
+        if (isCurrentCompanyScope(requestScope)) {
+          setSpeechNotice(message);
+        }
+      },
       onFinished: async ({ asrText, fullText }) => {
+        if (!isCurrentCompanyScope(requestScope)) {
+          return;
+        }
         if (asrText) {
           setInput(fullText);
           setSpeechNotice("实时转写完成，内容已生成到输入框。");
         } else {
           setSpeechNotice("未识别到有效语音内容。");
         }
-        window.setTimeout(() => composerInputRef.current?.focus(), 0);
+        window.setTimeout(() => {
+          if (isCurrentCompanyScope(requestScope)) {
+            composerInputRef.current?.focus();
+          }
+        }, 0);
       },
       autoStopAfterNoSpeechMs: 5000,
     });
