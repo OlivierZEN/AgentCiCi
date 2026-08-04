@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-04T14:11:00Z
+updated_at: 2026-08-04T14:55:00Z
 updated_by: MANAGER-001
-phase: cloudcc-org-id-contract-production
+phase: tenant-isolation-cache-hotfix-production
 active_task: TASK-252
-next_action: "由受权成员复核 CloudCC CRM 数据链路与公司 A→B→A 页面；未配置 CloudCC 的租户需先完成管理端集成配置。"
+next_action: "由受权成员刷新到 2.8.45 后复核公司 A→B→A 页面；未配置 CloudCC 的租户需先完成管理端集成配置。"
 read_next:
   goals: false
   decisions: false
@@ -24,7 +24,7 @@ read_next:
 
 - TASK-252 / CloudCC CRM orgId 契约：已发布生产 `2.8.44 / 4690e58cc154`。AgentCiCi 租户外键 `integration_app.company_id` 保持不变；CloudCC 配置/Token 请求统一为 `orgId`，兼容读取旧 `config.companyId`。V104 已成功从旧键或网关 URL 回填，6 个 CloudCC 集成中 5 个已有 `orgId`，香港大学仍未配置。定向测试、backend compile、前端 build、不可变镜像、发布前四类备份、六容器健康、V104、Nginx、版本接口、x=200 与匿名 auth=401 均通过；等待受权成员实际 CRM 数据回读。
 
-- TASK-252 / 公司切换会话隔离：已发布生产 `2.8.43 / 45b942c06b86`。AgentCiCi 后端继续以 JWT `company_id` 查询会话；前端消息、工作台 session/运行态缓存现按 `companyId` 分区，组织切换会立即清空公司级页面状态并使旧异步/流式响应失效。定向 Vitest 4/4、TypeScript/Vite build、不可变镜像、发布前四类备份、六容器健康、Nginx、版本接口、前端工件标记、`x.agentcici.com` 200 和匿名 `auth/me` 401 均通过；等待受权用户复核公司 A→B→A 页面内容。
+- TASK-252 / 公司切换会话隔离：已发布生产 `2.8.45 / 435ee0af6e2d`。截图页脚仍为 2.8.42，而服务器实际已是 2.8.44，确认旧 SPA 入口被浏览器复用。现已将工作台初始状态也按 `companyId` 建键，SSE/轮询回调捕获公司作用域并在旧作用域静默终止；`/app` 入口为 `no-store`，哈希 `/assets/` 为 immutable。定向 Vitest 5/5、TypeScript/Vite build、发布前四类备份、六容器健康、Nginx、版本接口、入口/资源缓存响应头、旧资源 404、`x.agentcici.com` 200 和匿名 `auth/me` 401 均通过；等待受权用户刷新后复核公司 A→B→A 页面内容。
 
 - TASK-252 / FEAT-145：人类邀请修复已发布 `2.8.41 / 3320ed77515d`。Flyway V102 成功，Keycloak Realm SMTP（SSL 465）和人工 provisioning 均为受控启用；既有绑定按远端 `sub` 复核，未激活才重发 Required Actions，已激活不重置密码。远端用户缺失时仅以不可变 public ID、受管 account ID 属性和邮箱同时证明归属后重绑，否则 fail closed；重复邀请不能恢复已停用成员。2026-08-04 已完成历史回填：5 个活跃但未绑定的全局账户均已创建/复用 Keycloak User、写入 issuer+subject 映射并触发邮箱验证与设置密码邮件；当前活跃未绑定数为 0，5/5 初始动作均就绪。另已在用户确认后修复一例重复 Keycloak User 和一例 Keycloak 空邮箱：前者仅将本地 issuer+subject 绑定切换至原可用手机号登录身份，后者补写已验证邮箱并重发初始化邮件；Principal 镜像已同步，未重置密码、未删除用户。backend/frontend healthy，根路径 200，匿名鉴权和服务交换入口均为预期 401。首个新成员的真实邮箱点击/首次 OIDC 激活由正常业务邀请完成，不伪造用户凭据。
 

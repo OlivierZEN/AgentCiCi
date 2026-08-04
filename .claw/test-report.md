@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-04T08:00:00Z
+updated_at: 2026-08-04T14:55:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-08-04T13:37:00Z
+last_run_at: 2026-08-04T14:54:00Z
 last_run_status: passed
 ---
 
@@ -16,6 +16,8 @@ last_run_status: passed
 - `frontend-build`：`npm run build` 通过（TypeScript + Vite）；仅保留既有 bundle 大小提示。
 - `isolation-contract`：认证 `companyId` 切换会递增作用域版本、同步清空公司级内存状态；会话/消息、工作台、知识库、智能体、技能、快捷指令与监控的异步响应在作用域不一致时不回写，工作台流式回调也会丢弃。服务器 API session ID 保持不变，未删除或迁移任何历史会话。
 - `production-2.8.43`：Git tag/commit 为 `2.8.43 / 45b942c06b86`；backend/frontend ACR index digest 为 `sha256:9fcfa8f2c72a5cb80ea6f5cdc68f7dd3a384bb590aed5fbbecb3c5a576e14610` / `sha256:8ad594eea01883e1e87901158c58bc3423d49bcb65738c2d65cf2f505f24d2f5`。发布前备份 `/opt/cici/backups/20260804-213816-before-2.8.43-company-switch-isolation` 的 env、PostgreSQL、KB、Qdrant 均非空；仅重建 backend/frontend，六容器 healthy，backend health=UP、版本接口为 `2.8.43 / 45b942c06b86`、Nginx 配置通过、线上工件含公司缓存键标记、`https://x.agentcici.com/`=200、匿名 `/auth/me`=401。受权用户 A→B→A 实际界面复核待完成，未伪造登录会话。
+- `cache-and-realtime-hardening`：截图显示浏览器仍在执行 `2.8.42`，生产容器则为 `2.8.44`，确认为旧入口缓存。工作台初始消息/运行态已按公司键初始化；会话 SSE、轮询、延迟审批与语音回调均在作用域失效后静默退出。定向 Vitest 通过（2 files / 5 tests），生产构建通过；仅保留既有 bundle-size 提示。
+- `production-2.8.45`：Git tag/commit 为 `2.8.45 / 435ee0af6e2d`；backend/frontend ACR index digest 为 `sha256:6f5c077947c8d2e51f7b6549affea0764166f7ab0d3aa876c4600b1f5d0c3a5b` / `sha256:856c1df5b9e521ea56ce98e86e8c725d8d88c4e83d670e5111d9b84abfb434bd`。发布前备份 `/opt/cici/backups/20260804-225342-before-2.8.45-tenant-isolation` 四项均非空；仅重建 backend/frontend，六容器 healthy，health=UP、版本正确、实际 SSL Nginx `-t` 通过。`/app` 明确返回 `no-store`，当前哈希 JS 返回 immutable，旧 JS 返回 404，根路径=200、匿名 `/auth/me`=401。真实受权 A→B→A 页面回归待用户刷新后复核。
 
 ## TASK-252 - CloudCC CRM orgId 契约（发布前）
 

@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-252
 status: in_progress
-updated_at: 2026-08-04T14:11:00Z
+updated_at: 2026-08-04T14:55:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: project-manager
@@ -15,7 +15,7 @@ spec_path: docs/specs/FEAT-145-unified-principal-identity-governance.md
 ## Current State
 
 - Status: `in_progress`
-- Next action: 紧急修复已发现的旧前端入口缓存与 SSE 作用域缺口，发布后由受权成员复核公司 A→B→A 页面回读。未配置 CloudCC 的租户应在管理端补齐 `orgId`、网关、Client ID、SecretKey 和成员绑定后再启用数据访问。旧 `company_id` 的浏览器缓存、异步响应、SSE 和工作台状态不得显示或写回新公司页面；不删除任何历史会话数据。
+- Next action: 由受权成员刷新加载 `2.8.45` 后复核公司 A→B→A 页面回读。未配置 CloudCC 的租户应在管理端补齐 `orgId`、网关、Client ID、SecretKey 和成员绑定后再启用数据访问。旧 `company_id` 的浏览器缓存、异步响应、SSE 和工作台状态不得显示或写回新公司页面；不删除任何历史会话数据。
 - Deployment scope: `deploy/docker-compose.acr.yml` 仅用于把独立 Keycloak provisioner 配置传入 backend；不修改服务拓扑、网络或证书。
 - Blocked: 无。Keycloak Realm SMTP 已配置，人工 provisioning 已在受控部署环境启用；本次只修复邀请/重绑闭环，不创建未获业务授权的机器主体。
 
@@ -48,6 +48,7 @@ spec_path: docs/specs/FEAT-145-unified-principal-identity-governance.md
 - CloudCC CRM 契约确认（2026-08-04）：CloudCC Token API 使用 `orgId`，实际 `POST /api/cauth/token` 已在受权凭据下返回 HTTP 200/result=true（未记录 token 或 secret）。当前 AgentCiCi 后端错误读取/发送配置 `companyId`；盘点显示多个租户还缺少该外部组织 ID 配置。规格与任务范围已扩展为“读新兼容旧、写新字段、Flyway 正向回填、请求使用 orgId、管理端收敛与脱敏连通性验证”，且明确不改 `integration_app.company_id`。
 - CloudCC CRM 实现（2026-08-04）：运行时优先读取 `config.orgId`、兼容旧 `config.companyId`；网关发现与 `/api/cauth/token` 请求体均使用 CloudCC `orgId`。V104 从旧配置字段或 `orgapi_switch_address` URL 的 `orgId` 正向回填新键，不改 `integration_app.company_id`、不删除旧键。管理端只显示/保存 `orgId`，并掩码 CloudCC SecretKey；保存被掩码的密钥会保留现有值。`CloudccAccessTokenServiceTest`、backend compile、前端定向测试、前端 production build 与 diff check 已通过。
 - CloudCC CRM 生产发布（2026-08-04）：已发布 `2.8.44 / 4690e58cc154`；backend/frontend ACR index digest 为 `sha256:28fe55de36010179b92a4203eabca6998030e9fbefc40f0da660cad5bf9a6b68` / `sha256:0c73ece9d1c2846bd2d616323bdf633f49643fefbfa52e54b8caee3b8afd7996`。发布前备份 `/opt/cici/backups/20260804-220929-before-2.8.44-cloudcc-orgid` 的环境、PostgreSQL、知识库、Qdrant 均非空；仅重建 backend/frontend，六容器 healthy，V104=true，版本接口/Nginx/公网 x=200/匿名 auth=401 均通过。V104 回读：6 个 CloudCC 集成中 5 个已有 `orgId`，香港大学仍未配置，未输出 secret 或 token。
+- 租户隔离缓存热修复生产发布（2026-08-04）：截图的前端版本为 `2.8.42`，而生产容器已是 `2.8.44`，故确定浏览器未获取已发布的隔离修复工件。已发布 `2.8.45 / 435ee0af6e2d`；backend/frontend ACR index digest 为 `sha256:6f5c077947c8d2e51f7b6549affea0764166f7ab0d3aa876c4600b1f5d0c3a5b` / `sha256:856c1df5b9e521ea56ce98e86e8c725d8d88c4e83d670e5111d9b84abfb434bd`。发布前备份 `/opt/cici/backups/20260804-225342-before-2.8.45-tenant-isolation` 的环境、PostgreSQL、知识库、Qdrant 均非空；仅重建 backend/frontend，六容器 healthy，health=UP、版本接口正确、实际 SSL Nginx 配置通过。`/app` 返回 no-store，当前哈希资源 immutable，旧 `2.8.44` JS 返回 404，公网根路径=200、匿名 auth=401；未伪造受权用户会话，A→B→A 仍需真实页面复核。
 
 ## Handoff
 
