@@ -15,7 +15,7 @@ spec_path: docs/specs/FEAT-145-unified-principal-identity-governance.md
 ## Current State
 
 - Status: `in_progress`
-- Next action: CloudCC `orgId` 契约已发布；由受权成员复核 CRM 问答与公司 A→B→A 页面回读。未配置 CloudCC 的租户应在管理端补齐 `orgId`、网关、Client ID、SecretKey 和成员绑定后再启用数据访问。旧 `company_id` 的浏览器缓存、异步响应、SSE 和工作台状态不得显示或写回新公司页面；不删除任何历史会话数据。
+- Next action: 紧急修复已发现的旧前端入口缓存与 SSE 作用域缺口，发布后由受权成员复核公司 A→B→A 页面回读。未配置 CloudCC 的租户应在管理端补齐 `orgId`、网关、Client ID、SecretKey 和成员绑定后再启用数据访问。旧 `company_id` 的浏览器缓存、异步响应、SSE 和工作台状态不得显示或写回新公司页面；不删除任何历史会话数据。
 - Deployment scope: `deploy/docker-compose.acr.yml` 仅用于把独立 Keycloak provisioner 配置传入 backend；不修改服务拓扑、网络或证书。
 - Blocked: 无。Keycloak Realm SMTP 已配置，人工 provisioning 已在受控部署环境启用；本次只修复邀请/重绑闭环，不创建未获业务授权的机器主体。
 

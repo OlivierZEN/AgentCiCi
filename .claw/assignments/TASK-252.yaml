@@ -20,6 +20,8 @@ allowed_write_roots:
   - backend/src/test/java/com/codehouse/ciciassistant/integration/**
   - frontend/src/**
   - deploy/docker-compose.acr.yml
+  - deploy/nginx.cici.conf
+  - deploy/nginx.cici.ssl.conf
   - docs/specs/**
   - .claw/tasks/**
   - .claw/assignments/**
@@ -46,6 +48,7 @@ task_boundary:
   - "实现必要的 API、迁移、测试、运行配置和官方应用契约；保持 UUID、issuer+sub、company_id 与既有 OACT/JWKS 的兼容边界。"
   - "允许按生产 release runbook 构建、推送、发布和验收；Semattice 的独立实现须在其仓库另建任务并遵循其项目规范。"
   - "修复 CloudCC CRM 集成的组织 ID 配置语义：AgentCiCi 租户外键仍为 company_id；CloudCC 配置与 Token 请求统一使用 orgId，允许正向迁移和兼容旧 companyId 读取。"
+  - "修复公司切换数据隔离的前端旧工件缓存与实时流作用域：入口 HTML 不得缓存，带内容哈希的静态资源可长期缓存；旧公司 SSE/轮询回调不得触发当前公司的任何会话读取或状态写入。"
 change_manifest_required: true
 preflight_required: true
 local_login_required: true
