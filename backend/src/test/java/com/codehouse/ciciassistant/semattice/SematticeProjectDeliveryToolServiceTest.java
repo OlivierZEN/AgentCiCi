@@ -33,10 +33,16 @@ class SematticeProjectDeliveryToolServiceTest {
                 java.util.List.of("runtime.record.read"), "semattice_project_delivery_query"))
                 .thenReturn(new AgentServicePrincipalExecutionService.ExecutionAuthorization(
                         "service-1", "DEV Autopilot 产品经理", "owner-1", "PRIMARY_OWNER", token));
-        for (String objectName : java.util.List.of("dev_project", "dev_requirement", "dev_task", "dev_worklog", "dev_change")) {
+        for (String objectName : java.util.List.of("dev_project", "dev_requirement", "dev_task", "dev_worklog", "dev_change", "dev_delivery_event")) {
+            String response = "dev_delivery_event".equals(objectName)
+                    ? "{\"status\":\"succeeded\",\"result\":{\"records\":["
+                    + "{\"record_id\":\"event-submission\",\"data\":{\"status\":\"pending\",\"event_type\":\"design_submitted\"}},"
+                    + "{\"record_id\":\"event-decision\",\"data\":{\"status\":\"accepted\",\"event_type\":\"design_approved\",\"parent_event_id\":\"event-submission\"}}]}}"
+                    : "{\"status\":\"succeeded\",\"result\":{\"records\":[{\"record_id\":\"r-" + objectName
+                    + "\",\"data\":{\"status\":\"执行中\",\"name\":\"演示项目\",\"hours\":2.5}}]}}";
             server.expect(requestTo("https://semattice.example.test/v1/capabilities/runtime.record.query/invoke"))
                     .andExpect(header("Authorization", "Bearer service-oact"))
-                    .andRespond(withSuccess("{\"status\":\"succeeded\",\"result\":{\"records\":[{\"record_id\":\"r-" + objectName + "\",\"data\":{\"status\":\"执行中\",\"name\":\"演示项目\",\"hours\":2.5}}]}}", MediaType.APPLICATION_JSON));
+                    .andRespond(withSuccess(response, MediaType.APPLICATION_JSON));
         }
         SematticeProjectDeliveryToolService service = new SematticeProjectDeliveryToolService(
                 builder, objectMapper, execution, "https://semattice.example.test");
@@ -50,6 +56,8 @@ class SematticeProjectDeliveryToolServiceTest {
         assertThat(result.path("projects").get(0).path("name").asText()).isEqualTo("演示项目");
         assertThat(result.path("execution_principal_type").asText()).isEqualTo("SERVICE");
         assertThat(result.path("execution_principal").asText()).isEqualTo("DEV Autopilot 产品经理");
+        assertThat(result.path("events").size()).isEqualTo(2);
+        assertThat(result.path("pending_reviews").size()).isZero();
         server.verify();
     }
 

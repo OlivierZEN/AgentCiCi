@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -26,7 +27,7 @@ public class SematticeProjectDeliveryToolService {
 
     public static final String TOOL_NAME = "semattice_project_delivery_query";
     private static final List<String> DELIVERY_OBJECTS = List.of(
-            "dev_project", "dev_requirement", "dev_task", "dev_worklog", "dev_change");
+            "dev_project", "dev_requirement", "dev_task", "dev_worklog", "dev_change", "dev_delivery_event");
     private static final String CAPABILITY_ID = "runtime.record.query";
 
     private final RestClient restClient;
@@ -45,7 +46,7 @@ public class SematticeProjectDeliveryToolService {
     }
 
     public static String toolDescription() {
-        return "使用当前 Agent 显式绑定的 SERVICE Principal 读取同公司的 Semattice 研发交付数据（项目、需求、任务、工时和变更）。"
+        return "使用当前 Agent 显式绑定的 SERVICE Principal 读取同公司的 Semattice 研发交付数据（项目、需求、任务、工时、变更和交付事件）。"
                 + "涉及项目状态、进度、工时、需求、任务或变更事实时必须先调用；"
                 + "只读，不接受租户、成员或令牌参数，不能创建或修改记录。";
     }
@@ -57,7 +58,7 @@ public class SematticeProjectDeliveryToolService {
                 "properties", Map.of(
                         "focus", Map.of(
                                 "type", "string",
-                                "enum", List.of("overview", "projects", "requirements", "tasks", "worklogs", "changes"),
+                                "enum", List.of("overview", "projects", "requirements", "tasks", "worklogs", "changes", "events", "pending_reviews"),
                                 "description", "可选的回答关注点；省略时返回完整交付概览。")),
                 "required", List.of()));
     }
@@ -133,6 +134,19 @@ public class SematticeProjectDeliveryToolService {
             copyIfPresent(data, row, "work_date");
             copyIfPresent(data, row, "summary");
             copyIfPresent(data, row, "impact");
+            copyIfPresent(data, row, "project_id");
+            copyIfPresent(data, row, "requirement_id");
+            copyIfPresent(data, row, "task_id");
+            copyIfPresent(data, row, "event_type");
+            copyIfPresent(data, row, "detail");
+            copyIfPresent(data, row, "evidence");
+            copyIfPresent(data, row, "actor_principal_id");
+            copyIfPresent(data, row, "agent_name");
+            copyIfPresent(data, row, "agent_instance_id");
+            copyIfPresent(data, row, "parent_event_id");
+            copyIfPresent(data, row, "decision");
+            copyIfPresent(data, row, "occurred_at");
+            copyIfPresent(data, row, "correlation_id");
             result.add(row);
         }
         return result;
@@ -163,6 +177,21 @@ public class SematticeProjectDeliveryToolService {
         result.put("tasks", tasks);
         result.put("worklogs", worklogs);
         result.put("changes", recordsByObject.getOrDefault("dev_change", List.of()));
+        List<Map<String, Object>> events = recordsByObject.getOrDefault("dev_delivery_event", List.of());
+        result.put("events", events);
+        Set<Object> decidedSubmissionIds = events.stream()
+                .filter(item -> Set.of(
+                                "design_approved", "design_changes_requested",
+                                "completion_approved", "completion_changes_requested")
+                        .contains(item.get("event_type")))
+                .map(item -> item.get("parent_event_id"))
+                .filter(value -> value != null && !String.valueOf(value).isBlank())
+                .collect(java.util.stream.Collectors.toSet());
+        result.put("pending_reviews", events.stream()
+                .filter(item -> "pending".equals(item.get("status")))
+                .filter(item -> Set.of("design_submitted", "completion_requested").contains(item.get("event_type")))
+                .filter(item -> !decidedSubmissionIds.contains(item.get("record_id")))
+                .toList());
         return result;
     }
 

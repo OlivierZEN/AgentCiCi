@@ -20,6 +20,7 @@ class SkillResolverServiceTest {
         assertThat(builtinDefinitions).contains("Semattice 研发交付管理");
         assertThat(builtinDefinitions).contains("semattice_project_delivery_query");
         assertThat(builtinDefinitions).contains("semattice_project_delivery_create");
+        assertThat(builtinDefinitions).contains("semattice_project_delivery_review");
         assertThat(builtinDefinitions).contains("SERVICE Principal");
 
         Field bindingsField = SkillDefinitionService.class.getDeclaredField("DEFAULT_AGENT_SKILLS");

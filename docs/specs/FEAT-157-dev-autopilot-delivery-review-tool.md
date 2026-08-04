@@ -5,7 +5,7 @@ title: DEV Autopilot 研发交付评审 Tool
 status: in_implementation
 owner_role: backend-agent
 task_id: TASK-265
-updated_at: 2026-08-04T04:10:00Z
+updated_at: 2026-08-04T08:00:00Z
 updated_by: MANAGER-001
 ---
 
@@ -39,6 +39,7 @@ updated_by: MANAGER-001
 输入：
 
 - `task_id`：DEV Autopilot 任务记录 UUID。
+- `submission_event_id`：待评审的设计提交或完成申请事件 UUID，避免评审到错误版本。
 - `gate`：`design` 或 `completion`。
 - `decision`：`approve` 或 `request_changes`。
 - `summary`：决策摘要，必填且有长度上限。
@@ -48,7 +49,7 @@ updated_by: MANAGER-001
 
 - AgentCiCi company、当前 HUMAN member、当前 agent id。
 - 执行 Principal 为该 agent 显式绑定的产品经理 SERVICE。
-- OACT scope 为 `runtime.record.read` 与 `runtime.record.create`。
+- OACT scope 为 `runtime.record.read`、`runtime.record.create` 与 `runtime.record.update`。
 - 目标地址来自受管配置 `app.dev-autopilot.base-url`，Tool 参数不能覆盖。
 
 输出至少包含：实际状态、事件编号、任务编号、Gate、Decision、执行 Principal 类型和显示名。DEV Autopilot 非 2xx、返回体不合法或身份链不完整时失败关闭。
@@ -73,7 +74,7 @@ updated_by: MANAGER-001
 ## 实施进度
 
 - [x] 完成架构与 Tool 契约设计。
-- [ ] 实现 query 扩展与 review Tool。
-- [ ] 完成 Skill、目录、调度和显式绑定。
-- [ ] 完成定向测试与生产发布。
+- [x] 实现 query 扩展与 review Tool。
+- [x] 完成 Skill、目录、调度和显式绑定。
+- [ ] 完成生产发布（定向测试、编译和 package 已通过）。
 - [ ] 以第三方开发者 CLI 提交设计、产品经理 SERVICE 批准、继续执行并申请验收完成线上闭环。
