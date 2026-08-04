@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildWorkbenchSessionId,
+  buildCompanyScopedCacheKey,
   buildWorkbenchSessionPrefix,
   createWorkbenchSessionId,
   isWorkbenchSessionIdForAgent,
@@ -16,6 +17,13 @@ describe("workbenchSessions", () => {
     expect(isWorkbenchSessionIdForAgent("workbench:sales-agent:abc", "sales-agent")).toBe(true);
     expect(isWorkbenchSessionIdForAgent("workbench:approval-agent:abc", "sales-agent")).toBe(false);
     expect(createWorkbenchSessionId("sales-agent").startsWith("workbench:sales-agent:")).toBe(true);
+  });
+
+  it("keeps browser cache entries isolated by company without changing API session ids", () => {
+    expect(buildCompanyScopedCacheKey("company-a", buildWorkbenchSessionId("cici-system")))
+      .toBe("company-a::workbench:cici-system");
+    expect(buildCompanyScopedCacheKey("company-b", buildWorkbenchSessionId("cici-system")))
+      .toBe("company-b::workbench:cici-system");
   });
 
   it("keeps chronological recent history and trims blanks", () => {

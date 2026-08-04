@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-252
 status: in_progress
-updated_at: 2026-08-04T13:35:00Z
+updated_at: 2026-08-04T13:37:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: project-manager
@@ -15,7 +15,7 @@ spec_path: docs/specs/FEAT-145-unified-principal-identity-governance.md
 ## Current State
 
 - Status: `in_progress`
-- Next action: 紧急修复公司切换后的前端会话状态隔离缺陷并发布。旧 `company_id` 的浏览器缓存、异步响应、SSE 和工作台状态不得显示或写回新公司页面；不删除任何历史会话数据。
+- Next action: 已完成本地公司作用域隔离实现与构建验证；提交主线、构建不可变镜像、备份后发布并完成线上 smoke。旧 `company_id` 的浏览器缓存、异步响应、SSE 和工作台状态不得显示或写回新公司页面；不删除任何历史会话数据。
 - Deployment scope: `deploy/docker-compose.acr.yml` 仅用于把独立 Keycloak provisioner 配置传入 backend；不修改服务拓扑、网络或证书。
 - Blocked: 无。Keycloak Realm SMTP 已配置，人工 provisioning 已在受控部署环境启用；本次只修复邀请/重绑闭环，不创建未获业务授权的机器主体。
 
@@ -43,6 +43,7 @@ spec_path: docs/specs/FEAT-145-unified-principal-identity-governance.md
 - 单账户身份重绑（2026-08-04）：经用户确认，已将一个 `ACTIVE` 全局账户从重复的、未完成初始化的 Keycloak User 重绑到其原有可用手机号登录 Keycloak User；只更新本地不可变 issuer+subject 映射，不重置密码、不删除或禁用任何 Keycloak User。更新前 PostgreSQL 备份已保存在受限生产备份目录；精确条件更新影响 1 条记录，目标 subject 没有其他 AgentCiCi 绑定，`principal_identity` 镜像由旧 subject 迁移至新 subject。AgentCiCi health=200、Keycloak active 且 OIDC discovery=200。
 - 单账户初始化邮箱修复（2026-08-04）：经用户确认，已将 AgentCiCi 中已验证的邮箱补写入一个已绑定 Keycloak User，并重新触发 `VERIFY_EMAIL` + `UPDATE_PASSWORD` 邮件。修复前发现 AgentCiCi 邮箱格式正常、而 Keycloak `email` 字段为空，导致初始化链接返回“无效的电子邮件地址”。Keycloak 用户受限备份已保存；回读确认 email 已存在、用户启用、邮箱尚待验证、两个 Required Actions 就绪，SMTP 错误日志为 0。未记录邮箱、密码或邮件链接。
 - 紧急缺陷设计（2026-08-04）：已确认后端会话和消息按 JWT `company_id` 查询，实际风险位于 `AssistantApp` 浏览器内存：工作台默认 session ID 跨公司可碰撞，缓存以 agent/session 而非 company 分区，且公司切换不清空旧状态或拒绝旧异步响应。规格已补齐“切换即失效、缓存 company 分区、旧响应静默丢弃、终止旧流”的实现与验收契约；本次不删除或迁移历史聊天数据。
+- 紧急缺陷实现（2026-08-04）：`AssistantApp` 在认证载荷的 `companyId` 变化时递增内存作用域版本并清空会话、消息、工作台运行态、知识库、技能、快捷指令、监控与智能体投影；浏览器消息/工作台缓存使用 `companyId::sessionOrAgentId`，不改变 API/session ID。会话、工作台、知识库、智能体、技能、快捷指令与监控异步加载仅能在原作用域回写；旧公司流式回调会静默丢弃。`workbenchSessions` 定向测试和前端 TypeScript/Vite 生产构建通过，等待生产发布验收。
 
 ## Handoff
 

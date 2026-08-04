@@ -8,6 +8,15 @@ export function buildWorkbenchSessionId(agentKey: string): string {
   return `workbench:${agentKey}`;
 }
 
+/**
+ * Browser-only cache key.  A workbench session id is intentionally stable for an
+ * agent, but the same agent can be used by the same person in more than one
+ * company.  Never send this value to the API; use it only for in-memory state.
+ */
+export function buildCompanyScopedCacheKey(companyId: string | undefined, key: string): string {
+  return `${companyId?.trim() || "__no_company__"}::${key}`;
+}
+
 export function buildWorkbenchSessionPrefix(agentKey: string): string {
   return `${buildWorkbenchSessionId(agentKey)}:`;
 }

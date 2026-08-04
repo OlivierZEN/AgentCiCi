@@ -4,11 +4,18 @@ version: 3
 updated_at: 2026-08-04T08:00:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-08-04T08:00:00Z
+last_run_at: 2026-08-04T13:37:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-252 - 公司切换会话隔离（发布前）
+
+- `frontend-focused`：`npm test -- --run src/assistant/workbenchSessions.test.ts src/assistant/AssistantApp.test.ts` 通过（2 files / 4 tests）；缓存键测试确认同一工作台 API session 在不同公司形成不同浏览器内存键。
+- `frontend-build`：`npm run build` 通过（TypeScript + Vite）；仅保留既有 bundle 大小提示。
+- `isolation-contract`：认证 `companyId` 切换会递增作用域版本、同步清空公司级内存状态；会话/消息、工作台、知识库、智能体、技能、快捷指令与监控的异步响应在作用域不一致时不回写，工作台流式回调也会丢弃。服务器 API session ID 保持不变，未删除或迁移任何历史会话。
+- `production-pending`：等待不可变前端镜像、发布前备份、容器/公网 smoke，以及受权用户的公司 A→B→A 实际界面复核。
 
 ## TASK-265 - DEV Autopilot 研发交付评审 Tool（发布前）
 

@@ -35,6 +35,7 @@ import {
   shouldKeepLocalStreamingMessages,
 } from "./chatMessageState";
 import {
+  buildCompanyScopedCacheKey,
   buildWorkbenchSessionId,
   createWorkbenchSessionId,
   isWorkbenchSessionIdForAgent,
@@ -1364,15 +1365,70 @@ export default function AssistantApp() {
   const { listening, speechSupported, start: startAsrSession, stop: stopAsrSession, abort: abortAsrSession } = useAsrVoiceInput();
   const activeConversationIdRef = useRef("");
   const workspaceTabRef = useRef<WorkspaceTab>("workbench");
+  const companyScopeRef = useRef({ companyId: auth?.companyId ?? "", generation: 0 });
   const [activeMonitorAgentKey, setActiveMonitorAgentKey] = useState("");
   const [activeMonitorLogId, setActiveMonitorLogId] = useState("");
   const [monitorSearchText, setMonitorSearchText] = useState("");
 
+  const resetCompanyScopedUiState = () => {
+    if (chatLoadingStaleTimerRef.current !== null) {
+      window.clearTimeout(chatLoadingStaleTimerRef.current);
+      chatLoadingStaleTimerRef.current = null;
+    }
+    setChatLoading(false);
+    setMe(null);
+    setKbs([]);
+    setSelectedKbIds([]);
+    setConversationThreads([]);
+    setConversationMessages({});
+    setConversationListLoading(false);
+    setConversationListNotice("");
+    setConversationHistoryLoadingId("");
+    setActiveConversationId("");
+    setAgentSkillBindingsByAgent({});
+    setAgentSkillBindingsLoadingByAgent({});
+    setAgentSkillBindingsFailedByAgent({});
+    setActiveSkillCodeByAgent({});
+    setQuickCommandsByAgent({});
+    setQuickCommandsLoadingByAgent({});
+    setActiveWorkbenchSessionIdByAgent({});
+    setWorkbenchMessagesByAgent(createInitialWorkbenchMessages());
+    setWorkbenchRuntimeByAgent(createInitialWorkbenchRuntime());
+    setWorkbenchMetrics(WORKBENCH_METRICS_DEFAULT);
+    setWorkbenchOverviewItems([]);
+    setMonitorRunLogs([]);
+    setMonitorTraceDetail(null);
+    setMonitorTraceLoadingId("");
+    setAgentWorkspaces(AGENT_WORKSPACES);
+    setWorkbenchDockAgents(WORKBENCH_DOCK_AGENTS);
+    setActiveAgentId(AGENT_WORKSPACES[0].id);
+    setActiveWorkbenchKey(WORKBENCH_DOCK_AGENTS[0].key);
+  };
+
+  const activateCompanyScope = (companyId: string | undefined) => {
+    const nextCompanyId = companyId?.trim() ?? "";
+    const current = companyScopeRef.current;
+    if (current.companyId === nextCompanyId) {
+      return current;
+    }
+    const next = { companyId: nextCompanyId, generation: current.generation + 1 };
+    companyScopeRef.current = next;
+    if (nextCompanyId) {
+      resetCompanyScopedUiState();
+    }
+    return next;
+  };
+
+  const isCurrentCompanyScope = (scope: { companyId: string; generation: number }) =>
+    companyScopeRef.current.companyId === scope.companyId && companyScopeRef.current.generation === scope.generation;
+
   const persistAuth = (payload: AuthPayload | null) => {
     if (payload) {
+      activateCompanyScope(payload.companyId);
       writeAuthPayload(LS_ASSISTANT_TOKEN, payload);
       setAuthStatus("authenticated");
     } else {
+      companyScopeRef.current = { companyId: "", generation: companyScopeRef.current.generation + 1 };
       clearAuthPayload(LS_ASSISTANT_TOKEN);
       setAuthStatus("guest");
     }
@@ -1396,6 +1452,11 @@ export default function AssistantApp() {
   }, []);
 
   useAuthStorageSync<AuthPayload>(LS_ASSISTANT_TOKEN, (payload) => {
+    if (payload?.token) {
+      activateCompanyScope(payload.companyId);
+    } else {
+      companyScopeRef.current = { companyId: "", generation: companyScopeRef.current.generation + 1 };
+    }
     if (!payload?.token) {
       abortAsrSession();
       setMe(null);
@@ -1442,12 +1503,13 @@ export default function AssistantApp() {
     if (!token) {
       return false;
     }
+    const requestScope = companyScopeRef.current;
     try {
       const response = await authFetch(LS_ASSISTANT_TOKEN, "/auth/me", {}, {
         onUnauthorized: () => persistAuth(null),
       });
       const { body } = await safeFetchJson<MeProfile>(response);
-      if (response.ok && body?.success) {
+      if (isCurrentCompanyScope(requestScope) && response.ok && body?.success) {
         const profile = body.data as MeProfile | null;
         setMe(profile);
         if (profile?.themeCode) applyProductTheme(profile.themeCode);
@@ -1463,16 +1525,19 @@ export default function AssistantApp() {
       setCompanies([]);
       return;
     }
+    const requestScope = companyScopeRef.current;
     try {
       const response = await authFetch(LS_ASSISTANT_TOKEN, "/auth/companies", {}, {
         onUnauthorized: () => persistAuth(null),
       });
       const { body } = await safeFetchJson<{ companies?: CompanyOption[] }>(response);
-      if (response.ok && body?.success) {
+      if (isCurrentCompanyScope(requestScope) && response.ok && body?.success) {
         setCompanies(body.data?.companies ?? []);
       }
     } catch {
-      setCompanies([]);
+      if (isCurrentCompanyScope(requestScope)) {
+        setCompanies([]);
+      }
     }
   };
 
@@ -1480,14 +1545,19 @@ export default function AssistantApp() {
     if (!auth) {
       return;
     }
+    const requestScope = companyScopeRef.current;
     try {
       const response = await authFetch(LS_ASSISTANT_TOKEN, "/kb", {}, {
         onUnauthorized: () => persistAuth(null),
       });
       const { body } = await safeFetchJson<KnowledgeBase[]>(response);
-      setKbs((body?.data ?? []) as KnowledgeBase[]);
+      if (isCurrentCompanyScope(requestScope)) {
+        setKbs((body?.data ?? []) as KnowledgeBase[]);
+      }
     } catch {
-      setKbs([]);
+      if (isCurrentCompanyScope(requestScope)) {
+        setKbs([]);
+      }
     }
   };
 
@@ -1496,6 +1566,7 @@ export default function AssistantApp() {
     if (!token || !agentId) {
       return;
     }
+    const requestScope = companyScopeRef.current;
     setAgentSkillBindingsFailedByAgent((prev) => ({ ...prev, [agentId]: false }));
     setAgentSkillBindingsLoadingByAgent((prev) => ({ ...prev, [agentId]: true }));
     let keepLoadingForRetry = false;
@@ -1504,6 +1575,9 @@ export default function AssistantApp() {
         onUnauthorized: () => persistAuth(null),
       });
       const { body } = await safeFetchJson<{ bindings?: AgentSkillBindingView[] }>(response);
+      if (!isCurrentCompanyScope(requestScope)) {
+        return;
+      }
       if (!response.ok || !body?.success) {
         throw new Error(body?.message ?? `HTTP ${response.status}`);
       }
@@ -1520,6 +1594,9 @@ export default function AssistantApp() {
         return next;
       });
     } catch {
+      if (!isCurrentCompanyScope(requestScope)) {
+        return;
+      }
       setAgentSkillBindingsByAgent((prev) => {
         if (!(agentId in prev)) {
           return prev;
@@ -1531,7 +1608,9 @@ export default function AssistantApp() {
       if (retryOnce) {
         keepLoadingForRetry = true;
         window.setTimeout(() => {
-          void loadAgentSkillBindings(agentId, token, false);
+          if (isCurrentCompanyScope(requestScope)) {
+            void loadAgentSkillBindings(agentId, token, false);
+          }
         }, 600);
       } else {
         setAgentSkillBindingsFailedByAgent((prev) => ({ ...prev, [agentId]: true }));
@@ -1548,20 +1627,28 @@ export default function AssistantApp() {
     if (!token || !agentId) {
       return;
     }
+    const requestScope = companyScopeRef.current;
     setQuickCommandsLoadingByAgent((prev) => ({ ...prev, [agentId]: true }));
     try {
       const response = await authFetch(LS_ASSISTANT_TOKEN, `/me/agents/${encodeURIComponent(agentId)}/workflow/quick-commands`, {}, {
         onUnauthorized: () => persistAuth(null),
       });
       const { body } = await safeFetchJson<UserQuickCommand[]>(response);
+      if (!isCurrentCompanyScope(requestScope)) {
+        return;
+      }
       if (!response.ok || !body?.success) {
         throw new Error(body?.message ?? `HTTP ${response.status}`);
       }
       setQuickCommandsByAgent((prev) => ({ ...prev, [agentId]: (body.data ?? []) as UserQuickCommand[] }));
     } catch {
-      setQuickCommandsByAgent((prev) => ({ ...prev, [agentId]: [] }));
+      if (isCurrentCompanyScope(requestScope)) {
+        setQuickCommandsByAgent((prev) => ({ ...prev, [agentId]: [] }));
+      }
     } finally {
-      setQuickCommandsLoadingByAgent((prev) => ({ ...prev, [agentId]: false }));
+      if (isCurrentCompanyScope(requestScope)) {
+        setQuickCommandsLoadingByAgent((prev) => ({ ...prev, [agentId]: false }));
+      }
     }
   };
 
@@ -1606,11 +1693,13 @@ export default function AssistantApp() {
   };
 
   const loadWorkbenchAgents = async (token: string) => {
+    const requestScope = companyScopeRef.current;
     try {
       const res = await authFetch(LS_ASSISTANT_TOKEN, "/agents", {}, {
         onUnauthorized: () => persistAuth(null),
       });
       const { body } = await safeFetchJson<PublishedAgentPayload[]>(res);
+      if (!isCurrentCompanyScope(requestScope)) return;
       if (!res.ok || !body?.success || !Array.isArray(body.data) || body.data.length === 0) return;
       const visible = (body.data as PublishedAgentPayload[]).filter(
         (a) => a.builtin || a.publishedVersionId != null,
@@ -1675,7 +1764,7 @@ export default function AssistantApp() {
       setWorkbenchMessagesByAgent((prev) => {
         const next = { ...prev };
         for (const a of visible) {
-          const key = a.agentId;
+          const key = buildCompanyScopedCacheKey(requestScope.companyId, a.agentId);
           const greetingText = (a.greeting ?? "").trim();
           if (!next[key] || next[key].length === 0) {
             next[key] = greetingText
@@ -1689,8 +1778,9 @@ export default function AssistantApp() {
       setWorkbenchRuntimeByAgent((prev) => {
         const next = { ...prev };
         for (const agent of nextDockAgents) {
-          if (!(agent.key in next)) {
-            next[agent.key] = { ...agent.stateMachine, thoughts: [...agent.stateMachine.thoughts] };
+          const key = buildCompanyScopedCacheKey(requestScope.companyId, agent.key);
+          if (!(key in next)) {
+            next[key] = { ...agent.stateMachine, thoughts: [...agent.stateMachine.thoughts] };
           }
         }
         return next;
@@ -1702,11 +1792,13 @@ export default function AssistantApp() {
   };
 
   const loadWorkbenchStats = async (token: string) => {
+    const requestScope = companyScopeRef.current;
     try {
       const res = await authFetch(LS_ASSISTANT_TOKEN, "/me/agents/cici-system/workflow/executions", {}, {
         onUnauthorized: () => persistAuth(null),
       });
       const { body } = await safeFetchJson<WorkflowExecutionPayload[]>(res);
+      if (!isCurrentCompanyScope(requestScope)) return;
       if (!res.ok || !body?.success || !Array.isArray(body.data)) return;
       const execs = body.data as WorkflowExecutionPayload[];
 
@@ -1762,6 +1854,7 @@ export default function AssistantApp() {
     if (!token) {
       return;
     }
+    const requestScope = companyScopeRef.current;
     setMonitorLogsLoading(true);
     try {
       const params = new URLSearchParams({ limit: "80" });
@@ -1769,6 +1862,9 @@ export default function AssistantApp() {
         onUnauthorized: () => persistAuth(null),
       });
       const { body } = await safeFetchJson<{ items?: AgentRunLogPayload[] } | AgentRunLogPayload[]>(response);
+      if (!isCurrentCompanyScope(requestScope)) {
+        return;
+      }
       if (!response.ok || !body?.success) {
         throw new Error(body?.message ?? `HTTP ${response.status}`);
       }
@@ -1776,9 +1872,13 @@ export default function AssistantApp() {
       const items = Array.isArray(data) ? data : (data?.items ?? []);
       setMonitorRunLogs(items.filter((item) => item.traceId));
     } catch {
-      setMonitorRunLogs([]);
+      if (isCurrentCompanyScope(requestScope)) {
+        setMonitorRunLogs([]);
+      }
     } finally {
-      setMonitorLogsLoading(false);
+      if (isCurrentCompanyScope(requestScope)) {
+        setMonitorLogsLoading(false);
+      }
     }
   };
 
@@ -1788,20 +1888,28 @@ export default function AssistantApp() {
       setMonitorTraceDetail(null);
       return;
     }
+    const requestScope = companyScopeRef.current;
     setMonitorTraceLoadingId(traceId);
     try {
       const response = await authFetch(LS_ASSISTANT_TOKEN, `/me/agents/run-logs/${encodeURIComponent(traceId)}`, {}, {
         onUnauthorized: () => persistAuth(null),
       });
       const { body } = await safeFetchJson<AgentTraceDetailPayload>(response);
+      if (!isCurrentCompanyScope(requestScope)) {
+        return;
+      }
       if (!response.ok || !body?.success || !body.data) {
         throw new Error(body?.message ?? `HTTP ${response.status}`);
       }
       setMonitorTraceDetail(body.data as AgentTraceDetailPayload);
     } catch {
-      setMonitorTraceDetail(null);
+      if (isCurrentCompanyScope(requestScope)) {
+        setMonitorTraceDetail(null);
+      }
     } finally {
-      setMonitorTraceLoadingId((current) => (current === traceId ? "" : current));
+      if (isCurrentCompanyScope(requestScope)) {
+        setMonitorTraceLoadingId((current) => (current === traceId ? "" : current));
+      }
     }
   };
 
@@ -1811,12 +1919,16 @@ export default function AssistantApp() {
       setActiveConversationId("");
       return;
     }
+    const requestScope = companyScopeRef.current;
     setConversationListLoading(true);
     try {
       const response = await authFetch(LS_ASSISTANT_TOKEN, "/ai/sessions", {}, {
         onUnauthorized: () => persistAuth(null),
       });
       const { body } = await safeFetchJson<ConversationThreadPayload[]>(response);
+      if (!isCurrentCompanyScope(requestScope)) {
+        return;
+      }
       if (!response.ok || !body?.success) {
         setConversationListNotice(body?.message ?? "加载会话列表失败");
         setConversationThreads([]);
@@ -1839,11 +1951,16 @@ export default function AssistantApp() {
         return nextThreads[0]?.id ?? "";
       });
     } catch {
+      if (!isCurrentCompanyScope(requestScope)) {
+        return;
+      }
       setConversationThreads([]);
       setActiveConversationId("");
       setConversationListNotice("加载会话列表失败");
     } finally {
-      setConversationListLoading(false);
+      if (isCurrentCompanyScope(requestScope)) {
+        setConversationListLoading(false);
+      }
     }
   };
 
@@ -1851,7 +1968,9 @@ export default function AssistantApp() {
     if (!auth || !conversationId) {
       return;
     }
-    if (!force && conversationId in conversationMessages) {
+    const requestScope = companyScopeRef.current;
+    const cacheKey = buildCompanyScopedCacheKey(requestScope.companyId, conversationId);
+    if (!force && cacheKey in conversationMessages) {
       return;
     }
     setConversationHistoryLoadingId(conversationId);
@@ -1859,13 +1978,16 @@ export default function AssistantApp() {
       const response = await authFetch(LS_ASSISTANT_TOKEN, `/ai/sessions/${encodeURIComponent(conversationId)}/messages`, {}, {
         onUnauthorized: () => persistAuth(null),
       });
+      if (!isCurrentCompanyScope(requestScope)) {
+        return;
+      }
       if (response.status === 404) {
         setConversationMessages((prev) => {
-          const existing = prev[conversationId] ?? [];
+          const existing = prev[cacheKey] ?? [];
           if (shouldKeepLocalStreamingMessages(existing, [])) {
             return prev;
           }
-          return { ...prev, [conversationId]: [] };
+          return { ...prev, [cacheKey]: [] };
         });
         return;
       }
@@ -1876,16 +1998,20 @@ export default function AssistantApp() {
       }
       const normalized = normalizeConversationMessages((body.data ?? []) as ConversationMessagePayload[]);
       setConversationMessages((prev) => {
-        const existing = prev[conversationId] ?? [];
+        const existing = prev[cacheKey] ?? [];
         if (shouldKeepLocalStreamingMessages(existing, normalized)) {
           return prev;
         }
-        return { ...prev, [conversationId]: preserveAssistantModelNames(existing, normalized) };
+        return { ...prev, [cacheKey]: preserveAssistantModelNames(existing, normalized) };
       });
     } catch {
-      setConversationListNotice("加载会话消息失败");
+      if (isCurrentCompanyScope(requestScope)) {
+        setConversationListNotice("加载会话消息失败");
+      }
     } finally {
-      setConversationHistoryLoadingId((current) => (current === conversationId ? "" : current));
+      if (isCurrentCompanyScope(requestScope)) {
+        setConversationHistoryLoadingId((current) => (current === conversationId ? "" : current));
+      }
     }
   };
 
@@ -1893,10 +2019,13 @@ export default function AssistantApp() {
     if (!auth) {
       return;
     }
-    if (!force && sessionId in conversationMessages) {
+    const requestScope = companyScopeRef.current;
+    const sessionCacheKey = buildCompanyScopedCacheKey(requestScope.companyId, sessionId);
+    const agentCacheKey = buildCompanyScopedCacheKey(requestScope.companyId, agentKey);
+    if (!force && sessionCacheKey in conversationMessages) {
       setWorkbenchMessagesByAgent((prev) => ({
         ...prev,
-        [agentKey]: conversationMessages[sessionId] ?? [],
+        [agentCacheKey]: conversationMessages[sessionCacheKey] ?? [],
       }));
       return;
     }
@@ -1904,20 +2033,23 @@ export default function AssistantApp() {
       const response = await authFetch(LS_ASSISTANT_TOKEN, `/ai/sessions/${encodeURIComponent(sessionId)}/messages`, {}, {
         onUnauthorized: () => persistAuth(null),
       });
+      if (!isCurrentCompanyScope(requestScope)) {
+        return;
+      }
       if (response.status === 404) {
         setConversationMessages((prev) => {
-          const existing = prev[sessionId] ?? [];
+          const existing = prev[sessionCacheKey] ?? [];
           if (shouldKeepLocalStreamingMessages(existing, [])) {
             return prev;
           }
-          return { ...prev, [sessionId]: [] };
+          return { ...prev, [sessionCacheKey]: [] };
         });
         setWorkbenchMessagesByAgent((prev) => {
-          const existing = prev[agentKey] ?? [];
+          const existing = prev[agentCacheKey] ?? [];
           if (shouldKeepLocalStreamingMessages(existing, [])) {
             return prev;
           }
-          return { ...prev, [agentKey]: [] };
+          return { ...prev, [agentCacheKey]: [] };
         });
         return;
       }
@@ -1927,20 +2059,20 @@ export default function AssistantApp() {
       }
       const normalized = normalizeConversationMessages((body.data ?? []) as ConversationMessagePayload[]);
       setConversationMessages((prev) => {
-        const existing = prev[sessionId] ?? [];
+        const existing = prev[sessionCacheKey] ?? [];
         if (shouldKeepLocalStreamingMessages(existing, normalized)) {
           return prev;
         }
-        return { ...prev, [sessionId]: preserveAssistantModelNames(existing, normalized) };
+        return { ...prev, [sessionCacheKey]: preserveAssistantModelNames(existing, normalized) };
       });
       setWorkbenchMessagesByAgent((prev) => {
-        const existing = prev[agentKey] ?? [];
+        const existing = prev[agentCacheKey] ?? [];
         // The backend commits the user turn before the assistant turn. A history refresh
         // during that window is older than the local streaming placeholder/partial text.
         if (shouldKeepLocalStreamingMessages(existing, normalized)) {
           return prev;
         }
-        return { ...prev, [agentKey]: preserveAssistantModelNames(existing, normalized) };
+        return { ...prev, [agentCacheKey]: preserveAssistantModelNames(existing, normalized) };
       });
     } catch {
       // Keep optimistic UI messages if refresh fails.
@@ -2245,10 +2377,13 @@ export default function AssistantApp() {
     return availableThreads.find((thread) => thread.id === activeConversationId) ?? availableThreads[0] ?? null;
   }, [activeConversationId, availableThreads]);
 
-  const conversationMessagesLoaded = activeConversation ? activeConversation.id in conversationMessages : false;
+  const activeConversationCacheKey = activeConversation
+    ? buildCompanyScopedCacheKey(auth?.companyId, activeConversation.id)
+    : "";
+  const conversationMessagesLoaded = activeConversation ? activeConversationCacheKey in conversationMessages : false;
   const conversationHistoryLoading =
     !!activeConversation && conversationHistoryLoadingId === activeConversation.id && !conversationMessagesLoaded;
-  const messages = activeConversation ? conversationMessages[activeConversation.id] ?? [] : [];
+  const messages = activeConversation ? conversationMessages[activeConversationCacheKey] ?? [] : [];
   const activeWorkbenchAgent =
     workbenchDockAgents.find((a) => a.key === activeWorkbenchKey) ??
     workbenchDockAgents[0] ??
@@ -2270,12 +2405,13 @@ export default function AssistantApp() {
       .filter((thread) => isWorkbenchSessionIdForAgent(thread.id, activeWorkbenchKey))
       .sort((a, b) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? ""));
   }, [activeWorkbenchKey, conversationThreads]);
+  const activeWorkbenchAgentCacheKey = buildCompanyScopedCacheKey(auth?.companyId, activeWorkbenchKey);
   const activeWorkbenchSessionId =
-    activeWorkbenchSessionIdByAgent[activeWorkbenchKey] ??
+    activeWorkbenchSessionIdByAgent[activeWorkbenchAgentCacheKey] ??
     workbenchSessionThreads[0]?.id ??
     buildWorkbenchSessionId(activeWorkbenchKey);
-  const workbenchMessages = workbenchMessagesByAgent[activeWorkbenchKey] ?? [];
-  const activeWorkbenchState = workbenchRuntimeByAgent[activeWorkbenchKey] ?? getWorkbenchDefaultState(activeWorkbenchKey);
+  const workbenchMessages = workbenchMessagesByAgent[activeWorkbenchAgentCacheKey] ?? [];
+  const activeWorkbenchState = workbenchRuntimeByAgent[activeWorkbenchAgentCacheKey] ?? getWorkbenchDefaultState(activeWorkbenchKey);
   const activeWorkbenchThoughts = activeWorkbenchState.thoughts.length ? activeWorkbenchState.thoughts : ["等待新的业务上下文"];
   // Keep the streaming assistant placeholder even when content is still empty so the
   // bubble appears immediately and text flows in incrementally.
@@ -2322,7 +2458,7 @@ export default function AssistantApp() {
   const agentUnread = (conversationsByAgent.get(activeAgent.id) ?? []).reduce((count, thread) => count + thread.unread, 0);
   const activeWorkbenchBusy = activeWorkbenchState.status !== "待命中" && activeWorkbenchState.status !== "已完成";
   const monitorRows = workbenchDockAgents.map((agent, index) => {
-    const runtime = workbenchRuntimeByAgent[agent.key] ?? getWorkbenchDefaultState(agent.key);
+    const runtime = workbenchRuntimeByAgent[buildCompanyScopedCacheKey(auth?.companyId, agent.key)] ?? getWorkbenchDefaultState(agent.key);
     const threads = conversationsByAgent.get(agent.runtimeAgentId ?? agent.key) ?? [];
     const unread = threads.reduce((sum, item) => sum + item.unread, 0);
     const severity = runtime.status === "待命中" ? "idle" : runtime.status === "已完成" ? "ok" : runtime.status === "等待确认" ? "warn" : "busy";
@@ -2441,17 +2577,17 @@ export default function AssistantApp() {
       void loadWorkbenchMessages(activeWorkbenchKey, activeWorkbenchSessionId, true);
     }
     setActiveWorkbenchSessionIdByAgent((prev) => {
-      if (prev[activeWorkbenchKey] === activeWorkbenchSessionId) {
+      if (prev[activeWorkbenchAgentCacheKey] === activeWorkbenchSessionId) {
         return prev;
       }
-      return { ...prev, [activeWorkbenchKey]: activeWorkbenchSessionId };
+      return { ...prev, [activeWorkbenchAgentCacheKey]: activeWorkbenchSessionId };
     });
     setWorkbenchThoughtIndex(0);
     const timer = window.setInterval(() => {
       setWorkbenchThoughtIndex((current) => current + 1);
     }, 1800);
     return () => window.clearInterval(timer);
-  }, [activeWorkbenchKey, activeWorkbenchSessionId, auth?.token, authStatus, workspaceTab]);
+  }, [activeWorkbenchAgentCacheKey, activeWorkbenchKey, activeWorkbenchSessionId, auth?.token, authStatus, workspaceTab]);
 
   useEffect(() => {
     if (!openWorkbenchSessionMenuId) {
@@ -2718,9 +2854,10 @@ export default function AssistantApp() {
     conversationId: string,
     updater: (items: ChatBubble[]) => ChatBubble[],
   ) => {
+    const cacheKey = buildCompanyScopedCacheKey(companyScopeRef.current.companyId, conversationId);
     setConversationMessages((prev) => {
-      const current = prev[conversationId] ?? [];
-      return { ...prev, [conversationId]: updater(current) };
+      const current = prev[cacheKey] ?? [];
+      return { ...prev, [cacheKey]: updater(current) };
     });
   };
 
@@ -2738,13 +2875,17 @@ export default function AssistantApp() {
       me?.avatarBase64 ?? "",
     );
     setConversationThreads((prev) => [draft, ...prev.filter((item) => item.id !== sessionId)]);
-    setConversationMessages((prev) => ({ ...prev, [sessionId]: [] }));
-    setWorkbenchMessagesByAgent((prev) => ({ ...prev, [activeWorkbenchKey]: [] }));
-    setActiveWorkbenchSessionIdByAgent((prev) => ({ ...prev, [activeWorkbenchKey]: sessionId }));
+    const companyId = companyScopeRef.current.companyId;
+    const sessionCacheKey = buildCompanyScopedCacheKey(companyId, sessionId);
+    const agentCacheKey = buildCompanyScopedCacheKey(companyId, activeWorkbenchKey);
+    setConversationMessages((prev) => ({ ...prev, [sessionCacheKey]: [] }));
+    setWorkbenchMessagesByAgent((prev) => ({ ...prev, [agentCacheKey]: [] }));
+    setActiveWorkbenchSessionIdByAgent((prev) => ({ ...prev, [agentCacheKey]: sessionId }));
   };
 
   const selectWorkbenchConversation = async (sessionId: string) => {
-    setActiveWorkbenchSessionIdByAgent((prev) => ({ ...prev, [activeWorkbenchKey]: sessionId }));
+    const agentCacheKey = buildCompanyScopedCacheKey(companyScopeRef.current.companyId, activeWorkbenchKey);
+    setActiveWorkbenchSessionIdByAgent((prev) => ({ ...prev, [agentCacheKey]: sessionId }));
     await loadWorkbenchMessages(activeWorkbenchKey, sessionId, true);
   };
 
@@ -2753,7 +2894,9 @@ export default function AssistantApp() {
       return;
     }
     const sessionId = session.id;
-    let items = conversationMessages[sessionId] ?? [];
+    const requestScope = companyScopeRef.current;
+    const sessionCacheKey = buildCompanyScopedCacheKey(requestScope.companyId, sessionId);
+    let items = conversationMessages[sessionCacheKey] ?? [];
     if (items.length === 0) {
       try {
         const response = await authFetch(LS_ASSISTANT_TOKEN, `/ai/sessions/${encodeURIComponent(sessionId)}/messages`, {}, {
@@ -2763,7 +2906,9 @@ export default function AssistantApp() {
           const { body } = await safeFetchJson<ConversationMessagePayload[]>(response);
           if (body?.success) {
             items = normalizeConversationMessages((body.data ?? []) as ConversationMessagePayload[]);
-            setConversationMessages((prev) => ({ ...prev, [sessionId]: items }));
+            if (isCurrentCompanyScope(requestScope)) {
+              setConversationMessages((prev) => ({ ...prev, [sessionCacheKey]: items }));
+            }
           }
         }
       } catch {
@@ -2839,13 +2984,16 @@ export default function AssistantApp() {
     setConversationThreads((prev) => prev.filter((item) => item.id !== session.id));
     setConversationMessages((prev) => {
       const next = { ...prev };
-      delete next[session.id];
+      delete next[buildCompanyScopedCacheKey(companyScopeRef.current.companyId, session.id)];
       return next;
     });
     if (session.id === activeWorkbenchSessionId) {
       const nextSessionId =
         workbenchSessionThreads.find((item) => item.id !== session.id)?.id ?? buildWorkbenchSessionId(activeWorkbenchKey);
-      setActiveWorkbenchSessionIdByAgent((prev) => ({ ...prev, [activeWorkbenchKey]: nextSessionId }));
+      setActiveWorkbenchSessionIdByAgent((prev) => ({
+        ...prev,
+        [buildCompanyScopedCacheKey(companyScopeRef.current.companyId, activeWorkbenchKey)]: nextSessionId,
+      }));
       await loadWorkbenchMessages(activeWorkbenchKey, nextSessionId, true);
     }
   };
@@ -3007,6 +3155,9 @@ export default function AssistantApp() {
     const timestamp = formatWorkbenchTime();
     const agentKey = activeWorkbenchAgent.key;
     const sessionId = activeWorkbenchSessionId;
+    const requestScope = companyScopeRef.current;
+    const agentCacheKey = buildCompanyScopedCacheKey(requestScope.companyId, agentKey);
+    const sessionCacheKey = buildCompanyScopedCacheKey(requestScope.companyId, sessionId);
     const cleanTrigger = triggerText.trim();
     setInput("");
     setSkillPickerOpen(false);
@@ -3045,17 +3196,17 @@ export default function AssistantApp() {
       );
       setWorkbenchMessagesByAgent((prev) => ({
         ...prev,
-        [agentKey]: [...(prev[agentKey] ?? []), userBubble, assistantBubble],
+        [agentCacheKey]: [...(prev[agentCacheKey] ?? []), userBubble, assistantBubble],
       }));
       setConversationMessages((prev) => ({
         ...prev,
-        [sessionId]: [...(prev[sessionId] ?? workbenchMessages), userBubble, assistantBubble],
+        [sessionCacheKey]: [...(prev[sessionCacheKey] ?? workbenchMessages), userBubble, assistantBubble],
       }));
       setWorkbenchRuntimeByAgent((prev) => ({
         ...prev,
-        [agentKey]: {
+        [agentCacheKey]: {
           status: "处理中",
-          previousTask: prev[agentKey]?.currentTask ?? "—",
+          previousTask: prev[agentCacheKey]?.currentTask ?? "—",
           currentTask: "实时会议听记中",
           nextTask: "结束会议后生成纪要",
           thoughts: ["正在监听麦克风音频", "转写结果会按发言人实时显示"],
@@ -3070,6 +3221,9 @@ export default function AssistantApp() {
       getPrefix: () => "",
       onLiveText: () => {},
       onNotice: (message) => {
+        if (!isCurrentCompanyScope(requestScope)) {
+          return;
+        }
         const setupMessage =
           message.includes("Iflytek realtime ASR credentials are missing") ||
           message.includes("Iflytek realtime ASR is disabled")
@@ -3081,6 +3235,9 @@ export default function AssistantApp() {
         }
       },
       onTranscriptEvent: (event) => {
+        if (!isCurrentCompanyScope(requestScope)) {
+          return;
+        }
         if (!event.text.trim()) {
           return;
         }
@@ -3093,6 +3250,9 @@ export default function AssistantApp() {
         updateMeetingTranscript((prev) => appendMeetingTranscriptSegment(prev, segment));
       },
       onFinished: async ({ asrText }) => {
+        if (!isCurrentCompanyScope(requestScope)) {
+          return;
+        }
         if (!meetingShouldSummarizeRef.current) {
           return;
         }
@@ -3180,6 +3340,9 @@ export default function AssistantApp() {
     const isWorkbench = workspaceTab === "workbench";
     const conversationId = activeConversation?.id ?? "workbench";
     const sessionId = isWorkbench ? activeWorkbenchSessionId : conversationId;
+    const requestScope = companyScopeRef.current;
+    const workbenchAgentCacheKey = buildCompanyScopedCacheKey(requestScope.companyId, activeWorkbenchAgent.key);
+    const sessionCacheKey = buildCompanyScopedCacheKey(requestScope.companyId, sessionId);
     const userBubble: ChatBubble = { role: "user", content: cleanQuestion, time: timestamp };
     const assistantPlaceholder: ChatBubble = { role: "assistant", content: "", time: timestamp };
     if (isWorkbench) {
@@ -3199,15 +3362,15 @@ export default function AssistantApp() {
       );
       setWorkbenchRuntimeByAgent((prev) => ({
         ...prev,
-        [agentKey]: deriveWorkbenchStateFromPrompt(cleanQuestion, agentKey),
+        [workbenchAgentCacheKey]: deriveWorkbenchStateFromPrompt(cleanQuestion, agentKey),
       }));
       setWorkbenchMessagesByAgent((prev) => ({
         ...prev,
-        [agentKey]: [...(prev[agentKey] ?? []), userBubble, assistantPlaceholder],
+        [workbenchAgentCacheKey]: [...(prev[workbenchAgentCacheKey] ?? []), userBubble, assistantPlaceholder],
       }));
       setConversationMessages((prev) => ({
         ...prev,
-        [sessionId]: [...(prev[sessionId] ?? workbenchMessages), userBubble, assistantPlaceholder],
+        [sessionCacheKey]: [...(prev[sessionCacheKey] ?? workbenchMessages), userBubble, assistantPlaceholder],
       }));
     } else {
       updateConversationMessages(conversationId, (prev) => [...prev, userBubble, assistantPlaceholder]);
@@ -3231,7 +3394,7 @@ export default function AssistantApp() {
           activeSkillCode: isWorkbench && activeWorkbenchSkillCode ? activeWorkbenchSkillCode : undefined,
         },
         (delta) => {
-          if (suppress) {
+          if (suppress || !isCurrentCompanyScope(requestScope)) {
             return;
           }
           streamedAssistantText += delta;
@@ -3240,9 +3403,9 @@ export default function AssistantApp() {
             const agentKey = activeWorkbenchAgent.key;
             setWorkbenchRuntimeByAgent((prev) => ({
               ...prev,
-              [agentKey]: {
+              [workbenchAgentCacheKey]: {
                 status: "处理中",
-                previousTask: prev[agentKey]?.currentTask ?? "—",
+                previousTask: prev[workbenchAgentCacheKey]?.currentTask ?? "—",
                 currentTask: "正在生成回复",
                 nextTask: "输出完成后等待下一指令",
                 thoughts: ["AI 正在流式输出回复内容…"],
@@ -3253,17 +3416,20 @@ export default function AssistantApp() {
             const agentKey = activeWorkbenchAgent.key;
             setWorkbenchMessagesByAgent((prev) => ({
               ...prev,
-              [agentKey]: appendAssistantDelta(prev[agentKey] ?? [], delta, timestamp),
+              [workbenchAgentCacheKey]: appendAssistantDelta(prev[workbenchAgentCacheKey] ?? [], delta, timestamp),
             }));
             setConversationMessages((prev) => ({
               ...prev,
-              [sessionId]: appendAssistantDelta(prev[sessionId] ?? [], delta, timestamp),
+              [sessionCacheKey]: appendAssistantDelta(prev[sessionCacheKey] ?? [], delta, timestamp),
             }));
           } else {
             updateConversationMessages(conversationId, (prev) => appendAssistantDelta(prev, delta, timestamp));
           }
         },
         (event: StreamToolResultEvent) => {
+          if (!isCurrentCompanyScope(requestScope)) {
+            return;
+          }
           if (event.toolName.toLowerCase() !== "get_pending_approvals") {
             return;
           }
@@ -3271,7 +3437,7 @@ export default function AssistantApp() {
             const agentKey = activeWorkbenchAgent.key;
             setWorkbenchRuntimeByAgent((prev) => ({
               ...prev,
-              [agentKey]: {
+              [workbenchAgentCacheKey]: {
                 status: "等待确认",
                 previousTask: "已识别审批工具响应",
                 currentTask: "等待你确认审批页面内容",
@@ -3287,14 +3453,15 @@ export default function AssistantApp() {
           suppress = false;
         },
         (event: StreamToolCallEvent) => {
+          if (!isCurrentCompanyScope(requestScope)) return;
           if (!isWorkbench) return;
           const agentKey = activeWorkbenchAgent.key;
           const label = toolCallLabel(event.toolName);
           setWorkbenchRuntimeByAgent((prev) => ({
             ...prev,
-            [agentKey]: {
+            [workbenchAgentCacheKey]: {
               status: "处理中",
-              previousTask: prev[agentKey]?.currentTask ?? "—",
+              previousTask: prev[workbenchAgentCacheKey]?.currentTask ?? "—",
               currentTask: `工具调用中：${label}`,
               nextTask: "整合工具结果并生成回复",
               thoughts: [`正在执行工具 ${event.toolName}…`, "工具返回后将继续生成回复"],
@@ -3302,6 +3469,9 @@ export default function AssistantApp() {
           }));
         },
         (event: StreamPhaseEvent) => {
+          if (!isCurrentCompanyScope(requestScope)) {
+            return;
+          }
           if (isWorkbench) {
             const agentKey = activeWorkbenchAgent.key;
             const kbNames = event.knowledgeBaseNames?.length
@@ -3311,9 +3481,9 @@ export default function AssistantApp() {
             if (event.phase === "retrieving") {
               setWorkbenchRuntimeByAgent((prev) => ({
                 ...prev,
-                [agentKey]: {
+                [workbenchAgentCacheKey]: {
                   status: "检索中",
-                  previousTask: prev[agentKey]?.currentTask ?? "—",
+                  previousTask: prev[workbenchAgentCacheKey]?.currentTask ?? "—",
                   currentTask: `正在检索知识库：${kbLabel}`,
                   nextTask: "命中知识片段后生成回复",
                   thoughts: [`检索范围：${kbLabel}`, "正在完成向量召回与权限校验"],
@@ -3324,7 +3494,7 @@ export default function AssistantApp() {
               const count = typeof event.contextCount === "number" ? event.contextCount : 0;
               setWorkbenchRuntimeByAgent((prev) => ({
                 ...prev,
-                [agentKey]: {
+                [workbenchAgentCacheKey]: {
                   status: "处理中",
                   previousTask: `知识库检索完成${elapsed}`,
                   currentTask: count > 0 ? `已命中 ${count} 条知识片段` : "未命中知识片段，转入模型判断",
@@ -3338,9 +3508,9 @@ export default function AssistantApp() {
             } else if (event.phase === "generating") {
               setWorkbenchRuntimeByAgent((prev) => ({
                 ...prev,
-                [agentKey]: {
+                [workbenchAgentCacheKey]: {
                   status: "处理中",
-                  previousTask: prev[agentKey]?.currentTask ?? "知识上下文已准备",
+                  previousTask: prev[workbenchAgentCacheKey]?.currentTask ?? "知识上下文已准备",
                   currentTask: "正在生成回复",
                   nextTask: "输出完成后等待下一指令",
                   thoughts: ["AI 正在组织知识库内容与回答结构"],
@@ -3355,11 +3525,11 @@ export default function AssistantApp() {
             const agentKey = activeWorkbenchAgent.key;
             setWorkbenchMessagesByAgent((prev) => ({
               ...prev,
-              [agentKey]: markTrailingAssistantModel(prev[agentKey] ?? [], event.modelName ?? "", timestamp),
+              [workbenchAgentCacheKey]: markTrailingAssistantModel(prev[workbenchAgentCacheKey] ?? [], event.modelName ?? "", timestamp),
             }));
             setConversationMessages((prev) => ({
               ...prev,
-              [sessionId]: markTrailingAssistantModel(prev[sessionId] ?? [], event.modelName ?? "", timestamp),
+              [sessionCacheKey]: markTrailingAssistantModel(prev[sessionCacheKey] ?? [], event.modelName ?? "", timestamp),
             }));
           } else {
             updateConversationMessages(conversationId, (prev) =>
@@ -3368,6 +3538,9 @@ export default function AssistantApp() {
           }
         },
       );
+      if (!isCurrentCompanyScope(requestScope)) {
+        return;
+      }
       finishChatLoading();
 
       if (renderedApproval) {
@@ -3375,11 +3548,11 @@ export default function AssistantApp() {
           const agentKey = activeWorkbenchAgent.key;
           setWorkbenchMessagesByAgent((prev) => ({
             ...prev,
-            [agentKey]: replaceTrailingAssistant(prev[agentKey] ?? [], "已为你生成审批页面。", timestamp),
+            [workbenchAgentCacheKey]: replaceTrailingAssistant(prev[workbenchAgentCacheKey] ?? [], "已为你生成审批页面。", timestamp),
           }));
           setConversationMessages((prev) => ({
             ...prev,
-            [sessionId]: replaceTrailingAssistant(prev[sessionId] ?? [], "已为你生成审批页面。", timestamp),
+            [sessionCacheKey]: replaceTrailingAssistant(prev[sessionCacheKey] ?? [], "已为你生成审批页面。", timestamp),
           }));
         } else {
           updateConversationMessages(conversationId, (prev) => replaceTrailingAssistant(prev, "已为你生成审批页面。"));
@@ -3389,7 +3562,7 @@ export default function AssistantApp() {
         const agentKey = activeWorkbenchAgent.key;
         setWorkbenchRuntimeByAgent((prev) => ({
           ...prev,
-          [agentKey]: finishWorkbenchState(agentKey, prev[agentKey]?.currentTask, streamedAssistantText),
+          [workbenchAgentCacheKey]: finishWorkbenchState(agentKey, prev[workbenchAgentCacheKey]?.currentTask, streamedAssistantText),
         }));
         await loadWorkbenchMessages(agentKey, sessionId, true);
       }
@@ -3397,35 +3570,38 @@ export default function AssistantApp() {
         await loadConversationThreads(conversationId);
       }
     } catch (error) {
+      if (!isCurrentCompanyScope(requestScope)) {
+        return;
+      }
       const message = error instanceof Error ? error.message : String(error);
       if (isWorkbench) {
         const agentKey = activeWorkbenchAgent.key;
         setWorkbenchRuntimeByAgent((prev) => ({
           ...prev,
-          [agentKey]: {
+          [workbenchAgentCacheKey]: {
             status: "等待确认",
-            previousTask: prev[agentKey]?.currentTask ?? "处理中断",
+            previousTask: prev[workbenchAgentCacheKey]?.currentTask ?? "处理中断",
             currentTask: "本轮处理出现中断",
             nextTask: "等待你重试或补充说明",
             thoughts: ["流式输出被中断", "可以重试，或补充更具体的任务描述"],
           },
         }));
         setWorkbenchMessagesByAgent((prev) => {
-          const current = prev[agentKey] ?? [];
+          const current = prev[workbenchAgentCacheKey] ?? [];
           const last = current[current.length - 1];
           const content = last?.role === "assistant" && last.content.trim()
             ? `${last.content}\n\n*(流式输出中断：${message})*`
             : `暂时无法完成回答：${message}`;
           const next = replaceTrailingAssistant(current, content, timestamp);
-          return { ...prev, [agentKey]: next };
+          return { ...prev, [workbenchAgentCacheKey]: next };
         });
         setConversationMessages((prev) => {
-          const current = prev[sessionId] ?? [];
+          const current = prev[sessionCacheKey] ?? [];
           const last = current[current.length - 1];
           const content = last?.role === "assistant" && last.content.trim()
             ? `${last.content}\n\n*(流式输出中断：${message})*`
             : `暂时无法完成回答：${message}`;
-          return { ...prev, [sessionId]: replaceTrailingAssistant(current, content, timestamp) };
+          return { ...prev, [sessionCacheKey]: replaceTrailingAssistant(current, content, timestamp) };
         });
       } else {
         updateConversationMessages(conversationId, (prev) => {
@@ -3437,8 +3613,10 @@ export default function AssistantApp() {
         });
       }
     } finally {
-      finishChatLoading();
-      if (auth?.token) {
+      if (isCurrentCompanyScope(requestScope)) {
+        finishChatLoading();
+      }
+      if (isCurrentCompanyScope(requestScope) && auth?.token) {
         void loadMonitorRunLogs(auth.token);
       }
     }
