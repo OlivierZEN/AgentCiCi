@@ -20,6 +20,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
 class CloudccAccessTokenServiceTest {
@@ -101,9 +102,11 @@ class CloudccAccessTokenServiceTest {
     @Test
     void coalescesConcurrentTokenRequestsForTheSameUser() throws Exception {
         AtomicInteger tokenRequests = new AtomicInteger();
+        AtomicReference<String> requestBody = new AtomicReference<>("");
         HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
         server.createContext("/lightningapi/api/cauth/token", exchange -> {
             tokenRequests.incrementAndGet();
+            requestBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
             try {
                 Thread.sleep(100);
             } catch (InterruptedException ex) {
@@ -123,7 +126,7 @@ class CloudccAccessTokenServiceTest {
             String companyId = "agent-org";
             String userId = "member-1";
             String config = """
-                    {"companyId":"cloudcc-org","clientId":"client","secretKey":"secret",
+                    {"orgId":"cloudcc-org","clientId":"client","secretKey":"secret",
                      "orgapi_switch_address":"http://127.0.0.1:%d/lightningapi"}
                     """.formatted(server.getAddress().getPort());
             IntegrationAppRepository appRepository = mock(IntegrationAppRepository.class);
@@ -152,6 +155,9 @@ class CloudccAccessTokenServiceTest {
                         .isEqualTo("shared-token");
             }
             assertThat(tokenRequests).hasValue(1);
+            var payload = new ObjectMapper().readTree(requestBody.get());
+            assertThat(payload.path("orgId").asText()).isEqualTo("cloudcc-org");
+            assertThat(payload.has("companyId")).isFalse();
         } finally {
             executor.shutdownNow();
             server.stop(0);
@@ -160,7 +166,7 @@ class CloudccAccessTokenServiceTest {
 
     private IntegrationAppRepository configuredAppRepository(String companyId, String gateway) {
         String config = """
-                {"companyId":"cloudcc-org","clientId":"client","secretKey":"secret",
+                {"orgId":"cloudcc-org","clientId":"client","secretKey":"secret",
                  "orgapi_switch_address":"%s"}
                 """.formatted(gateway);
         IntegrationAppRepository repository = mock(IntegrationAppRepository.class);

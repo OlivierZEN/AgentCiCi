@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-04T13:39:00Z
+updated_at: 2026-08-04T14:05:00Z
 updated_by: MANAGER-001
-phase: production-company-switch-isolation-release
+phase: cloudcc-org-id-contract-ready-for-release
 active_task: TASK-252
-next_action: "由受权用户复核公司 A→B→A 的工作台消息与 CRM 数据随当前组织刷新；正常公司管理员邀请的新成员仍应在完成 Keycloak 邮箱验证和设置密码后才激活。"
+next_action: "等待用户授权发布 CloudCC orgId 契约修复；发布后用受控租户验证 CloudCC Token 与 CRM 数据链路，并由受权用户复核公司 A→B→A 页面。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-252 / CloudCC CRM orgId 契约：本地实现完成、待生产发布。AgentCiCi 租户外键 `integration_app.company_id` 保持不变；CloudCC 配置/Token 请求统一为 `orgId`，兼容读取旧 `config.companyId`。V104 从旧键或网关 URL 安全回填 `orgId`，管理端仅展示新字段并掩码 SecretKey。CloudCC Token 定向测试、backend compile、前端定向测试与 production build 均通过；未在未获本轮明确授权时发布或改写生产配置。
 
 - TASK-252 / 公司切换会话隔离：已发布生产 `2.8.43 / 45b942c06b86`。AgentCiCi 后端继续以 JWT `company_id` 查询会话；前端消息、工作台 session/运行态缓存现按 `companyId` 分区，组织切换会立即清空公司级页面状态并使旧异步/流式响应失效。定向 Vitest 4/4、TypeScript/Vite build、不可变镜像、发布前四类备份、六容器健康、Nginx、版本接口、前端工件标记、`x.agentcici.com` 200 和匿名 `auth/me` 401 均通过；等待受权用户复核公司 A→B→A 页面内容。
 

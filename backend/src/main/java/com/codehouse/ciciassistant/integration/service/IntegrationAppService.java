@@ -30,6 +30,7 @@ public class IntegrationAppService {
     /** Displayed to the frontend when an encrypted apiKey exists. The frontend never receives the ciphertext. */
     public static final String API_KEY_MASK = "tvly-****";
     public static final String IFLYTEK_SECRET_MASK = "iflytek-****";
+    public static final String CLOUDCC_SECRET_MASK = "cloudcc-****";
     public static final String PLATFORM_MANAGED_MESSAGE = "Tavily 搜索和讯飞实时转写由运营平台统一配置，组织后台不可修改。";
 
     private static final String DEFAULT_IFLYTEK_REALTIME_URL = "wss://office-api-ast-dx.iflyaisol.com/ast/communicate/v1";
@@ -242,6 +243,14 @@ public class IntegrationAppService {
         BuiltinAppDef def = BUILTIN_APPS.get(e.getAppCode());
         List<String> requiredKeys = def == null ? List.of() : def.configKeys();
         Map<String, Object> config = new LinkedHashMap<>(readJsonToMap(e.getConfigJson()));
+        if (APP_CODE_CLOUDCC_CRM.equals(e.getAppCode())) {
+            Object orgId = config.get("orgId");
+            if ((orgId == null || String.valueOf(orgId).isBlank()) && config.containsKey("companyId")) {
+                config.put("orgId", config.get("companyId"));
+            }
+            config.remove("companyId");
+            maskSecrets(config, "secretKey", CLOUDCC_SECRET_MASK);
+        }
         if (APP_CODE_TAVILY.equals(e.getAppCode())) {
             maskSecrets(config, "apiKey", API_KEY_MASK);
         } else if (APP_CODE_IFLYTEK_ASR.equals(e.getAppCode())) {
@@ -290,6 +299,12 @@ public class IntegrationAppService {
             if ((v == null || String.valueOf(v).isBlank()) && "orgapi_switch_address".equals(key) && cfg.containsKey("baseUrl")) {
                 v = cfg.get("baseUrl");
             }
+            // CloudCC's external organization identifier is orgId. companyId was an
+            // earlier, misleading config key and remains readable only for migration.
+            if ((v == null || String.valueOf(v).isBlank()) && APP_CODE_CLOUDCC_CRM.equals(def.appCode())
+                    && "orgId".equals(key) && cfg.containsKey("companyId")) {
+                v = cfg.get("companyId");
+            }
             if ((v == null || String.valueOf(v).isBlank()) && APP_CODE_FEISHU_BOT.equals(def.appCode())
                     && "defaultAgentCode".equals(key)) {
                 v = "cici";
@@ -318,6 +333,10 @@ public class IntegrationAppService {
             }
             if (APP_CODE_IFLYTEK_ASR.equals(def.appCode()) && "accessKeySecret".equals(key)) {
                 out.put(key, encryptOrPreserveSecret(existing.get(key), v, IFLYTEK_SECRET_MASK));
+                continue;
+            }
+            if (APP_CODE_CLOUDCC_CRM.equals(def.appCode()) && "secretKey".equals(key)) {
+                out.put(key, preservePlainSecret(existing.get(key), v, CLOUDCC_SECRET_MASK));
                 continue;
             }
 
@@ -355,13 +374,21 @@ public class IntegrationAppService {
         return envelope;
     }
 
+    private Object preservePlainSecret(Object existingValue, Object incomingValue, String mask) {
+        String incoming = incomingValue == null ? "" : String.valueOf(incomingValue).trim();
+        if (incoming.isEmpty() || mask.equals(incoming)) {
+            return existingValue == null ? "" : existingValue;
+        }
+        return incoming;
+    }
+
     private static Map<String, BuiltinAppDef> builtinApps() {
         Map<String, BuiltinAppDef> apps = new LinkedHashMap<>();
         apps.put(APP_CODE_CLOUDCC_CRM, new BuiltinAppDef(
                 APP_CODE_CLOUDCC_CRM,
                 "CloudCC CRM",
                 "接入 CloudCC CRM 系统，获取并处理业务数据与业务功能",
-                List.of("companyId", "orgapi_switch_address", "clientId", "secretKey"),
+                List.of("orgId", "orgapi_switch_address", "clientId", "secretKey"),
                 true));
         apps.put(APP_CODE_FEISHU_BOT, new BuiltinAppDef(
                 APP_CODE_FEISHU_BOT,

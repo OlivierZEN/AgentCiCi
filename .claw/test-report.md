@@ -17,6 +17,14 @@ last_run_status: passed
 - `isolation-contract`：认证 `companyId` 切换会递增作用域版本、同步清空公司级内存状态；会话/消息、工作台、知识库、智能体、技能、快捷指令与监控的异步响应在作用域不一致时不回写，工作台流式回调也会丢弃。服务器 API session ID 保持不变，未删除或迁移任何历史会话。
 - `production-2.8.43`：Git tag/commit 为 `2.8.43 / 45b942c06b86`；backend/frontend ACR index digest 为 `sha256:9fcfa8f2c72a5cb80ea6f5cdc68f7dd3a384bb590aed5fbbecb3c5a576e14610` / `sha256:8ad594eea01883e1e87901158c58bc3423d49bcb65738c2d65cf2f505f24d2f5`。发布前备份 `/opt/cici/backups/20260804-213816-before-2.8.43-company-switch-isolation` 的 env、PostgreSQL、KB、Qdrant 均非空；仅重建 backend/frontend，六容器 healthy，backend health=UP、版本接口为 `2.8.43 / 45b942c06b86`、Nginx 配置通过、线上工件含公司缓存键标记、`https://x.agentcici.com/`=200、匿名 `/auth/me`=401。受权用户 A→B→A 实际界面复核待完成，未伪造登录会话。
 
+## TASK-252 - CloudCC CRM orgId 契约（发布前）
+
+- `external-contract`：受权参数按 CloudCC 文档字段 `username/safetyMark/clientId/secretKey/orgId/grant_type=password` 调用已返回 HTTP 200、`result=true` 且有 accessToken；未输出、存储或写入 token/SecretKey。
+- `backend-focused`：`mvn -q -f backend/pom.xml -Dmaven.repo.local=backend/.m2 -Dtest=CloudccAccessTokenServiceTest test` 通过（3 tests）；覆盖当前用户 session 校验、并发 token 合并，以及 Token JSON 使用 `orgId` 且不含旧 `companyId`。
+- `backend-compile`：`mvn -q -f backend/pom.xml -Dmaven.repo.local=backend/.m2 -DskipTests compile` 通过。
+- `frontend`：`npm --prefix frontend test -- --run src/assistant/AssistantApp.test.ts` 与 `npm --prefix frontend run build` 通过；仅保留既有 bundle-size 提示。
+- `migration`：V104 是只追加的 JSONB 正向迁移，优先复制旧配置键，次选提取发现 URL 的 `orgId`；不改 `integration_app.company_id`、不删除旧键。尚未发布或执行生产迁移。
+
 ## TASK-265 - DEV Autopilot 研发交付评审 Tool（发布前）
 
 - `backend-focused`：`SematticeProjectDeliveryToolServiceTest`、`SematticeProjectDeliveryWriteToolServiceTest`、`SematticeProjectDeliveryReviewToolServiceTest`、`ToolOrchestratorServiceTest`、`SkillResolverServiceTest` 全部通过；覆盖 6 个已发布对象、已决提交不再误列待评审、产品经理 SERVICE read/create/update OACT、稳定幂等键、禁止身份/令牌/目标覆写、Tool 编排及 Skill 显式绑定。

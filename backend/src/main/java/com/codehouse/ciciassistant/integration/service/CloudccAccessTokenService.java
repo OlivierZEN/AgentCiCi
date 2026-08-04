@@ -135,15 +135,15 @@ public class CloudccAccessTokenService {
                 return Optional.empty();
             }
             Map<String, Object> config = readConfig(app.getConfigJson());
-            String cloudccCompanyId = stringVal(config.get("companyId"));
+            String cloudccOrgId = cloudccOrgId(config);
             String orgapiSwitchAddress = stringVal(config.get("orgapi_switch_address"));
             if (orgapiSwitchAddress.isBlank()) {
                 orgapiSwitchAddress = stringVal(config.get("baseUrl"));
             }
-            if (orgapiSwitchAddress.isBlank() && cloudccCompanyId.isBlank()) {
+            if (orgapiSwitchAddress.isBlank() && cloudccOrgId.isBlank()) {
                 return Optional.empty();
             }
-            String gateway = resolveGateway(cloudccCompanyId, orgapiSwitchAddress);
+            String gateway = resolveGateway(cloudccOrgId, orgapiSwitchAddress);
             return Optional.of(new CloudccGatewayContext(gateway, deriveSetupSvc(gateway)));
         } catch (Exception ex) {
             log.debug("Failed to resolve configured CloudCC gateway for org={}: {}", companyId, ex.getMessage());
@@ -211,7 +211,7 @@ public class CloudccAccessTokenService {
             return Optional.empty();
         }
         Map<String, Object> config = readConfig(app.getConfigJson());
-        String cloudccCompanyId = stringVal(config.get("companyId"));
+        String cloudccOrgId = cloudccOrgId(config);
         String clientId = stringVal(config.get("clientId"));
         String secretKey = stringVal(config.get("secretKey"));
         // 优先读取 orgapi_switch_address（新的配置字段），兼容历史 baseUrl。
@@ -219,8 +219,11 @@ public class CloudccAccessTokenService {
         if (orgapiSwitchAddress.isBlank()) {
             orgapiSwitchAddress = stringVal(config.get("baseUrl"));
         }
-        if (cloudccCompanyId.isBlank() || clientId.isBlank() || secretKey.isBlank()) {
-            return Optional.empty();
+        if (cloudccOrgId.isBlank()) {
+            throw new IllegalArgumentException("CloudCC orgId 未配置");
+        }
+        if (clientId.isBlank() || secretKey.isBlank()) {
+            throw new IllegalArgumentException("CloudCC Client ID 或 Secret Key 未配置");
         }
         UserEntity user = userRepository.findByIdAndCompany_Id(userId, companyId).orElse(null);
         if (user == null) {
@@ -232,9 +235,9 @@ public class CloudccAccessTokenService {
             return Optional.empty();
         }
 
-        String gateway = resolveGateway(cloudccCompanyId, orgapiSwitchAddress);
+        String gateway = resolveGateway(cloudccOrgId, orgapiSwitchAddress);
         String setupSvc = deriveSetupSvc(gateway);
-        String token = requestToken(gateway, cloudccCompanyId, username, safetyMark, clientId, secretKey);
+        String token = requestToken(gateway, cloudccOrgId, username, safetyMark, clientId, secretKey);
         Instant exp = parseJwtExp(token).orElse(Instant.now().plus(DEFAULT_TOKEN_TTL));
         tokenCache.put(cacheKey, new CachedToken(token, gateway, setupSvc, exp));
         return Optional.of(new CloudccSessionContext(token, gateway, setupSvc));
@@ -242,18 +245,18 @@ public class CloudccAccessTokenService {
 
     /**
      * 解析 CloudCC 组织网关地址：
-     * - 若配置了 orgapi_switch_address，则直接请求该地址（通常包含 scope 和 companyId 查询参数）；
+     * - 若配置了 orgapi_switch_address，则直接请求该地址（通常包含 scope 和 orgId 查询参数）；
      * - 否则回退到官方默认的 apidomain 接口。
      * 响应中的 orgapi_address 将作为实际网关（baseUrl）返回，例如 https://szyd.apis.cloudcc.cn/lightningapi。
      */
-    private String resolveGateway(String cloudccCompanyId, String orgapiSwitchAddress) throws Exception {
+    private String resolveGateway(String cloudccOrgId, String orgapiSwitchAddress) throws Exception {
         if (looksLikeDirectApiGateway(orgapiSwitchAddress)) {
             return normalizeDirectApiGateway(orgapiSwitchAddress);
         }
         String url = !orgapiSwitchAddress.isBlank()
                 ? orgapiSwitchAddress
-                : "https://developer.apis.cloudcc.cn/oauth/apidomain?scope=cloudccCRM&companyId="
-                        + URLEncoder.encode(cloudccCompanyId, StandardCharsets.UTF_8);
+                : "https://developer.apis.cloudcc.cn/oauth/apidomain?scope=cloudccCRM&orgId="
+                        + URLEncoder.encode(cloudccOrgId, StandardCharsets.UTF_8);
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .timeout(HTTP_TIMEOUT)
@@ -309,7 +312,7 @@ public class CloudccAccessTokenService {
 
     private String requestToken(
             String gateway,
-            String companyId,
+            String orgId,
             String username,
             String safetyMark,
             String clientId,
@@ -320,7 +323,7 @@ public class CloudccAccessTokenService {
                 "safetyMark", safetyMark,
                 "clientId", clientId,
                 "secretKey", secretKey,
-                "companyId", companyId,
+                "orgId", orgId,
                 "grant_type", "password"
         ));
         HttpRequest req = HttpRequest.newBuilder()
@@ -419,6 +422,12 @@ public class CloudccAccessTokenService {
 
     private String stringVal(Object value) {
         return value == null ? "" : String.valueOf(value).trim();
+    }
+
+    /** CloudCC uses orgId; companyId is a legacy AgentCiCi configuration alias only. */
+    private String cloudccOrgId(Map<String, Object> config) {
+        String orgId = stringVal(config.get("orgId"));
+        return orgId.isBlank() ? stringVal(config.get("companyId")) : orgId;
     }
 
     private String blankToEmpty(String value) {

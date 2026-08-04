@@ -72,8 +72,20 @@ const FIELD_META: Record<string, Record<string, FieldMeta>> = {
     pairingCommandHint: { label: "配对指令提示", placeholder: "配对 123456", hint: "用户发送配对码时的识别前缀，留空使用「配对」。" },
   },
   cloudcc_crm: {
+    orgId: {
+      label: "CloudCC 组织 ID（orgId）",
+      required: true,
+      placeholder: "orgxxxxxxxxxxxxxxxx",
+      hint: "CloudCC Token API 的 orgId。它不是当前 AgentCiCi 的租户 companyId。",
+    },
+    orgapi_switch_address: {
+      label: "CloudCC 组织网关/发现地址",
+      required: true,
+      placeholder: "https://example.apis.cloudcc.cn/lightningapi",
+      hint: "可填写 CloudCC 组织网关或官方 apidomain 发现地址；保存后由服务端解析实际网关。",
+    },
     clientId: { label: "Client ID", required: true, placeholder: "xxxxxxxxxxx", hint: "CloudCC OAuth 客户端 ID。" },
-    secretKey: { label: "Secret Key", required: true, placeholder: "xxxxxxxxxxxxxxxxxxxx", hint: "CloudCC OAuth 密钥，保存后不会明文展示。" },
+    secretKey: { label: "Secret Key", required: true, placeholder: "xxxxxxxxxxxxxxxxxxxx", hint: "CloudCC OAuth 密钥，保存后不会明文展示；保留掩码不变即可继续使用现有密钥。" },
     loginDomain: { label: "登录域名", placeholder: "https://login.cloudcc.com", hint: "CloudCC 登录接口域名，留空使用默认值。" },
   },
   iflytek_asr: {
