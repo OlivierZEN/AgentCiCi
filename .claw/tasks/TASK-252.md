@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-252
 status: in_progress
-updated_at: 2026-08-04T12:49:00Z
+updated_at: 2026-08-04T13:35:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: project-manager
@@ -15,7 +15,7 @@ spec_path: docs/specs/FEAT-145-unified-principal-identity-governance.md
 ## Current State
 
 - Status: `in_progress`
-- Next action: 已发布 `2.8.41`。正常管理员可邀请首个新成员；该成员应收到 Keycloak “验证邮箱 + 设置密码”邮件，在完成 Required Actions 后首次 OIDC 登录才转为 `ACTIVE`。持续监控初始化邮件投递与首次登录，不使用或猜测真实被邀请人的凭据。
+- Next action: 紧急修复公司切换后的前端会话状态隔离缺陷并发布。旧 `company_id` 的浏览器缓存、异步响应、SSE 和工作台状态不得显示或写回新公司页面；不删除任何历史会话数据。
 - Deployment scope: `deploy/docker-compose.acr.yml` 仅用于把独立 Keycloak provisioner 配置传入 backend；不修改服务拓扑、网络或证书。
 - Blocked: 无。Keycloak Realm SMTP 已配置，人工 provisioning 已在受控部署环境启用；本次只修复邀请/重绑闭环，不创建未获业务授权的机器主体。
 
@@ -42,6 +42,7 @@ spec_path: docs/specs/FEAT-145-unified-principal-identity-governance.md
 - 生产历史身份回填（2026-08-04）：盘点到 5 个 `ACTIVE` AgentCiCi 全局账户缺少 `account_external_identity`。已先备份 AgentCiCi PostgreSQL（`/opt/cici/backups/20260804-151145-before-keycloak-human-backfill/postgres.dump`）和 Keycloak Realm（`/opt/keycloak/backups/20260804-151150-before-agentcici-human-backfill/agentcici-realm.json`），随后为 5 个账户创建或复用 Keycloak User、写入 5 条唯一 issuer+subject 映射，并触发 `VERIFY_EMAIL` + `UPDATE_PASSWORD` 初始动作邮件。回读：活跃账户未绑定数为 0，5/5 Keycloak 用户启用且具备两个初始动作；未记录收件人、密码、令牌或邮件链接。Keycloak 用户自定义属性受当前 Realm 配置限制未持久化，AgentCiCi 的不可变 `issuer + subject` 映射仍是实际身份绑定事实源。
 - 单账户身份重绑（2026-08-04）：经用户确认，已将一个 `ACTIVE` 全局账户从重复的、未完成初始化的 Keycloak User 重绑到其原有可用手机号登录 Keycloak User；只更新本地不可变 issuer+subject 映射，不重置密码、不删除或禁用任何 Keycloak User。更新前 PostgreSQL 备份已保存在受限生产备份目录；精确条件更新影响 1 条记录，目标 subject 没有其他 AgentCiCi 绑定，`principal_identity` 镜像由旧 subject 迁移至新 subject。AgentCiCi health=200、Keycloak active 且 OIDC discovery=200。
 - 单账户初始化邮箱修复（2026-08-04）：经用户确认，已将 AgentCiCi 中已验证的邮箱补写入一个已绑定 Keycloak User，并重新触发 `VERIFY_EMAIL` + `UPDATE_PASSWORD` 邮件。修复前发现 AgentCiCi 邮箱格式正常、而 Keycloak `email` 字段为空，导致初始化链接返回“无效的电子邮件地址”。Keycloak 用户受限备份已保存；回读确认 email 已存在、用户启用、邮箱尚待验证、两个 Required Actions 就绪，SMTP 错误日志为 0。未记录邮箱、密码或邮件链接。
+- 紧急缺陷设计（2026-08-04）：已确认后端会话和消息按 JWT `company_id` 查询，实际风险位于 `AssistantApp` 浏览器内存：工作台默认 session ID 跨公司可碰撞，缓存以 agent/session 而非 company 分区，且公司切换不清空旧状态或拒绝旧异步响应。规格已补齐“切换即失效、缓存 company 分区、旧响应静默丢弃、终止旧流”的实现与验收契约；本次不删除或迁移历史聊天数据。
 
 ## Handoff
 
