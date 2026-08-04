@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-05T00:00:00Z
+updated_at: 2026-08-04T23:57:37Z
 updated_by: MANAGER-001
-phase: ai-table-authentication-repair
-active_task: TASK-266
-next_action: "修复已确认的 AI表格 Bearer 会话透传缺陷，完成定向验证后发布新的不可变生产版本。"
+phase: ai-table-authentication-released
+active_task: none
+next_action: "TASK-266 已发布生产 2.8.49；等待受权成员在 AI表格中回读实际对象和记录。onechat.agentcici.com 的 DNS 解析风险仍需单独修复。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-266 / FEAT-158：生产 `2.8.48` 的 AI表格在真实用户端返回 `Authentication required`。代码审计已确认目录/记录请求绕过应用统一 `authFetch`，只发送同源 Cookie；当前工作台的登录态实际使用 Bearer Token，因此请求在 AgentCiCi 鉴权层被拒绝，尚未进入 OACT 或数据平台调用。任务已恢复为进行中，修复将复用统一会话请求并保持浏览器不接触 OACT、租户或公司标识；桌面鎏金账房和受控主题结构不变。
+- TASK-266 / FEAT-158：已发布生产 `2.8.49 / 760776a354f5`，修复 AI表格目录和记录请求绕过统一 Bearer 会话的问题。`requestAiTable` 现复用 `authFetch(LS_ASSISTANT_TOKEN, ...)`，保留同源 Cookie、Token 更新重试和原有受保护 API 错误语义；浏览器仍不接触 OACT、租户或公司标识，鎏金账房和受控主题结构不变。backend/frontend ACR index digest 为 `sha256:eb931697527bcdfbc8486a7a23910c0f37ddd8b8be0bfd3a356b9499e8ce576c` / `sha256:69f7573a3bbfb9b2f7b41638905e539e866bd95721cd81fbc7a26de2f796f209`，发布前四类备份位于 `/opt/cici/backups/20260805-075621-before-2.8.49-ai-table-auth` 且均非空。六容器 healthy、backend health=UP、版本/Nginx/x HTTPS/HTTP 均通过；匿名与无效 Bearer 的 AI表格目录请求均正确返回 401。当前会话无受权成员 Cookie/测试账号，未伪造真实记录回读。
 
 ## Snapshot
 

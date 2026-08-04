@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-05T00:00:00Z
+updated_at: 2026-08-04T23:57:37Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-08-05T00:00:00Z
+last_run_at: 2026-08-04T23:57:37Z
 last_run_status: passed
 ---
 
@@ -22,6 +22,7 @@ last_run_status: passed
 - `browser-limit`：Playwright CLI 的本机 Chromium 对 `127.0.0.1:5174/app` 直接返回工具环境的 `chrome-error`/HTTP 500，而同一地址 curl 为 HTTP 200；已停止无效重试，未把它记录为产品页面失败。先前已确认的桌面高保真截图仍保留为视觉基线；生产将以受权会话完成真实数据回读，不伪造登录或业务数据。
 - `full-backend-limit`：`mvn -q test` 进入既有 `KnowledgeBaseLifecycleIntegrationTest` 后等待未配置的本机 PostgreSQL（Hikari 重复连接），未在本任务中完成全量结果；聚焦测试和编译均通过，发布后按 runbook 验证生产 Flyway/健康与受权业务路径。
 - `production-2.8.48`：Git tag/commit 为 `2.8.48 / 3bde866470b3`；backend/frontend ACR index digest 为 `sha256:7bcea486aac0612e168208b08698cf1297e4290512fc6639f3150d8ddb0d60ad` / `sha256:3f1666e3a1c54d9cce51f2659c20589fe2a5851dd06d803030288064fa4deac0`。发布前备份 `/opt/cici/backups/20260805-000608-before-2.8.48-ai-table-live` 的 `acr.env.before-release`、PostgreSQL、KB 和 Qdrant 均非空。仅重建 backend/frontend；六容器 healthy，`/actuator/health=UP`，版本接口返回 `2.8.48 / 3bde866470b3`，Nginx `-t` 通过，`x.agentcici.com` HTTPS=200、HTTP=301。经 x HTTPS 虚拟主机请求 `/ai-table/catalog` 返回受保护 API 的 401 JSON，与 `/auth/me` 一致，不再落入 SPA fallback。生产 OACT 已启用，数据平台地址已配置，逗号分隔 scopes 含 `metadata.read`、`runtime.record.read`。本会话没有成员登录 Cookie/测试账号，未伪造真实记录回读；`onechat.agentcici.com` 仍无法 DNS 解析，未作为发布成功依据。
+- `production-2.8.49`：Git tag/commit 为 `2.8.49 / 760776a354f5`；backend/frontend ACR index digest 为 `sha256:eb931697527bcdfbc8486a7a23910c0f37ddd8b8be0bfd3a356b9499e8ce576c` / `sha256:69f7573a3bbfb9b2f7b41638905e539e866bd95721cd81fbc7a26de2f796f209`。发布前备份 `/opt/cici/backups/20260805-075621-before-2.8.49-ai-table-auth` 的环境、PostgreSQL、KB、Qdrant 均非空；仅重建 backend/frontend，六容器 healthy，`/actuator/health=UP`、版本为 `2.8.49 / 760776a354f5`、Nginx 配置通过。`x.agentcici.com` HTTPS=200、HTTP=301，线上页面返回新前端工件 `assets/index-mhRX_a5B.js`。AI表格目录匿名调用为 401 `Authentication required`、无效 Bearer 为 401 `Invalid or expired token`，符合受保护 API 契约。受权成员数据回读待真实登录会话完成；`onechat.agentcici.com` DNS 仍不可解析，未作为发布成功判定。
 - `production-2.8.47`：Git tag/commit 为 `2.8.47 / aeeb24f9ea66`；backend/frontend ACR index digest 为 `sha256:28980489578b0bdc50d148941056154833d96c8fc16e5afb0aa8d6dcedeba686` / `sha256:fc36895b5063c30665edbf2a419564d56ff54fa81172318918eec463322133a5`。发布前备份 `/opt/cici/backups/20260804-233730-before-2.8.47` 的环境、PostgreSQL、KB、Qdrant 均非空；仅重建 backend/frontend，六服务 healthy，`/actuator/health=UP`、版本接口为 `2.8.47 / aeeb24f9ea66`、Nginx 配置通过。`https://x.agentcici.com/`=200、HTTP 根路径=301、匿名 `/auth/me`=401；`onechat.agentcici.com` DNS 仍不可解析，未作为发布成功判定。
 
 ## TASK-265 - DEV Autopilot 研发交付评审 Tool 生产闭环

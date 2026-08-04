@@ -13,8 +13,9 @@ status: active
 - ISSUE-2026-08-05-ai-table-auth-header:
   - Symptom: 已登录用户在 `https://x.agentcici.com/app` 打开 AI表格时，目录请求显示 `Authentication required`，无法读取业务对象。
   - Verified root cause: `AiTableBusinessObjectList` 对 `/ai-table/catalog` 和记录查询使用裸 `fetch`，仅设置 `credentials: same-origin`；用户端的实际登录态由 `LS_ASSISTANT_TOKEN` 中的 Bearer Token 提供。该请求没有 `Authorization`，被 AgentCiCi 鉴权层拒绝，未进入 OACT 签发或数据平台调用。
-  - Resolution: TASK-266 统一改用 `authFetch`，保持既有 Token 更新重试语义和同源请求边界。
-  - Status: in_progress.
+  - Resolution: TASK-266 已统一改用 `authFetch`，保持既有 Token 更新重试语义和同源请求边界；已发布生产 `2.8.49 / 760776a354f5`。
+  - Verification: 前端定向 2 项、全量 34 文件/208 项测试与生产构建通过；线上 backend/frontend healthy，版本、Nginx、x HTTPS/HTTP 与受保护接口的匿名/无效 Bearer 401 边界均通过。
+  - Status: resolved by TASK-266 on 2026-08-05; awaiting authorized member data readback.
 
 - ISSUE-2026-07-24-oidc-state-cross-origin:
   - Symptom: 用户完成 Keycloak SSO 后，`https://x.agentcici.com/auth/oidc/callback` 返回 `Invalid OIDC login state`，无法进入系统。

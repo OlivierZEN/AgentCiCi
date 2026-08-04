@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-158
 title: AgentCiCi AI表格业务对象实时列表
-status: repair
+status: completed
 owner_role: fullstack-agent
 task_ids: TASK-266
 related_decisions: none
 related_issues: ISSUE-2026-08-05-ai-table-auth-header
-updated_at: 2026-08-05T00:00:00Z
+updated_at: 2026-08-04T23:57:37Z
 updated_by: MANAGER-001
 ---
 
@@ -92,4 +92,4 @@ AgentCiCi 左侧入口已命名为“AI表格”。用户已确认高保真桌�
 
 - 已完成：高保真桌面交互与多主题视觉方向；用户已确认形态。
 - 已完成：修复目录/记录请求缺少当前工作台 Bearer 会话的问题，新增定向回归并通过前端全量 34 文件/208 项测试和生产构建。
-- 进行中：发布热修复并完成线上鉴权边界、健康与受权成员数据回读验收。
+- 已完成：热修复已发布为 `2.8.49 / 760776a354f5`；线上健康、版本、Nginx、HTTPS/HTTP 与 AI表格鉴权边界 smoke 通过。受权成员数据回读需要在真实成员会话中完成，当前发布会话未持有或伪造该凭据。
