@@ -10,6 +10,14 @@ last_run_status: passed
 
 # Test Report
 
+## 2026-08-05 TASK-249 组织简档代理热修
+
+- `frontend-build`：`npm --prefix frontend run build` 通过（TypeScript + Vite）；仅有既有 bundle-size 提示。
+- `production-nginx`：同步两份版本化 Nginx 配置后，`docker exec cici-frontend nginx -t` 通过并完成热重载。服务器回环、显式公网 IP/SNI 与 DNS 域名的匿名 `GET /admin/company/profile` 均返回 `401 application/json;charset=ISO-8859-1`，不再返回 SPA `200 text/html`；前端/后端容器 healthy，backend health=`UP`。
+- `scope`：未构建镜像、未重启后端或数据库、未触碰 Keycloak、身份或业务数据。受权组织管理员页面数据由既有接口返回，未伪造登录会话。
+
+- 状态：`passed`
+
 ## 2026-08-05 TASK-268 Semattice 本体第一阶段本地集成
 
 - `backend-focused`：`mvn -q -Dmaven.repo.local=.m2 -Dtest=SematticeOntologyLifecycleServiceTest,SematticeOntologyAdapterTest,SematticeOntologyContractCompilerTest,SematticeOntologyHttpGatewayTest test` 通过。覆盖当前已发布元数据发现、受限单对象记录查询、最小公开连接器配置、稳定对象/字段/关系编译、服务端 OACT 与幂等调用边界，以及首次发布幂等、独立审批激活、AgentCiCi 版本同步与远端漂移阻断。

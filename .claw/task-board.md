@@ -190,13 +190,13 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-249 - 组织简档接口反向代理修复
 
-- status: `in_progress`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-142-admin-company-profile-proxy-route.md`
 - task_status_path: `.claw/tasks/TASK-249.md`
 - assignment_path: `.claw/assignments/TASK-249.yaml`
-- next_action: 已复核生产仍返回 SPA HTML；补齐精确代理后热重载 Nginx，并验证请求由后端鉴权处理。
+- next_action: 已提交并上线配置热修；生产请求已由后端返回 401 JSON，受权会话刷新即可回读简档。
 
 ### TASK-248 - 平台注册用户目录展示已加入组织
 

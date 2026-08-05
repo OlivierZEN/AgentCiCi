@@ -1,7 +1,7 @@
 task_id: TASK-249
 assignee: MANAGER-001
 assigned_by: MANAGER-001
-status: active
+status: completed
 assigned_at: 2026-07-24T14:31:37Z
 expires_at: none
 spec_path: docs/specs/FEAT-142-admin-company-profile-proxy-route.md

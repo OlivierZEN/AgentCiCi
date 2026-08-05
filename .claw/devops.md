@@ -8,6 +8,12 @@ status: active
 
 # DevOps
 
+## 2026-08-05 TASK-249 / 组织简档代理热修
+
+- 生产 `x.agentcici.com/admin/company/profile` 曾落入 SPA 并返回 `200 text/html`；根因是 Nginx API 正则仅保留了旧 `admin/organization/(profile|export-jobs)`，没有当前 `admin/company/profile`。
+- 已同步版本化 `nginx.cici.conf` 与 `nginx.cici.ssl.conf`，补齐精确 `admin/company/profile` 代理，同时保留生产已有 `admin/users` 与 `admin/service-principals` 白名单，避免覆盖配置时回归其他管理接口。
+- 配置备份位于 `/opt/cici/backups/20260805-154049-before-task249-company-profile-proxy`。容器内 `nginx -t` 成功后仅热重载 Nginx；无镜像构建、无应用容器重建、无后端/数据库重启。回环、公网 IP/SNI 和 DNS 请求均为后端 `401 application/json`，frontend/backend healthy、backend health=`UP`。
+
 ## 2026-08-05 TASK-267 / 机器主体管理页面发布
 
 - 已发布 AgentCiCi `2.8.50 / 82e1c249e622`。ACR backend/frontend index digest 为 `sha256:affd6eb08e2b65c0a5d33c2ca59dbe29e72208444b618714eab31a1e478dd20c` / `sha256:59e52f78a72dc11197ed9aa976f0dd21e319dabe2bb393d6ae189b871b3e35c0`。
