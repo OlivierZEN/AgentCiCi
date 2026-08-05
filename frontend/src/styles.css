@@ -19445,6 +19445,44 @@ td.skills-data-table__actions > * {
   font-weight: 400;
 }
 
+.service-principal-scope-editor {
+  display: grid;
+  max-height: 290px;
+  gap: 7px;
+  margin-top: 15px;
+  padding: 12px;
+  overflow: auto;
+  border: 1px solid #d7c49d;
+  border-radius: 7px;
+  background: #fbf6ea;
+}
+
+.service-principal-scope-editor legend {
+  padding: 0 5px;
+  color: #665238;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.service-principal-scope-editor label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #4c3b28;
+  cursor: pointer;
+}
+
+.service-principal-scope-editor input {
+  width: 15px;
+  height: 15px;
+  accent-color: #9f7126;
+}
+
+.service-principal-scope-editor code {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 11px;
+}
+
 .service-principal-dialog__actions {
   justify-content: flex-end;
   margin-top: 20px;

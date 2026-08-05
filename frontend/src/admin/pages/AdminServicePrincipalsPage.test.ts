@@ -9,8 +9,19 @@ describe("machine principal presentation", () => {
     expect(servicePrincipalPresentation.canRotate("SUSPENDED")).toBe(false);
     expect(servicePrincipalPresentation.canRenameClientId("SUSPENDED")).toBe(true);
     expect(servicePrincipalPresentation.canRenameClientId("REVOKED")).toBe(false);
+    expect(servicePrincipalPresentation.canManageScopes("ACTIVE")).toBe(true);
+    expect(servicePrincipalPresentation.canManageScopes("REVOKED")).toBe(false);
     expect(servicePrincipalPresentation.isValidClientId("dev-autopilot-developer-wukong")).toBe(true);
     expect(servicePrincipalPresentation.isValidClientId("DEV Autopilot")).toBe(false);
+  });
+
+  it("normalizes scope sets before comparing a replacement", () => {
+    expect(servicePrincipalPresentation.normalizeScopes(["runtime.record.read", " runtime.record.delete ", "runtime.record.read"]))
+      .toEqual(["runtime.record.delete", "runtime.record.read"]);
+    expect(servicePrincipalPresentation.sameScopes(
+      ["runtime.record.read", "runtime.record.delete"],
+      ["runtime.record.delete", "runtime.record.read"],
+    )).toBe(true);
   });
 
   it("uses the governed human owner display name when present", () => {

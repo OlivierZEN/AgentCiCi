@@ -14,6 +14,7 @@ type ServicePrincipal = {
   clientId: string;
   tokenAudience?: string;
   scopes?: string[];
+  availableScopes?: string[];
   lastRotatedAt?: string;
   createdAt?: string;
   ownerPublicId?: string;
@@ -58,6 +59,18 @@ export const servicePrincipalPresentation = {
   canRenameClientId(status: LifecycleStatus) {
     return status !== "REVOKED";
   },
+  canManageScopes(status: LifecycleStatus) {
+    return status !== "REVOKED";
+  },
+  normalizeScopes(scopes?: string[]) {
+    return [...new Set((scopes ?? []).map((scope) => scope.trim()).filter(Boolean))].sort();
+  },
+  sameScopes(left?: string[], right?: string[]) {
+    const normalizedLeft = this.normalizeScopes(left);
+    const normalizedRight = this.normalizeScopes(right);
+    return normalizedLeft.length === normalizedRight.length
+      && normalizedLeft.every((scope, index) => scope === normalizedRight[index]);
+  },
   isValidClientId(value: string) {
     return /^[a-z0-9][a-z0-9-]{2,127}$/.test(value);
   },
@@ -88,8 +101,9 @@ export default function AdminServicePrincipalsPage() {
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<"rename-client-id" | "rotate" | "suspend" | "activate" | null>(null);
+  const [confirmAction, setConfirmAction] = useState<"rename-client-id" | "scopes" | "rotate" | "suspend" | "activate" | null>(null);
   const [replacementClientId, setReplacementClientId] = useState("");
+  const [replacementScopes, setReplacementScopes] = useState<string[]>([]);
   const [oneTimeSecret, setOneTimeSecret] = useState<RotateSecretResult | null>(null);
 
   const selected = useMemo(
@@ -125,6 +139,7 @@ export default function AdminServicePrincipalsPage() {
     setOneTimeSecret(null);
     setConfirmAction(null);
     setReplacementClientId("");
+    setReplacementScopes([]);
   }, [selected?.principalId]);
 
   const updateLifecycle = async (action: "suspend" | "activate") => {
@@ -200,6 +215,39 @@ export default function AdminServicePrincipalsPage() {
     }
   };
 
+  const updateScopes = async () => {
+    if (!selected) return;
+    const scopes = servicePrincipalPresentation.normalizeScopes(replacementScopes);
+    if (scopes.length === 0 || servicePrincipalPresentation.sameScopes(scopes, selected.scopes)) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(adminApi.servicePrincipals(`/${encodeURIComponent(selected.principalId)}/scopes`), {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ scopes }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        setNotice(json.message ?? "授权范围更新失败");
+        return;
+      }
+      setNotice(`“${selected.displayName}”的授权范围已更新；后续新签发令牌将使用新范围。`);
+      await load({ quiet: true });
+    } catch {
+      setNotice("授权范围更新失败，请稍后重试");
+    } finally {
+      setSubmitting(false);
+      setConfirmAction(null);
+      setReplacementScopes([]);
+    }
+  };
+
+  const openScopeEditor = () => {
+    if (!selected) return;
+    setReplacementScopes(servicePrincipalPresentation.normalizeScopes(selected.scopes));
+    setConfirmAction("scopes");
+  };
+
   const copySecret = async () => {
     if (!oneTimeSecret) return;
     try {
@@ -212,6 +260,7 @@ export default function AdminServicePrincipalsPage() {
 
   const runConfirmedAction = () => {
     if (confirmAction === "rename-client-id") void renameClientId();
+    if (confirmAction === "scopes") void updateScopes();
     if (confirmAction === "rotate") void rotateSecret();
     if (confirmAction === "suspend") void updateLifecycle("suspend");
     if (confirmAction === "activate") void updateLifecycle("activate");
@@ -284,6 +333,11 @@ export default function AdminServicePrincipalsPage() {
                     变更 Client ID
                   </button>
                 )}
+                {servicePrincipalPresentation.canManageScopes(selected.lifecycleStatus) && (
+                  <button type="button" className="secondary" onClick={openScopeEditor} disabled={submitting}>
+                    调整授权范围
+                  </button>
+                )}
                 {selected.lifecycleStatus === "ACTIVE" && (
                   <button type="button" className="secondary" onClick={() => setConfirmAction("suspend")} disabled={submitting}>
                     暂停主体
@@ -354,11 +408,14 @@ export default function AdminServicePrincipalsPage() {
             <h2 id="service-principal-dialog-title">
               {confirmAction === "rename-client-id"
                 ? "确认变更 Client ID？"
+                : confirmAction === "scopes" ? "确认调整授权范围？"
                 : confirmAction === "rotate" ? "确认轮换 Client Secret？" : confirmAction === "suspend" ? "确认暂停机器主体？" : "确认恢复机器主体？"}
             </h2>
             <p>
               {confirmAction === "rename-client-id"
                 ? `变更后，旧 ID “${selected.clientId}”将立即失效。现有 Client Secret 保持不变；请同步更新所有调用方的配置。`
+                : confirmAction === "scopes"
+                  ? `提交后，“${selected.displayName}”后续新签发令牌将使用下列完整授权范围；Client ID 和 Client Secret 均不改变。`
                 : confirmAction === "rotate"
                 ? `“${selected.displayName}”的旧 Client Secret 将立即失效。新密钥仅会在下一步显示一次。`
                 : confirmAction === "suspend"
@@ -379,9 +436,28 @@ export default function AdminServicePrincipalsPage() {
                 <small>仅允许小写字母、数字和连字符，长度 3–128 位。</small>
               </label>
             )}
+            {confirmAction === "scopes" && (
+              <fieldset className="service-principal-scope-editor">
+                <legend>完整目标范围</legend>
+                {servicePrincipalPresentation.normalizeScopes(selected.availableScopes).map((scope) => (
+                  <label key={scope}>
+                    <input
+                      type="checkbox"
+                      checked={replacementScopes.includes(scope)}
+                      onChange={() => setReplacementScopes((current) => current.includes(scope)
+                        ? current.filter((item) => item !== scope)
+                        : [...current, scope])}
+                    />
+                    <code>{scope}</code>
+                  </label>
+                ))}
+              </fieldset>
+            )}
             <div className="service-principal-dialog__actions">
               <button type="button" className="secondary" onClick={() => setConfirmAction(null)} disabled={submitting}>取消</button>
-              <button type="button" className="service-principal-button--primary" onClick={runConfirmedAction} disabled={submitting || (confirmAction === "rename-client-id" && !servicePrincipalPresentation.isValidClientId(replacementClientId))}>
+              <button type="button" className="service-principal-button--primary" onClick={runConfirmedAction} disabled={submitting
+                || (confirmAction === "rename-client-id" && !servicePrincipalPresentation.isValidClientId(replacementClientId))
+                || (confirmAction === "scopes" && (replacementScopes.length === 0 || servicePrincipalPresentation.sameScopes(replacementScopes, selected.scopes)))}>
                 {submitting ? "处理中…" : "确认执行"}
               </button>
             </div>

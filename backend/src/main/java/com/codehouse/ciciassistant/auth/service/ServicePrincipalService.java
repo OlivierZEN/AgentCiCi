@@ -33,13 +33,17 @@ public class ServicePrincipalService {
                                    UserRepository userRepository,
                                    KeycloakIdentityProvisioningService keycloak,
                                    PlatformAuditService audit,
-                                   @Value("${app.auth.official-access.semattice-scopes:}") List<String> sematticeAllowedScopes) {
+                                   @Value("${app.auth.official-access.semattice-scopes:}") List<String> sematticeHumanScopes,
+                                   @Value("${app.auth.official-access.semattice-service-scopes:}") List<String> sematticeServiceScopes) {
         this.jdbcTemplate = jdbcTemplate;
         this.userRepository = userRepository;
         this.keycloak = keycloak;
         this.audit = audit;
-        this.sematticeAllowedScopes = sematticeAllowedScopes == null ? List.of() : sematticeAllowedScopes.stream()
+        List<String> humanScopes = sematticeHumanScopes == null ? List.of() : sematticeHumanScopes.stream()
                 .filter(scope -> scope != null && !scope.isBlank()).map(String::trim).distinct().toList();
+        List<String> serviceScopes = sematticeServiceScopes == null ? List.of() : sematticeServiceScopes.stream()
+                .filter(scope -> scope != null && !scope.isBlank()).map(String::trim).distinct().toList();
+        this.sematticeAllowedScopes = serviceScopes.isEmpty() ? humanScopes : serviceScopes;
     }
 
     @Transactional
@@ -139,6 +143,7 @@ public class ServicePrincipalService {
             item.put("clientId", rs.getString("client_id"));
             item.put("tokenAudience", rs.getString("token_audience"));
             item.put("scopes", scopes(principalId));
+            item.put("availableScopes", sematticeAllowedScopes);
             item.put("lastRotatedAt", toInstant(rs.getTimestamp("last_rotated_at")));
             item.put("createdAt", toInstant(rs.getTimestamp("created_at")));
             item.put("ownerPrincipalId", rs.getString("owner_principal_id"));
@@ -210,6 +215,30 @@ public class ServicePrincipalService {
             throw persistenceFailure;
         }
         return Map.of("principalId", principalId, "clientId", replacement, "changed", true);
+    }
+
+    @Transactional
+    public Map<String, Object> updateScopes(String companyId, String actorMemberId, String principalId,
+                                            List<String> requestedScopes) {
+        UserEntity actor = requireActiveMember(companyId, actorMemberId, "只有有效的人类成员可以调整机器账户授权范围");
+        GovernedService service = requireGoverned(companyId, principalId);
+        if ("REVOKED".equals(service.lifecycleStatus())) {
+            throw new ForbiddenException("已撤销机器账户不能调整授权范围");
+        }
+        List<String> replacement = requireAllowedScopes(requestedScopes);
+        List<String> previous = scopes(principalId).stream().distinct().sorted().toList();
+        if (previous.equals(replacement)) {
+            return Map.of("principalId", principalId, "scopes", replacement, "changed", false);
+        }
+        Timestamp now = Timestamp.from(Instant.now());
+        jdbcTemplate.update("DELETE FROM service_principal_scope WHERE service_principal_id=?", principalId);
+        replacement.forEach(scope -> jdbcTemplate.update("""
+                INSERT INTO service_principal_scope (service_principal_id, scope_code, created_at)
+                VALUES (?, ?, ?)
+                """, principalId, scope, now));
+        audit(companyId, actor.getAccountId(), "scopes_updated", principalId,
+                "机器账户授权范围已从 [" + String.join(",", previous) + "] 更新为 [" + String.join(",", replacement) + "]");
+        return Map.of("principalId", principalId, "scopes", replacement, "changed", true);
     }
 
     @Transactional
@@ -343,7 +372,7 @@ public class ServicePrincipalService {
 
     private List<String> requireAllowedScopes(List<String> requestedScopes) {
         List<String> scopes = requestedScopes == null ? List.of() : requestedScopes.stream()
-                .filter(scope -> scope != null && !scope.isBlank()).map(String::trim).distinct().toList();
+                .filter(scope -> scope != null && !scope.isBlank()).map(String::trim).distinct().sorted().toList();
         if (scopes.isEmpty()) {
             throw new IllegalArgumentException("机器账户至少需要一个 scope");
         }

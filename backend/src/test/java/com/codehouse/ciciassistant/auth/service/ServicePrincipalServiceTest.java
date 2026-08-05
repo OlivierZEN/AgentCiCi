@@ -35,7 +35,8 @@ class ServicePrincipalServiceTest {
     @BeforeEach
     void setUp() {
         service = new ServicePrincipalService(jdbc, users, keycloak, audit,
-                List.of("identity.principal.sync", "runtime.record.read", "runtime.record.update"));
+                List.of("identity.principal.sync", "runtime.record.read", "runtime.record.update"),
+                List.of("identity.principal.sync", "runtime.record.read", "runtime.record.update", "runtime.record.delete"));
     }
 
     @Test
@@ -91,6 +92,40 @@ class ServicePrincipalServiceTest {
         verify(audit).log(eq("company-a"), eq("account-director"), eq("ORG_ADMIN"),
                 eq("service_principal.client_id_renamed"), eq("service_principal"),
                 eq("principal-developer"), contains("dev-autopilot-developer-wukong"));
+    }
+
+    @Test
+    void replacesScopesWithinTheServiceAllowlistAndAuditsTheDelta() throws Exception {
+        UserEntity actor = activeMember("account-director");
+        when(users.findByIdAndCompany_Id("member-director", "company-a")).thenReturn(Optional.of(actor));
+        stubGovernedService("principal-manager", "company-a", "dev-autopilot-product-manager", "ACTIVE");
+        when(jdbc.queryForList(anyString(), eq(String.class), eq("principal-manager")))
+                .thenReturn(List.of("identity.principal.sync", "runtime.record.read", "runtime.record.update"));
+
+        Map<String, Object> result = service.updateScopes("company-a", "member-director", "principal-manager",
+                List.of("runtime.record.update", "runtime.record.delete", "runtime.record.read", "identity.principal.sync"));
+
+        assertThat(result).containsEntry("changed", true);
+        assertThat((List<String>) result.get("scopes")).containsExactly(
+                "identity.principal.sync", "runtime.record.delete", "runtime.record.read", "runtime.record.update");
+        verify(jdbc).update("DELETE FROM service_principal_scope WHERE service_principal_id=?", "principal-manager");
+        verify(jdbc).update(contains("INSERT INTO service_principal_scope"),
+                eq("principal-manager"), eq("runtime.record.delete"), any());
+        verify(audit).log(eq("company-a"), eq("account-director"), eq("ORG_ADMIN"),
+                eq("service_principal.scopes_updated"), eq("service_principal"),
+                eq("principal-manager"), contains("runtime.record.delete"));
+    }
+
+    @Test
+    void rejectsScopeOutsideTheServiceAllowlistWithoutChangingPersistence() throws Exception {
+        UserEntity actor = activeMember("account-director");
+        when(users.findByIdAndCompany_Id("member-director", "company-a")).thenReturn(Optional.of(actor));
+        stubGovernedService("principal-manager", "company-a", "dev-autopilot-product-manager", "ACTIVE");
+
+        assertThatThrownBy(() -> service.updateScopes("company-a", "member-director", "principal-manager",
+                List.of("runtime.record.read", "authorization.manage")))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessageContaining("未授权");
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})

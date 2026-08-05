@@ -56,6 +56,7 @@ class OfficialAccessTokenServiceTest {
                 "oact-test-1",
                 Base64.getEncoder().encodeToString(keys.getPrivate().getEncoded()),
                 List.of("metadata.version.read", "record.read"),
+                List.of("metadata.version.read", "record.read", "runtime.record.delete"),
                 600);
 
         OfficialAccessTokenService.IssuedToken issued = service.issueForSemattice(member);
@@ -107,6 +108,7 @@ class OfficialAccessTokenServiceTest {
                 "oact-test-1",
                 Base64.getEncoder().encodeToString(keys.getPrivate().getEncoded()),
                 List.of("metadata.version.read"),
+                List.of("metadata.version.read"),
                 600);
 
         assertThatThrownBy(() -> service.issueForSemattice(member))
@@ -126,6 +128,7 @@ class OfficialAccessTokenServiceTest {
                 "oact-test-1",
                 Base64.getEncoder().encodeToString(keys.getPrivate().getEncoded()),
                 List.of("metadata.version.read", "record.read"),
+                List.of("metadata.version.read", "record.read", "runtime.record.delete"),
                 600);
 
         String principalId = "11111111-1111-4111-8111-111111111111";
@@ -147,6 +150,11 @@ class OfficialAccessTokenServiceTest {
         assertThat(claims.get("delegated_by_principal_id", String.class)).isEqualTo(ownerPrincipalId);
         assertThat(claims.get("delegation_policy", String.class)).isEqualTo("PRIMARY_OWNER");
         assertThat(claims.get("scope", String.class)).isEqualTo("record.read");
+        OfficialAccessTokenService.IssuedToken deleteToken = service.issueForSematticeService(
+                principalId, ownerPrincipalId, "agentcici-data-sync",
+                "33333333-3333-4333-8333-333333333333", "orgaaaaaaaaaaaaaaaaa",
+                List.of("runtime.record.delete"));
+        assertThat(deleteToken.scopes()).containsExactly("runtime.record.delete");
         assertThatThrownBy(() -> service.issueForSematticeService(
                 principalId, ownerPrincipalId, "agentcici-data-sync", "tenant", "company", List.of("audit.read")))
                 .isInstanceOf(ForbiddenException.class)

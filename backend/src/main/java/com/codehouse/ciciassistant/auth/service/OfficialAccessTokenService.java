@@ -44,6 +44,7 @@ public class OfficialAccessTokenService {
     private final String keyId;
     private final PrivateKey privateKey;
     private final List<String> sematticeScopes;
+    private final List<String> sematticeServiceScopes;
     private final long ttlSeconds;
 
     public OfficialAccessTokenService(AccountExternalIdentityRepository identityRepository,
@@ -54,6 +55,7 @@ public class OfficialAccessTokenService {
                                       @Value("${app.auth.official-access.key-id:}") String keyId,
                                       @Value("${app.auth.official-access.private-key-pkcs8-base64:}") String privateKeyBase64,
                                       @Value("${app.auth.official-access.semattice-scopes:}") List<String> sematticeScopes,
+                                      @Value("${app.auth.official-access.semattice-service-scopes:}") List<String> sematticeServiceScopes,
                                       @Value("${app.auth.official-access.ttl-seconds:600}") long ttlSeconds) {
         this.identityRepository = identityRepository;
         this.bindingRepository = bindingRepository;
@@ -63,6 +65,8 @@ public class OfficialAccessTokenService {
         this.keyId = trim(keyId);
         this.privateKey = enabled ? parseRsaPrivateKey(privateKeyBase64) : null;
         this.sematticeScopes = normalizeScopes(sematticeScopes);
+        List<String> configuredServiceScopes = normalizeScopes(sematticeServiceScopes);
+        this.sematticeServiceScopes = configuredServiceScopes.isEmpty() ? this.sematticeScopes : configuredServiceScopes;
         if (ttlSeconds < 60 || ttlSeconds > 600) {
             throw new IllegalArgumentException("Official access token TTL must be between 60 and 600 seconds");
         }
@@ -113,7 +117,7 @@ public class OfficialAccessTokenService {
             throw new ForbiddenException("机器账户缺少数据平台租户绑定");
         }
         List<String> issuedScopes = normalizeScopes(requestedScopes);
-        if (issuedScopes.isEmpty() || issuedScopes.stream().anyMatch(scope -> !sematticeScopes.contains(scope))) {
+        if (issuedScopes.isEmpty() || issuedScopes.stream().anyMatch(scope -> !sematticeServiceScopes.contains(scope))) {
             throw new ForbiddenException("机器账户 scope 未获官方应用授权");
         }
 

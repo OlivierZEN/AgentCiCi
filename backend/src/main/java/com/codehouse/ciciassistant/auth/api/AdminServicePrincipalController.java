@@ -11,6 +11,7 @@ import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -42,6 +43,12 @@ public class AdminServicePrincipalController {
     @PostMapping("/{principalId}/rotate-secret")
     public ApiResponse<Map<String, Object>> rotateSecret(@PathVariable String principalId) {
         return ApiResponse.ok(service.rotateSecret(companyId(), actorMemberId(), principalId));
+    }
+
+    @PutMapping("/{principalId}/scopes")
+    public ApiResponse<Map<String, Object>> updateScopes(@PathVariable String principalId,
+                                                          @Valid @RequestBody UpdateScopesRequest request) {
+        return ApiResponse.ok(service.updateScopes(companyId(), actorMemberId(), principalId, request.scopes()));
     }
 
     @PostMapping("/{principalId}/rename-client-id")
@@ -91,5 +98,8 @@ public class AdminServicePrincipalController {
     }
 
     public record RenameClientIdRequest(@NotBlank String clientId) {
+    }
+
+    public record UpdateScopesRequest(List<@NotBlank String> scopes) {
     }
 }
