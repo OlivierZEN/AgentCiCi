@@ -13,11 +13,13 @@ allowed_write_roots:
   - backend/src/main/java/com/codehouse/ciciassistant/auth/**
   - backend/src/main/java/com/codehouse/ciciassistant/company/**
   - backend/src/main/java/com/codehouse/ciciassistant/integration/**
+  - backend/src/main/java/com/codehouse/ciciassistant/tenant/**
   - backend/src/main/resources/db/migration/**
   - backend/src/main/resources/**
   - backend/src/test/java/com/codehouse/ciciassistant/auth/**
   - backend/src/test/java/com/codehouse/ciciassistant/company/**
   - backend/src/test/java/com/codehouse/ciciassistant/integration/**
+  - backend/src/test/java/com/codehouse/ciciassistant/tenant/**
   - frontend/src/**
   - deploy/docker-compose.acr.yml
   - deploy/nginx.cici.conf
@@ -35,9 +37,11 @@ scope_files:
   - backend/src/main/java/com/codehouse/ciciassistant/auth/api/AuthController.java
   - backend/src/main/java/com/codehouse/ciciassistant/auth/service/KeycloakOidcLoginService.java
   - backend/src/main/java/com/codehouse/ciciassistant/auth/service/KeycloakIdentityProvisioningService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/tenant/TenantContextFilter.java
   - backend/src/test/java/com/codehouse/ciciassistant/auth/KeycloakOidcLoginServiceTest.java
   - backend/src/test/java/com/codehouse/ciciassistant/auth/KeycloakIdentityProvisioningServiceTest.java
   - backend/src/test/java/com/codehouse/ciciassistant/auth/AuthControllerTest.java
+  - backend/src/test/java/com/codehouse/ciciassistant/tenant/TenantContextFilterTest.java
   - frontend/src/assistant/MyEmailAccountsModal.tsx
   - frontend/src/assistant/MyEmailAccountsModal.test.ts
   - .claw/assignments/TASK-252.yaml

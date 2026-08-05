@@ -43,6 +43,18 @@ class TenantContextFilterTest {
     }
 
     @Test
+    void shouldLetOidcPasswordActionStartWithoutAnExistingApplicationSession() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/auth/oidc/password");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(response.getStatus()).isNotEqualTo(401);
+        assertThat(chain.getRequest()).isSameAs(request);
+    }
+
+    @Test
     void shouldLetSematticeInternalProvisioningReachItsHmacValidator() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/internal/semattice/provisioning/reservations");
         MockHttpServletResponse response = new MockHttpServletResponse();
