@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-159
 title: AgentCiCi 机器主体管理界面
-status: verified
+status: in_implementation
 owner_role: fullstack-agent
 task_ids: TASK-267
 related_decisions: "AgentCiCi 是全局 Principal、Keycloak client 与密钥轮换权威；Semattice 只保存租户投影"
 related_issues: none
-updated_at: 2026-08-05T05:22:30Z
+updated_at: 2026-08-05T07:06:00Z
 updated_by: MANAGER-001
 ---
 
@@ -34,6 +34,7 @@ updated_by: MANAGER-001
 
 - 页面继承 `AdminGuard` 的 ORG_ADMIN 门禁，浏览器只携带当前组织 Admin Bearer Token。
 - 所有动作调用既有 AgentCiCi 后端接口；不直接访问 Keycloak、Semattice 或 DEV Autopilot。
+- 浏览器页面路由与 API 路由必须分离：`/admin/service-principals` 只用于 React SPA 页面，浏览器 API 使用 `/api/admin/service-principals`，由 Nginx 内部改写至既有受保护后端接口。`/admin/users` 与 `/api/admin/users` 同样遵循该边界，避免刷新页面时将后端 `401 Authentication required` JSON 渲染为整页文档。
 - 轮换确认文案必须说明“旧密钥立即失效”和“新值仅显示一次”。
 - 设计沿用组织控制台的紧凑、暖白/鎏金数据管理风格，不新增独立主题或演示数据。
 
@@ -44,3 +45,4 @@ updated_by: MANAGER-001
 - 暂停/恢复成功后刷新真实状态；暂停主体的轮换操作不可用。
 - 轮换行为必须先确认，成功 secret 只存在于一次性安全面板；关闭后不可从页面恢复。
 - 前端定向测试、现有后端回归、前端构建、生产发布与匿名访问边界检查通过；已发布 `2.8.50`，受权组织管理员可进行实际会话验收。
+- 对 `/admin/service-principals` 或 `/admin/users` 的硬刷新必须返回 SPA HTML；无有效会话由 `AdminGuard` 显示权限校验并跳转统一登录，不得显示任何原始后端 JSON。

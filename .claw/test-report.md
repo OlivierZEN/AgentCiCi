@@ -10,6 +10,12 @@ last_run_status: passed
 
 # Test Report
 
+## 2026-08-05 TASK-267 管理 SPA 路由与接口路径冲突修复
+
+- `frontend-focused`：`npm --prefix frontend test -- --run src/admin/adminApi.test.ts src/admin/pages/AdminServicePrincipalsPage.test.ts` 通过（2 files / 3 tests）；断言用户与机器主体浏览器 API 都使用 `/api/admin/...`，不与 `/admin/...` SPA 路由冲突。
+- `frontend-build`：`npm --prefix frontend run build` 通过（TypeScript + Vite）；仅保留既有 bundle-size 提示。
+- `nginx-route-smoke`：Nginx 1.27 配置语法通过。用生产构建前端工件挂载的临时 Nginx 对 `GET /admin/service-principals` 返回 `200 text/html` 且包含 SPA `#root`，不再转发为后端认证 JSON。该临时容器已停止；生产发布和真实受权硬刷新验收待执行。
+
 - 状态：`passed`
 
 ## TASK-252 - Keycloak 统一密码与邀请落地

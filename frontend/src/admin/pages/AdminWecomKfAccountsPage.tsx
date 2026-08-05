@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { safeFetchJson } from "../../utils/http";
+import { adminApi } from "../adminApi";
 import { useAdminToken } from "../useAdminToken";
 
 type WecomKfAccount = {
@@ -166,7 +167,7 @@ export default function AdminWecomKfAccountsPage() {
     try {
       const [agentResponse, userResponse] = await Promise.all([
         fetch("/agents", { headers: authHeaders }),
-        fetch("/admin/users", { headers: authHeaders }),
+        fetch(adminApi.users(), { headers: authHeaders }),
       ]);
       const [agentBody, userBody] = await Promise.all([
         safeFetchJson<AgentOption[]>(agentResponse),

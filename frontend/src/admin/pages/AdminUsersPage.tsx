@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAdminToken } from "../useAdminToken";
+import { adminApi } from "../adminApi";
 import { processAvatarFile } from "../../shared/avatar";
 import { LS_ADMIN_TOKEN } from "../../constants";
 
@@ -62,7 +63,7 @@ export default function AdminUsersPage() {
 
   const load = async () => {
     setNotice("");
-    const res = await fetch("/admin/users", { headers: { Authorization: `Bearer ${token}` } });
+    const res = await fetch(adminApi.users(), { headers: { Authorization: `Bearer ${token}` } });
     const json = await res.json();
     if (!res.ok || !json.success) {
       setNotice(json.message ?? "加载失败");
@@ -83,7 +84,7 @@ export default function AdminUsersPage() {
     const reload = options?.reload ?? true;
     const roleCode = pending[userId];
     if (!roleCode) return;
-    const res = await fetch(`/admin/users/${encodeURIComponent(userId)}/role`, {
+    const res = await fetch(adminApi.users(`/${encodeURIComponent(userId)}/role`), {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ roleCode }),
@@ -105,7 +106,7 @@ export default function AdminUsersPage() {
   };
 
   const saveProfile = async (userId: string) => {
-    const res = await fetch(`/admin/users/${encodeURIComponent(userId)}/profile`, {
+    const res = await fetch(adminApi.users(`/${encodeURIComponent(userId)}/profile`), {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ ...profileForm, avatarBase64: avatarPreview }),
@@ -136,7 +137,7 @@ export default function AdminUsersPage() {
     }
     setInviteSubmitting(true);
     try {
-      const res = await fetch("/admin/users/invitations", {
+      const res = await fetch(adminApi.users("/invitations"), {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(inviteForm),
@@ -159,7 +160,7 @@ export default function AdminUsersPage() {
   };
 
   const setMemberStatus = async (userId: string, action: "suspend" | "restore") => {
-    const res = await fetch(`/admin/users/${encodeURIComponent(userId)}/${action}`, {
+    const res = await fetch(adminApi.users(`/${encodeURIComponent(userId)}/${action}`), {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -173,7 +174,7 @@ export default function AdminUsersPage() {
   };
 
   const transferOwner = async (userId: string) => {
-    const res = await fetch(`/admin/users/${encodeURIComponent(userId)}/transfer-owner`, {
+    const res = await fetch(adminApi.users(`/${encodeURIComponent(userId)}/transfer-owner`), {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -189,7 +190,7 @@ export default function AdminUsersPage() {
   const resendActivationEmail = async (userId: string) => {
     setResendActivationSubmitting(true);
     try {
-      const res = await fetch(`/admin/users/${encodeURIComponent(userId)}/activation-email`, {
+      const res = await fetch(adminApi.users(`/${encodeURIComponent(userId)}/activation-email`), {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });

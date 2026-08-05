@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { safeFetchJson } from "../utils/http";
+import { adminApi } from "../admin/adminApi";
 
 type AgentAccessManagementDialogProps = {
   open: boolean;
@@ -107,7 +108,7 @@ export default function AgentAccessManagementDialog({
           fetch(`/agents/${encodeURIComponent(agentId)}/access-grants`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          fetch("/admin/users", {
+          fetch(adminApi.users(), {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);

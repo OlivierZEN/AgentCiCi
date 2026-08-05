@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { adminApi } from "../admin/adminApi";
 
 type AgentOpenApiKeysDialogProps = {
   open: boolean;
@@ -206,7 +207,7 @@ export default function AgentOpenApiKeysDialog({
       const [keyRows, callRows, userRows] = await Promise.all([
         requestJson<ApiKeyRow[]>(`/agents/${encodeURIComponent(agentId)}/api-keys`),
         requestJson<ApiCallRow[]>(`/agents/${encodeURIComponent(agentId)}/api-calls`),
-        requestJson<UserRow[]>("/admin/users"),
+        requestJson<UserRow[]>(adminApi.users()),
       ]);
       setKeys(keyRows ?? []);
       setCalls(callRows ?? []);

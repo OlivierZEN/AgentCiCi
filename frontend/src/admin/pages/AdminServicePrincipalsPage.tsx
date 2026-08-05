@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAdminToken } from "../useAdminToken";
+import { adminApi } from "../adminApi";
 
 type LifecycleStatus = "ACTIVE" | "SUSPENDED" | "REVOKED" | string;
 
@@ -93,7 +94,7 @@ export default function AdminServicePrincipalsPage() {
     if (!options?.quiet) setLoading(true);
     setNotice("");
     try {
-      const res = await fetch("/admin/service-principals", { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(adminApi.servicePrincipals(), { headers: { Authorization: `Bearer ${token}` } });
       const json = await res.json();
       if (!res.ok || !json.success) {
         setNotice(json.message ?? "机器主体加载失败");
@@ -122,7 +123,7 @@ export default function AdminServicePrincipalsPage() {
     if (!selected) return;
     setSubmitting(true);
     try {
-      const res = await fetch(`/admin/service-principals/${encodeURIComponent(selected.principalId)}/${action}`, {
+      const res = await fetch(adminApi.servicePrincipals(`/${encodeURIComponent(selected.principalId)}/${action}`), {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -145,7 +146,7 @@ export default function AdminServicePrincipalsPage() {
     if (!selected) return;
     setSubmitting(true);
     try {
-      const res = await fetch(`/admin/service-principals/${encodeURIComponent(selected.principalId)}/rotate-secret`, {
+      const res = await fetch(adminApi.servicePrincipals(`/${encodeURIComponent(selected.principalId)}/rotate-secret`), {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });

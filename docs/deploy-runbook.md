@@ -50,7 +50,7 @@ Images:
 - `op-registry.cloudcc.cn/cloudcc-ai-native/cici-rabbitmq:latest`
 - `op-registry.cloudcc.cn/cloudcc-ai-native/cici-qdrant:latest`
 
-The compose file mounts `deploy/nginx.cici.conf` into the frontend container so browser-relative API calls such as `/auth`, `/ai`, `/kb`, `/agents`, `/skills`, `/me`, `/admin/users`, `/admin/agents`, and `/api/platform` are proxied to the backend service.
+The compose file mounts `deploy/nginx.cici.conf` into the frontend container so browser-relative API calls such as `/auth`, `/ai`, `/kb`, `/agents`, `/skills`, `/me`, `/api/admin/users`, `/api/admin/service-principals`, `/admin/agents`, and `/api/platform` are proxied to the backend service. `/admin/...` is reserved for SPA page routes, so a hard refresh remains inside the client authentication guard instead of rendering a backend API response.
 
 Build and push backend/frontend images from the current workspace:
 

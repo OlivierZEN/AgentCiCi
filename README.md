@@ -65,7 +65,7 @@ npm run dev
 - **助手**：http://127.0.0.1:5173/ — 面向员工；仅对话与只读知识库列表（勾选参与 RAG）。登录态保存在 `localStorage` 键 `cici_assistant_token`。拥有目标组织 **OWNER** 或 **ORG_ADMIN** 权限的用户，可在“切换组织”菜单从该组织行的“管理后台”直接进入。
 - **管理后台**：`/admin/...` — 仅 **OWNER** / **ORG_ADMIN** 可访问（知识库维护、模型、工具、观测运维、**用户管理**与 `/admin/evaluation` 组织 AI 质量中心）。不再提供 `/admin/login` 独立表单；它会回到 `/app`。进入后台时 `cici_admin_token` 只作为当前助手会话的临时本地镜像，退出后台仅清除该镜像并回到前台，不退出助手会话。
 - **平台运营端**：http://127.0.0.1:5173/platform/login — 使用平台账号；`/platform/evaluation` 维护平台核心、标准应用和行业评测资产。平台登录态与组织后台隔离。
-- 开发代理除 `/auth`、`/kb`、`/ai` 等外，已包含 `/admin/users`、`/admin/agents`、`/evaluation` 与 `/api/platform`（用户、运行日志、租户评测和平台治理接口）。
+- 开发代理除 `/auth`、`/kb`、`/ai` 等外，已包含 `/api/admin/users`、`/api/admin/service-principals`、`/admin/agents`、`/evaluation` 与 `/api/platform`（用户、机器主体、运行日志、租户评测和平台治理接口）。`/admin/...` 保留给 SPA 页面路由，避免刷新时渲染接口响应。
 
 在某组织下**首次注册**的用户：若手机号在 `app.auth.bootstrap-admin-mobiles`（见 `application-local.yml`）中，则为组织管理员，否则为普通用户。若某手机号已在名单内但库里仍是普通用户，**下次短信登录成功时会自动升为** `ORG_ADMIN`（不会自动降级）。
 
@@ -141,7 +141,7 @@ cp deploy/acr.env.example deploy/acr.env
 - Tools（**ORG_ADMIN**）: `GET/POST/DELETE /tools`
 - Ops（**ORG_ADMIN**）: `/ops/audit/logs`, `/ops/metrics/cost`
 - Admin 智能体运行观测（**ORG_ADMIN**）: `GET /admin/agents/run-logs`，`GET /admin/agents/run-logs/{traceId}`
-- Admin 用户管理（**ORG_ADMIN**）: `GET /admin/users`，`PUT /admin/users/{userId}/role`（body 字段 `roleCode` 为 `ORG_ADMIN` 或 `ORG_USER`）
+- Admin 用户管理（**ORG_ADMIN**）: 后端控制器为 `GET /admin/users`、`PUT /admin/users/{userId}/role`（body 字段 `roleCode` 为 `ORG_ADMIN` 或 `ORG_USER`）；浏览器经网关使用 `/api/admin/users`，以保留 `/admin/users` 给管理页路由。
 - 租户 AI 质量（**ORG_ADMIN**）: `/evaluation/overview`、`/evaluation/suites`、`/evaluation/runs`、`/evaluation/issues`、`/evaluation/cases/from-trace`
 - 平台智能体质量（平台角色）: `/platform/evaluation/overview`、`/platform/evaluation/suites`、`/platform/evaluation/runs`；平台资产写操作仅 `PLATFORM_ADMIN` / `PLATFORM_OPERATOR`
 

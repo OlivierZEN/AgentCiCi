@@ -25,7 +25,13 @@ export default defineConfig(function (_a) {
                 "/embed/v1": { target: backendTarget, changeOrigin: true },
                 "/mcp-servers": { target: backendTarget, changeOrigin: true },
                 "/customer-workbench": { target: backendTarget, changeOrigin: true },
-                "/admin/users": { target: backendTarget, changeOrigin: true },
+                "^/api/admin/(users|service-principals)(/|$)": {
+                    target: backendTarget,
+                    changeOrigin: true,
+                    rewrite: function (path) {
+                        return path.replace(/^\/api/, "");
+                    },
+                },
                 "/admin/agents": { target: backendTarget, changeOrigin: true },
                 "^/admin/ontologies(/|$)": { target: backendTarget, changeOrigin: true },
                 "^/semantic-query(/|$)": { target: backendTarget, changeOrigin: true },

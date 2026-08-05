@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { adminApi } from "../adminApi";
 import { useAdminToken } from "../useAdminToken";
 
 type ApiEnvelope<T> = {
@@ -205,7 +206,7 @@ export default function AdminEmbedAppsPage() {
 
   const loadUsers = async () => {
     try {
-      const list = await requestJson<UserRow[]>("/admin/users", { headers: authHeaders });
+      const list = await requestJson<UserRow[]>(adminApi.users(), { headers: authHeaders });
       setUsers((list ?? []).filter((user) => user.memberStatus !== "SUSPENDED"));
     } catch {
       setUsers([]);
