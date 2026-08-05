@@ -26,7 +26,7 @@ read_next:
 
 - TASK-269：已按用户明确授权完成生产全局账户 `18611892001` 的公共编号更正：`U20267MV3E4N7 → U2026OLVX1230`。预检确认目标手机号唯一、目标编号未占用且唯一/格式/不可变保护正常；PostgreSQL 备份位于 `/opt/cici/backups/20260805-150512-before-task269-user-public-id-correction`。受当前旧值保护的单行事务更新受影响数为 `1`，提交后独立回读确认目标编号全局唯一、旧编号为 `0`、触发器已恢复启用；数据库 healthy、backend health=UP。未修改 Keycloak、密码、MFA、组织成员、Principal 或其他业务数据，也未发布应用。
 
-- TASK-268 / FEAT-160：已完成 AgentCiCi 与 Semattice 业务本体四阶段详细设计。四阶段依次为“Semattice 读通与统一契约”“受控编译、审批与发布闭环”“数据质量、清洗与语义指标”“智能体原生语义运行时”。AgentCiCi 定位为业务设计、AI 提案、审批编排和智能体消费入口；Semattice 定位为已发布运行元数据、业务记录、权限、索引和确定性数据任务事实源。规格已覆盖统一元模型、稳定 ID、版本状态机、数据映射、血缘、画像、清洗、去重、指标、动作、安全、API、持久化、测试和回滚；当前仅交付文档，尚未修改运行代码。
+- TASK-268 / FEAT-160：第一、第二阶段已完成 AgentCiCi 侧本地实现并提交，包含 Semattice 只读适配、稳定绑定、反向导入提案、漂移阻断、确定性编译、影响模拟、独立审批、回填/覆盖校验、激活、候选取消和非破坏性安全回滚；已连接工作区不能绕过运行治理直发本地版本。V105 与真实跨系统闭环尚未在隔离/生产环境执行；破坏性字段退役与 purge 继续失败关闭，第三、第四阶段未开始。
 
 - TASK-252 / FEAT-145：已发布生产 `2.8.52 / 8c9ce75884c5`，修复统一身份接入后的两处密码生命周期缺陷。个人档案不再将密码提交给 AgentCiCi，而是启动 Keycloak 的 `UPDATE_PASSWORD` OIDC 动作，并强制重新认证；OIDC 启用时旧本地密码写接口会拒绝，杜绝“页面成功、实际 Keycloak 密码未变”。人工邀请 Required Actions 邮件落地已改为 `/app`，Keycloak `agentcici-bff` 精确白名单仅保留 `/app` 与 `/auth/oidc/callback`。发布前两次完整备份均非空（最终备份 `/opt/cici/backups/20260805-143617-before-2.8.52-oidc-password-route`）；六容器 healthy、health=UP、Nginx 有效、x HTTPS=200/HTTP=301，线上密码入口实际 302 至 Keycloak 且断言 `UPDATE_PASSWORD`、`prompt=login`、PKCE/state/nonce 与正常 callback。未使用任何用户密码、令牌或邮件链接；真实新成员首次激活由正常管理员邀请完成。
 

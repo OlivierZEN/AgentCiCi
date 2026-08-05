@@ -197,12 +197,31 @@ class OntologyPublishServiceTest {
     }
 
     @Test
-    void exposesOnlyTheExplicitHumanPublishOperation() {
+    void exposesOnlyExplicitHumanPublishAndGovernedRollbackOperations() {
         assertThat(Arrays.stream(OntologyPublishService.class.getDeclaredMethods())
                 .filter(method -> Modifier.isPublic(method.getModifiers()))
                 .filter(method -> !method.isSynthetic())
                 .map(method -> method.getName()))
-                .containsExactly("publish");
+                .containsExactlyInAnyOrder("publish", "rollbackToPrevious");
+    }
+
+    @Test
+    void rollsBackLocalPublishedPointerToExistingPreviousVersion() {
+        OntologyWorkspaceEntity workspace = workspace(41L, 5L, 3);
+        OntologyVersionEntity previous = new OntologyVersionEntity(
+                "org-a", 41L, 2, 4L, "hash-v2", "{}", "{}", "", "{}", "[]", "human-a");
+        when(workspaces.findForUpdateByIdAndCompanyId(41L, "org-a"))
+                .thenReturn(Optional.of(workspace));
+        when(versions.findByWorkspaceIdAndCompanyIdAndVersionNo(41L, "org-a", 2))
+                .thenReturn(Optional.of(previous));
+        when(persistence.saveForCurrentOrg(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        OntologyVersionEntity result = service.rollbackToPrevious("org-a", "human-a", 41L);
+
+        assertThat(result).isSameAs(previous);
+        assertThat(workspace.getPublishedVersion()).isEqualTo(2);
+        assertThat(workspace.getUpdatedBy()).isEqualTo("human-a");
+        verify(persistence).saveForCurrentOrg(workspace);
     }
 
     @Test

@@ -41,6 +41,9 @@ class SematticeOntologyLifecycleServiceTest {
     private static final String OBJECT_ID = "22222222-2222-4222-8222-222222222222";
     private static final String FIELD_ID = "33333333-3333-4333-8333-333333333333";
     private static final String APPROVAL_ID = "44444444-4444-4444-8444-444444444444";
+    private static final String BASE_VERSION_ID = "55555555-5555-4555-8555-555555555555";
+    private static final String CHANGESET_ID = "66666666-6666-4666-8666-666666666666";
+    private static final String ROLLBACK_APPROVAL_ID = "77777777-7777-4777-8777-777777777777";
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final OntologyWorkspaceRepository workspaces = mock(OntologyWorkspaceRepository.class);
@@ -135,6 +138,61 @@ class SematticeOntologyLifecycleServiceTest {
         assertThat(states.findBinding(COMPANY_ID, WORKSPACE_ID)).isEmpty();
     }
 
+    @Test
+    void simulatesCancelsAndIndependentlyRollsBackSafeChangeset() {
+        gateway.currentAvailable = true;
+        gateway.currentVersionId = BASE_VERSION_ID;
+        service.link(COMPANY_ID, USER_ID, WORKSPACE_ID);
+
+        var compiled = service.prepare(COMPANY_ID, USER_ID, WORKSPACE_ID, 3L);
+        assertThat(compiled.operationType()).isEqualTo("CHANGESET");
+        assertThat(compiled.plan()).isNotNull();
+        assertThat(compiled.simulation()).isNotNull();
+
+        var canceled = service.cancel(COMPANY_ID, USER_ID, WORKSPACE_ID, compiled.operationId());
+        assertThat(canceled.status()).isEqualTo("CANCELED");
+        assertThat(service.status(COMPANY_ID, WORKSPACE_ID).syncStatus()).isEqualTo("IN_SYNC");
+
+        InMemoryStateStore rollbackStates = new InMemoryStateStore();
+        FakeGateway rollbackGateway = new FakeGateway(objectMapper);
+        rollbackGateway.currentAvailable = true;
+        rollbackGateway.currentVersionId = BASE_VERSION_ID;
+        SematticeOntologyLifecycleService rollbackService = new SematticeOntologyLifecycleService(
+                workspaces, drafts, publisher, provisioning, rollbackGateway,
+                new SematticeOntologyContractCompiler(objectMapper), rollbackStates,
+                approvals, objectMapper);
+        rollbackService.link(COMPANY_ID, USER_ID, WORKSPACE_ID);
+        var change = rollbackService.prepare(COMPANY_ID, USER_ID, WORKSPACE_ID, 3L);
+        when(approvals.request(
+                COMPANY_ID, USER_ID, "CHANGESET", CHANGESET_ID, "发布业务本体工作区 42，来源修订 3"))
+                .thenReturn(new SematticeMetadataApprovalService.ApprovalView(
+                        APPROVAL_ID, "CHANGESET", CHANGESET_ID, "发布",
+                        USER_ID, null, "PENDING", null, Instant.now(), null));
+        var publishPending = rollbackService.requestApproval(
+                COMPANY_ID, USER_ID, WORKSPACE_ID, change.operationId());
+        var active = rollbackService.activate(
+                COMPANY_ID, USER_ID, WORKSPACE_ID, publishPending.operationId());
+        assertThat(active.status()).isEqualTo("ACTIVE");
+
+        var rollback = rollbackService.prepareRollback(
+                COMPANY_ID, USER_ID, WORKSPACE_ID, active.operationId());
+        assertThat(rollback.operationType()).isEqualTo("ROLLBACK");
+        when(approvals.request(
+                COMPANY_ID, USER_ID, "CHANGESET", CHANGESET_ID, "回滚业务本体工作区 42，来源修订 3"))
+                .thenReturn(new SematticeMetadataApprovalService.ApprovalView(
+                        ROLLBACK_APPROVAL_ID, "CHANGESET", CHANGESET_ID, "回滚",
+                        USER_ID, null, "PENDING", null, Instant.now(), null));
+        var rollbackPending = rollbackService.requestApproval(
+                COMPANY_ID, USER_ID, WORKSPACE_ID, rollback.operationId());
+        var rolledBack = rollbackService.activate(
+                COMPANY_ID, USER_ID, WORKSPACE_ID, rollbackPending.operationId());
+
+        assertThat(rolledBack.status()).isEqualTo("ROLLED_BACK");
+        assertThat(rollbackService.status(COMPANY_ID, WORKSPACE_ID).activeMetadataVersionId())
+                .isEqualTo(BASE_VERSION_ID);
+        verify(publisher).rollbackToPrevious(COMPANY_ID, USER_ID, WORKSPACE_ID);
+    }
+
     private OntologyDocument document() {
         OntologyDocument.Property name = new OntologyDocument.Property(
                 "name", "项目名称", "业务项目名称", OntologyDocument.DataType.TEXT,
@@ -220,6 +278,8 @@ class SematticeOntologyLifecycleServiceTest {
         private final Map<String, Integer> calls = new LinkedHashMap<>();
         private boolean currentAvailable;
         private String currentVersionId = VERSION_ID;
+        private String changesetBaseVersionId;
+        private String changesetState = "validated";
 
         private FakeGateway(ObjectMapper objectMapper) {
             this.objectMapper = objectMapper;
@@ -237,6 +297,29 @@ class SematticeOntologyLifecycleServiceTest {
                 case "metadata.version.create" -> json(Map.of("metadata_version_id", VERSION_ID));
                 case "metadata.object.upsert" -> json(Map.of("object_id", OBJECT_ID));
                 case "metadata.field.upsert" -> json(Map.of("field_id", FIELD_ID));
+                case "metadata.changeset.validate" -> {
+                    changesetBaseVersionId = currentVersionId;
+                    changesetState = "validated";
+                    yield changeset();
+                }
+                case "metadata.changeset.cancel" -> {
+                    changesetState = "canceled";
+                    yield changeset();
+                }
+                case "metadata.changeset.approve" -> {
+                    changesetState = "approved";
+                    yield changeset();
+                }
+                case "metadata.changeset.publish" -> {
+                    changesetState = "active";
+                    currentVersionId = VERSION_ID;
+                    yield changeset();
+                }
+                case "metadata.changeset.rollback" -> {
+                    changesetState = "rolled_back";
+                    currentVersionId = changesetBaseVersionId;
+                    yield changeset();
+                }
                 case "metadata.version.publish" -> {
                     currentAvailable = true;
                     currentVersionId = VERSION_ID;
@@ -253,6 +336,10 @@ class SematticeOntologyLifecycleServiceTest {
                 String capabilityId,
                 Map<String, Object> input) {
             calls.merge(capabilityId, 1, Integer::sum);
+            if ("metadata.changeset.simulate".equals(capabilityId)
+                    || "metadata.changeset.get-status".equals(capabilityId)) {
+                return changeset();
+            }
             if (!"metadata.version.get-current".equals(capabilityId)) {
                 throw new AssertionError("Unexpected read capability " + capabilityId);
             }
@@ -279,6 +366,23 @@ class SematticeOntologyLifecycleServiceTest {
 
         private JsonNode json(Object value) {
             return objectMapper.valueToTree(value);
+        }
+
+        private JsonNode changeset() {
+            return json(Map.of(
+                    "changeset_id", CHANGESET_ID,
+                    "state", changesetState,
+                    "risk_level", "low",
+                    "requires_backfill", false,
+                    "plan", Map.of("changes", List.of(Map.of(
+                            "kind", "field_added",
+                            "api_name", "name",
+                            "eligible_records", 0))),
+                    "simulation", Map.of("objects", List.of(Map.of(
+                            "object_id", OBJECT_ID,
+                            "record_count", 0,
+                            "projected_typed_rows", 0))),
+                    "coverage", Map.of()));
         }
 
         private int callCount(String capabilityId) {

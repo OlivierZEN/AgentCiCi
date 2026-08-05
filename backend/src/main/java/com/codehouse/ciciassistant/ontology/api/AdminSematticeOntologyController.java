@@ -73,16 +73,32 @@ public class AdminSematticeOntologyController {
                 companyId(), userId(), workspaceId, operationId));
     }
 
+    @PostMapping("/operations/{operationId}/cancel")
+    public ApiResponse<OperationView> cancel(
+            @PathVariable Long workspaceId,
+            @PathVariable String operationId) {
+        return ApiResponse.ok(service.cancel(
+                companyId(), userId(), workspaceId, operationId));
+    }
+
+    @PostMapping("/operations/{operationId}/rollback-prepare")
+    public ApiResponse<OperationView> prepareRollback(
+            @PathVariable Long workspaceId,
+            @PathVariable String operationId) {
+        return ApiResponse.ok(service.prepareRollback(
+                companyId(), userId(), workspaceId, operationId));
+    }
+
     @GetMapping("/operations/{operationId}")
     public ApiResponse<OperationView> operation(
             @PathVariable Long workspaceId,
             @PathVariable String operationId) {
-        return ApiResponse.ok(service.operation(companyId(), workspaceId, operationId));
+        return ApiResponse.ok(service.operation(companyId(), userId(), workspaceId, operationId));
     }
 
     @GetMapping("/operations/latest")
     public ApiResponse<OperationView> latestOperation(@PathVariable Long workspaceId) {
-        return ApiResponse.ok(service.latestOperation(companyId(), workspaceId));
+        return ApiResponse.ok(service.latestOperation(companyId(), userId(), workspaceId));
     }
 
     private String companyId() {

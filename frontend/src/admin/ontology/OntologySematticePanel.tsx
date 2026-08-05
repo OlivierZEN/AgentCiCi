@@ -54,6 +54,7 @@ const OPERATION_LABELS: Record<OntologySematticeOperation["status"], string> = {
 };
 
 function operationKind(value: OntologySematticeOperation): string {
+  if (value.operationType === "ROLLBACK") return "安全回滚";
   return value.operationType === "INITIAL_PUBLISH" ? "首次发布" : "受控变更";
 }
 
@@ -165,10 +166,22 @@ export default function OntologySematticePanel({
   const canActivate = operationIsCurrent
     && Boolean(operation?.approvalRequestId)
     && ["APPROVAL_PENDING", "APPROVED", "BACKFILLING", "READY"].includes(operation?.status ?? "");
+  const canCancel = operationIsCurrent
+    && operation?.operationType === "CHANGESET"
+    && ["VALIDATED", "APPROVAL_PENDING"].includes(operation.status);
+  const canPrepareRollback = operationIsCurrent
+    && operation?.operationType === "CHANGESET"
+    && operation.status === "ACTIVE"
+    && !operation.requiresBackfill;
   const canCompile = binding?.syncStatus !== "NOT_LINKED"
     && !publishBlocked
     && currentDocument.concepts.some((concept) => concept.enabled)
-    && (!operationIsCurrent || ["ACTIVE", "FAILED", "CANCELED", "ROLLED_BACK"].includes(operation?.status ?? ""));
+    && (!operationIsCurrent || operation?.status === "FAILED");
+  const impactedChanges = operation?.plan?.changes?.length ?? 0;
+  const impactedRecords = operation?.simulation?.objects?.reduce(
+    (total, item) => total + (item.record_count ?? 0),
+    0,
+  ) ?? 0;
 
   if (loadState === "loading") {
     return (
@@ -279,10 +292,18 @@ export default function OntologySematticePanel({
                 <div className="ontology-runtime__operation-status">
                   <span>{operationKind(operation)}</span>
                   <strong>{OPERATION_LABELS[operation.status]}</strong>
-                  <span>{riskLabel(operation.riskLevel)}{operation.requiresBackfill ? "，需要数据回填" : "，无需数据回填"}</span>
+                  <span>{riskLabel(operation.riskLevel)}，{impactedChanges} 项模型变化，影响 {impactedRecords} 条现有记录{operation.requiresBackfill ? "，需要数据回填" : "，无需数据回填"}</span>
                   {!operationIsCurrent && <span className="is-warning">该操作基于修订 {operation.sourceRevision}，当前草稿为修订 {draftRevision}。</span>}
                 </div>
                 <div className="ontology-runtime__operation-actions">
+                  <button type="button" className="ontology-text-action" disabled={Boolean(busy) || !canCancel} onClick={() => void run("取消变更", async () => {
+                    const next = await api.cancelSemattice(workspaceId, operation.operationId);
+                    setOperation(next);
+                    const nextBinding = await api.getSematticeBinding(workspaceId);
+                    setBinding(nextBinding);
+                    onBindingChange(nextBinding);
+                    setNotice("候选变更已取消，当前运行版本未改变。");
+                  })}>取消候选</button>
                   <button type="button" className="ontology-text-action" disabled={Boolean(busy) || !canRequestApproval} onClick={() => void run("发起审批", async () => {
                     const next = await api.requestSematticeApproval(workspaceId, operation.operationId);
                     setOperation(next);
@@ -290,7 +311,12 @@ export default function OntologySematticePanel({
                     setApprovals(nextApprovals);
                     setNotice("审批请求已创建，需要另一位组织管理员批准。");
                   })}><ShieldCheck size={14} aria-hidden /> 发起独立审批</button>
-                  <button type="button" className="cici-btn cici-btn--primary" disabled={Boolean(busy) || !canActivate} onClick={() => void run("激活运行版本", async () => {
+                  <button type="button" className="ontology-text-action" disabled={Boolean(busy) || !canPrepareRollback} onClick={() => void run("准备回滚", async () => {
+                    const next = await api.prepareSematticeRollback(workspaceId, operation.operationId);
+                    setOperation(next);
+                    setNotice("已生成安全回滚操作，必须重新发起独立审批。");
+                  })}>准备安全回滚</button>
+                  <button type="button" className="cici-btn cici-btn--primary" disabled={Boolean(busy) || !canActivate} onClick={() => void run(operation.operationType === "ROLLBACK" ? "执行回滚" : "激活运行版本", async () => {
                     const next = await api.activateSemattice(workspaceId, operation.operationId);
                     setOperation(next);
                     if (next.status === "BACKFILLING") {
@@ -301,8 +327,10 @@ export default function OntologySematticePanel({
                     setBinding(nextBinding);
                     onBindingChange(nextBinding);
                     await onActivated();
-                    setNotice("运行版本已激活，AgentCiCi 本体版本也已同步发布。");
-                  })}><Check size={14} aria-hidden /> {operation.status === "BACKFILLING" ? "继续回填并激活" : "激活运行版本"}</button>
+                    setNotice(next.status === "ROLLED_BACK"
+                      ? "运行版本与 AgentCiCi 发布指针已安全回退。"
+                      : "运行版本已激活，AgentCiCi 本体版本也已同步发布。");
+                  })}><Check size={14} aria-hidden /> {operation.operationType === "ROLLBACK" ? "执行已审批回滚" : operation.status === "BACKFILLING" ? "继续回填并激活" : "激活运行版本"}</button>
                 </div>
               </div>
             )}

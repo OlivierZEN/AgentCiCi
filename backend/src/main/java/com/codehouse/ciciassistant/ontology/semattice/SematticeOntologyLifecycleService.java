@@ -44,11 +44,14 @@ public class SematticeOntologyLifecycleService {
     private static final String RELATION_UPSERT = "metadata.relation.upsert";
     private static final String VERSION_PUBLISH = "metadata.version.publish";
     private static final String CHANGESET_VALIDATE = "metadata.changeset.validate";
+    private static final String CHANGESET_SIMULATE = "metadata.changeset.simulate";
     private static final String CHANGESET_APPROVE = "metadata.changeset.approve";
     private static final String CHANGESET_STATUS = "metadata.changeset.get-status";
     private static final String CHANGESET_BACKFILL = "metadata.changeset.backfill";
     private static final String CHANGESET_COVERAGE = "metadata.changeset.validate-coverage";
     private static final String CHANGESET_PUBLISH = "metadata.changeset.publish";
+    private static final String CHANGESET_CANCEL = "metadata.changeset.cancel";
+    private static final String CHANGESET_ROLLBACK = "metadata.changeset.rollback";
     private static final int BACKFILL_BATCH_SIZE = 250;
 
     private final OntologyWorkspaceRepository workspaces;
@@ -225,7 +228,7 @@ public class SematticeOntologyLifecycleService {
                         companyId, workspaceId, operationType, expectedRevision, contract.sourceDigest())
                 .orElse(null);
         if (existing != null && !"FAILED".equals(existing.status())) {
-            return operationView(existing);
+            return operationViewWithImpact(companyId, userId, existing);
         }
         Instant now = Instant.now();
         Operation operation = existing == null
@@ -238,7 +241,7 @@ public class SematticeOntologyLifecycleService {
         markBindingFailed(binding, "PUBLISHING", null);
         try {
             operation = compileCandidate(companyId, userId, workspace, contract, remote, operation);
-            return operationView(operation);
+            return operationViewWithImpact(companyId, userId, operation);
         } catch (RuntimeException exception) {
             states.saveOperation(withState(operation, "FAILED", safeError(exception)));
             markBindingFailed(binding, "FAILED", safeError(exception));
@@ -257,14 +260,16 @@ public class SematticeOntologyLifecycleService {
             throw new ConflictException("SEMATTICE_APPROVAL_SUBJECT_NOT_READY");
         }
         if (!blank(operation.approvalRequestId())) {
-            return operationView(operation);
+            return operationViewWithImpact(companyId, userId, operation);
         }
         SematticeMetadataApprovalService.ApprovalView approval = approvals.request(
                 companyId,
                 userId,
                 operation.subjectType(),
                 operation.subjectId(),
-                "发布业务本体工作区 " + workspaceId + "，来源修订 " + operation.sourceRevision());
+                ("ROLLBACK".equals(operation.operationType()) ? "回滚" : "发布")
+                        + "业务本体工作区 " + workspaceId
+                        + "，来源修订 " + operation.sourceRevision());
         Operation updated = states.saveOperation(new Operation(
                 operation.operationId(), operation.companyId(), operation.workspaceId(),
                 operation.operationType(), operation.sourceRevision(), operation.sourceDigest(),
@@ -273,7 +278,7 @@ public class SematticeOntologyLifecycleService {
                 approval.approvalId(), "APPROVAL_PENDING", operation.riskLevel(),
                 operation.requiresBackfill(), operation.requestedBy(), operation.approvedBy(),
                 null, operation.createdAt(), Instant.now(), operation.activatedAt()));
-        return operationView(updated);
+        return operationViewWithImpact(companyId, userId, updated);
     }
 
     public OperationView activate(
@@ -291,20 +296,19 @@ public class SematticeOntologyLifecycleService {
             throw new ConflictException("ONTOLOGY_REVISION_CONFLICT");
         }
         try {
-            Operation progressed = "INITIAL_PUBLISH".equals(operation.operationType())
-                    ? activateInitial(companyId, userId, operation)
-                    : activateChangeset(companyId, userId, operation);
+            Operation progressed = switch (operation.operationType()) {
+                case "INITIAL_PUBLISH" -> activateInitial(companyId, userId, operation);
+                case "ROLLBACK" -> activateRollback(companyId, userId, operation);
+                default -> activateChangeset(companyId, userId, operation);
+            };
             if ("ACTIVE".equals(progressed.status())) {
                 publisher.publish(companyId, userId, workspaceId, operation.sourceRevision());
-                RemoteBundle remote = parseRemote(currentMetadata(companyId, userId, true));
-                Binding binding = requireBinding(companyId, workspaceId);
-                Instant now = Instant.now();
-                states.saveBinding(new Binding(
-                        companyId, workspaceId, binding.sematticeTenantId(), remote.versionId(),
-                        remote.sequence(), remote.digest(), "IN_SYNC", null, now,
-                        binding.createdAt(), now));
+                syncBinding(companyId, userId, workspaceId);
+            } else if ("ROLLED_BACK".equals(progressed.status())) {
+                publisher.rollbackToPrevious(companyId, userId, workspaceId);
+                syncBinding(companyId, userId, workspaceId);
             }
-            return operationView(progressed);
+            return operationViewWithImpact(companyId, userId, progressed);
         } catch (RuntimeException exception) {
             states.saveOperation(withState(operation, "FAILED", safeError(exception)));
             Binding binding = requireBinding(companyId, workspaceId);
@@ -313,16 +317,75 @@ public class SematticeOntologyLifecycleService {
         }
     }
 
-    public OperationView operation(String companyId, Long workspaceId, String operationId) {
+    public OperationView operation(
+            String companyId,
+            String userId,
+            Long workspaceId,
+            String operationId) {
         requireWorkspace(companyId, workspaceId);
-        return operationView(requireOperation(companyId, workspaceId, operationId));
+        return operationViewWithImpact(
+                companyId, userId, requireOperation(companyId, workspaceId, operationId));
     }
 
-    public OperationView latestOperation(String companyId, Long workspaceId) {
+    public OperationView latestOperation(String companyId, String userId, Long workspaceId) {
         requireWorkspace(companyId, workspaceId);
         return states.findLatestOperation(companyId, workspaceId)
-                .map(this::operationView)
+                .map(value -> operationViewWithImpact(companyId, userId, value))
                 .orElse(null);
+    }
+
+    public OperationView cancel(
+            String companyId,
+            String userId,
+            Long workspaceId,
+            String operationId) {
+        Operation operation = requireOperation(companyId, workspaceId, operationId);
+        requireRequester(operation, userId);
+        if (!"CHANGESET".equals(operation.operationType()) || blank(operation.changesetId())) {
+            throw new ConflictException("SEMATTICE_CHANGESET_CANCEL_UNAVAILABLE");
+        }
+        gateway.invoke(
+                companyId, userId, CHANGESET_CANCEL,
+                Map.of("changeset_id", operation.changesetId()),
+                operation.operationId() + ":cancel");
+        Operation canceled = states.saveOperation(withState(operation, "CANCELED", null));
+        syncBinding(companyId, userId, workspaceId);
+        return operationViewWithImpact(companyId, userId, canceled);
+    }
+
+    public OperationView prepareRollback(
+            String companyId,
+            String userId,
+            Long workspaceId,
+            String activeOperationId) {
+        requireWorkspace(companyId, workspaceId);
+        Operation active = requireOperation(companyId, workspaceId, activeOperationId);
+        if (!"CHANGESET".equals(active.operationType())
+                || !"ACTIVE".equals(active.status())
+                || active.requiresBackfill()
+                || blank(active.changesetId())
+                || blank(active.baseMetadataVersionId())) {
+            throw new ConflictException("SEMATTICE_CHANGESET_ROLLBACK_UNAVAILABLE");
+        }
+        RemoteBundle remote = parseRemote(currentMetadata(companyId, userId, true));
+        if (!Objects.equals(remote.versionId(), active.candidateMetadataVersionId())) {
+            throw new ConflictException("SEMATTICE_METADATA_DRIFTED");
+        }
+        String digest = active.sourceDigest() + ":rollback:" + active.operationId();
+        Operation existing = states.findOperationByRevision(
+                        companyId, workspaceId, "ROLLBACK", active.sourceRevision(), digest)
+                .orElse(null);
+        if (existing != null) {
+            return operationViewWithImpact(companyId, userId, existing);
+        }
+        Instant now = Instant.now();
+        Operation rollback = states.saveOperation(new Operation(
+                UUID.randomUUID().toString(), companyId, workspaceId, "ROLLBACK",
+                active.sourceRevision(), digest,
+                active.candidateMetadataVersionId(), active.baseMetadataVersionId(),
+                active.changesetId(), "CHANGESET", active.changesetId(), null,
+                "VALIDATED", "high", false, userId, null, null, now, now, null));
+        return operationViewWithImpact(companyId, userId, rollback);
     }
 
     private Operation compileCandidate(
@@ -458,6 +521,34 @@ public class SematticeOntologyLifecycleService {
                 Map.of("changeset_id", operation.changesetId()),
                 operation.operationId() + ":publish");
         return states.saveOperation(active(progressed));
+    }
+
+    private Operation activateRollback(String companyId, String userId, Operation operation) {
+        gateway.invoke(
+                companyId, userId, CHANGESET_ROLLBACK,
+                Map.of(
+                        "changeset_id", operation.changesetId(),
+                        "approval_id", operation.approvalRequestId()),
+                operation.operationId() + ":rollback");
+        Instant now = Instant.now();
+        return states.saveOperation(new Operation(
+                operation.operationId(), operation.companyId(), operation.workspaceId(),
+                operation.operationType(), operation.sourceRevision(), operation.sourceDigest(),
+                operation.baseMetadataVersionId(), operation.candidateMetadataVersionId(),
+                operation.changesetId(), operation.subjectType(), operation.subjectId(),
+                operation.approvalRequestId(), "ROLLED_BACK", operation.riskLevel(), false,
+                operation.requestedBy(), operation.approvedBy(), null,
+                operation.createdAt(), now, now));
+    }
+
+    private void syncBinding(String companyId, String userId, Long workspaceId) {
+        RemoteBundle remote = parseRemote(currentMetadata(companyId, userId, true));
+        Binding binding = requireBinding(companyId, workspaceId);
+        Instant now = Instant.now();
+        states.saveBinding(new Binding(
+                companyId, workspaceId, binding.sematticeTenantId(), remote.versionId(),
+                remote.sequence(), remote.digest(), "IN_SYNC", null, now,
+                binding.createdAt(), now));
     }
 
     private void requireNoUnsupportedDeletion(Contract contract, RemoteBundle remote) {
@@ -822,7 +913,32 @@ public class SematticeOntologyLifecycleService {
                 value.sourceDigest(), value.baseMetadataVersionId(),
                 value.candidateMetadataVersionId(), value.changesetId(), value.subjectType(),
                 value.subjectId(), value.approvalRequestId(), value.status(), value.riskLevel(),
-                value.requiresBackfill(), value.lastErrorCode(), value.updatedAt(), value.activatedAt());
+                value.requiresBackfill(), value.lastErrorCode(), value.updatedAt(), value.activatedAt(),
+                null, null, null);
+    }
+
+    private OperationView operationViewWithImpact(
+            String companyId,
+            String userId,
+            Operation value) {
+        OperationView base = operationView(value);
+        if (blank(value.changesetId())) {
+            return base;
+        }
+        JsonNode impact = gateway.invokeRead(
+                companyId, userId, CHANGESET_SIMULATE,
+                Map.of("changeset_id", value.changesetId()));
+        return new OperationView(
+                base.operationId(), base.operationType(), base.sourceRevision(), base.sourceDigest(),
+                base.baseMetadataVersionId(), base.candidateMetadataVersionId(), base.changesetId(),
+                base.subjectType(), base.subjectId(), base.approvalRequestId(), base.status(),
+                base.riskLevel(), base.requiresBackfill(), base.lastErrorCode(), base.updatedAt(),
+                base.activatedAt(), nullableNode(impact.path("plan")),
+                nullableNode(impact.path("simulation")), nullableNode(impact.path("coverage")));
+    }
+
+    private JsonNode nullableNode(JsonNode value) {
+        return value == null || value.isMissingNode() || value.isNull() ? null : value.deepCopy();
     }
 
     private String required(JsonNode value, String field) {
@@ -897,7 +1013,10 @@ public class SematticeOntologyLifecycleService {
             boolean requiresBackfill,
             String lastErrorCode,
             Instant updatedAt,
-            Instant activatedAt) {
+            Instant activatedAt,
+            JsonNode plan,
+            JsonNode simulation,
+            JsonNode coverage) {
     }
 
     private record RemoteBundle(

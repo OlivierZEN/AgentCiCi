@@ -244,6 +244,21 @@ export interface OntologySematticeOperation {
   lastErrorCode: string | null;
   updatedAt: string;
   activatedAt: string | null;
+  plan: {
+    changes?: Array<{
+      kind?: string;
+      api_name?: string;
+      eligible_records?: number;
+      requires_backfill?: boolean;
+    }>;
+  } | null;
+  simulation: {
+    objects?: Array<{
+      record_count?: number;
+      projected_typed_rows?: number;
+    }>;
+  } | null;
+  coverage: Record<string, unknown> | null;
 }
 
 export interface SematticeMetadataApproval {

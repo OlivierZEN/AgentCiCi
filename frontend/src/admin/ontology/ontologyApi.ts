@@ -359,6 +359,8 @@ export interface OntologyApi {
   getLatestSematticeOperation(workspaceId: number): Promise<OntologySematticeOperation | null>;
   requestSematticeApproval(workspaceId: number, operationId: string): Promise<OntologySematticeOperation>;
   activateSemattice(workspaceId: number, operationId: string): Promise<OntologySematticeOperation>;
+  cancelSemattice(workspaceId: number, operationId: string): Promise<OntologySematticeOperation>;
+  prepareSematticeRollback(workspaceId: number, operationId: string): Promise<OntologySematticeOperation>;
   listSematticeMetadataApprovals(): Promise<SematticeMetadataApproval[]>;
   approveSematticeMetadata(approvalId: string): Promise<SematticeMetadataApproval>;
   listVersions(workspaceId: number): Promise<OntologyVersionSummary[]>;
@@ -649,6 +651,22 @@ export function createOntologyApi(token: string, options: OntologyApiOptions = {
       {},
       () => request<OntologySematticeOperation>(
         `${MANAGEMENT_ROOT}/${workspaceId}/semattice/operations/${encodeURIComponent(operationId)}/activate`,
+        "POST",
+      ),
+    ),
+    cancelSemattice: (workspaceId, operationId) => revisionMutation(
+      `semattice:cancel:${workspaceId}:${operationId}`,
+      {},
+      () => request<OntologySematticeOperation>(
+        `${MANAGEMENT_ROOT}/${workspaceId}/semattice/operations/${encodeURIComponent(operationId)}/cancel`,
+        "POST",
+      ),
+    ),
+    prepareSematticeRollback: (workspaceId, operationId) => revisionMutation(
+      `semattice:rollback-prepare:${workspaceId}:${operationId}`,
+      {},
+      () => request<OntologySematticeOperation>(
+        `${MANAGEMENT_ROOT}/${workspaceId}/semattice/operations/${encodeURIComponent(operationId)}/rollback-prepare`,
         "POST",
       ),
     ),

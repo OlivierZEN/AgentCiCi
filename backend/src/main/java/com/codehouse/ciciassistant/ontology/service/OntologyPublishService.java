@@ -108,6 +108,27 @@ public class OntologyPublishService {
         return savedVersion;
     }
 
+    @Transactional
+    public OntologyVersionEntity rollbackToPrevious(
+            String companyId,
+            String userId,
+            Long workspaceId) {
+        requireCurrentOrg(companyId);
+        requireCurrentHuman(userId);
+        OntologyWorkspaceEntity workspace = workspaces.findForUpdateByIdAndCompanyId(workspaceId, companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ontology workspace not found"));
+        Integer currentVersion = workspace.getPublishedVersion();
+        if (currentVersion == null || currentVersion <= 1) {
+            throw new ConflictException("ONTOLOGY_ROLLBACK_UNAVAILABLE");
+        }
+        OntologyVersionEntity previous = versions
+                .findByWorkspaceIdAndCompanyIdAndVersionNo(workspaceId, companyId, currentVersion - 1)
+                .orElseThrow(() -> new ConflictException("ONTOLOGY_ROLLBACK_TARGET_NOT_FOUND"));
+        workspace.markPublished(previous.getVersionNo(), userId);
+        persistence.saveForCurrentOrg(workspace);
+        return previous;
+    }
+
     private void requireFreshServerMappings(
             String companyId,
             Long workspaceId,

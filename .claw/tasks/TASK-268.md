@@ -17,16 +17,16 @@ spec_path: docs/specs/FEAT-160-agentcici-semattice-business-ontology-four-phase.
 - 已完成四阶段产品和技术设计：读通与契约对齐、受控发布与版本闭环、数据质量与清洗治理、智能体原生语义运行时。
 - 已明确 AgentCiCi 负责业务设计、AI 提案、审批编排和智能体消费；Semattice 负责已发布运行元数据、业务记录、权限、索引和确定性数据任务。
 - 已覆盖本体元模型、数据映射、血缘、数据画像、质量规则、清洗、去重、指标、动作、AI 结合、安全、API、持久化、测试、回滚及四阶段验收。
-- 第一阶段的 AgentCiCi 侧实现已完成本地集成：只读 `semattice` 数据源适配器、稳定本体契约编译器、生命周期状态存储、组织管理员 API，以及本体工作台“运行治理”标签页已落地；数据库迁移为 V105。已连接 Semattice 的工作区会禁用直发 AgentCiCi 版本入口，改由编译、独立审批和激活链路推进。
-- 生命周期写操作仍保持受控：编译、差异校验、独立审批、回填覆盖校验与发布均通过现有 Semattice capability/OACT 网关执行；尚未执行生产迁移、配置或真实租户写入。
+- 第一、第二阶段的 AgentCiCi 侧实现已完成本地集成：只读 `semattice` 数据源适配器、稳定本体契约编译器、生命周期状态存储、组织管理员 API，以及本体工作台“运行治理”标签页已落地；数据库迁移为 V105。已连接 Semattice 的工作区会禁用直发 AgentCiCi 版本入口，改由编译、影响模拟、独立审批、回填、激活、取消和安全回滚链路推进。
+- 生命周期写操作仍保持受控：编译、差异校验、模拟、独立审批、回填覆盖校验、发布、取消和非破坏性回滚均通过现有 Semattice capability/OACT 网关执行；尚未执行生产迁移、配置或真实租户写入。破坏性字段清除需要完整字段退役状态链和再次独立审批，当前继续失败关闭，不开放半成品 purge 入口。
 
 ## Next Action
 
-- 先在隔离环境执行 V105 和 AgentCiCi → Semattice 的受权端到端回归，验证只读发现、编译、审批与发布状态机；生产上线需单独获得用户发布授权。
+- 先在隔离环境执行 V105 和 AgentCiCi → Semattice 的受权端到端回归，验证只读发现、编译、审批、取消、回填、发布与回滚状态机；随后单独实现破坏性字段退役与 purge。生产上线需单独获得用户发布授权。
 
 ## Verification
 
-- `mvn -q -Dmaven.repo.local=.m2 -Dtest=SematticeOntologyLifecycleServiceTest,SematticeOntologyAdapterTest,SematticeOntologyContractCompilerTest,SematticeOntologyHttpGatewayTest test` 通过；覆盖已发布元数据发现、受限运行时查询、契约稳定性、网关 OACT/幂等边界，以及首次发布幂等、独立审批激活和远端漂移阻断。
+- `mvn -q -Dtest=SematticeOntologyLifecycleServiceTest,OntologyPublishServiceTest,SematticeOntologyAdapterTest,SematticeOntologyContractCompilerTest,SematticeOntologyHttpGatewayTest test` 通过；覆盖已发布元数据发现、受限运行时查询、契约稳定性、网关 OACT/幂等边界，以及首次发布幂等、变更影响模拟、取消、独立审批激活、非破坏性回滚和远端漂移阻断。
 - `npm test -- --run src/admin/ontology/ontologyWorkbenchContract.test.ts` 和 `npm run build` 通过；标签、tabpanel 与既有工作台发布门禁可编译、可回归验证。真实桌面浏览器与受权跨系统交互验收仍待隔离环境完成。
 - `OntologyPersistenceIntegrationTest` 已扩展为断言 V105 的 3 张 `ontology_semattice_*` 表；本机未配置 PostgreSQL，Spring Context 在数据源初始化超时，16 个集成断言均未执行。该环境限制不影响已通过的无数据库单元测试，但 V105 必须在隔离数据库和生产发布前完成实际迁移验证。
 - 尚未进行真实 Semattice 环境调用或生产迁移，不将本地单元测试记作跨系统上线验证。

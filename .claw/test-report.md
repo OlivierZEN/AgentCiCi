@@ -10,12 +10,13 @@ last_run_status: passed
 
 # Test Report
 
-## 2026-08-05 TASK-268 Semattice 本体第一阶段本地集成
+## 2026-08-05 TASK-268 Semattice 本体第一、第二阶段本地集成
 
-- `backend-focused`：`mvn -q -Dmaven.repo.local=.m2 -Dtest=SematticeOntologyLifecycleServiceTest,SematticeOntologyAdapterTest,SematticeOntologyContractCompilerTest,SematticeOntologyHttpGatewayTest test` 通过。覆盖当前已发布元数据发现、受限单对象记录查询、最小公开连接器配置、稳定对象/字段/关系编译、服务端 OACT 与幂等调用边界，以及首次发布幂等、独立审批激活、AgentCiCi 版本同步与远端漂移阻断。
+- `backend-focused`：`mvn -q -Dtest=SematticeOntologyLifecycleServiceTest,OntologyPublishServiceTest,SematticeOntologyAdapterTest,SematticeOntologyContractCompilerTest,SematticeOntologyHttpGatewayTest test` 通过。覆盖当前已发布元数据发现、受限单对象记录查询、最小公开连接器配置、稳定对象/字段/关系编译、服务端 OACT 与幂等调用边界，以及首次发布幂等、变更影响模拟、候选取消、独立审批激活、AgentCiCi 版本同步、非破坏性安全回滚与远端漂移阻断。
 - `frontend-contract/build`：`npm test -- --run src/admin/ontology/ontologyWorkbenchContract.test.ts`（8 tests）与 `npm run build` 通过。运行治理标签有完整 tab/tabpanel 语义，连接 Semattice 后会阻断原本直发 AgentCiCi 版本的入口，改走受控编译、独立审批与激活路径。未取得受权会话，未伪造真实跨系统读写或桌面浏览器验收。
 - `persistence-integration-limit`：`mvn -q -Dmaven.repo.local=.m2 -Dtest=OntologyPersistenceIntegrationTest test` 因本机 PostgreSQL 未配置而在 Spring 数据源初始化超时，16 个测试均未执行。测试已更新为验证 V105 追加的三张 `ontology_semattice_*` 表；不得将该环境失败记作验证通过，发布前需在隔离 PostgreSQL 实际跑 Flyway 与此断言。
 - `production-limit`：未执行 V105、未配置或调用真实 Semattice 租户，也未触发 metadata 发布；该提交仅完成本地实现与单元测试，生产验收需单独发布授权。
+- `destructive-change-limit`：字段从 active 到 deprecated、hidden、purging、tombstone 的退役状态链尚未进入 AgentCiCi 业务模型，当前删除会失败关闭，不调用 `metadata.changeset.purge`。不得把这一安全限制表述为破坏性清除已交付。
 
 - 状态：`passed`
 
