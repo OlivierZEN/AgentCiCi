@@ -6,7 +6,7 @@ assigned_at: 2026-07-24T14:31:37Z
 expires_at: none
 spec_path: docs/specs/FEAT-142-admin-company-profile-proxy-route.md
 task_status_path: .claw/tasks/TASK-249.md
-branch: codex/TASK-249-admin-company-profile-proxy
+branch: codex/TASK-249-admin-company-profile-proxy-hotfix
 pr_url: n/a
 scope_mode: task_bounded_broad_code
 allowed_write_roots:
@@ -42,9 +42,9 @@ shared_contracts:
 task_boundary:
   - "将 /admin/company/profile 正确代理到后端，修复组织简档加载 HTML 而非 JSON 的问题。"
   - "同步生产 Nginx 与本地 Vite，保留既有 organization 兼容代理。"
-  - "不修改后端、数据库、权限、UI、移动端或生产环境。"
+  - "不修改后端、数据库、权限、UI 或移动端；生产仅同步这两份 Nginx 配置并执行语法校验和热重载。"
 change_manifest_required: true
 preflight_required: true
 local_login_required: true
 identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
-signature: "MANAGER-001; user reported the organization profile load failure on 2026-07-24."
+signature: "MANAGER-001; user再次报告生产组织简档加载失败并授权修复，2026-08-05。"

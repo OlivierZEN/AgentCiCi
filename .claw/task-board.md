@@ -190,13 +190,13 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-249 - 组织简档接口反向代理修复
 
-- status: `ready`
+- status: `in_progress`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-142-admin-company-profile-proxy-route.md`
 - task_status_path: `.claw/tasks/TASK-249.md`
 - assignment_path: `.claw/assignments/TASK-249.yaml`
-- next_action: 为生产 Nginx 与本地 Vite 同步 `/admin/company/profile` API 代理，并验证不再返回 SPA HTML。
+- next_action: 已复核生产仍返回 SPA HTML；补齐精确代理后热重载 Nginx，并验证请求由后端鉴权处理。
 
 ### TASK-248 - 平台注册用户目录展示已加入组织
 
