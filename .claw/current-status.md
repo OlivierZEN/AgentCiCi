@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-05T06:45:53Z
+updated_at: 2026-08-05T07:03:22Z
 updated_by: MANAGER-001
-phase: ontology-semattice-four-phase-design-ready
-active_task: TASK-268
-next_action: "基于 FEAT-160 拆分第一、第二阶段实施计划：先完成 Semattice 只读契约、稳定 ID 绑定和真实租户验收，再启用受控 metadata 编译、独立审批与发布；第三、第四阶段保持后续里程碑。"
+phase: production-user-public-id-correction
+active_task: TASK-269
+next_action: "对用户明确指定的全局账号执行严格预检、备份、一次性受控 public_id 更正与回读；不触碰其他身份或业务数据。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-269：用户明确授权将生产全局账户 `18611892001` 的公共编号更正为 `U2026OLVX1230`。该字段受唯一、格式和不可变触发器保护；先完成单行预检与备份，再在一个事务内受控更正并恢复触发器。范围不含 Keycloak、密码、MFA、组织成员、Principal 或任何其他账户；不需要应用发布。
 
 - TASK-268 / FEAT-160：已完成 AgentCiCi 与 Semattice 业务本体四阶段详细设计。四阶段依次为“Semattice 读通与统一契约”“受控编译、审批与发布闭环”“数据质量、清洗与语义指标”“智能体原生语义运行时”。AgentCiCi 定位为业务设计、AI 提案、审批编排和智能体消费入口；Semattice 定位为已发布运行元数据、业务记录、权限、索引和确定性数据任务事实源。规格已覆盖统一元模型、稳定 ID、版本状态机、数据映射、血缘、画像、清洗、去重、指标、动作、安全、API、持久化、测试和回滚；当前仅交付文档，尚未修改运行代码。
 

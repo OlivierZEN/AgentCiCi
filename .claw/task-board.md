@@ -15,6 +15,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-269 - 指定全局用户公共编号更正
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `project-manager`
+- spec_path: `n/a`
+- task_status_path: `.claw/tasks/TASK-269.md`
+- assignment_path: `n/a`
+- blocked_by: `none`
+- next_action: 完成生产行级预检和备份后，仅更正手机号 `18611892001` 的公共编号为用户指定值并回读验证。
+
 ### TASK-268 - AgentCiCi 与 Semattice 业务本体四阶段建设
 
 - status: `ready`
