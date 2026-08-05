@@ -36,6 +36,9 @@ describe("ontology workbench release contracts", () => {
     expect(pageSource).toContain("WIZARD_TABS.filter((tab) => tab.id !== wizardMode)");
     expect(pageSource).toContain("WORKSPACE_TABS.filter((tab) => draftStatus !== \"ready\" || !draft || tab.id !== activeTab)");
     expect(pageSource).toContain("TECHNICAL_TABS.filter((tab) => tab.id !== technicalTab)");
+    expect(pageSource).toContain('{ id: "runtime", label: "运行治理" }');
+    expect(pageSource).toContain('<OntologySematticePanel');
+    expect(pageSource).toContain('id="ontology-panel-runtime"');
   });
 
   it("meets the ontology primary-button and warning contrast across light and Galaxy surfaces", () => {

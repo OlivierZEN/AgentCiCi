@@ -48,6 +48,7 @@ import OntologyCanvas from "../ontology/OntologyCanvas";
 import OntologyInspector from "../ontology/OntologyInspector";
 import OntologyMappingPanel from "../ontology/OntologyMappingPanel";
 import OntologyProposalPanel from "../ontology/OntologyProposalPanel";
+import OntologySematticePanel from "../ontology/OntologySematticePanel";
 import {
   createOntologyAuthScopeKey,
   createOntologyCompilePreviewBinding,
@@ -86,6 +87,7 @@ import type {
   OntologyProposalRecord,
   OntologyProposalRequest,
   OntologyReferencePackageSummary,
+  OntologySematticeBinding,
   OntologySourceType,
   OntologyValidationIssue,
   OntologyVersionDetail,
@@ -96,7 +98,7 @@ import type {
 type LoadStatus = "idle" | "loading" | "ready" | "error";
 type PageMode = "list" | "wizard" | "workspace";
 type WizardMode = "domain" | "source";
-type WorkspaceTab = "model" | "mapping" | "proposal" | "validation" | "versions" | "technical";
+type WorkspaceTab = "model" | "mapping" | "proposal" | "validation" | "runtime" | "versions" | "technical";
 type TechnicalTab = "schema" | "graphql" | "query";
 
 const WORKSPACE_TABS: Array<{ id: WorkspaceTab; label: string }> = [
@@ -104,6 +106,7 @@ const WORKSPACE_TABS: Array<{ id: WorkspaceTab; label: string }> = [
   { id: "mapping", label: "数据映射" },
   { id: "proposal", label: "AI 提案" },
   { id: "validation", label: "校验与发布" },
+  { id: "runtime", label: "运行治理" },
   { id: "versions", label: "版本历史" },
   { id: "technical", label: "技术预览" },
 ];
@@ -194,6 +197,7 @@ export default function AdminOntologyPage() {
   const versionRequestId = useRef(0);
   const versionDetailRequestId = useRef(0);
   const compileRequestId = useRef(0);
+  const runtimeBindingRequestId = useRef(0);
   const workspaceDataGenerationRef = useRef(0);
   const activeWorkspaceIdRef = useRef<number | null>(null);
   const busyRef = useRef<string | null>(null);
@@ -253,6 +257,8 @@ export default function AdminOntologyPage() {
   const [technicalTab, setTechnicalTab] = useState<TechnicalTab>("schema");
   const [copiedLabel, setCopiedLabel] = useState("");
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
+  const [runtimeBinding, setRuntimeBinding] = useState<OntologySematticeBinding | null>(null);
+  const [runtimeBindingLoaded, setRuntimeBindingLoaded] = useState(false);
 
   const [wizardMode, setWizardMode] = useState<WizardMode>("domain");
   const [domainName, setDomainName] = useState("");
@@ -431,6 +437,7 @@ export default function AdminOntologyPage() {
     versionRequestId.current += 1;
     versionDetailRequestId.current += 1;
     compileRequestId.current += 1;
+    runtimeBindingRequestId.current += 1;
     workspaceDataGenerationRef.current += 1;
     activeWorkspaceIdRef.current = null;
     busyRef.current = null;
@@ -481,6 +488,8 @@ export default function AdminOntologyPage() {
     setVersionsLoading(false);
     invalidateCompilePreview();
     setPublishConfirmOpen(false);
+    setRuntimeBinding(null);
+    setRuntimeBindingLoaded(false);
     setOperationError("");
     setOperationNotice("");
     setDirty(false);
@@ -621,6 +630,23 @@ export default function AdminOntologyPage() {
     resetWorkspacePanels();
     resetWizardForm();
   }, [authScopeKey, invalidateOntologyAsyncContext, resetWizardForm, resetWorkspacePanels]);
+
+  useEffect(() => {
+    const workspaceId = activeWorkspaceIdRef.current;
+    if (pageMode !== "workspace" || !workspaceId || draftStatus !== "ready") return;
+    const requestId = ++runtimeBindingRequestId.current;
+    const epoch = contextEpochRef.current;
+    setRuntimeBindingLoaded(false);
+    void api.getSematticeBinding(workspaceId).then((next) => {
+      if (requestId !== runtimeBindingRequestId.current || epoch !== contextEpochRef.current) return;
+      setRuntimeBinding(next);
+      setRuntimeBindingLoaded(true);
+    }).catch(() => {
+      if (requestId !== runtimeBindingRequestId.current || epoch !== contextEpochRef.current) return;
+      setRuntimeBinding(null);
+      setRuntimeBindingLoaded(false);
+    });
+  }, [api, draftStatus, pageMode, selectedWorkspace?.id]);
 
   useEffect(() => {
     if (!shouldConfirmOntologyDraftDiscard(dirty, revisionLocked, mappingDirty)) return undefined;
@@ -1695,8 +1721,41 @@ export default function AdminOntologyPage() {
     setOperationNotice("");
   };
 
+  const handleRuntimeBindingChange = useCallback((next: OntologySematticeBinding) => {
+    setRuntimeBinding(next);
+    setRuntimeBindingLoaded(true);
+  }, []);
+
+  const applySematticeImport = useCallback(async (
+    candidate: OntologyDocument,
+    expectedRevision: number,
+  ) => {
+    const workspaceId = activeWorkspaceIdRef.current;
+    if (!workspaceId || revisionLockedRef.current) return;
+    const next = await api.saveDraft(workspaceId, expectedRevision, candidate);
+    acceptDraft(next);
+    setValidationChecked(false);
+  }, [acceptDraft, api]);
+
+  const refreshAfterSematticeActivation = useCallback(async () => {
+    const workspaceId = activeWorkspaceIdRef.current;
+    if (!workspaceId) return;
+    try {
+      const [nextDraft, nextVersions] = await Promise.all([
+        api.getDraft(workspaceId),
+        api.listVersions(workspaceId),
+      ]);
+      acceptDraft(nextDraft);
+      setVersions(nextVersions);
+    } catch {
+      lockEditingForReload();
+      setOperationError("运行版本已激活，但 AgentCiCi 工作区重新加载失败，请重新加载核对。");
+    }
+  }, [acceptDraft, api, lockEditingForReload]);
+
   const hasUnvalidatedMappings = hasUnvalidatedOntologyMappings(draft?.document.mappings ?? [], mappings);
   const validationHasErrors = validationIssues.some((issue) => issue.severity === "ERROR");
+  const sematticeManaged = runtimeBindingLoaded && runtimeBinding?.syncStatus !== "NOT_LINKED";
   const canPublish = Boolean(
     draft
     && !dirty
@@ -1707,7 +1766,9 @@ export default function AdminOntologyPage() {
     && draft.document.concepts.length > 0
     && draft.status !== "ARCHIVED"
     && !revisionLocked
-    && !busyAction,
+    && !busyAction
+    && runtimeBindingLoaded
+    && !sematticeManaged,
   );
   const nextVersion = (draft?.publishedVersion ?? 0) + 1;
   const publishConfirmation = `发布版本 ${nextVersion}；当前线上版本不会被 AI 自动替换`;
@@ -1945,9 +2006,15 @@ export default function AdminOntologyPage() {
             <button type="button" className="cici-btn cici-btn--ghost" disabled={editingLocked || !draft || dirty || mappingDirty} onClick={() => void runValidation()}>
               <ShieldCheck size={15} aria-hidden /> 运行校验
             </button>
-            <button type="button" className="cici-btn cici-btn--primary" disabled={!canPublish} onClick={openPublishConfirm}>
-              发布版本 {nextVersion}
-            </button>
+            {sematticeManaged ? (
+              <button type="button" className="cici-btn cici-btn--primary" disabled={editingLocked || dirty || mappingDirty} onClick={() => setActiveTab("runtime")}>
+                进入运行治理
+              </button>
+            ) : (
+              <button type="button" className="cici-btn cici-btn--primary" disabled={!canPublish} onClick={openPublishConfirm}>
+                {runtimeBindingLoaded ? `发布版本 ${nextVersion}` : "正在核对发布方式"}
+              </button>
+            )}
           </div>
         </header>
 
@@ -2158,12 +2225,33 @@ export default function AdminOntologyPage() {
             )}
             <footer className="ontology-validation__publish">
               <div>
-                <strong>{publishConfirmation}</strong>
-                <span>{mappingDirty ? "请先保存数据映射。" : hasUnvalidatedMappings ? "仍有映射未验证。" : validationHasErrors ? "请先修复错误。" : dirty ? "请先保存草稿。" : validationChecked ? "所有发布门已检查。" : "需要先运行校验。"}</span>
+                <strong>{sematticeManaged ? "该本体已连接 Semattice，发布必须经过编译与独立审批" : publishConfirmation}</strong>
+                <span>{sematticeManaged ? "完成本地校验后，请进入运行治理继续。" : mappingDirty ? "请先保存数据映射。" : hasUnvalidatedMappings ? "仍有映射未验证。" : validationHasErrors ? "请先修复错误。" : dirty ? "请先保存草稿。" : validationChecked ? "所有发布门已检查。" : "需要先运行校验。"}</span>
               </div>
-              <button type="button" className="cici-btn cici-btn--primary" disabled={!canPublish} onClick={openPublishConfirm}>进入人工确认</button>
+              {sematticeManaged ? (
+                <button type="button" className="cici-btn cici-btn--primary" disabled={!validationChecked || validationHasErrors || dirty || mappingDirty || hasUnvalidatedMappings} onClick={() => setActiveTab("runtime")}>进入运行治理</button>
+              ) : (
+                <button type="button" className="cici-btn cici-btn--primary" disabled={!canPublish} onClick={openPublishConfirm}>进入人工确认</button>
+              )}
             </footer>
           </section>
+        )}
+
+        {draftStatus === "ready" && draft && activeTab === "runtime" && (
+          <div id="ontology-panel-runtime" role="tabpanel" aria-labelledby="ontology-tab-runtime">
+            <OntologySematticePanel
+              api={api}
+              workspaceId={draft.workspace.id}
+              draftRevision={draft.draftRevision}
+              currentDocument={draft.document}
+              userId={userId}
+              draftBlocked={dirty || mappingDirty || revisionLocked}
+              publishBlocked={dirty || mappingDirty || revisionLocked || validationHasErrors || !validationChecked || hasUnvalidatedMappings}
+              onApplyImport={applySematticeImport}
+              onBindingChange={handleRuntimeBindingChange}
+              onActivated={refreshAfterSematticeActivation}
+            />
+          </div>
         )}
 
         {draftStatus === "ready" && activeTab === "versions" && (

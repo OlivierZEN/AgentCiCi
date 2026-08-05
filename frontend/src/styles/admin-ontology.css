@@ -1220,6 +1220,7 @@
 .ontology-mapping,
 .ontology-proposal,
 .ontology-validation,
+.ontology-runtime,
 .ontology-versions,
 .ontology-technical {
   min-width: 0;
@@ -1227,6 +1228,282 @@
   border-radius: 10px;
   background: var(--ontology-surface);
   overflow: hidden;
+}
+
+.ontology-runtime__message {
+  margin: 0;
+  padding: 9px 16px;
+  border-bottom: 1px solid var(--ontology-line);
+  color: var(--ontology-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.ontology-runtime__message.is-error {
+  color: var(--ontology-danger);
+}
+
+.ontology-runtime__message.is-success {
+  color: var(--ontology-success);
+}
+
+.ontology-runtime__summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-bottom: 1px solid var(--ontology-line);
+}
+
+.ontology-runtime__summary > div {
+  min-width: 0;
+  padding: 12px 16px;
+  border-right: 1px solid var(--ontology-line);
+}
+
+.ontology-runtime__summary > div:last-child {
+  border-right: 0;
+}
+
+.ontology-runtime__summary span,
+.ontology-runtime__summary strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ontology-runtime__summary span {
+  color: var(--ontology-muted);
+  font-size: 11px;
+}
+
+.ontology-runtime__summary strong {
+  margin-top: 4px;
+  color: var(--ontology-ink);
+  font-size: 13px;
+}
+
+.ontology-runtime__summary strong.is-in_sync,
+.ontology-runtime__summary strong.is-active {
+  color: var(--ontology-success);
+}
+
+.ontology-runtime__summary strong.is-drifted,
+.ontology-runtime__summary strong.is-failed {
+  color: var(--ontology-danger);
+}
+
+.ontology-runtime__onboarding {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 16px;
+  color: var(--ontology-accent-strong);
+}
+
+.ontology-runtime__onboarding div {
+  min-width: 0;
+}
+
+.ontology-runtime__onboarding strong,
+.ontology-runtime__onboarding span {
+  display: block;
+}
+
+.ontology-runtime__onboarding strong {
+  color: var(--ontology-ink);
+  font-size: 13px;
+}
+
+.ontology-runtime__onboarding span {
+  margin-top: 4px;
+  color: var(--ontology-muted);
+  font-size: 11px;
+}
+
+.ontology-runtime__stage,
+.ontology-runtime__approvals {
+  padding: 16px;
+  border-bottom: 1px solid var(--ontology-line);
+}
+
+.ontology-runtime__approvals {
+  border-bottom: 0;
+}
+
+.ontology-runtime__stage > p,
+.ontology-runtime__approvals > p {
+  margin: 7px 0 0;
+  color: var(--ontology-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.ontology-runtime__stage-head {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ontology-runtime__stage-head > div:first-child {
+  min-width: 0;
+}
+
+.ontology-runtime__stage-head > div:last-child {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.ontology-runtime__stage-head span {
+  color: var(--ontology-muted);
+  font-size: 11px;
+}
+
+.ontology-runtime__stage-head h3 {
+  margin-top: 3px;
+  color: var(--ontology-ink);
+  font-size: 14px;
+}
+
+.ontology-runtime__proposal {
+  margin-top: 14px;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--ontology-line);
+}
+
+.ontology-runtime__proposal > div:first-child strong,
+.ontology-runtime__proposal > div:first-child span {
+  display: block;
+}
+
+.ontology-runtime__proposal > div:first-child strong {
+  color: var(--ontology-ink);
+  font-size: 13px;
+}
+
+.ontology-runtime__proposal > div:first-child span {
+  margin-top: 3px;
+  color: var(--ontology-muted);
+  font-size: 11px;
+}
+
+.ontology-runtime__proposal-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 10px;
+  border-top: 1px solid var(--ontology-line);
+}
+
+.ontology-runtime__proposal-list > div {
+  min-width: 0;
+  padding: 9px 12px 9px 0;
+  border-bottom: 1px solid var(--ontology-line);
+}
+
+.ontology-runtime__proposal-list > div:nth-child(odd) {
+  border-right: 1px solid var(--ontology-line);
+}
+
+.ontology-runtime__proposal-list > div:nth-child(even) {
+  padding-left: 12px;
+}
+
+.ontology-runtime__proposal-list strong,
+.ontology-runtime__proposal-list span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ontology-runtime__proposal-list strong {
+  color: var(--ontology-ink);
+  font-size: 12px;
+}
+
+.ontology-runtime__proposal-list span {
+  margin-top: 3px;
+  color: var(--ontology-muted);
+  font-size: 11px;
+}
+
+.ontology-runtime__proposal-actions,
+.ontology-runtime__operation-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.ontology-runtime__operation {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 16px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ontology-line);
+}
+
+.ontology-runtime__operation-status span,
+.ontology-runtime__operation-status strong {
+  display: block;
+}
+
+.ontology-runtime__operation-status > span:first-child {
+  color: var(--ontology-muted);
+  font-size: 11px;
+}
+
+.ontology-runtime__operation-status strong {
+  margin-top: 3px;
+  color: var(--ontology-ink);
+  font-size: 14px;
+}
+
+.ontology-runtime__operation-status > span:not(:first-child) {
+  margin-top: 4px;
+  color: var(--ontology-secondary);
+  font-size: 11px;
+}
+
+.ontology-runtime__operation-status > span.is-warning {
+  color: var(--ontology-warning);
+}
+
+.ontology-runtime__approval-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--ontology-line);
+}
+
+.ontology-runtime__approval-row:first-of-type {
+  margin-top: 10px;
+}
+
+.ontology-runtime__approval-row strong,
+.ontology-runtime__approval-row span {
+  display: block;
+}
+
+.ontology-runtime__approval-row strong {
+  color: var(--ontology-ink);
+  font-size: 12px;
+}
+
+.ontology-runtime__approval-row span {
+  margin-top: 3px;
+  color: var(--ontology-muted);
+  font-size: 11px;
 }
 
 .ontology-section-header {

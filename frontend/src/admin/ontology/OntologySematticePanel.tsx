@@ -22,7 +22,8 @@ interface OntologySematticePanelProps {
   draftRevision: number;
   currentDocument: OntologyDocument;
   userId: string;
-  blocked: boolean;
+  draftBlocked: boolean;
+  publishBlocked: boolean;
   onApplyImport: (candidate: OntologyDocument, expectedRevision: number) => Promise<void>;
   onBindingChange: (binding: OntologySematticeBinding) => void;
   onActivated: () => Promise<void>;
@@ -100,7 +101,8 @@ export default function OntologySematticePanel({
   draftRevision,
   currentDocument,
   userId,
-  blocked,
+  draftBlocked,
+  publishBlocked,
   onApplyImport,
   onBindingChange,
   onActivated,
@@ -164,7 +166,7 @@ export default function OntologySematticePanel({
     && Boolean(operation?.approvalRequestId)
     && ["APPROVAL_PENDING", "APPROVED", "BACKFILLING", "READY"].includes(operation?.status ?? "");
   const canCompile = binding?.syncStatus !== "NOT_LINKED"
-    && !blocked
+    && !publishBlocked
     && currentDocument.concepts.some((concept) => concept.enabled)
     && (!operationIsCurrent || ["ACTIVE", "FAILED", "CANCELED", "ROLLED_BACK"].includes(operation?.status ?? ""));
 
@@ -251,7 +253,7 @@ export default function OntologySematticePanel({
                 </div>
                 <div className="ontology-runtime__proposal-actions">
                   <button type="button" className="ontology-text-action" disabled={Boolean(busy)} onClick={() => setProposal(null)}>放弃提案</button>
-                  <button type="button" className="cici-btn cici-btn--primary" disabled={Boolean(busy) || blocked || proposal.expectedRevision !== draftRevision} onClick={() => void run("应用导入提案", async () => {
+                  <button type="button" className="cici-btn cici-btn--primary" disabled={Boolean(busy) || draftBlocked || proposal.expectedRevision !== draftRevision} onClick={() => void run("应用导入提案", async () => {
                     await onApplyImport(proposal.candidate, proposal.expectedRevision);
                     setProposal(null);
                     setNotice("导入提案已应用到草稿，请继续审阅并运行校验。");
@@ -270,7 +272,7 @@ export default function OntologySematticePanel({
                 setNotice("候选版本已编译并完成 Semattice 变更校验。");
               })}>编译候选版本</button>
             </div>
-            <p>{blocked ? "请先保存草稿和映射，再编译确定性运行契约。" : "每个草稿修订只生成一个幂等候选操作；删除等不兼容变化会安全停止。"}</p>
+            <p>{publishBlocked ? "请先保存并校验草稿和映射，再编译确定性运行契约。" : "每个草稿修订只生成一个幂等候选操作；删除等不兼容变化会安全停止。"}</p>
 
             {operation && (
               <div className="ontology-runtime__operation">
