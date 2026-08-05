@@ -13,6 +13,7 @@ allowed_write_roots:
   - deploy/nginx.cici.conf
   - deploy/nginx.cici.ssl.conf
   - frontend/vite.config.ts
+  - frontend/vite.config.js
   - docs/specs/**
   - .claw/tasks/**
   - .claw/assignments/**
@@ -28,6 +29,7 @@ scope_files:
   - deploy/nginx.cici.conf
   - deploy/nginx.cici.ssl.conf
   - frontend/vite.config.ts
+  - frontend/vite.config.js
   - docs/specs/FEAT-142-admin-company-profile-proxy-route.md
   - .claw/tasks/TASK-249.md
   - .claw/assignments/TASK-249.yaml

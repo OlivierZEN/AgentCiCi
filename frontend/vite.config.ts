@@ -37,6 +37,7 @@ export default defineConfig(({ mode }) => {
         "^/admin/ontologies(/|$)": { target: backendTarget, changeOrigin: true },
         "^/semantic-query(/|$)": { target: backendTarget, changeOrigin: true },
         "^/admin/billing/(overview|subscription|usage-events|ledger|quota)(/|$)": { target: backendTarget, changeOrigin: true },
+        "^/admin/company/profile(/|$)": { target: backendTarget, changeOrigin: true },
         "^/admin/organization/(profile|export-jobs)(/|$)": { target: backendTarget, changeOrigin: true },
         "/admin/wecom": { target: backendTarget, changeOrigin: true },
         "/api/autoservice": { target: backendTarget, changeOrigin: true },
