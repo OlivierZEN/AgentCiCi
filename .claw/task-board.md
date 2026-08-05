@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-05T05:22:30Z
+updated_at: 2026-08-05T06:45:53Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-268 - AgentCiCi 与 Semattice 业务本体四阶段建设
+
+- status: `ready`
+- priority: `critical`
+- owner_role: `project-manager`
+- spec_path: `docs/specs/FEAT-160-agentcici-semattice-business-ontology-four-phase.md`
+- task_status_path: `.claw/tasks/TASK-268.md`
+- assignment_path: `n/a`
+- blocked_by: `none`
+- next_action: 基于已批准四阶段设计拆分第一、第二阶段实施计划；先完成 Semattice 只读契约，再启用受控元数据发布。
 
 ### TASK-266 - AI表格业务对象实时列表
 

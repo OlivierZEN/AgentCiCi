@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-05T06:39:16Z
+updated_at: 2026-08-05T06:45:53Z
 updated_by: MANAGER-001
-phase: governed-service-principal-admin-ui-released
-active_task: none
-next_action: "TASK-252 统一密码/邀请闭环已发布 2.8.52；等待正常管理员邀请的真实成员完成验证邮箱、设置密码和首次 OIDC 登录。TASK-267 机器主体受权管理员验收、TASK-266 AI表格真实记录回读与 onechat.agentcici.com DNS 风险仍独立待办。"
+phase: ontology-semattice-four-phase-design-ready
+active_task: TASK-268
+next_action: "基于 FEAT-160 拆分第一、第二阶段实施计划：先完成 Semattice 只读契约、稳定 ID 绑定和真实租户验收，再启用受控 metadata 编译、独立审批与发布；第三、第四阶段保持后续里程碑。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-268 / FEAT-160：已完成 AgentCiCi 与 Semattice 业务本体四阶段详细设计。四阶段依次为“Semattice 读通与统一契约”“受控编译、审批与发布闭环”“数据质量、清洗与语义指标”“智能体原生语义运行时”。AgentCiCi 定位为业务设计、AI 提案、审批编排和智能体消费入口；Semattice 定位为已发布运行元数据、业务记录、权限、索引和确定性数据任务事实源。规格已覆盖统一元模型、稳定 ID、版本状态机、数据映射、血缘、画像、清洗、去重、指标、动作、安全、API、持久化、测试和回滚；当前仅交付文档，尚未修改运行代码。
 
 - TASK-252 / FEAT-145：已发布生产 `2.8.52 / 8c9ce75884c5`，修复统一身份接入后的两处密码生命周期缺陷。个人档案不再将密码提交给 AgentCiCi，而是启动 Keycloak 的 `UPDATE_PASSWORD` OIDC 动作，并强制重新认证；OIDC 启用时旧本地密码写接口会拒绝，杜绝“页面成功、实际 Keycloak 密码未变”。人工邀请 Required Actions 邮件落地已改为 `/app`，Keycloak `agentcici-bff` 精确白名单仅保留 `/app` 与 `/auth/oidc/callback`。发布前两次完整备份均非空（最终备份 `/opt/cici/backups/20260805-143617-before-2.8.52-oidc-password-route`）；六容器 healthy、health=UP、Nginx 有效、x HTTPS=200/HTTP=301，线上密码入口实际 302 至 Keycloak 且断言 `UPDATE_PASSWORD`、`prompt=login`、PKCE/state/nonce 与正常 callback。未使用任何用户密码、令牌或邮件链接；真实新成员首次激活由正常管理员邀请完成。
 
