@@ -5,10 +5,13 @@ const ADMIN_BROWSER_API_ROOT = "/api/admin";
  * Nginx forwards these paths to the existing protected backend controllers.
  */
 export const adminApi = {
+  path(path: string) {
+    return `${ADMIN_BROWSER_API_ROOT}${path.startsWith("/") ? path : `/${path}`}`;
+  },
   users(path = "") {
-    return `${ADMIN_BROWSER_API_ROOT}/users${path}`;
+    return this.path(`/users${path}`);
   },
   servicePrincipals(path = "") {
-    return `${ADMIN_BROWSER_API_ROOT}/service-principals${path}`;
+    return this.path(`/service-principals${path}`);
   },
 };

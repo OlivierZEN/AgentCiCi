@@ -3,9 +3,9 @@ kind: current-status
 version: 4
 updated_at: 2026-08-05T09:11:00Z
 updated_by: MANAGER-001
-phase: admin-spa-route-repair-in-progress
+phase: admin-spa-route-repair-review
 active_task: TASK-272
-next_action: "修复 /admin/* 页面路由与后端 API 路径冲突，确保深链刷新由 SPA 接管；不发布生产。"
+next_action: "等待用户决定是否合并 TASK-272 并按生产 Runbook 发布；当前未发布生产。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-272 / FEAT-162：已复现线上组织管理端刷新问题。`Accept: text/html` 请求 `/admin/service-principals` 仍返回后端 `401 application/json`，原因是页面路由与后端 API 都使用 `/admin/*`，旧 Nginx 规则将文档请求代理到受保护控制器。将浏览器管理 API 统一迁至 `/api/admin/*`，而 `/admin/*` 只保留给 SPA；本任务不改后端、鉴权、数据或生产环境。
+- TASK-272 / FEAT-162：已完成组织管理端深链刷新修复，浏览器管理 API 统一使用 `/api/admin/*`，而 `/admin/*` 只保留给 SPA。前端定向测试 52/52、生产构建、Compose 配置和 HTTP Nginx 语法检查通过；挂载新配置的本地 Nginx 验证 `/admin/service-principals` 返回 SPA HTML。SSL Nginx 语法检查受本机缺少部署证书限制，待发布前环境复核。本任务未改后端、鉴权或数据，未发布生产。
 
 - TASK-270：用户明确授权将悟空开发者 SERVICE 的 Client ID 由 `dev-autopilot-developer` 改为 `dev-autopilot-developer-wukong`。受治理 API 已发布于 `2.8.53`，且显式确认入口已发布于 `2.8.55 / 9796b475d7d5`；AgentCiCi 权威记录、Keycloak client 和 identity mirror 均在事务/补偿边界内处理，Secret 不读取、不轮换。当前线上仍未改名：本次执行环境没有可用的 Oliver ORG_ADMIN 会话，未绕过人类委托直接改库。待 Oliver 在“机器主体 → 悟空”完成一次确认后，立即同步 DevAutopilot allowlist 与 root-only CLI 凭据并回归。
 

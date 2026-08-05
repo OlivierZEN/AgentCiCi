@@ -1,4 +1,5 @@
 import { createOntologyMutationLane, type OntologyMutationLane } from "./ontologyModel";
+import { adminApi } from "../adminApi";
 import type {
   OntologyApiDetails,
   OntologyCatalogFieldMutation,
@@ -32,7 +33,7 @@ import type {
   SematticeMetadataApproval,
 } from "./ontologyTypes";
 
-const MANAGEMENT_ROOT = "/admin/ontologies";
+const MANAGEMENT_ROOT = adminApi.path("/ontologies");
 const QUERY_ROOT = "/semantic-query";
 const ERROR_CODE_PATTERN = /^[A-Z][A-Z0-9_]{2,127}$/;
 const NETWORK_FAILURE_MESSAGE = "网络请求失败，请稍后重试";
@@ -653,13 +654,13 @@ export function createOntologyApi(token: string, options: OntologyApiOptions = {
       ),
     ),
     listSematticeMetadataApprovals: () => request<SematticeMetadataApproval[]>(
-      "/admin/semattice/metadata-approvals",
+      adminApi.path("/semattice/metadata-approvals"),
     ),
     approveSematticeMetadata: (approvalId) => revisionMutation(
       `semattice:approve:${approvalId}`,
       {},
       () => request<SematticeMetadataApproval>(
-        `/admin/semattice/metadata-approvals/${encodeURIComponent(approvalId)}/approve`,
+        adminApi.path(`/semattice/metadata-approvals/${encodeURIComponent(approvalId)}/approve`),
         "POST",
       ),
     ),

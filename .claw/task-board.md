@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-272 - 组织管理端深链刷新回退修复
 
-- status: `in_progress`
+- status: `review`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-162-admin-spa-route-api-namespace.md`
 - task_status_path: `.claw/tasks/TASK-272.md`
 - assignment_path: `.claw/assignments/TASK-272.yaml`
 - blocked_by: `none`
-- next_action: 统一浏览器管理 API 命名空间并去除 `/admin/*` 深链后端代理冲突。
+- next_action: 定向验证已通过，等待用户决定是否合并并按生产 Runbook 发布。
 
 ### TASK-271 - 组织切换全称悬浮提示
 

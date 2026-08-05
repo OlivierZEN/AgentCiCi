@@ -15,6 +15,7 @@ import {
 } from "./adminAuthScope";
 import { applyProductTheme } from "../theme/theme";
 import { endOrganizationAdminSession } from "./adminSession";
+import { adminApi } from "./adminApi";
 
 type AuthPayload = { token: string; companyId: string; companyName?: string; userId: string; roles: string[] };
 type MePayload = { nickname?: string; avatarBase64?: string; mobile?: string; themeCode?: string };
@@ -169,7 +170,7 @@ export default function AdminShell() {
     );
     void (async () => {
       try {
-        const res = await authFetch(LS_ADMIN_TOKEN, "/admin/company/profile", {}, {
+        const res = await authFetch(LS_ADMIN_TOKEN, adminApi.path("/company/profile"), {}, {
           onUnauthorized: () => {
             if (!isCurrent()) return;
             invalidateAdminAuthRequests(createAdminAuthScopeKey("", ""));

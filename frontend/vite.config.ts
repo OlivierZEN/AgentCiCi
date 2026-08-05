@@ -26,20 +26,14 @@ export default defineConfig(({ mode }) => {
         "/embed/v1": { target: backendTarget, changeOrigin: true },
         "/mcp-servers": { target: backendTarget, changeOrigin: true },
         "/customer-workbench": { target: backendTarget, changeOrigin: true },
-        "^/api/admin/(users|service-principals)(/|$)": {
+        "^/api/admin(/|$)": {
           target: backendTarget,
           changeOrigin: true,
           rewrite(path) {
             return path.replace(/^\/api/, "");
           },
         },
-        "/admin/agents": { target: backendTarget, changeOrigin: true },
-        "^/admin/ontologies(/|$)": { target: backendTarget, changeOrigin: true },
         "^/semantic-query(/|$)": { target: backendTarget, changeOrigin: true },
-        "^/admin/billing/(overview|subscription|usage-events|ledger|quota)(/|$)": { target: backendTarget, changeOrigin: true },
-        "^/admin/company/profile(/|$)": { target: backendTarget, changeOrigin: true },
-        "^/admin/organization/(profile|export-jobs)(/|$)": { target: backendTarget, changeOrigin: true },
-        "/admin/wecom": { target: backendTarget, changeOrigin: true },
         "/api/autoservice": { target: backendTarget, changeOrigin: true },
         "/agents": { target: backendTarget, changeOrigin: true },
         "/evaluation": { target: backendTarget, changeOrigin: true },

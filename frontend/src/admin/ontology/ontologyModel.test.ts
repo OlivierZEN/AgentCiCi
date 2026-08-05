@@ -774,8 +774,8 @@ describe("ontology draft transport", () => {
 
     expect(result.draftRevision).toBe(5);
     expect(calls.map((call) => call.url)).toEqual([
-      "/admin/ontologies/7/proposals/31/apply",
-      "/admin/ontologies/7/draft",
+      "/api/admin/ontologies/7/proposals/31/apply",
+      "/api/admin/ontologies/7/draft",
     ]);
     expect(JSON.parse(String(calls[0].init?.body))).toEqual({ expectedRevision: 4 });
     expect(calls[0].init?.headers).toMatchObject({

@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-162
 title: 组织管理端 SPA 路由与浏览器 API 命名空间隔离
-status: in_progress
+status: review
 owner_role: fullstack-agent
 task_ids: TASK-272
 related_decisions: none
 related_issues: none
-updated_at: 2026-08-05T09:11:00Z
+updated_at: 2026-08-05T09:18:00Z
 updated_by: MANAGER-001
 ---
 
@@ -50,3 +50,9 @@ updated_by: MANAGER-001
 
 - 本次只改变浏览器到代理的路径，不改变后端控制器；若发现代理回归，回滚前端与两份 Nginx/Vite 配置即可恢复上一版本。
 - 发布前必须按生产 Runbook 验证匿名页面深链和匿名 `/api/admin/*` 的 401 边界。
+
+## 实现与验证
+
+- 已迁移当前组织管理端的用户、机器主体、组织简档、计费、运行观测、微信客服、本体与元数据审批浏览器请求。
+- HTTP 与 HTTPS Nginx、Vite 均使用通用 `/api/admin/*` 去前缀代理，旧 `/admin/*` API 代理已移除。
+- 前端定向测试 52/52、生产构建、Compose 配置与 HTTP `nginx -t` 通过；挂载配置的本地 Nginx 镜像已验证深链返回 SPA HTML。SSL `nginx -t` 受本机无部署证书限制，待发布前环境复核。

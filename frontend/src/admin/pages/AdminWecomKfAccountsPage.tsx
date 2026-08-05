@@ -144,7 +144,7 @@ export default function AdminWecomKfAccountsPage() {
     setLoading(true);
     setNotice("");
     try {
-      const response = await fetch("/admin/wecom/kf-accounts", { headers: authHeaders });
+      const response = await fetch(adminApi.path("/wecom/kf-accounts"), { headers: authHeaders });
       const { body } = await safeFetchJson<WecomKfAccount[]>(response);
       if (!response.ok || !body?.success) {
         setNotice(body?.message ?? "微信客服配置加载失败");
@@ -232,7 +232,9 @@ export default function AdminWecomKfAccountsPage() {
         runAsUserId: form.runAsUserId.trim(),
         enabled: form.enabled,
       };
-      const response = await fetch(selectedAccount ? `/admin/wecom/kf-accounts/${selectedAccount.id}` : "/admin/wecom/kf-accounts", {
+      const response = await fetch(selectedAccount
+        ? adminApi.path(`/wecom/kf-accounts/${selectedAccount.id}`)
+        : adminApi.path("/wecom/kf-accounts"), {
         method: selectedAccount ? "PUT" : "POST",
         headers: jsonHeaders,
         body: JSON.stringify(body),
@@ -256,7 +258,7 @@ export default function AdminWecomKfAccountsPage() {
   const setEnabled = async (account: WecomKfAccount, enabled: boolean) => {
     setNotice("");
     try {
-      const response = await fetch(`/admin/wecom/kf-accounts/${account.id}/${enabled ? "enable" : "disable"}`, {
+      const response = await fetch(adminApi.path(`/wecom/kf-accounts/${account.id}/${enabled ? "enable" : "disable"}`), {
         method: "POST",
         headers: authHeaders,
       });
@@ -288,7 +290,7 @@ export default function AdminWecomKfAccountsPage() {
     setNotice("");
     setConnectionTest(null);
     try {
-      const response = await fetch(`/admin/wecom/kf-accounts/${selectedAccount.id}/connection-test`, {
+      const response = await fetch(adminApi.path(`/wecom/kf-accounts/${selectedAccount.id}/connection-test`), {
         method: "POST",
         headers: authHeaders,
       });
