@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { adminApi } from "../adminApi";
 import { useAdminToken } from "../useAdminToken";
 
 type AdminSubscription = {
@@ -234,7 +235,7 @@ export default function AdminBillingPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/admin/billing/overview", {
+      const res = await fetch(adminApi.path("/billing/overview"), {
         headers: { Authorization: `Bearer ${token}` },
       });
       const json = await parseOverviewResponse(res);

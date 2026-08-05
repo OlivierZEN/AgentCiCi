@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { adminApi } from "../adminApi";
 import { useAdminToken } from "../useAdminToken";
 
 type ExportJobSummary = {
@@ -144,7 +145,7 @@ export default function AdminCompanyPage() {
       setLoading(true);
       setError("");
       try {
-        const res = await fetch("/admin/company/profile", { headers: { Authorization: `Bearer ${token}` } });
+        const res = await fetch(adminApi.path("/company/profile"), { headers: { Authorization: `Bearer ${token}` } });
         const json = await res.json();
         if (!res.ok || !json.success) {
           if (!ignore) setError(json.message ?? "组织简档加载失败");
@@ -211,7 +212,7 @@ export default function AdminCompanyPage() {
     setError("");
     setSuccess("");
     try {
-      const res = await fetch("/admin/company/profile", {
+      const res = await fetch(adminApi.path("/company/profile"), {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,

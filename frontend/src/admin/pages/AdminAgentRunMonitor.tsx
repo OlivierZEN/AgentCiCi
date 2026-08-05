@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import AvatarView from "../../components/AvatarView";
 import { getDisplayInitial } from "../../shared/avatar";
 import { safeFetchJson } from "../../utils/http";
+import { adminApi } from "../adminApi";
 
 type AgentRuntimeSnapshotPayload = {
   agentId: string;
@@ -339,7 +340,7 @@ export default function AdminAgentRunMonitor({ token }: Props) {
 
   const loadRuntimeSnapshots = async () => {
     try {
-      const response = await fetch("/admin/agents/runtime-snapshots", { headers: { Authorization: `Bearer ${token}` } });
+      const response = await fetch(adminApi.path("/agents/runtime-snapshots"), { headers: { Authorization: `Bearer ${token}` } });
       const { body } = await safeFetchJson<{ items?: AgentRuntimeSnapshotPayload[] }>(response);
       if (!response.ok || !body?.success || !Array.isArray(body.data?.items)) {
         throw new Error(body?.message ?? `HTTP ${response.status}`);
@@ -354,7 +355,7 @@ export default function AdminAgentRunMonitor({ token }: Props) {
     setLogsLoading(true);
     try {
       const params = new URLSearchParams({ limit: "100" });
-      const response = await fetch(`/admin/agents/run-logs?${params.toString()}`, {
+      const response = await fetch(`${adminApi.path("/agents/run-logs")}?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const { body } = await safeFetchJson<{ items?: AgentRunLogPayload[] } | AgentRunLogPayload[]>(response);
@@ -378,7 +379,7 @@ export default function AdminAgentRunMonitor({ token }: Props) {
     }
     setTraceLoadingId(traceId);
     try {
-      const response = await fetch(`/admin/agents/run-logs/${encodeURIComponent(traceId)}`, {
+      const response = await fetch(adminApi.path(`/agents/run-logs/${encodeURIComponent(traceId)}`), {
         headers: { Authorization: `Bearer ${token}` },
       });
       const { body } = await safeFetchJson<AgentTraceDetailPayload>(response);
