@@ -351,6 +351,15 @@ sequenceDiagram
 9. 只有身份激活成功后，成员关系才变为 `ACTIVE`；激活前不得签发可访问业务资源的 OACT。
 10. 相同幂等键返回同一操作结果；不同幂等键不得创建重复成员或重复 Keycloak User。
 
+### 密码与激活落地规则
+
+1. Keycloak 是唯一的人类密码、MFA、密码历史和登录失败保护权威。AgentCiCi 不得保存、校验或成功宣称修改了统一登录密码。
+2. OIDC 已启用时，个人档案的“修改密码”只允许启动受状态、Nonce 与 PKCE 保护的应用发起动作：授权请求携带 `kc_action=UPDATE_PASSWORD`，完成后仍使用正常 OIDC `code + state` callback 签发 AgentCiCi 会话。浏览器和 AgentCiCi 后端均不接收明文当前密码或新密码。
+3. 未启用 OIDC 的本地兼容环境可保留历史密码接口；生产 OIDC 环境必须拒绝该接口，避免产生与 Keycloak 无关的本地密码并误报成功。
+4. 邀请邮件继续只使用 `VERIFY_EMAIL`、`UPDATE_PASSWORD` Required Actions，且链接有效期为 24 小时。链接过期时仅对仍未激活的同一 Keycloak User 重发，不生成默认密码、不覆盖已激活用户密码。
+5. Required Actions 邮件完成后的 `redirect_uri` 必须是 `https://x.agentcici.com/app`。`/auth/oidc/callback` 仅接收由 AgentCiCi 正常 OIDC 开始事务创建的 `code + state`，绝不能作为邮件动作落地地址。
+6. Keycloak `agentcici-bff` 的 Valid Redirect URIs 必须精确包含 `https://x.agentcici.com/auth/oidc/callback` 和 `https://x.agentcici.com/app`，不使用通配符；前者用于 OIDC 协议回调，后者用于激活完成后的安全落地和重新启动登录。
+
 ### 撤销规则
 
 - 撤销单个公司成员：停止该公司的 OACT/应用访问，不删除全局 Principal，也不影响其在其他公司的成员资格。
@@ -474,6 +483,7 @@ Keycloak client_credentials
 - realm 为 `agentcici`；内部 `id`/OIDC `sub` 由 Keycloak 生成且不可修改。
 - `username` 使用 AgentCiCi 人类 `public_id`；`email` 是已验证的可变镜像。
 - 首次邀请采用 `VERIFY_EMAIL`、`UPDATE_PASSWORD` 和按策略要求的 MFA Required Actions。
+- 已启用 OIDC 的个人密码修改由应用发起 `UPDATE_PASSWORD` 动作完成，个人档案不展示或提交本地密码表单；激活完成回跳 `/app`，而不是 OIDC callback。
 - Realm/Client Role 只承载认证级别或客户端访问能力，不编码公司成员角色、Semattice 数据角色或资源 ACL。
 
 ### 服务客户端

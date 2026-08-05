@@ -32,6 +32,13 @@ protected_paths:
   - infrastructure/**
   - .claw/developers/**
 scope_files:
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/api/AuthController.java
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/service/KeycloakOidcLoginService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/service/KeycloakIdentityProvisioningService.java
+  - backend/src/test/java/com/codehouse/ciciassistant/auth/KeycloakOidcLoginServiceTest.java
+  - backend/src/test/java/com/codehouse/ciciassistant/auth/KeycloakIdentityProvisioningServiceTest.java
+  - frontend/src/assistant/MyEmailAccountsModal.tsx
+  - frontend/src/assistant/MyEmailAccountsModal.test.tsx
   - .claw/assignments/TASK-252.yaml
   - .claw/tasks/TASK-252.md
   - .claw/task-board.md
@@ -49,8 +56,10 @@ task_boundary:
   - "允许按生产 release runbook 构建、推送、发布和验收；Semattice 的独立实现须在其仓库另建任务并遵循其项目规范。"
   - "修复 CloudCC CRM 集成的组织 ID 配置语义：AgentCiCi 租户外键仍为 company_id；CloudCC 配置与 Token 请求统一使用 orgId，允许正向迁移和兼容旧 companyId 读取。"
   - "修复公司切换数据隔离的前端旧工件缓存与实时流作用域：入口 HTML 不得缓存，带内容哈希的静态资源可长期缓存；旧公司 SSE/轮询回调不得触发当前公司的任何会话读取或状态写入。"
+  - "修复统一认证后的密码生命周期：AgentCiCi 不得再把本地历史密码写入宣称为登录密码；已启用 OIDC 时，个人档案必须通过受控 Keycloak UPDATE_PASSWORD 动作完成修改。"
+  - "修复激活邮件落地：Required Actions 邮件完成后必须回到可正常启动 OIDC 的 /app，而非需要 code/state 的 callback；Keycloak BFF 必须仅允许精确的 callback 与 /app 回跳地址。"
 change_manifest_required: true
 preflight_required: true
 local_login_required: true
 identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
-signature: "MANAGER-001; user explicitly authorized FEAT-145 implementation, mainline merge/push and production release on 2026-07-27."
+signature: "MANAGER-001; user explicitly authorized FEAT-145 implementation, mainline merge/push and production release on 2026-07-27, and explicitly authorized the Keycloak password lifecycle plus invitation landing-page production repair on 2026-08-05."
