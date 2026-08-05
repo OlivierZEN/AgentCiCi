@@ -1,7 +1,7 @@
 task_id: TASK-267
 assignee: MANAGER-001
 assigned_by: MANAGER-001
-status: review
+status: completed
 assigned_at: 2026-08-05T04:59:18Z
 expires_at: none
 spec_path: docs/specs/FEAT-159-governed-service-principal-admin-ui.md
@@ -17,8 +17,10 @@ allowed_write_roots:
   - .claw/tasks/**
   - .claw/assignments/**
   - .claw/task-board.md
+  - .claw/task-archive.md
   - .claw/current-status.md
   - .claw/test-report.md
+  - .claw/devops.md
 protected_paths:
   - .claw/developers/**
   - .github/workflows/**
@@ -34,8 +36,10 @@ scope_files:
   - .claw/tasks/TASK-267.md
   - .claw/assignments/TASK-267.yaml
   - .claw/task-board.md
+  - .claw/task-archive.md
   - .claw/current-status.md
   - .claw/test-report.md
+  - .claw/devops.md
 touch_policy: exclusive
 shared_contracts:
   - AdminGuard organization authorization

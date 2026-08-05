@@ -1,14 +1,16 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-05T05:08:00Z
+updated_at: 2026-08-05T05:22:30Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-08-05T05:08:00Z
+last_run_at: 2026-08-05T05:22:30Z
 last_run_status: passed
 ---
 
 # Test Report
+
+- 状态：`passed`
 
 ## TASK-267 - 机器主体管理页面
 
@@ -17,6 +19,7 @@ last_run_status: passed
 - `service-principal-contract`：`mvn -q -Dtest=ServicePrincipalServiceTest test` 通过。既有服务契约继续保证轮换产生的新密钥不进入审计记录，并拒绝跨企业的主体操作。
 - `secret-display-boundary`：代码审阅确认列表接口只消费无密钥的投影数据；轮换成功的 `clientSecret` 只存放于页面内存，切换主体/确认已保存均立即清除，未使用 localStorage、URL 参数、日志或埋点。
 - `diff-check`：`git diff --check` 通过。
+- `production-2.8.50`：backend/frontend ACR index digest 为 `sha256:affd6eb08e2b65c0a5d33c2ca59dbe29e72208444b618714eab31a1e478dd20c` / `sha256:59e52f78a72dc11197ed9aa976f0dd21e319dabe2bb393d6ae189b871b3e35c0`。发布前备份 `/opt/cici/backups/20260805-052058-before-2.8.50-machine-principals` 的环境、PostgreSQL、KB、Qdrant 均非空；仅重建 backend/frontend，六容器 healthy，`/actuator/health=UP`、版本为 `2.8.50 / 82e1c249e622`、Nginx 通过，`https://x.agentcici.com/`=200、HTTP 根路径=301。匿名 `/admin/service-principals` 为 401 `Authentication required`，符合组织管理员保护契约。无受权管理员浏览器会话，未伪造主体或密钥操作。
 
 ## TASK-266 - AI表格业务对象实时列表
 

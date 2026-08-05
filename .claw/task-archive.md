@@ -1,7 +1,7 @@
 ---
 kind: task-archive
 version: 4
-updated_at: 2026-08-01T15:46:00Z
+updated_at: 2026-08-05T05:22:30Z
 updated_by: MANAGER-001
 archive_status: active
 ---
@@ -11,6 +11,8 @@ archive_status: active
 Historical task cards have been removed from the hot board. Keep details in task status files and specs when they exist.
 
 ## Archived Tasks
+
+- TASK-267 — done — AgentCiCi 机器主体管理页面，已发布 `2.8.50 / 82e1c249e622`；入口为“组织架构 → 机器主体”，支持受确认保护的生命周期与一次性密钥轮换。
 
 - TASK-129 — done — Admin login organization-selection alignment; `/admin/login` supports organization selection after account login and passed desktop/mobile QA.
 - TASK-127 — done — Merge remaining local branches into the current branch; historical branch integration and worktree restoration completed.

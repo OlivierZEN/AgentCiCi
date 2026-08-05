@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-159
 title: AgentCiCi 机器主体管理界面
-status: implemented
+status: verified
 owner_role: fullstack-agent
 task_ids: TASK-267
 related_decisions: "AgentCiCi 是全局 Principal、Keycloak client 与密钥轮换权威；Semattice 只保存租户投影"
 related_issues: none
-updated_at: 2026-08-05T05:08:00Z
+updated_at: 2026-08-05T05:22:30Z
 updated_by: MANAGER-001
 ---
 
@@ -43,4 +43,4 @@ updated_by: MANAGER-001
 - 后羿、悟空、哪吒和大乔等 SERVICE 能从真实 API 显示 Client ID 与负责人，不显示 secret。
 - 暂停/恢复成功后刷新真实状态；暂停主体的轮换操作不可用。
 - 轮换行为必须先确认，成功 secret 只存在于一次性安全面板；关闭后不可从页面恢复。
-- 前端定向测试、现有后端回归、前端构建与 diff 检查通过；生产发布和受权会话验收等待后续授权。
+- 前端定向测试、现有后端回归、前端构建、生产发布与匿名访问边界检查通过；已发布 `2.8.50`，受权组织管理员可进行实际会话验收。

@@ -8,6 +8,12 @@ status: active
 
 # DevOps
 
+## 2026-08-05 TASK-267 / 机器主体管理页面发布
+
+- 已发布 AgentCiCi `2.8.50 / 82e1c249e622`。ACR backend/frontend index digest 为 `sha256:affd6eb08e2b65c0a5d33c2ca59dbe29e72208444b618714eab31a1e478dd20c` / `sha256:59e52f78a72dc11197ed9aa976f0dd21e319dabe2bb393d6ae189b871b3e35c0`。
+- 发布前备份 `/opt/cici/backups/20260805-052058-before-2.8.50-machine-principals` 的 `acr.env.before-release`、`postgres.dump`、`kb-files.tgz`、`qdrant.tgz` 均非空。仅 pull/force-recreate `cici-backend` 与 `cici-frontend`，四个状态服务容器未重启。
+- 六容器 healthy，backend `/actuator/health=UP`，`/system/version` 返回该版本和提交，Nginx 配置有效，`x.agentcici.com` HTTPS=200、HTTP=301；匿名 `/admin/service-principals` 为预期 401。未使用或输出任何 Client Secret；受权 ORG_ADMIN 真实会话验收待完成。
+
 ## 2026-08-04 TASK-265 / 产品经理评审 Tool 生产验收
 
 - 当前生产 AgentCiCi `2.8.45 / 435ee0af6e2d` 保留并运行 query/create/review 三个正式 Tool、always-on Skill 与产品经理 SERVICE 显式绑定；生产数据库回读均为 enabled。
