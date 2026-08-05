@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-05T07:59:27Z
+updated_at: 2026-08-05T10:45:24Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-08-05T07:59:27Z
+last_run_at: 2026-08-05T10:45:24Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## 2026-08-05 TASK-272 管理端设置页深链刷新修复（生产 2.8.56）
+
+- `merge/release`：修复提交 `903efee` 已由合并提交 `564fb9fbfd8d` 进入 `main`；Git annotated tag `2.8.56` 与 backend/frontend ACR index digest `sha256:b9fad83dc1ed0710844a78c645c56bf6b82922047b82f3f7dc2d1b62f1ab12e6` / `sha256:e767ed0177ecd7f599897caad741b2a90f7e7002bc21bb148ae8e912dfb60e89` 一致。
+- `quality-gates`：前端定向 Vitest 4 files / 52 tests、完整 `mvn -q -Dmaven.repo.local=.m2 test`、前端 TypeScript/Vite 生产构建、Compose config、HTTP Nginx `nginx -t` 与 `git diff --check` 通过。前端构建仅输出既有 bundle-size 提示。
+- `backup/deploy`：发布前四类备份位于 `/opt/cici/backups/20260805-184240-before-2.8.56` 且均非空；生产六容器 healthy，backend health=`UP`、`/system/version=2.8.56 / 564fb9fbfd8d`、线上 `nginx -t` 通过，近期 backend/frontend 启动错误扫描均为 0。
+- `route-boundary`：公网 x HTTP 为 301、HTTPS 首页为 200；匿名 HTML 请求 `/admin/service-principals` 现为 `200 text/html` 且包含 SPA `#root`，未出现 `Authentication required`；匿名 `/api/admin/service-principals` 仍为预期 `401 application/json`。`onechat.agentcici.com` DNS 无法解析，记录为既有入口风险。
+
+- 状态：`passed`
 
 ## 2026-08-05 TASK-270 悟空 Client ID 切换闭环
 

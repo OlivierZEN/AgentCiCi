@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-05T09:11:00Z
+updated_at: 2026-08-05T10:45:24Z
 updated_by: MANAGER-001
-phase: admin-spa-route-repair-review
-active_task: TASK-272
-next_action: "等待用户决定是否合并 TASK-272 并按生产 Runbook 发布；当前未发布生产。"
+phase: released
+active_task: none
+next_action: "TASK-272 已完成并发布；等待用户以正常组织管理员会话复核设置页硬刷新后的登录守卫跳转。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-272 / FEAT-162：已完成组织管理端深链刷新修复，浏览器管理 API 统一使用 `/api/admin/*`，而 `/admin/*` 只保留给 SPA。前端定向测试 52/52、生产构建、Compose 配置和 HTTP Nginx 语法检查通过；挂载新配置的本地 Nginx 验证 `/admin/service-principals` 返回 SPA HTML。SSL Nginx 语法检查受本机缺少部署证书限制，待发布前环境复核。本任务未改后端、鉴权或数据，未发布生产。
+- TASK-272 / FEAT-162：已发布生产 `2.8.56 / 564fb9fbfd8d`，修复所有组织管理端功能页深链刷新被后端 `/admin/*` 控制器截获的问题。浏览器管理 API 已统一至 `/api/admin/*`，而 `/admin/*` 仅保留 SPA 页面路由。前端定向测试 52/52、完整后端测试、生产构建、Compose/Nginx 配置校验通过；发布前四类备份位于 `/opt/cici/backups/20260805-184240-before-2.8.56`。六容器 healthy、health=UP、版本接口与 Nginx 均正确；匿名 `https://x.agentcici.com/admin/service-principals` 为 `200 text/html` 且含 SPA root，匿名 `/api/admin/service-principals` 仍为预期 JSON 401。未改后端控制器、鉴权或业务数据；`onechat.agentcici.com` 仍无 DNS 解析，未作为成功依据。
 
 - TASK-270：用户明确授权将悟空开发者 SERVICE 的 Client ID 由 `dev-autopilot-developer` 改为 `dev-autopilot-developer-wukong`。受治理 API 已发布于 `2.8.53`，且显式确认入口已发布于 `2.8.55 / 9796b475d7d5`；AgentCiCi 权威记录、Keycloak client 和 identity mirror 均在事务/补偿边界内处理，Secret 不读取、不轮换。当前线上仍未改名：本次执行环境没有可用的 Oliver ORG_ADMIN 会话，未绕过人类委托直接改库。待 Oliver 在“机器主体 → 悟空”完成一次确认后，立即同步 DevAutopilot allowlist 与 root-only CLI 凭据并回归。
 

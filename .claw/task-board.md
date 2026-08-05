@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-05T15:15:00Z
+updated_at: 2026-08-05T10:45:24Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-272 - 组织管理端深链刷新回退修复
 
-- status: `review`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-162-admin-spa-route-api-namespace.md`
 - task_status_path: `.claw/tasks/TASK-272.md`
 - assignment_path: `.claw/assignments/TASK-272.yaml`
 - blocked_by: `none`
-- next_action: 定向验证已通过，等待用户决定是否合并并按生产 Runbook 发布。
+- next_action: 已合并 `main` 并发布 `2.8.56 / 564fb9fbfd8d`；设置页深链刷新现回到 SPA，待正常组织管理员会话作最终交互回读。
 
 ### TASK-271 - 组织切换全称悬浮提示
 

@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-162
 title: 组织管理端 SPA 路由与浏览器 API 命名空间隔离
-status: review
+status: done
 owner_role: fullstack-agent
 task_ids: TASK-272
 related_decisions: none
 related_issues: none
-updated_at: 2026-08-05T09:18:00Z
+updated_at: 2026-08-05T10:45:24Z
 updated_by: MANAGER-001
 ---
 
@@ -31,7 +31,7 @@ updated_by: MANAGER-001
 ### Out Of Scope
 
 - 不修改后端控制器、认证逻辑、权限、数据、路由 UI、主题或移动端。
-- 不改变外部 OpenAPI 契约，不发布生产环境。
+- 不改变外部 OpenAPI 契约、权限或业务数据。
 
 ## 方案与约束
 
@@ -55,4 +55,5 @@ updated_by: MANAGER-001
 
 - 已迁移当前组织管理端的用户、机器主体、组织简档、计费、运行观测、微信客服、本体与元数据审批浏览器请求。
 - HTTP 与 HTTPS Nginx、Vite 均使用通用 `/api/admin/*` 去前缀代理，旧 `/admin/*` API 代理已移除。
-- 前端定向测试 52/52、生产构建、Compose 配置与 HTTP `nginx -t` 通过；挂载配置的本地 Nginx 镜像已验证深链返回 SPA HTML。SSL `nginx -t` 受本机无部署证书限制，待发布前环境复核。
+- 前端定向测试 52/52、完整后端测试、生产构建、Compose 配置与 HTTP `nginx -t` 通过；挂载配置的本地 Nginx 镜像已验证深链返回 SPA HTML。
+- 已随 `2.8.56 / 564fb9fbfd8d` 发布生产。线上六容器 healthy、后端 health=UP、版本接口/Nginx 语法通过；`x.agentcici.com/admin/service-principals` 的 HTML 请求返回 `200 text/html` 和 SPA root，匿名 `/api/admin/service-principals` 仍返回 JSON 401，证明页面路由与 API 鉴权边界均已生效。
