@@ -23,6 +23,49 @@ import org.mockito.Mockito;
 class AdminUserServiceTest {
 
     @Test
+    void resendsActivationOnlyForThePendingMemberWithoutChangingMembershipData() {
+        UserRepository users = Mockito.mock(UserRepository.class);
+        CompanyRepository companies = Mockito.mock(CompanyRepository.class);
+        UserAccountRepository accounts = Mockito.mock(UserAccountRepository.class);
+        AccountLoginIdentifierRepository identifiers = Mockito.mock(AccountLoginIdentifierRepository.class);
+        KeycloakIdentityProvisioningService provisioning = Mockito.mock(KeycloakIdentityProvisioningService.class);
+        UserAccountEntity account = new UserAccountEntity("13900000002");
+        UserEntity pending = new UserEntity(Mockito.mock(CompanyEntity.class), account, RoleCodes.ORG_ADMIN);
+        pending.setMemberStatus(UserEntity.STATUS_PENDING_ACTIVATION);
+        when(users.findByIdAndCompany_Id(pending.getId(), "company-1")).thenReturn(Optional.of(pending));
+        when(provisioning.resendHumanActivation(account)).thenReturn(
+                new KeycloakIdentityProvisioningService.ProvisionResult(true, true, "subject-1"));
+
+        AdminUserService service = new AdminUserService(users, companies, accounts, identifiers, provisioning);
+
+        assertThat(service.resendActivationEmail("company-1", pending.getId()))
+                .containsEntry("id", pending.getId())
+                .containsEntry("memberStatus", UserEntity.STATUS_PENDING_ACTIVATION)
+                .containsEntry("roleCode", RoleCodes.ORG_ADMIN);
+        verify(provisioning).resendHumanActivation(account);
+        verify(users, never()).save(any());
+    }
+
+    @Test
+    void rejectsActivationResendForAnAlreadyActiveMember() {
+        UserRepository users = Mockito.mock(UserRepository.class);
+        CompanyRepository companies = Mockito.mock(CompanyRepository.class);
+        UserAccountRepository accounts = Mockito.mock(UserAccountRepository.class);
+        AccountLoginIdentifierRepository identifiers = Mockito.mock(AccountLoginIdentifierRepository.class);
+        KeycloakIdentityProvisioningService provisioning = Mockito.mock(KeycloakIdentityProvisioningService.class);
+        UserEntity active = new UserEntity(Mockito.mock(CompanyEntity.class), new UserAccountEntity("13900000003"), RoleCodes.ORG_USER);
+        when(users.findByIdAndCompany_Id(active.getId(), "company-1")).thenReturn(Optional.of(active));
+
+        AdminUserService service = new AdminUserService(users, companies, accounts, identifiers, provisioning);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                () -> service.resendActivationEmail("company-1", active.getId()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("仅可向待激活成员重发初始化邮件");
+        verifyNoInteractions(provisioning);
+    }
+
+    @Test
     void doesNotReactivateASuspendedMemberWhenAnAdministratorInvitesAgain() {
         UserRepository users = Mockito.mock(UserRepository.class);
         CompanyRepository companies = Mockito.mock(CompanyRepository.class);

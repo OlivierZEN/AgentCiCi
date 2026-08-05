@@ -82,6 +82,23 @@ public class AdminUserService {
         return toRow(target);
     }
 
+    /**
+     * Sends a fresh Keycloak verification/password-setup message for a member
+     * that is still pending activation.  This intentionally does not reuse
+     * {@link #inviteMember(String, String, String, String, String)} because an
+     * invitation edit may otherwise change the member's role or profile.
+     */
+    @Transactional
+    public Map<String, Object> resendActivationEmail(String companyId, String userId) {
+        UserEntity target = userRepository.findByIdAndCompany_Id(userId, companyId)
+                .orElseThrow(() -> new IllegalArgumentException("成员不存在或不属于当前组织"));
+        if (!UserEntity.STATUS_PENDING_ACTIVATION.equals(target.getMemberStatus())) {
+            throw new IllegalStateException("仅可向待激活成员重发初始化邮件");
+        }
+        keycloakIdentityProvisioningService.resendHumanActivation(target.getAccount());
+        return toRow(target);
+    }
+
     @Transactional
     public Map<String, Object> updateRole(String companyId, String actorUserId, String targetUserId, String newRoleCode) {
         String role = normalizeMemberRole(newRoleCode);

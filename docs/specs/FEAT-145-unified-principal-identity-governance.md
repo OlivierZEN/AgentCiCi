@@ -7,7 +7,7 @@ owner_role: project-manager
 task_ids: TASK-252
 related_decisions: FEAT-136 Keycloak 统一身份与官方应用访问令牌, FEAT-144 全局用户公共编号
 related_issues: none
-updated_at: 2026-08-04T13:45:00Z
+updated_at: 2026-08-05T06:56:00Z
 updated_by: MANAGER-001
 ---
 
@@ -360,6 +360,14 @@ sequenceDiagram
 5. Required Actions 邮件完成后的 `redirect_uri` 必须是 `https://x.agentcici.com/app`。`/auth/oidc/callback` 仅接收由 AgentCiCi 正常 OIDC 开始事务创建的 `code + state`，绝不能作为邮件动作落地地址。
 6. Keycloak `agentcici-bff` 的 Valid Redirect URIs 必须精确包含 `https://x.agentcici.com/auth/oidc/callback` 和 `https://x.agentcici.com/app`，不使用通配符；前者用于 OIDC 协议回调，后者用于激活完成后的安全落地和重新启动登录。
 
+### 待激活成员重发入口
+
+- 组织管理员在“组织控制台 → 用户”选择 `PENDING_ACTIVATION` 成员时，可看到“统一账号待激活”和“重发激活邮件”入口；非待激活成员不展示该入口。
+- 确认操作调用 `POST /admin/users/{userId}/activation-email`。控制器沿用 `@RequireOrgAdmin`，并以当前 OACT 的 `company_id` 查询目标成员；跨公司 ID、已激活成员、已停用成员均 fail closed。
+- 服务端仅调用 Keycloak 的 `VERIFY_EMAIL`、`UPDATE_PASSWORD` Required Actions，邮件链接有效期仍为 24 小时；不传输、生成、展示或重置密码。
+- 该操作不得复用“添加成员”接口：重发过程中不可改变 `company_member` 的角色、昵称、CloudCC 绑定、成员状态或全局账户资料。若远端绑定缺失，仍只能按既有 `public_id + account_id` 属性和邮箱归属规则恢复同一身份。
+- 已完成激活的 Keycloak User 被服务端明确拒绝，避免把重发入口变为管理员密码重置通道。页面在发送前二次确认，并在成功后仅提示邮件已重新发送，不返回 Keycloak token、激活链接或任何秘密。
+
 ### 撤销规则
 
 - 撤销单个公司成员：停止该公司的 OACT/应用访问，不删除全局 Principal，也不影响其在其他公司的成员资格。
@@ -520,6 +528,7 @@ Keycloak client_credentials
 - 已实现独立的 AgentCiCi Keycloak provisioner 配置入口（默认关闭）；生产启用时使用独立 confidential client，不复用 BFF client。
 - 已实现精确查找/创建 Keycloak User、`issuer + sub` 绑定、`VERIFY_EMAIL` / `UPDATE_PASSWORD` Required Actions 与首次成功 OIDC 登录激活成员；创建失败时本地事务回滚，重试时以 `public_id` 精确查找，避免重复 User。
 - 生产邀请修复：每次受控邀请先读取已绑定 `sub` 的 Keycloak User；未激活用户重发 Required Actions 邮件，已激活用户不触发密码重置。若远端 `sub` 已被删除，只有 `public_id + account_id` 受管属性与邮箱同时一致的用户可恢复绑定，否则创建新用户或安全拒绝。V102 将兼容镜像改为按绑定主键 upsert，使 `subject` 重绑同步到 `principal_identity`。
+- 管理端补充了待激活成员的独立“重发激活邮件”入口和 `POST /admin/users/{userId}/activation-email`。入口不复用添加成员，不覆盖角色或资料；后端只接受当前公司的 `PENDING_ACTIVATION` 成员，并拒绝向已激活账号发起初始化邮件。
 - 新公司成员入口已接受邮箱。未启用 provisioner 保持兼容；启用后邮箱必填且成员处于 `PENDING_ACTIVATION`，完成激活前不可获得应用会话。
 - 既有未绑定成员只通过受控邀请或人工确认补齐，不强制重置密码或静默创建重复用户。
 
@@ -566,6 +575,7 @@ Keycloak client_credentials
 ### 流程与安全
 
 - 新人邀请不会产生重复 AgentCiCi 账户、重复 Keycloak User、重复成员或重复邀请；幂等重试返回同一操作结果。
+- 仅当前公司 `PENDING_ACTIVATION` 成员可重发激活邮件；重发不改变成员角色、资料或状态，已激活成员不能经该入口触发密码设置邮件。
 - 未激活、绑定冲突、失效成员、无责任人的机器主体、错误 issuer/audience/scope 均 fail closed。
 - Keycloak 人类密码、MFA、refresh token、私钥和 bearer token 不出现在 AgentCiCi 数据库、日志、事件或 API 响应中；Client Secret 仅能在受控机器账户创建响应中经 TLS 返回一次，随后必须进入受管密钥库，绝不持久化、记录或再次展示。
 - 官方应用不能直接创建 Keycloak 人类用户；只能经受控 AgentCiCi API 创建/确保成员。

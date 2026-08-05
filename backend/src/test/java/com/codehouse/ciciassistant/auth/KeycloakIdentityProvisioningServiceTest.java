@@ -191,7 +191,7 @@ class KeycloakIdentityProvisioningServiceTest {
     }
 
     @Test
-    void keepsAnActivatedBoundUserActiveWithoutSendingAnotherPasswordSetupEmail() throws Exception {
+    void refusesActivationResendForAnActivatedBoundUserWithoutSendingAnotherPasswordSetupEmail() throws Exception {
         UserAccountEntity account = account("account-4", "U2026MN34OP56", "active@example.com");
         AccountExternalIdentityEntity identity = new AccountExternalIdentityEntity(
                 account, "http://placeholder/realms/agentcici", "active-subject");
@@ -214,8 +214,10 @@ class KeycloakIdentityProvisioningServiceTest {
             }
         });
         try {
-            assertThat(provisioningService(identities, accounts, issuer(server), true).ensureHumanIdentity(account))
-                    .isEqualTo(new KeycloakIdentityProvisioningService.ProvisionResult(true, false, "active-subject"));
+            assertThatThrownBy(() -> provisioningService(identities, accounts, issuer(server), true)
+                    .resendHumanActivation(account))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessage("该统一账号已经激活，不能重发初始化邮件");
             verify(identities, never()).saveAndFlush(any());
         } finally {
             server.stop(0);

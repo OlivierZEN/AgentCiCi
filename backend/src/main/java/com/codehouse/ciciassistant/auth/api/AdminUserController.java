@@ -44,6 +44,12 @@ public class AdminUserController {
                 request.roleCode()));
     }
 
+    @PostMapping("/{userId}/activation-email")
+    public ApiResponse<Map<String, Object>> resendActivationEmail(@PathVariable String userId) {
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(adminUserService.resendActivationEmail(companyId, userId));
+    }
+
     @PutMapping("/{userId}/role")
     public ApiResponse<Map<String, Object>> updateRole(
             @PathVariable String userId,

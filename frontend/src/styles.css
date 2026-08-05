@@ -5858,6 +5858,55 @@ select {
   transform: translateX(14px);
 }
 
+.user-member-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.2;
+}
+
+.user-member-status--pending {
+  color: #9a6700;
+}
+
+.user-activation-callout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: -2px 0 18px;
+  padding: 12px 14px;
+  border: 1px solid #ded2bb;
+  border-left: 3px solid #b99652;
+  background: #fffaf0;
+}
+
+.user-activation-callout strong {
+  color: #5f3f14;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.user-activation-callout p,
+.user-activation-confirmation {
+  margin: 4px 0 0;
+  color: #5f523f;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.user-activation-confirmation {
+  margin: 0;
+}
+
+.user-activation-confirmation strong {
+  color: #2b2217;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
 .user-avatar-placeholder {
   width: 52px;
   height: 52px;
@@ -6429,6 +6478,11 @@ select {
     width: 100%;
     min-width: 0;
     margin-left: 0;
+  }
+
+  .user-activation-callout {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 

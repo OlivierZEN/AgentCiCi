@@ -133,6 +133,24 @@ public class KeycloakIdentityProvisioningService {
         }
     }
 
+    /**
+     * Re-sends the initial human-account actions without changing any AgentCiCi
+     * company membership data.  It is deliberately restricted to a Keycloak
+     * user that is still awaiting email verification or password setup, so an
+     * administrator cannot turn this into a password-reset path for an active
+     * member.
+     */
+    public ProvisionResult resendHumanActivation(UserAccountEntity account) {
+        if (!humanProvisioningEnabled) {
+            throw new IllegalStateException("统一身份邀请开通尚未启用");
+        }
+        ProvisionResult result = ensureHumanIdentity(account);
+        if (!result.activationRequired()) {
+            throw new IllegalStateException("该统一账号已经激活，不能重发初始化邮件");
+        }
+        return result;
+    }
+
     public boolean isEnabled() {
         return humanProvisioningEnabled;
     }

@@ -5,6 +5,7 @@ import { LS_ADMIN_TOKEN } from "../../constants";
 
 const ROLE_OWNER = "OWNER";
 const STATUS_SUSPENDED = "SUSPENDED";
+const STATUS_PENDING_ACTIVATION = "PENDING_ACTIVATION";
 
 type UserRow = {
   id: string;
@@ -55,6 +56,8 @@ export default function AdminUsersPage() {
   const [inviteForm, setInviteForm] = useState({ mobile: "", email: "", nickname: "", roleCode: "ORG_USER" });
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
+  const [resendActivationModalOpen, setResendActivationModalOpen] = useState(false);
+  const [resendActivationSubmitting, setResendActivationSubmitting] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState("");
 
   const load = async () => {
@@ -183,20 +186,46 @@ export default function AdminUsersPage() {
     await load();
   };
 
+  const resendActivationEmail = async (userId: string) => {
+    setResendActivationSubmitting(true);
+    try {
+      const res = await fetch(`/admin/users/${encodeURIComponent(userId)}/activation-email`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        setNotice(json.message ?? "初始化邮件发送失败");
+        return;
+      }
+      setResendActivationModalOpen(false);
+      await load();
+      setNotice("初始化邮件已重新发送，请提醒成员在 24 小时内验证邮箱并设置密码");
+    } catch {
+      setNotice("初始化邮件发送失败");
+    } finally {
+      setResendActivationSubmitting(false);
+    }
+  };
+
   useEffect(() => {
     void load();
   }, [token]);
 
   useEffect(() => {
-    if (!inviteModalOpen) return;
+    if (!inviteModalOpen && !resendActivationModalOpen) return;
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !inviteSubmitting) {
+      if (event.key !== "Escape") return;
+      if (inviteModalOpen && !inviteSubmitting) {
         setInviteModalOpen(false);
+      }
+      if (resendActivationModalOpen && !resendActivationSubmitting) {
+        setResendActivationModalOpen(false);
       }
     };
     document.addEventListener("keydown", closeOnEscape);
     return () => document.removeEventListener("keydown", closeOnEscape);
-  }, [inviteModalOpen, inviteSubmitting]);
+  }, [inviteModalOpen, inviteSubmitting, resendActivationModalOpen, resendActivationSubmitting]);
 
   const filteredUsers = users.filter((u) => {
     const q = keyword.trim().toLowerCase();
@@ -208,6 +237,7 @@ export default function AdminUsersPage() {
   const currentAdminIsOwner = currentMember?.roleCode === ROLE_OWNER || (!currentMember && adminAuth?.roles?.includes(ROLE_OWNER));
   const selectedIsOwner = selected?.roleCode === ROLE_OWNER;
   const selectedIsSuspended = selected?.memberStatus === STATUS_SUSPENDED;
+  const selectedIsPendingActivation = selected?.memberStatus === STATUS_PENDING_ACTIVATION;
 
   useEffect(() => {
     if (!selected) return;
@@ -276,7 +306,13 @@ export default function AdminUsersPage() {
                 <div className="user-list-item__mobile">{u.nickname || u.mobile}</div>
                 <div className="user-list-item__meta">
                   <span>{u.nickname ? u.mobile : "未设置昵称"}</span>
-                  <span>{u.memberStatus === STATUS_SUSPENDED ? "已停用" : userRoleLabel(u.roleCode)}</span>
+                  <span>
+                    {u.memberStatus === STATUS_SUSPENDED
+                      ? "已停用"
+                      : u.memberStatus === STATUS_PENDING_ACTIVATION
+                        ? "待激活"
+                        : userRoleLabel(u.roleCode)}
+                  </span>
                 </div>
               </button>
             ))}
@@ -313,19 +349,23 @@ export default function AdminUsersPage() {
                   </div>
                   <div className="user-detail-topbox__item">
                     <span className="subtle">成员状态</span>
-                    <button
-                      type="button"
-                      className={`user-status-switch${selectedIsSuspended ? "" : " is-on"}`}
-                      role="switch"
-                      aria-checked={!selectedIsSuspended}
-                      aria-label={selectedIsSuspended ? "恢复成员" : "停用成员"}
-                      onClick={() => void setMemberStatus(selected.id, selectedIsSuspended ? "restore" : "suspend")}
-                    >
-                      <span className="user-status-switch__track" aria-hidden>
-                        <span className="user-status-switch__thumb" />
-                      </span>
-                      <span>{selectedIsSuspended ? "已停用" : "有效"}</span>
-                    </button>
+                    {selectedIsPendingActivation ? (
+                      <span className="user-member-status user-member-status--pending">待激活</span>
+                    ) : (
+                      <button
+                        type="button"
+                        className={`user-status-switch${selectedIsSuspended ? "" : " is-on"}`}
+                        role="switch"
+                        aria-checked={!selectedIsSuspended}
+                        aria-label={selectedIsSuspended ? "恢复成员" : "停用成员"}
+                        onClick={() => void setMemberStatus(selected.id, selectedIsSuspended ? "restore" : "suspend")}
+                      >
+                        <span className="user-status-switch__track" aria-hidden>
+                          <span className="user-status-switch__thumb" />
+                        </span>
+                        <span>{selectedIsSuspended ? "已停用" : "有效"}</span>
+                      </button>
+                    )}
                   </div>
                   <div className="user-detail-topbox__item">
                     <span className="subtle">创建时间</span>
@@ -333,6 +373,18 @@ export default function AdminUsersPage() {
                   </div>
                 </div>
               </div>
+
+              {selectedIsPendingActivation && (
+                <div className="user-activation-callout">
+                  <div>
+                    <strong>统一账号待激活</strong>
+                    <p>成员需通过邮件验证邮箱并设置首次登录密码；重发不会修改其角色、资料或成员状态。</p>
+                  </div>
+                  <button type="button" className="user-btn-soft" onClick={() => setResendActivationModalOpen(true)}>
+                    重发激活邮件
+                  </button>
+                </div>
+              )}
 
               <div className="user-detail-tabs">
                 <button
@@ -546,6 +598,56 @@ export default function AdminUsersPage() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {resendActivationModalOpen && selected && (
+        <div
+          className="user-invite-modal-backdrop"
+          role="presentation"
+          onClick={(event) => {
+            if (event.target === event.currentTarget && !resendActivationSubmitting) {
+              setResendActivationModalOpen(false);
+            }
+          }}
+        >
+          <section className="user-invite-modal" role="dialog" aria-modal="true" aria-labelledby="resend-activation-modal-title">
+            <div className="user-invite-modal__head">
+              <h2 id="resend-activation-modal-title">重发激活邮件</h2>
+              <button
+                type="button"
+                className="user-invite-modal__close"
+                aria-label="关闭重发激活邮件"
+                onClick={() => setResendActivationModalOpen(false)}
+                disabled={resendActivationSubmitting}
+              >
+                ×
+              </button>
+            </div>
+            <div className="user-invite-modal__body">
+              <p className="user-activation-confirmation">
+                将向 <strong>{selected.email || "该成员的已登记邮箱"}</strong> 发送新的邮箱验证和设置密码链接。链接有效期为 24 小时；不会修改成员的角色、资料或成员状态。
+              </p>
+            </div>
+            <div className="user-invite-modal__foot">
+              <button
+                type="button"
+                className="user-invite-modal__secondary"
+                onClick={() => setResendActivationModalOpen(false)}
+                disabled={resendActivationSubmitting}
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                className="user-invite-modal__primary"
+                onClick={() => void resendActivationEmail(selected.id)}
+                disabled={resendActivationSubmitting}
+              >
+                {resendActivationSubmitting ? "发送中" : "确认重发"}
+              </button>
+            </div>
+          </section>
         </div>
       )}
     </div>
