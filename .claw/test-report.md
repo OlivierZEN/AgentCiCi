@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-05T16:05:00Z
+updated_at: 2026-08-05T07:59:27Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-08-05T16:05:00Z
+last_run_at: 2026-08-05T07:59:27Z
 last_run_status: passed
 ---
 
@@ -16,6 +16,22 @@ last_run_status: passed
 - Semattice 可信 OACT 同步将既有悟空 SERVICE principal 原位协调为新 Client ID，`identity.principal.sync` 审计为 `succeeded`；角色、负责人和业务历史未重建。
 - 悟空自身 CLI 的 `identity status --human` 和只读 `tasks list --human` 均成功；未使用人类、产品经理或其他机器身份替代，也未输出密钥或 OACT。
 
+## 2026-08-05 TASK-271 组织切换全称悬浮提示
+
+- `frontend-focused`：`npm test -- src/assistant/AssistantApp.test.ts` 通过（1 test）。
+- `frontend-build`：`npm run build` 通过（TypeScript + Vite）；仅有既有 bundle-size 提示。
+- `scope`：仅为现有当前组织入口和组织名称补充原生 `title` 提示，不改变组织来源、组织切换、管理后台入口、菜单样式或主题。
+- `production-2.8.54`：Git tag/commit 为 `2.8.54 / 9a0fe88bf59f`；backend/frontend ACR index digest 为 `sha256:36d870c55ad8234e2a193823cc4b71153feaabc54b6422ec3a547b648657198e` / `sha256:103cdf2c5cecd864e81d7ec17a832bdc89d7c6def820235b2083e807166cb91c`。发布前备份 `/opt/cici/backups/20260805-155805-before-2.8.54-org-tooltip` 的环境、PostgreSQL、KB、Qdrant 均非空；仅重建 backend/frontend，六容器 healthy，health=UP、版本正确、Nginx 配置通过、`x.agentcici.com` HTTPS=200、HTTP=301。线上页面返回新前端 `assets/index-MIoTtAf-.js`，工件含“当前组织：”提示文本。未使用或伪造受权会话，真实菜单悬浮验收待用户回读。
+
+- 状态：`passed`
+
+## 2026-08-05 TASK-249 组织简档代理热修
+
+- `frontend-build`：`npm --prefix frontend run build` 通过（TypeScript + Vite）；仅有既有 bundle-size 提示。
+- `production-nginx`：同步两份版本化 Nginx 配置后，`docker exec cici-frontend nginx -t` 通过并完成热重载。服务器回环、显式公网 IP/SNI 与 DNS 域名的匿名 `GET /admin/company/profile` 均返回 `401 application/json;charset=ISO-8859-1`，不再返回 SPA `200 text/html`；前端/后端容器 healthy，backend health=`UP`。
+- `scope`：未构建镜像、未重启后端或数据库、未触碰 Keycloak、身份或业务数据。受权组织管理员页面数据由既有接口返回，未伪造登录会话。
+
+- 状态：`passed`
 
 ## 2026-08-05 TASK-268 Semattice 本体第一、第二阶段本地集成
 

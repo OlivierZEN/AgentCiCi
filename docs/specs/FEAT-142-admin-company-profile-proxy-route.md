@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-142
 title: 组织简档接口反向代理修复
-status: in_implementation
+status: complete
 owner_role: fullstack-agent
 task_ids: TASK-249
 related_decisions: company_id identity terminology; existing admin company profile API
 related_issues: production /admin/company/profile served as SPA HTML
-updated_at: 2026-07-24T14:31:37Z
+updated_at: 2026-08-05T07:41:57Z
 updated_by: MANAGER-001
 ---
 
@@ -32,7 +32,7 @@ updated_by: MANAGER-001
 
 - 不修改后端控制器、数据库、迁移、权限模型、`/admin/company/profile` 响应体或组织资料页面 UI。
 - 不添加新的管理员入口、移动端适配、主题或组件视觉调整。
-- 本任务只修复、测试并推送代码；生产发布必须由用户另行明确授权。
+- 本任务只修复、测试并推送代码；生产配置热修已获用户对当前故障的明确授权。
 
 ## 设计与接口约定
 
@@ -51,3 +51,9 @@ updated_by: MANAGER-001
 
 - 变更仅扩大既有 API 代理白名单，未触及数据或权限；错误匹配的主要风险是把 SPA 页面路由误代理。
 - 仅匹配精确 `admin/company/profile` 前缀，`/admin/company` 页面路由保持由 SPA 承载；如需回滚可撤回这一个代理匹配，但会恢复当前故障。
+
+## 实施与上线结果
+
+- 已在 HTTP/HTTPS 两份 Nginx 配置中加入 `admin/company/profile`，并在 Vite 开发代理中加入相同精确匹配；旧 `admin/organization/(profile|export-jobs)` 兼容规则保留。
+- 同步配置前发现生产还有 `admin/users`、`admin/service-principals` 白名单而仓库未记录；已一并保留，避免配置覆盖导致既有管理 API 回归。
+- `npm --prefix frontend run build` 与线上 `nginx -t` 通过。热重载后，回环、公网 IP/SNI 与 DNS 域名请求均返回后端 `401 application/json`，不再是 SPA HTML；受权会话可继续既有 GET/PATCH 契约。

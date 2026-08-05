@@ -55,6 +55,12 @@ export const servicePrincipalPresentation = {
   canRotate(status: LifecycleStatus) {
     return status === "ACTIVE";
   },
+  canRenameClientId(status: LifecycleStatus) {
+    return status !== "REVOKED";
+  },
+  isValidClientId(value: string) {
+    return /^[a-z0-9][a-z0-9-]{2,127}$/.test(value);
+  },
   serviceKindLabel(kind: string) {
     if (kind === "DEVELOPER") return "开发智能体";
     if (kind === "PRODUCT_MANAGER") return "产品经理智能体";
@@ -82,7 +88,8 @@ export default function AdminServicePrincipalsPage() {
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<"rotate" | "suspend" | "activate" | null>(null);
+  const [confirmAction, setConfirmAction] = useState<"rename-client-id" | "rotate" | "suspend" | "activate" | null>(null);
+  const [replacementClientId, setReplacementClientId] = useState("");
   const [oneTimeSecret, setOneTimeSecret] = useState<RotateSecretResult | null>(null);
 
   const selected = useMemo(
@@ -117,6 +124,7 @@ export default function AdminServicePrincipalsPage() {
   useEffect(() => {
     setOneTimeSecret(null);
     setConfirmAction(null);
+    setReplacementClientId("");
   }, [selected?.principalId]);
 
   const updateLifecycle = async (action: "suspend" | "activate") => {
@@ -167,6 +175,31 @@ export default function AdminServicePrincipalsPage() {
     }
   };
 
+  const renameClientId = async () => {
+    if (!selected || !servicePrincipalPresentation.isValidClientId(replacementClientId)) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(adminApi.servicePrincipals(`/${encodeURIComponent(selected.principalId)}/rename-client-id`), {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ clientId: replacementClientId }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        setNotice(json.message ?? "Client ID 更新失败");
+        return;
+      }
+      setNotice(`“${selected.displayName}”的 Client ID 已更新为 ${json.data?.clientId ?? replacementClientId}；现有 Client Secret 保持不变。`);
+      await load({ quiet: true });
+    } catch {
+      setNotice("Client ID 更新失败，请稍后重试");
+    } finally {
+      setSubmitting(false);
+      setConfirmAction(null);
+      setReplacementClientId("");
+    }
+  };
+
   const copySecret = async () => {
     if (!oneTimeSecret) return;
     try {
@@ -178,6 +211,7 @@ export default function AdminServicePrincipalsPage() {
   };
 
   const runConfirmedAction = () => {
+    if (confirmAction === "rename-client-id") void renameClientId();
     if (confirmAction === "rotate") void rotateSecret();
     if (confirmAction === "suspend") void updateLifecycle("suspend");
     if (confirmAction === "activate") void updateLifecycle("activate");
@@ -245,6 +279,11 @@ export default function AdminServicePrincipalsPage() {
               </div>
 
               <div className="service-principal-detail__actions">
+                {servicePrincipalPresentation.canRenameClientId(selected.lifecycleStatus) && (
+                  <button type="button" className="secondary" onClick={() => setConfirmAction("rename-client-id")} disabled={submitting}>
+                    变更 Client ID
+                  </button>
+                )}
                 {selected.lifecycleStatus === "ACTIVE" && (
                   <button type="button" className="secondary" onClick={() => setConfirmAction("suspend")} disabled={submitting}>
                     暂停主体
@@ -313,18 +352,36 @@ export default function AdminServicePrincipalsPage() {
           <section className="service-principal-dialog" role="dialog" aria-modal="true" aria-labelledby="service-principal-dialog-title">
             <p className="service-principals-page__eyebrow">需要明确确认</p>
             <h2 id="service-principal-dialog-title">
-              {confirmAction === "rotate" ? "确认轮换 Client Secret？" : confirmAction === "suspend" ? "确认暂停机器主体？" : "确认恢复机器主体？"}
+              {confirmAction === "rename-client-id"
+                ? "确认变更 Client ID？"
+                : confirmAction === "rotate" ? "确认轮换 Client Secret？" : confirmAction === "suspend" ? "确认暂停机器主体？" : "确认恢复机器主体？"}
             </h2>
             <p>
-              {confirmAction === "rotate"
+              {confirmAction === "rename-client-id"
+                ? `变更后，旧 ID “${selected.clientId}”将立即失效。现有 Client Secret 保持不变；请同步更新所有调用方的配置。`
+                : confirmAction === "rotate"
                 ? `“${selected.displayName}”的旧 Client Secret 将立即失效。新密钥仅会在下一步显示一次。`
                 : confirmAction === "suspend"
                   ? `暂停后，“${selected.displayName}”将不能再获取新的访问令牌或执行受授权调用。`
                   : `恢复后，“${selected.displayName}”可再次按已授权范围获取访问令牌。`}
             </p>
+            {confirmAction === "rename-client-id" && (
+              <label className="service-principal-dialog__field">
+                <span>新的 Client ID</span>
+                <input
+                  value={replacementClientId}
+                  onChange={(event) => setReplacementClientId(event.target.value.trim())}
+                  placeholder="例如 dev-autopilot-developer-wukong"
+                  autoComplete="off"
+                  spellCheck={false}
+                  autoFocus
+                />
+                <small>仅允许小写字母、数字和连字符，长度 3–128 位。</small>
+              </label>
+            )}
             <div className="service-principal-dialog__actions">
               <button type="button" className="secondary" onClick={() => setConfirmAction(null)} disabled={submitting}>取消</button>
-              <button type="button" className="service-principal-button--primary" onClick={runConfirmedAction} disabled={submitting}>
+              <button type="button" className="service-principal-button--primary" onClick={runConfirmedAction} disabled={submitting || (confirmAction === "rename-client-id" && !servicePrincipalPresentation.isValidClientId(replacementClientId))}>
                 {submitting ? "处理中…" : "确认执行"}
               </button>
             </div>

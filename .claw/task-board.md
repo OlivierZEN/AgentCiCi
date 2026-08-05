@@ -15,6 +15,28 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-272 - 组织管理端深链刷新回退修复
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-162-admin-spa-route-api-namespace.md`
+- task_status_path: `.claw/tasks/TASK-272.md`
+- assignment_path: `.claw/assignments/TASK-272.yaml`
+- blocked_by: `none`
+- next_action: 统一浏览器管理 API 命名空间并去除 `/admin/*` 深链后端代理冲突。
+
+### TASK-271 - 组织切换全称悬浮提示
+
+- status: `done`
+- priority: `medium`
+- owner_role: `frontend-agent`
+- spec_path: `docs/specs/FEAT-161-organization-switch-full-name-tooltip.md`
+- task_status_path: `.claw/tasks/TASK-271.md`
+- assignment_path: `.claw/assignments/TASK-271.yaml`
+- blocked_by: `none`
+- next_action: 已发布 `2.8.54 / 9a0fe88bf59f`；用户可在组织入口和切换菜单中悬停查看完整组织名称。
+
 ### TASK-270 - 悟空开发者 SERVICE Client ID 规范化改名
 
 - status: `in_progress`
@@ -24,7 +46,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-270.md`
 - assignment_path: `n/a`
 - blocked_by: `none`
-- next_action: 发布受保护改名 API，并在带回滚备份的切换窗口完成 AgentCiCi、Keycloak、DevAutopilot allowlist 与悟空受管凭据的同步改名和回归验证。
+- next_action: `2.8.55` 已发布受治理 API 的显式确认入口；待 Oliver 有效 ORG_ADMIN 会话在“机器主体 → 悟空”确认改名后，同步 DevAutopilot allowlist 与悟空受管凭据并回归验证。
 
 ### TASK-269 - 指定全局用户公共编号更正
 
@@ -190,13 +212,13 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-249 - 组织简档接口反向代理修复
 
-- status: `ready`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-142-admin-company-profile-proxy-route.md`
 - task_status_path: `.claw/tasks/TASK-249.md`
 - assignment_path: `.claw/assignments/TASK-249.yaml`
-- next_action: 为生产 Nginx 与本地 Vite 同步 `/admin/company/profile` API 代理，并验证不再返回 SPA HTML。
+- next_action: 已提交并上线配置热修；生产请求已由后端返回 401 JSON，受权会话刷新即可回读简档。
 
 ### TASK-248 - 平台注册用户目录展示已加入组织
 

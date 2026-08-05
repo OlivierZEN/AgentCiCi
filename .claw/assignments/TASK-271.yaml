@@ -1,0 +1,46 @@
+task_id: TASK-271
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-08-05T00:00:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-161-organization-switch-full-name-tooltip.md
+task_status_path: .claw/tasks/TASK-271.md
+branch: codex/TASK-271-org-switch-tooltip
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - frontend/src/assistant/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/developers/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+scope_files:
+  - frontend/src/assistant/AssistantApp.tsx
+  - frontend/src/assistant/AssistantApp.test.ts
+  - docs/specs/FEAT-161-organization-switch-full-name-tooltip.md
+  - .claw/tasks/TASK-271.md
+  - .claw/assignments/TASK-271.yaml
+  - .claw/task-board.md
+  - .claw/test-report.md
+touch_policy: exclusive
+shared_contracts:
+  - AgentCiCi authenticated desktop workbench shell
+  - current product theme token contract
+  - organization switching and organization admin entry
+task_boundary:
+  - "为侧栏当前组织首字符入口提供完整组织名称的悬浮提示。"
+  - "为组织切换菜单内被省略号截断的组织名称提供完整组织名称的悬浮提示。"
+  - "保持组织名称来源、切换逻辑、管理后台入口、菜单尺寸、主题和桌面结构不变。"
+  - "不新增移动端适配、不修改组织数据或权限、不更改组织切换 API。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
+signature: "MANAGER-001; user requested organization full-name hover visibility on 2026-08-05."

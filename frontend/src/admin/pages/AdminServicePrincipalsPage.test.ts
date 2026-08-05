@@ -7,6 +7,10 @@ describe("machine principal presentation", () => {
     expect(servicePrincipalPresentation.statusLabel("SUSPENDED")).toBe("已暂停");
     expect(servicePrincipalPresentation.canRotate("ACTIVE")).toBe(true);
     expect(servicePrincipalPresentation.canRotate("SUSPENDED")).toBe(false);
+    expect(servicePrincipalPresentation.canRenameClientId("SUSPENDED")).toBe(true);
+    expect(servicePrincipalPresentation.canRenameClientId("REVOKED")).toBe(false);
+    expect(servicePrincipalPresentation.isValidClientId("dev-autopilot-developer-wukong")).toBe(true);
+    expect(servicePrincipalPresentation.isValidClientId("DEV Autopilot")).toBe(false);
   });
 
   it("uses the governed human owner display name when present", () => {

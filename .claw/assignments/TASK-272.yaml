@@ -1,0 +1,56 @@
+task_id: TASK-272
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-08-05T09:11:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-162-admin-spa-route-api-namespace.md
+task_status_path: .claw/tasks/TASK-272.md
+branch: codex/TASK-272-admin-spa-refresh
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - frontend/src/admin/**
+  - frontend/vite.config.ts
+  - frontend/vite.config.js
+  - deploy/nginx.cici.conf
+  - deploy/nginx.cici.ssl.conf
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/developers/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+scope_files:
+  - frontend/src/admin/adminApi.ts
+  - frontend/src/admin/adminApi.test.ts
+  - frontend/src/admin/**
+  - frontend/vite.config.ts
+  - frontend/vite.config.js
+  - deploy/nginx.cici.conf
+  - deploy/nginx.cici.ssl.conf
+  - docs/specs/FEAT-162-admin-spa-route-api-namespace.md
+  - .claw/tasks/TASK-272.md
+  - .claw/assignments/TASK-272.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+touch_policy: exclusive
+shared_contracts:
+  - /admin/* SPA page routes
+  - /api/admin/* browser API proxy namespace
+  - existing backend /admin/* controller paths and authorization
+task_boundary:
+  - "管理端页面刷新必须回到 SPA，而不是后端 JSON。"
+  - "浏览器管理 API 统一使用 /api/admin 并由代理去前缀。"
+  - "不改后端、权限、数据或生产环境。"
+change_manifest_required: true
+preflight_required: false
+local_login_required: false
+identity_policy: temporarily_paused_by_project_manager_2026-08-05
+signature: "MANAGER-001; user reported admin feature-page refresh renders backend Authentication required JSON on 2026-08-05."

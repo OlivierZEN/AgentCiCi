@@ -26,7 +26,6 @@ spec_path: docs/specs/FEAT-156-dev-autopilot-identity-roster.md
 - 线上改名后，旧 ID 不可换取 token；新 ID 使用有效的受管 Secret 可完成 OACT 交换与 DevAutopilot 任务读取。
 
 ## Progress
-
 - 受保护改名 API 已随 AgentCiCi `2.8.53` 发布；改名在 AgentCiCi 权威记录、Keycloak client 与 identity mirror 上原子化处理。
 - 管理端“机器主体”页的显式“变更 Client ID”确认入口已随生产 `2.8.55 / 9796b475d7d5` 发布。该入口仅由当前组织的 ORG_ADMIN 会话提交，界面会明确提示旧 ID 将失效、Secret 不变及调用方配置同步要求。
 - Oliver 已通过已发布机器主体页确认改名。权威记录、Keycloak client 与 identity mirror 均为 `dev-autopilot-developer-wukong`；旧 ID 已被 Keycloak 拒绝。

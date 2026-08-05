@@ -13,6 +13,12 @@ status: active
 - Client ID 改名是 Keycloak client 与 AgentCiCi 身份记录的一致性操作，不需要重建 AgentCiCi 容器；DevAutopilot 仅需重启以重新读取 allowlist。
 - 本次改名后原受管密钥被 Keycloak 拒绝，因此在受管 Keycloak 客户端上轮换一次 Client Secret，并仅写回悟空 `root:root 0600` 的生产凭据文件。旧密钥即时失效，未输出、未写入数据库、代码或日志。
 - 生产验收为悟空新 Client ID 的 Keycloak → OACT → Semattice identity sync → CLI 身份/只读任务链路；旧 ID 负向认证失败。
+
+## 2026-08-05 TASK-249 / 组织简档代理热修
+
+- 生产 `x.agentcici.com/admin/company/profile` 曾落入 SPA 并返回 `200 text/html`；根因是 Nginx API 正则仅保留了旧 `admin/organization/(profile|export-jobs)`，没有当前 `admin/company/profile`。
+- 已同步版本化 `nginx.cici.conf` 与 `nginx.cici.ssl.conf`，补齐精确 `admin/company/profile` 代理，同时保留生产已有 `admin/users` 与 `admin/service-principals` 白名单，避免覆盖配置时回归其他管理接口。
+- 配置备份位于 `/opt/cici/backups/20260805-154049-before-task249-company-profile-proxy`。容器内 `nginx -t` 成功后仅热重载 Nginx；无镜像构建、无应用容器重建、无后端/数据库重启。回环、公网 IP/SNI 和 DNS 请求均为后端 `401 application/json`，frontend/backend healthy、backend health=`UP`。
 ## 2026-08-05 TASK-267 / 机器主体管理页面发布
 
 - 已发布 AgentCiCi `2.8.50 / 82e1c249e622`。ACR backend/frontend index digest 为 `sha256:affd6eb08e2b65c0a5d33c2ca59dbe29e72208444b618714eab31a1e478dd20c` / `sha256:59e52f78a72dc11197ed9aa976f0dd21e319dabe2bb393d6ae189b871b3e35c0`。
