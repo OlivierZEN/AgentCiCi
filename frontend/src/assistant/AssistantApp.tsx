@@ -4137,6 +4137,7 @@ export default function AssistantApp() {
               setCompanyMenuOpen((open) => !open);
             }}
             aria-label={`切换组织，当前组织：${currentCompanyName}`}
+            title={`当前组织：${currentCompanyName}`}
             aria-expanded={companyMenuOpen}
           >
             <div className="cici-rail__logo-icon">{getCompanyMonogram(currentCompanyName)}</div>
@@ -4170,7 +4171,7 @@ export default function AssistantApp() {
                     aria-current={isCurrent ? "true" : undefined}
                     disabled={Boolean(adminEntryCompanyId)}
                   >
-                    <span>{item.companyName}</span>
+                    <span title={item.companyName}>{item.companyName}</span>
                     {isCurrent ? <small>当前</small> : null}
                   </button>
                   {canManage ? (

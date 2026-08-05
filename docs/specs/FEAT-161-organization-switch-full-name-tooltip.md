@@ -7,7 +7,7 @@ owner_role: frontend-agent
 task_ids: TASK-271
 related_decisions: none
 related_issues: none
-updated_at: 2026-08-05T00:00:00Z
+updated_at: 2026-08-05T07:55:12Z
 updated_by: MANAGER-001
 ---
 
@@ -34,3 +34,8 @@ updated_by: MANAGER-001
 - 鼠标停留在左侧当前组织入口时可见完整当前组织名称。
 - 鼠标停留在组织切换菜单任意名称时可见该组织全称，即使正文显示为省略号。
 - 组织切换和“管理后台”按钮保持原有行为，前端测试与生产构建通过。
+
+## 实施进展
+
+- 已完成：当前组织入口使用“当前组织：完整名称”提示，菜单名称使用完整 `companyName` 提示。
+- 已完成：定向前端测试和生产构建通过，等待发布与线上入口验收。

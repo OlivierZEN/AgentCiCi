@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-05T16:05:00Z
+updated_at: 2026-08-05T07:55:12Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-08-05T16:05:00Z
+last_run_at: 2026-08-05T07:55:12Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## 2026-08-05 TASK-271 组织切换全称悬浮提示
+
+- `frontend-focused`：`npm test -- src/assistant/AssistantApp.test.ts` 通过（1 test）。
+- `frontend-build`：`npm run build` 通过（TypeScript + Vite）；仅有既有 bundle-size 提示。
+- `scope`：仅为现有当前组织入口和组织名称补充原生 `title` 提示，不改变组织来源、组织切换、管理后台入口、菜单样式或主题。
+
+- 状态：`passed`
 
 ## 2026-08-05 TASK-249 组织简档代理热修
 
