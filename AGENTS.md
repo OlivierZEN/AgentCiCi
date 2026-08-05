@@ -12,7 +12,7 @@
 ## 工作方式
 
 - 默认先读 `.claw/current-status.md`；涉及实现、交接或排期时再读 `.claw/task-board.md` 与对应 `.claw/tasks/TASK-xxx.md`。
-- 若仓库启用了 `.claw/developers/`、`.claw/assignments/` 或本地登录要求，编辑前必须通过身份门禁；优先使用仓库内 `scripts/dev-login.py`，若仓库未内置该脚本，则使用已加载的 `cc-aidev-guidelines-common` 技能包自带 `scripts/dev-login.py`，不得因本地脚本缺失而跳过门禁。
+- 临时暂停开发身份门禁：自 2026-08-05 起，在项目经理明确宣布该流程正式可用之前，AI agent 不得启用或要求 DevAutopilot Developer SERVICE / `doctor` / 任务认领与设计审批门禁，也不得运行 `.claw` 的 `dev-login.py` / `check-assignment.py` SSH 持钥和任务范围门禁。现有 `.claw/developers/`、`.claw/assignments/` 与历史验证记录只作保留，不作为当前项目编辑的前置条件；功能规格、任务状态、测试证据、最小范围修改、Git 提交和其他安全治理规则继续执行。只有项目经理的后续明确指令可以重新启用这些门禁。
 - 新功能、跨模块改动、API/数据结构变化、非平凡重构必须落到 `docs/specs/`；小修可只更新任务状态。
 - 真实验证结果写入 `.claw/test-report.md`；热状态文件只保留当前快照，不堆历史。
 - 功能设计、实现和测试默认不新增移动端兼容实现、移动端布局适配、移动端截图或移动端自动化测试；除非用户明确单独要求，验收只做桌面端产品质量门。
