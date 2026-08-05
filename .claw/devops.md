@@ -8,6 +8,11 @@ status: active
 
 # DevOps
 
+## 2026-08-05 TASK-270 悟空机器凭据恢复
+
+- Client ID 改名是 Keycloak client 与 AgentCiCi 身份记录的一致性操作，不需要重建 AgentCiCi 容器；DevAutopilot 仅需重启以重新读取 allowlist。
+- 本次改名后原受管密钥被 Keycloak 拒绝，因此在受管 Keycloak 客户端上轮换一次 Client Secret，并仅写回悟空 `root:root 0600` 的生产凭据文件。旧密钥即时失效，未输出、未写入数据库、代码或日志。
+- 生产验收为悟空新 Client ID 的 Keycloak → OACT → Semattice identity sync → CLI 身份/只读任务链路；旧 ID 负向认证失败。
 ## 2026-08-05 TASK-267 / 机器主体管理页面发布
 
 - 已发布 AgentCiCi `2.8.50 / 82e1c249e622`。ACR backend/frontend index digest 为 `sha256:affd6eb08e2b65c0a5d33c2ca59dbe29e72208444b618714eab31a1e478dd20c` / `sha256:59e52f78a72dc11197ed9aa976f0dd21e319dabe2bb393d6ae189b871b3e35c0`。

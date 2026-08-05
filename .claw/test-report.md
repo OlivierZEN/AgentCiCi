@@ -10,6 +10,13 @@ last_run_status: passed
 
 # Test Report
 
+## 2026-08-05 TASK-270 悟空 Client ID 切换闭环
+
+- 受治理改名后，悟空新 Client ID `dev-autopilot-developer-wukong` 可完成 Keycloak Client Credentials 和 AgentCiCi OACT 交换；旧 ID 返回预期 Keycloak 认证失败。
+- Semattice 可信 OACT 同步将既有悟空 SERVICE principal 原位协调为新 Client ID，`identity.principal.sync` 审计为 `succeeded`；角色、负责人和业务历史未重建。
+- 悟空自身 CLI 的 `identity status --human` 和只读 `tasks list --human` 均成功；未使用人类、产品经理或其他机器身份替代，也未输出密钥或 OACT。
+
+
 ## 2026-08-05 TASK-268 Semattice 本体第一、第二阶段本地集成
 
 - `backend-focused`：`mvn -q -Dtest=SematticeOntologyLifecycleServiceTest,OntologyPublishServiceTest,SematticeOntologyAdapterTest,SematticeOntologyContractCompilerTest,SematticeOntologyHttpGatewayTest test` 通过。覆盖当前已发布元数据发现、受限单对象记录查询、最小公开连接器配置、稳定对象/字段/关系编译、服务端 OACT 与幂等调用边界，以及首次发布幂等、变更影响模拟、候选取消、独立审批激活、AgentCiCi 版本同步、非破坏性安全回滚与远端漂移阻断。
