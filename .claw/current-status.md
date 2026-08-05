@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-05T16:05:00Z
+updated_at: 2026-08-05T09:11:00Z
 updated_by: MANAGER-001
-phase: wukong-service-client-id-rename-in-progress
-active_task: TASK-270
-next_action: "由 Oliver 的有效 ORG_ADMIN 会话在已发布的机器主体页明确确认 Client ID 改名；随后将悟空从 dev-autopilot-developer 原子切换为 dev-autopilot-developer-wukong，并同步 DevAutopilot 准入和受管 CLI 凭据。"
+phase: admin-spa-route-repair-in-progress
+active_task: TASK-272
+next_action: "修复 /admin/* 页面路由与后端 API 路径冲突，确保深链刷新由 SPA 接管；不发布生产。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-272 / FEAT-162：已复现线上组织管理端刷新问题。`Accept: text/html` 请求 `/admin/service-principals` 仍返回后端 `401 application/json`，原因是页面路由与后端 API 都使用 `/admin/*`，旧 Nginx 规则将文档请求代理到受保护控制器。将浏览器管理 API 统一迁至 `/api/admin/*`，而 `/admin/*` 只保留给 SPA；本任务不改后端、鉴权、数据或生产环境。
 
 - TASK-270：用户明确授权将悟空开发者 SERVICE 的 Client ID 由 `dev-autopilot-developer` 改为 `dev-autopilot-developer-wukong`。受治理 API 已发布于 `2.8.53`，且显式确认入口已发布于 `2.8.55 / 9796b475d7d5`；AgentCiCi 权威记录、Keycloak client 和 identity mirror 均在事务/补偿边界内处理，Secret 不读取、不轮换。当前线上仍未改名：本次执行环境没有可用的 Oliver ORG_ADMIN 会话，未绕过人类委托直接改库。待 Oliver 在“机器主体 → 悟空”完成一次确认后，立即同步 DevAutopilot allowlist 与 root-only CLI 凭据并回归。
 
