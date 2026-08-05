@@ -10,6 +10,12 @@ last_run_status: passed
 
 # Test Report
 
+## 2026-08-05 TASK-270 悟空 Client ID 切换闭环
+
+- 受治理改名后，悟空新 Client ID `dev-autopilot-developer-wukong` 可完成 Keycloak Client Credentials 和 AgentCiCi OACT 交换；旧 ID 返回预期 Keycloak 认证失败。
+- Semattice 可信 OACT 同步将既有悟空 SERVICE principal 原位协调为新 Client ID，`identity.principal.sync` 审计为 `succeeded`；角色、负责人和业务历史未重建。
+- 悟空自身 CLI 的 `identity status --human` 和只读 `tasks list --human` 均成功；未使用人类、产品经理或其他机器身份替代，也未输出密钥或 OACT。
+
 ## 2026-08-05 TASK-271 组织切换全称悬浮提示
 
 - `frontend-focused`：`npm test -- src/assistant/AssistantApp.test.ts` 通过（1 test）。
