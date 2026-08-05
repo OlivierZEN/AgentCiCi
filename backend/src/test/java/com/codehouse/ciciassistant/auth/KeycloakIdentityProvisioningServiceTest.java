@@ -57,6 +57,47 @@ class KeycloakIdentityProvisioningServiceTest {
     }
 
     @Test
+    void renamesMachineClientWithoutRotatingItsServiceAccountCredential() throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        AtomicInteger lookupsForReplacement = new AtomicInteger();
+        HttpServer server = server(exchange -> {
+            String path = exchange.getRequestURI().getPath();
+            if (path.endsWith("/protocol/openid-connect/token")) {
+                respond(exchange, 200, "{\"access_token\":\"provisioner-token\"}");
+            } else if (path.endsWith("/clients") && "GET".equals(exchange.getRequestMethod())) {
+                String query = exchange.getRequestURI().getRawQuery();
+                if (query.contains("clientId=dev-autopilot-developer-wukong")) {
+                    respond(exchange, 200, lookupsForReplacement.getAndIncrement() == 0 ? "[]" : "[{\"id\":\"internal-client\"}]");
+                } else if (query.contains("clientId=dev-autopilot-developer")) {
+                    respond(exchange, 200, "[{\"id\":\"internal-client\"}]");
+                } else {
+                    respond(exchange, 404, "");
+                }
+            } else if (path.endsWith("/clients/internal-client") && "GET".equals(exchange.getRequestMethod())) {
+                respond(exchange, 200, "{\"id\":\"internal-client\",\"clientId\":\"dev-autopilot-developer\",\"name\":\"dev-autopilot-developer\",\"enabled\":true}");
+            } else if (path.endsWith("/clients/internal-client") && "PUT".equals(exchange.getRequestMethod())) {
+                JsonNode body = mapper.readTree(exchange.getRequestBody().readAllBytes());
+                assertThat(body.path("clientId").asText()).isEqualTo("dev-autopilot-developer-wukong");
+                assertThat(body.path("name").asText()).isEqualTo("dev-autopilot-developer-wukong");
+                respond(exchange, 204, "");
+            } else {
+                respond(exchange, 404, "");
+            }
+        });
+        try {
+            KeycloakIdentityProvisioningService service = new KeycloakIdentityProvisioningService(
+                    Mockito.mock(AccountExternalIdentityRepository.class), Mockito.mock(UserAccountRepository.class),
+                    mapper, false, true, issuer(server), "agentcici-provisioner", "test-secret", "");
+
+            service.renameServiceClient("dev-autopilot-developer", "dev-autopilot-developer-wukong");
+
+            assertThat(lookupsForReplacement.get()).isEqualTo(2);
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
     void recreatesMissingRemoteUserAndRebindsTheExistingLocalIdentity() throws Exception {
         ObjectMapper mapper = new ObjectMapper();
         UserAccountEntity account = account("account-1", "U2026AB12CD34", "invitee@example.com");

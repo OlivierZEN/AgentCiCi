@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-05T06:45:53Z
+updated_at: 2026-08-05T15:15:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-270 - 悟空开发者 SERVICE Client ID 规范化改名
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `integration-agent`
+- spec_path: `docs/specs/FEAT-156-dev-autopilot-identity-roster.md`
+- task_status_path: `.claw/tasks/TASK-270.md`
+- assignment_path: `n/a`
+- blocked_by: `none`
+- next_action: 发布受保护改名 API，并在带回滚备份的切换窗口完成 AgentCiCi、Keycloak、DevAutopilot allowlist 与悟空受管凭据的同步改名和回归验证。
 
 ### TASK-269 - 指定全局用户公共编号更正
 

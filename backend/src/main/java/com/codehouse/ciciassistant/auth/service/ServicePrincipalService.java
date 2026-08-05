@@ -171,6 +171,48 @@ public class ServicePrincipalService {
     }
 
     @Transactional
+    public Map<String, Object> renameClientId(String companyId, String actorMemberId, String principalId,
+                                              String replacementClientId) {
+        UserEntity actor = requireActiveMember(companyId, actorMemberId, "只有有效的人类成员可以更新机器账户 Client ID");
+        GovernedService service = requireGoverned(companyId, principalId);
+        if ("REVOKED".equals(service.lifecycleStatus())) {
+            throw new ForbiddenException("已撤销机器账户不能更新 Client ID");
+        }
+        String replacement = required(replacementClientId, "clientId");
+        if (!replacement.matches("^[a-z0-9][a-z0-9-]{2,127}$")) {
+            throw new IllegalArgumentException("clientId 只能由小写字母、数字和连字符组成");
+        }
+        if (service.clientId().equals(replacement)) {
+            return Map.of("principalId", principalId, "clientId", replacement, "changed", false);
+        }
+        Integer conflicts = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM service_principal WHERE client_id=? AND principal_id<>?",
+                Integer.class, replacement, principalId);
+        if (conflicts != null && conflicts > 0) {
+            throw new IllegalArgumentException("Client ID 已被当前平台中的其他机器账户使用");
+        }
+        keycloak.renameServiceClient(service.clientId(), replacement);
+        try {
+            Timestamp now = Timestamp.from(Instant.now());
+            jdbcTemplate.update("UPDATE service_principal SET client_id=?, updated_at=? WHERE principal_id=?",
+                    replacement, now, principalId);
+            jdbcTemplate.update("UPDATE principal_identity SET keycloak_client_id=?, updated_at=?, last_verified_at=? "
+                            + "WHERE principal_id=? AND provider='KEYCLOAK' AND identity_type='SERVICE_ACCOUNT'",
+                    replacement, now, now, principalId);
+            audit(companyId, actor.getAccountId(), "client_id_renamed", principalId,
+                    "机器账户 Client ID 已更新为 " + replacement);
+        } catch (RuntimeException persistenceFailure) {
+            try {
+                keycloak.renameServiceClient(replacement, service.clientId());
+            } catch (RuntimeException compensationFailure) {
+                persistenceFailure.addSuppressed(compensationFailure);
+            }
+            throw persistenceFailure;
+        }
+        return Map.of("principalId", principalId, "clientId", replacement, "changed", true);
+    }
+
+    @Transactional
     public Map<String, Object> suspend(String companyId, String actorMemberId, String principalId) {
         UserEntity actor = requireActiveMember(companyId, actorMemberId, "只有有效的人类成员可以暂停机器账户");
         GovernedService service = requireGoverned(companyId, principalId);

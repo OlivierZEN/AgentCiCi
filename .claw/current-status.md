@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-05T07:08:30Z
+updated_at: 2026-08-05T15:15:00Z
 updated_by: MANAGER-001
-phase: ontology-semattice-four-phase-design-ready
-active_task: TASK-268
-next_action: "基于 FEAT-160 拆分第一、第二阶段实施计划：先完成 Semattice 只读契约、稳定 ID 绑定和真实租户验收，再启用受控 metadata 编译、独立审批与发布；第三、第四阶段保持后续里程碑。"
+phase: wukong-service-client-id-rename-in-progress
+active_task: TASK-270
+next_action: "发布受保护的机器主体 Client ID 改名 API；随后将悟空从 dev-autopilot-developer 原子切换为 dev-autopilot-developer-wukong，并同步 DevAutopilot 准入和受管 CLI 凭据。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-270：用户明确授权将悟空开发者 SERVICE 的 Client ID 由 `dev-autopilot-developer` 改为 `dev-autopilot-developer-wukong`。后端已完成 Keycloak client 改名、AgentCiCi 权威记录及 identity mirror 的受事务保护实现，并保留 Keycloak 远端更新失败/本地持久化失败时的失败关闭与补偿边界；正等待提交、发布和生产实际切换。DevAutopilot 的 allowlist 适配已独立提交。
 
 - TASK-269：已按用户明确授权完成生产全局账户 `18611892001` 的公共编号更正：`U20267MV3E4N7 → U2026OLVX1230`。预检确认目标手机号唯一、目标编号未占用且唯一/格式/不可变保护正常；PostgreSQL 备份位于 `/opt/cici/backups/20260805-150512-before-task269-user-public-id-correction`。受当前旧值保护的单行事务更新受影响数为 `1`，提交后独立回读确认目标编号全局唯一、旧编号为 `0`、触发器已恢复启用；数据库 healthy、backend health=UP。未修改 Keycloak、密码、MFA、组织成员、Principal 或其他业务数据，也未发布应用。
 

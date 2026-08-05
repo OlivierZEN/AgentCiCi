@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -67,6 +68,29 @@ class ServicePrincipalServiceTest {
                 "company-a", "member-director", "principal-other"))
                 .isInstanceOf(ForbiddenException.class)
                 .hasMessageContaining("不属于当前组织");
+    }
+
+    @Test
+    void renamesClientIdWithoutRotatingTheCredential() throws Exception {
+        UserEntity actor = activeMember("account-director");
+        when(users.findByIdAndCompany_Id("member-director", "company-a")).thenReturn(Optional.of(actor));
+        stubGovernedService("principal-developer", "company-a", "dev-autopilot-developer", "ACTIVE");
+        when(jdbc.queryForObject(anyString(), eq(Integer.class),
+                eq("dev-autopilot-developer-wukong"), eq("principal-developer"))).thenReturn(0);
+
+        Map<String, Object> result = service.renameClientId(
+                "company-a", "member-director", "principal-developer", "dev-autopilot-developer-wukong");
+
+        assertThat(result).containsEntry("clientId", "dev-autopilot-developer-wukong")
+                .containsEntry("changed", true);
+        verify(keycloak).renameServiceClient("dev-autopilot-developer", "dev-autopilot-developer-wukong");
+        verify(jdbc).update(contains("UPDATE service_principal SET client_id"),
+                eq("dev-autopilot-developer-wukong"), any(), eq("principal-developer"));
+        verify(jdbc).update(contains("UPDATE principal_identity SET keycloak_client_id"),
+                eq("dev-autopilot-developer-wukong"), any(), any(), eq("principal-developer"));
+        verify(audit).log(eq("company-a"), eq("account-director"), eq("ORG_ADMIN"),
+                eq("service_principal.client_id_renamed"), eq("service_principal"),
+                eq("principal-developer"), contains("dev-autopilot-developer-wukong"));
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})

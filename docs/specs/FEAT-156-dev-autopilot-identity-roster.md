@@ -7,7 +7,7 @@ owner_role: integration-agent
 task_ids: TASK-264
 related_decisions: "AgentCiCi 是全局 Principal 与凭据权威；Semattice 只保存租户投影和授权事实"
 related_issues: none
-updated_at: 2026-08-03T12:47:56Z
+updated_at: 2026-08-05T15:15:00Z
 updated_by: MANAGER-001
 ---
 
@@ -21,7 +21,7 @@ updated_by: MANAGER-001
 
 - 产品总监 HUMAN：`Oliver`，继续绑定全局用户 `18611892001`。
 - 产品经理 SERVICE：`大乔`，沿用 client `dev-autopilot-product-manager`。
-- 现有开发者 SERVICE：`悟空`，沿用 client `dev-autopilot-developer`。
+- 现有开发者 SERVICE：`悟空`，Client ID 规范化为 `dev-autopilot-developer-wukong`。
 - 新增开发者 SERVICE：`后羿`，client 使用 `dev-autopilot-developer-houyi`。
 - 三个 SERVICE 的 PRIMARY 人类负责人均为产品总监 Oliver。
 
@@ -31,7 +31,7 @@ updated_by: MANAGER-001
 
 ### In Scope
 
-- 更新 AgentCiCi 权威 HUMAN/SERVICE 显示名，不改变主体 ID、公共编号、client ID、手机号绑定或生命周期状态。
+- 更新 AgentCiCi 权威 HUMAN/SERVICE 显示名；悟空 Client ID 的规范化改名必须保留主体 ID、Keycloak service-account subject、负责人、Secret 与生命周期状态。
 - 通过现有受管 API 创建后羿 SERVICE，secret 只返回一次并写入服务器 `0600` 受管文件，不进入仓库、日志或审计。
 - 使用各主体的短时 OACT 自同步 Semattice 显示名与新 Principal 投影。
 - 为后羿分配现有“开发者”角色和“研发交付部”primary membership，复用现有角色权限与数据范围，不复制权限定义。
@@ -47,6 +47,7 @@ updated_by: MANAGER-001
 ## 安全与一致性
 
 - AgentCiCi 继续作为显示名、全局身份、Keycloak client 和 owner 关系权威。
+- Client ID 改名必须由组织管理员调用受保护的机器主体治理 API 完成；先更新 Keycloak client，再在同一事务中同步 AgentCiCi 权威记录和 identity mirror。持久化失败时必须尝试回滚 Keycloak 名称。
 - Semattice 只保存同租户 Principal、角色和组织投影；新开发者必须先用可信 SERVICE OACT 自同步，再赋权。
 - 后羿只获得与悟空相同的开发者角色，不获得产品经理或身份治理权限。
 - 所有一次性 secret 仅在生产服务器内存与 root-only 文件中处理，任何验证输出必须脱敏。
@@ -57,4 +58,5 @@ updated_by: MANAGER-001
 - 后羿 SERVICE 为 ACTIVE，owner 为 Oliver，Keycloak client credentials 可交换短时 Semattice OACT。
 - Semattice members/overview 返回 4 members、3 roles、1 organization；四行角色分别为产品总监、产品经理、开发者、开发者。
 - 后羿能读取/领取/更新开发任务并登记工时，不能创建项目或读取身份治理目录。
+- 悟空以新 Client ID 可通过 Keycloak client-credentials、AgentCiCi OACT 和 DevAutopilot 任务读取；旧 Client ID 不再为有效开发者准入。
 - 三个仓库工作树保持 clean；所有触发的项目状态文档完成校验和提交。

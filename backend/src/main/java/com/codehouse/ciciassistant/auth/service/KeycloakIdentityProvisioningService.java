@@ -242,6 +242,55 @@ public class KeycloakIdentityProvisioningService {
         }
     }
 
+    /** Renames a governed confidential client without rotating its service account or secret. */
+    public void renameServiceClient(String clientId, String replacementClientId) {
+        requireMachineProvisioning();
+        String current = trim(clientId);
+        String replacement = trim(replacementClientId);
+        if (current.isBlank() || replacement.isBlank()) {
+            throw new IllegalArgumentException("clientId is required");
+        }
+        if (current.equals(replacement)) {
+            return;
+        }
+        try {
+            String token = obtainAdminToken();
+            String internalId = requireServiceClient(token, current);
+            if (findClientInternalId(token, replacement) != null) {
+                throw new IllegalArgumentException("Keycloak client ID 已存在");
+            }
+            HttpRequest read = adminRequest("/clients/" + encode(internalId), token).GET().build();
+            HttpResponse<String> readResponse = httpClient.send(read, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            if (readResponse.statusCode() != 200) {
+                throw new IllegalStateException("Keycloak 机器账户读取失败");
+            }
+            JsonNode representation = objectMapper.readTree(readResponse.body());
+            if (!(representation instanceof com.fasterxml.jackson.databind.node.ObjectNode object)) {
+                throw new IllegalStateException("Keycloak 机器账户响应无效");
+            }
+            object.put("clientId", replacement);
+            if (current.equals(trim(object.path("name").asText()))) {
+                object.put("name", replacement);
+            }
+            HttpRequest update = adminRequest("/clients/" + encode(internalId), token)
+                    .header("Content-Type", "application/json")
+                    .PUT(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(object), StandardCharsets.UTF_8))
+                    .build();
+            HttpResponse<Void> updateResponse = httpClient.send(update, HttpResponse.BodyHandlers.discarding());
+            if (updateResponse.statusCode() != 204) {
+                throw new IllegalStateException("Keycloak 机器账户 Client ID 更新失败");
+            }
+            if (!internalId.equals(findClientInternalId(token, replacement))) {
+                throw new IllegalStateException("Keycloak 机器账户 Client ID 更新后不可验证");
+            }
+        } catch (Exception ex) {
+            if (ex instanceof IllegalArgumentException illegalArgumentException) {
+                throw illegalArgumentException;
+            }
+            throw new IllegalStateException("Keycloak 机器账户 Client ID 更新失败", ex);
+        }
+    }
+
     /** Removes a just-created client when the authoritative database transaction cannot be persisted. */
     public void deleteServiceClient(String clientId) {
         requireMachineProvisioning();

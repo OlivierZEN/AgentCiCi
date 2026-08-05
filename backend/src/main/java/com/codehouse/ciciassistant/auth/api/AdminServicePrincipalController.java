@@ -44,6 +44,12 @@ public class AdminServicePrincipalController {
         return ApiResponse.ok(service.rotateSecret(companyId(), actorMemberId(), principalId));
     }
 
+    @PostMapping("/{principalId}/rename-client-id")
+    public ApiResponse<Map<String, Object>> renameClientId(@PathVariable String principalId,
+                                                            @Valid @RequestBody RenameClientIdRequest request) {
+        return ApiResponse.ok(service.renameClientId(companyId(), actorMemberId(), principalId, request.clientId()));
+    }
+
     @PostMapping("/{principalId}/suspend")
     public ApiResponse<Map<String, Object>> suspend(@PathVariable String principalId) {
         return ApiResponse.ok(service.suspend(companyId(), actorMemberId(), principalId));
@@ -82,5 +88,8 @@ public class AdminServicePrincipalController {
     }
 
     public record TransferOwnerRequest(@NotBlank String ownerMemberId) {
+    }
+
+    public record RenameClientIdRequest(@NotBlank String clientId) {
     }
 }
