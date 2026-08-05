@@ -37,8 +37,9 @@ scope_files:
   - backend/src/main/java/com/codehouse/ciciassistant/auth/service/KeycloakIdentityProvisioningService.java
   - backend/src/test/java/com/codehouse/ciciassistant/auth/KeycloakOidcLoginServiceTest.java
   - backend/src/test/java/com/codehouse/ciciassistant/auth/KeycloakIdentityProvisioningServiceTest.java
+  - backend/src/test/java/com/codehouse/ciciassistant/auth/AuthControllerTest.java
   - frontend/src/assistant/MyEmailAccountsModal.tsx
-  - frontend/src/assistant/MyEmailAccountsModal.test.tsx
+  - frontend/src/assistant/MyEmailAccountsModal.test.ts
   - .claw/assignments/TASK-252.yaml
   - .claw/tasks/TASK-252.md
   - .claw/task-board.md

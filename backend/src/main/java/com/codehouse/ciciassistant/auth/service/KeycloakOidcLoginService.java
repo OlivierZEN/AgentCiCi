@@ -75,6 +75,19 @@ public class KeycloakOidcLoginService {
     }
 
     public LoginStart start(String requestedReturnTo) {
+        return start(requestedReturnTo, "");
+    }
+
+    /**
+     * Starts Keycloak's application-initiated password update.  The password
+     * remains entirely inside Keycloak; the normal state/nonce/PKCE callback
+     * still completes the AgentCiCi session afterwards.
+     */
+    public LoginStart startPasswordUpdate(String requestedReturnTo) {
+        return start(requestedReturnTo, "UPDATE_PASSWORD");
+    }
+
+    private LoginStart start(String requestedReturnTo, String requiredAction) {
         requireEnabled();
         String state = randomUrlValue();
         String nonce = randomUrlValue();
@@ -90,6 +103,12 @@ public class KeycloakOidcLoginService {
         query.put("nonce", nonce);
         query.put("code_challenge", sha256Url(verifier));
         query.put("code_challenge_method", "S256");
+        if (hasText(requiredAction)) {
+            query.put("kc_action", requiredAction);
+            // Password change is a sensitive action: require fresh Keycloak
+            // authentication instead of silently relying on an old browser SSO session.
+            query.put("prompt", "login");
+        }
         return new LoginStart(URI.create(issuer + "/protocol/openid-connect/auth?" + queryString(query)), state);
     }
 
@@ -117,13 +136,25 @@ public class KeycloakOidcLoginService {
     }
 
     public URI canonicalStartUri(String requestedReturnTo) {
+        return canonicalStartUri("/auth/oidc/login", requestedReturnTo);
+    }
+
+    public URI canonicalPasswordUpdateUri(String requestedReturnTo) {
+        return canonicalStartUri("/auth/oidc/password", requestedReturnTo);
+    }
+
+    private URI canonicalStartUri(String path, String requestedReturnTo) {
         URI callback = URI.create(redirectUri);
         return URI.create(callback.getScheme() + "://" + callback.getRawAuthority()
-                + "/auth/oidc/login?return_to=" + encode(safeReturnTo(requestedReturnTo)));
+                + path + "?return_to=" + encode(safeReturnTo(requestedReturnTo)));
     }
 
     public String issuer() {
         return issuer;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
     }
 
     public URI complete(String code, String state, String stateCookie) {

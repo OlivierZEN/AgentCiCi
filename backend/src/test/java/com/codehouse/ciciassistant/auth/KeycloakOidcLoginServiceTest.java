@@ -21,6 +21,7 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 class KeycloakOidcLoginServiceTest {
@@ -33,6 +34,21 @@ class KeycloakOidcLoginServiceTest {
         assertThat(service.isCanonicalStartHost("x.agentcici.com")).isTrue();
         assertThat(service.canonicalStartUri("/admin/ops?tab=access").toString())
                 .isEqualTo("https://x.agentcici.com/auth/oidc/login?return_to=%2Fadmin%2Fops%3Ftab%3Daccess");
+        assertThat(service.canonicalPasswordUpdateUri("/app").toString())
+                .isEqualTo("https://x.agentcici.com/auth/oidc/password?return_to=%2Fapp");
+    }
+
+    @Test
+    void startsPasswordUpdateAsAnAuthenticatedOidcAction() {
+        KeycloakOidcLoginService service = service(true);
+
+        Map<String, String> query = java.util.Arrays.stream(service.startPasswordUpdate("/app").redirectUri().getRawQuery().split("&"))
+                .map(part -> part.split("=", 2))
+                .collect(Collectors.toMap(parts -> parts[0], parts -> parts.length == 2 ? parts[1] : ""));
+
+        assertThat(query).containsEntry("kc_action", "UPDATE_PASSWORD");
+        assertThat(query).containsEntry("prompt", "login");
+        assertThat(query).containsKey("state").containsKey("nonce").containsKey("code_challenge");
     }
 
     @Test

@@ -41,6 +41,13 @@ class KeycloakIdentityProvisioningServiceTest {
     }
 
     @Test
+    void rejectsAnOidcCallbackAsAnInvitationLandingPage() {
+        assertThatThrownBy(() -> service(true, false, "https://x.agentcici.com/auth/oidc/callback"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("must target /app");
+    }
+
+    @Test
     void failsClosedWhenMachineProvisioningIsDisabled() {
         KeycloakIdentityProvisioningService service = service(false, false, "");
 
@@ -76,6 +83,9 @@ class KeycloakIdentityProvisioningServiceTest {
                 exchange.getResponseHeaders().add("Location", "/admin/realms/agentcici/users/new-subject");
                 respond(exchange, 201, "");
             } else if (path.endsWith("/users/new-subject/execute-actions-email")) {
+                assertThat(exchange.getRequestURI().getRawQuery())
+                        .contains("redirect_uri=https%3A%2F%2Fx.agentcici.com%2Fapp")
+                        .contains("lifespan=86400");
                 activationEmails.incrementAndGet();
                 respond(exchange, 204, "");
             } else {
@@ -122,6 +132,9 @@ class KeycloakIdentityProvisioningServiceTest {
                 creates.incrementAndGet();
                 respond(exchange, 500, "");
             } else if (path.endsWith("/users/pending-subject/execute-actions-email")) {
+                assertThat(exchange.getRequestURI().getRawQuery())
+                        .contains("redirect_uri=https%3A%2F%2Fx.agentcici.com%2Fapp")
+                        .contains("lifespan=86400");
                 activationEmails.incrementAndGet();
                 respond(exchange, 204, "");
             } else {
@@ -224,7 +237,7 @@ class KeycloakIdentityProvisioningServiceTest {
             boolean humanEnabled) {
         return new KeycloakIdentityProvisioningService(
                 identities, accounts, new ObjectMapper(), humanEnabled, false,
-                issuer, "agentcici-provisioner", "test-secret", "https://x.agentcici.com/auth/oidc/callback");
+                issuer, "agentcici-provisioner", "test-secret", "https://x.agentcici.com/app");
     }
 
     private static UserAccountEntity account(String id, String publicId, String email) throws Exception {

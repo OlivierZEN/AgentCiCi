@@ -40,12 +40,6 @@ type ProfileForm = {
   email: string;
 };
 
-type PasswordForm = {
-  currentPassword: string;
-  newPassword: string;
-  confirmPassword: string;
-};
-
 type ProviderPreset = {
   code: string;
   displayLabel: string;
@@ -151,11 +145,6 @@ export default function MyEmailAccountsModal({ open, token, onClose, variant = "
     displayName: "",
     mobile: "",
     email: "",
-  });
-  const [passwordForm, setPasswordForm] = useState<PasswordForm>({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
   });
   const [avatarPreview, setAvatarPreview] = useState("");
   const [providers, setProviders] = useState<ProviderPreset[]>([]);
@@ -429,32 +418,9 @@ export default function MyEmailAccountsModal({ open, token, onClose, variant = "
     }
   };
 
-  const changePassword = async () => {
-    if (!token) return;
-    setNotice("");
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setNotice("两次输入的新密码不一致");
-      return;
-    }
-    setBusy(true);
-    try {
-      const res = await fetchJson<{ updated: boolean }>("/auth/me/password", {
-        method: "PUT",
-        headers,
-        body: JSON.stringify({
-          currentPassword: passwordForm.currentPassword,
-          newPassword: passwordForm.newPassword,
-        }),
-      });
-      if (!res.success) {
-        setNotice(res.message ?? "密码修改失败");
-        return;
-      }
-      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
-      setNotice("密码已更新，下次登录请使用新密码");
-    } finally {
-      setBusy(false);
-    }
+  const startUnifiedPasswordUpdate = () => {
+    const returnTo = `${window.location.pathname}${window.location.search}`;
+    window.location.assign(`/auth/oidc/password?return_to=${encodeURIComponent(returnTo)}`);
   };
 
   const beginAvatarCrop = async (file: File) => {
@@ -544,43 +510,15 @@ export default function MyEmailAccountsModal({ open, token, onClose, variant = "
         <header className="cici-modal__section-head">
           <h4>修改密码</h4>
         </header>
-        <div className="cici-form-grid cici-profile-form">
-          <label>
-            <span>当前密码</span>
-            <input
-              type="password"
-              autoComplete="current-password"
-              value={passwordForm.currentPassword}
-              onChange={(e) => setPasswordForm((c) => ({ ...c, currentPassword: e.target.value }))}
-            />
-          </label>
-          <label>
-            <span>新密码</span>
-            <input
-              type="password"
-              autoComplete="new-password"
-              value={passwordForm.newPassword}
-              onChange={(e) => setPasswordForm((c) => ({ ...c, newPassword: e.target.value }))}
-            />
-          </label>
-          <label>
-            <span>确认新密码</span>
-            <input
-              type="password"
-              autoComplete="new-password"
-              value={passwordForm.confirmPassword}
-              onChange={(e) => setPasswordForm((c) => ({ ...c, confirmPassword: e.target.value }))}
-            />
-          </label>
-        </div>
+        <p className="cici-modal__intro">密码由统一账号中心安全管理。修改时将重新验证身份，AgentCiCi 不会接收或保存你的密码。</p>
         <footer className="cici-modal__footer">
           <button
             type="button"
             className="cici-btn cici-btn--primary"
-            onClick={() => void changePassword()}
-            disabled={busy || !passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword}
+            onClick={startUnifiedPasswordUpdate}
+            disabled={busy}
           >
-            更新密码
+            前往统一账号中心修改密码
           </button>
         </footer>
       </section>

@@ -63,6 +63,9 @@ public class KeycloakIdentityProvisioningService {
         if (humanProvisioningEnabled && this.invitationRedirectUri.isBlank()) {
             throw new IllegalArgumentException("Keycloak invitation provisioning redirect URI is incomplete");
         }
+        if (humanProvisioningEnabled && !isInvitationLandingUri(this.invitationRedirectUri)) {
+            throw new IllegalArgumentException("Keycloak invitation redirect URI must target /app");
+        }
     }
 
     public ProvisionResult ensureHumanIdentity(UserAccountEntity account) {
@@ -488,6 +491,20 @@ public class KeycloakIdentityProvisioningService {
             result = result.substring(0, result.length() - 1);
         }
         return result;
+    }
+
+    private static boolean isInvitationLandingUri(String value) {
+        try {
+            URI uri = URI.create(value);
+            return "https".equalsIgnoreCase(uri.getScheme())
+                    && uri.getUserInfo() == null
+                    && uri.getHost() != null
+                    && "/app".equals(uri.getPath())
+                    && uri.getQuery() == null
+                    && uri.getFragment() == null;
+        } catch (IllegalArgumentException ex) {
+            return false;
+        }
     }
 
     public record ProvisionResult(boolean alreadyBound, boolean activationRequired, String subject) {

@@ -74,12 +74,27 @@ public class AuthController {
     @GetMapping("/oidc/login")
     public ResponseEntity<Void> startOidcLogin(@RequestParam(name = "return_to", required = false) String returnTo,
                                                HttpServletRequest request) {
+        return beginOidcLogin(returnTo, request, false);
+    }
+
+    @GetMapping("/oidc/password")
+    public ResponseEntity<Void> startOidcPasswordUpdate(@RequestParam(name = "return_to", required = false) String returnTo,
+                                                        HttpServletRequest request) {
+        return beginOidcLogin(returnTo, request, true);
+    }
+
+    private ResponseEntity<Void> beginOidcLogin(String returnTo, HttpServletRequest request, boolean passwordUpdate) {
         if (!keycloakOidcLoginService.isCanonicalStartHost(request.getHeader(HttpHeaders.HOST))) {
+            URI canonical = passwordUpdate
+                    ? keycloakOidcLoginService.canonicalPasswordUpdateUri(returnTo)
+                    : keycloakOidcLoginService.canonicalStartUri(returnTo);
             return ResponseEntity.status(302)
-                    .header(HttpHeaders.LOCATION, keycloakOidcLoginService.canonicalStartUri(returnTo).toString())
+                    .header(HttpHeaders.LOCATION, canonical.toString())
                     .build();
         }
-        KeycloakOidcLoginService.LoginStart login = keycloakOidcLoginService.start(returnTo);
+        KeycloakOidcLoginService.LoginStart login = passwordUpdate
+                ? keycloakOidcLoginService.startPasswordUpdate(returnTo)
+                : keycloakOidcLoginService.start(returnTo);
         ResponseCookie cookie = ResponseCookie.from(KeycloakOidcLoginService.STATE_COOKIE, login.state())
                 .httpOnly(true)
                 .secure(true)
@@ -206,6 +221,9 @@ public class AuthController {
 
     @PutMapping("/me/password")
     public ApiResponse<Map<String, Object>> changeMyPassword(@Valid @RequestBody ChangeMyPasswordRequest request) {
+        if (keycloakOidcLoginService.isEnabled()) {
+            throw new IllegalStateException("统一认证已启用，请在统一账号中心修改密码");
+        }
         String companyId = TenantContext.requireCompanyId();
         String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
         return ApiResponse.ok(authService.changeCurrentUserPassword(
