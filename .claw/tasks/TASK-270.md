@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-270
 status: in_progress
-updated_at: 2026-08-05T15:15:00Z
+updated_at: 2026-08-05T16:05:00Z
 updated_by: ai
 assignee: ai
 owner_role: integration-agent
@@ -25,6 +25,12 @@ spec_path: docs/specs/FEAT-156-dev-autopilot-identity-roster.md
 - AgentCiCi 本地持久化失败时补偿恢复 Keycloak 原 Client ID；审计仅记录改名结果，不记录 Secret。
 - 线上改名后，旧 ID 不可换取 token；新 ID 使用原有受管 Secret 可完成 OACT 交换与 DevAutopilot 任务读取。
 
+## Progress
+
+- 受保护改名 API 已随 AgentCiCi `2.8.53` 发布；改名会保留既有 Client Secret，并在 AgentCiCi 权威记录、Keycloak client 与 identity mirror 上原子化处理。
+- 管理端“机器主体”页的显式“变更 Client ID”确认入口已随生产 `2.8.55 / 9796b475d7d5` 发布。该入口仅由当前组织的 ORG_ADMIN 会话提交，界面会明确提示旧 ID 将失效、Secret 不变及调用方配置同步要求。
+- 线上当前仍为旧 Client ID 和旧 DevAutopilot 配置；未伪造 Oliver 会话、未直接改库、未输出 Secret。
+
 ## Next Action
 
-- 提交并发布后端实现，创建生产备份后通过受保护治理 API 执行改名和完整回归。
+- 使用 Oliver 的有效 ORG_ADMIN 会话，在“机器主体 → 悟空 → 变更 Client ID”中输入 `dev-autopilot-developer-wukong` 并确认；随后立即在生产同步 DevAutopilot allowlist 与 root-only CLI 凭据，并验证新 ID 使用原 Secret 的 OACT/任务读取，旧 ID 被拒绝。

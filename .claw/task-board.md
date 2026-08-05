@@ -35,7 +35,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-270.md`
 - assignment_path: `n/a`
 - blocked_by: `none`
-- next_action: 发布受保护改名 API，并在带回滚备份的切换窗口完成 AgentCiCi、Keycloak、DevAutopilot allowlist 与悟空受管凭据的同步改名和回归验证。
+- next_action: `2.8.55` 已发布受治理 API 的显式确认入口；待 Oliver 有效 ORG_ADMIN 会话在“机器主体 → 悟空”确认改名后，同步 DevAutopilot allowlist 与悟空受管凭据并回归验证。
 
 ### TASK-269 - 指定全局用户公共编号更正
 
