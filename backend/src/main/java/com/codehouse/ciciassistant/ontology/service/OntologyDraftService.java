@@ -130,7 +130,7 @@ public class OntologyDraftService {
         return persistence.saveForCurrentOrg(workspace);
     }
 
-    OntologyDocument loadDraft(
+    public OntologyDocument loadDraft(
             String companyId,
             Long workspaceId,
             OntologyWorkspaceEntity workspace) {

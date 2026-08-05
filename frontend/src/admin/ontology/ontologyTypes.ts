@@ -183,6 +183,82 @@ export interface OntologyDraftView {
   sources: OntologySourceView[];
 }
 
+export type OntologySematticeSyncStatus =
+  | "NOT_LINKED"
+  | "LINKED"
+  | "IN_SYNC"
+  | "DRIFTED"
+  | "PUBLISHING"
+  | "FAILED";
+
+export interface OntologySematticeBinding {
+  workspaceId: number;
+  syncStatus: OntologySematticeSyncStatus;
+  activeMetadataVersionId: string | null;
+  activeSequence: number | null;
+  activeDigest: string | null;
+  lastErrorCode: string | null;
+  lastCheckedAt: string | null;
+  boundElements: number;
+}
+
+export interface OntologySematticeImportProposal {
+  expectedRevision: number;
+  metadataVersionId: string;
+  metadataSequence: number;
+  metadataDigest: string;
+  candidate: OntologyDocument;
+  diff: {
+    objects: number;
+    relations: number;
+    fields: number;
+  };
+}
+
+export type OntologySematticeOperationStatus =
+  | "COMPILING"
+  | "VALIDATED"
+  | "APPROVAL_PENDING"
+  | "APPROVED"
+  | "BACKFILLING"
+  | "READY"
+  | "ACTIVE"
+  | "FAILED"
+  | "CANCELED"
+  | "ROLLED_BACK";
+
+export interface OntologySematticeOperation {
+  operationId: string;
+  operationType: "INITIAL_PUBLISH" | "CHANGESET" | "ROLLBACK";
+  sourceRevision: number;
+  sourceDigest: string;
+  baseMetadataVersionId: string | null;
+  candidateMetadataVersionId: string | null;
+  changesetId: string | null;
+  subjectType: "METADATA_VERSION" | "CHANGESET" | null;
+  subjectId: string | null;
+  approvalRequestId: string | null;
+  status: OntologySematticeOperationStatus;
+  riskLevel: string | null;
+  requiresBackfill: boolean;
+  lastErrorCode: string | null;
+  updatedAt: string;
+  activatedAt: string | null;
+}
+
+export interface SematticeMetadataApproval {
+  approvalId: string;
+  subjectType: "METADATA_VERSION" | "CHANGESET";
+  subjectId: string;
+  summary: string;
+  requesterMemberId: string;
+  approverMemberId: string | null;
+  state: "PENDING" | "APPROVED";
+  expiresAt: string | null;
+  createdAt: string;
+  approvedAt: string | null;
+}
+
 export interface OntologyDraftDiff {
   draftRevision: number;
   publishedVersion: number | null;

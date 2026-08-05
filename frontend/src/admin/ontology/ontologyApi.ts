@@ -21,11 +21,15 @@ import type {
   OntologyReferencePackageSummary,
   OntologyReferencePackageView,
   OntologySemanticQuery,
+  OntologySematticeBinding,
+  OntologySematticeImportProposal,
+  OntologySematticeOperation,
   OntologySourceView,
   OntologyValidationIssue,
   OntologyVersionDetail,
   OntologyVersionSummary,
   OntologyWorkspaceView,
+  SematticeMetadataApproval,
 } from "./ontologyTypes";
 
 const MANAGEMENT_ROOT = "/admin/ontologies";
@@ -347,6 +351,16 @@ export interface OntologyApi {
   ): Promise<OntologyMappingValidationBatch>;
   compilePreview(workspaceId: number, expectedRevision: number): Promise<OntologyCompilePreview>;
   publish(workspaceId: number, expectedRevision: number): Promise<OntologyVersionSummary>;
+  getSematticeBinding(workspaceId: number): Promise<OntologySematticeBinding>;
+  linkSemattice(workspaceId: number): Promise<OntologySematticeBinding>;
+  checkSematticeDrift(workspaceId: number): Promise<OntologySematticeBinding>;
+  createSematticeImportProposal(workspaceId: number): Promise<OntologySematticeImportProposal>;
+  compileSemattice(workspaceId: number, expectedRevision: number): Promise<OntologySematticeOperation>;
+  getLatestSematticeOperation(workspaceId: number): Promise<OntologySematticeOperation | null>;
+  requestSematticeApproval(workspaceId: number, operationId: string): Promise<OntologySematticeOperation>;
+  activateSemattice(workspaceId: number, operationId: string): Promise<OntologySematticeOperation>;
+  listSematticeMetadataApprovals(): Promise<SematticeMetadataApproval[]>;
+  approveSematticeMetadata(approvalId: string): Promise<SematticeMetadataApproval>;
   listVersions(workspaceId: number): Promise<OntologyVersionSummary[]>;
   getVersion(workspaceId: number, version: number): Promise<OntologyVersionDetail>;
   explain(query: OntologySemanticQuery): Promise<OntologyQueryPlan>;
@@ -588,6 +602,67 @@ export function createOntologyApi(token: string, options: OntologyApiOptions = {
         },
       );
     },
+    getSematticeBinding: (workspaceId) => request<OntologySematticeBinding>(
+      `${MANAGEMENT_ROOT}/${workspaceId}/semattice/status`,
+    ),
+    linkSemattice: (workspaceId) => revisionMutation(
+      `semattice:link:${workspaceId}`,
+      {},
+      () => request<OntologySematticeBinding>(
+        `${MANAGEMENT_ROOT}/${workspaceId}/semattice/link`,
+        "POST",
+      ),
+    ),
+    checkSematticeDrift: (workspaceId) => request<OntologySematticeBinding>(
+      `${MANAGEMENT_ROOT}/${workspaceId}/semattice/drift-check`,
+      "POST",
+    ),
+    createSematticeImportProposal: (workspaceId) => request<OntologySematticeImportProposal>(
+      `${MANAGEMENT_ROOT}/${workspaceId}/semattice/import-proposal`,
+      "POST",
+    ),
+    compileSemattice: (workspaceId, expectedRevision) => {
+      const body = { expectedRevision };
+      return revisionMutation(
+        `semattice:compile:${workspaceId}`,
+        body,
+        () => request<OntologySematticeOperation>(
+          `${MANAGEMENT_ROOT}/${workspaceId}/semattice/compile`,
+          "POST",
+          body,
+        ),
+      );
+    },
+    getLatestSematticeOperation: (workspaceId) => request<OntologySematticeOperation | null>(
+      `${MANAGEMENT_ROOT}/${workspaceId}/semattice/operations/latest`,
+    ),
+    requestSematticeApproval: (workspaceId, operationId) => revisionMutation(
+      `semattice:approval:${workspaceId}:${operationId}`,
+      {},
+      () => request<OntologySematticeOperation>(
+        `${MANAGEMENT_ROOT}/${workspaceId}/semattice/operations/${encodeURIComponent(operationId)}/approval-request`,
+        "POST",
+      ),
+    ),
+    activateSemattice: (workspaceId, operationId) => revisionMutation(
+      `semattice:activate:${workspaceId}:${operationId}`,
+      {},
+      () => request<OntologySematticeOperation>(
+        `${MANAGEMENT_ROOT}/${workspaceId}/semattice/operations/${encodeURIComponent(operationId)}/activate`,
+        "POST",
+      ),
+    ),
+    listSematticeMetadataApprovals: () => request<SematticeMetadataApproval[]>(
+      "/admin/semattice/metadata-approvals",
+    ),
+    approveSematticeMetadata: (approvalId) => revisionMutation(
+      `semattice:approve:${approvalId}`,
+      {},
+      () => request<SematticeMetadataApproval>(
+        `/admin/semattice/metadata-approvals/${encodeURIComponent(approvalId)}/approve`,
+        "POST",
+      ),
+    ),
     listVersions: (workspaceId) => request<OntologyVersionSummary[]>(`${MANAGEMENT_ROOT}/${workspaceId}/versions`),
     getVersion: (workspaceId, version) => request<OntologyVersionDetail>(
       `${MANAGEMENT_ROOT}/${workspaceId}/versions/${version}`,

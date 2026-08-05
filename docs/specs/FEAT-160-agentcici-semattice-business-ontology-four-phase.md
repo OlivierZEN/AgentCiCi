@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-160
 title: AgentCiCi 与 Semattice 业务本体四阶段建设方案
-status: approved
+status: in_progress
 owner_role: project-manager
 task_ids: TASK-268
 related_decisions: FEAT-118, FEAT-134, FEAT-145, FEAT-149, FEAT-158
 related_issues: none
-updated_at: 2026-08-05T06:45:53Z
+updated_at: 2026-08-05T16:05:00Z
 updated_by: MANAGER-001
 ---
 
@@ -22,6 +22,10 @@ updated_by: MANAGER-001
 3. 第一至第四阶段分别交付什么、依赖什么、如何验收，以及哪些能力不能提前越界。
 
 本文是后续实现 AgentCiCi 本体 V2 和 Semattice 适配的主规格。FEAT-118 继续作为已上线的 AgentCiCi 本体 V1 事实记录；本文不回改其历史结论。
+
+## 实施状态（2026-08-05）
+
+第一阶段的 AgentCiCi 侧骨架已实现但尚未发布：`semattice` 只读数据源适配器以受控 capability 网关读取当前已发布 metadata 与记录；确定性编译器为对象、字段和关系生成稳定 API 名、语义注解与内容摘要；V105 保存绑定、元素映射和生命周期操作。组织管理员 API 支持绑定、漂移检查、导入提案、编译、独立审批申请和激活请求。所有跨系统调用仍在服务端使用短期 OACT，浏览器不接触令牌、租户标识或 capability 输入。生产迁移、真实租户数据读取及元数据发布尚未执行，必须在独立发布窗口完成。
 
 ## 2. 产品结论
 

@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-268
-status: ready
-updated_at: 2026-08-05T06:45:53Z
+status: in_progress
+updated_at: 2026-08-05T16:05:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: project-manager
@@ -17,13 +17,14 @@ spec_path: docs/specs/FEAT-160-agentcici-semattice-business-ontology-four-phase.
 - 已完成四阶段产品和技术设计：读通与契约对齐、受控发布与版本闭环、数据质量与清洗治理、智能体原生语义运行时。
 - 已明确 AgentCiCi 负责业务设计、AI 提案、审批编排和智能体消费；Semattice 负责已发布运行元数据、业务记录、权限、索引和确定性数据任务。
 - 已覆盖本体元模型、数据映射、血缘、数据画像、质量规则、清洗、去重、指标、动作、AI 结合、安全、API、持久化、测试、回滚及四阶段验收。
-- 当前只交付详细规格，没有修改代码、数据库、生产配置或 Semattice。
+- 第一阶段的 AgentCiCi 侧实现已完成本地集成：只读 `semattice` 数据源适配器、稳定本体契约编译器、生命周期状态存储、组织管理员 API 与前端 API 类型已落地；数据库迁移为 V105。
+- 生命周期写操作仍保持受控：编译、差异校验、独立审批、回填覆盖校验与发布均通过现有 Semattice capability/OACT 网关执行；尚未执行生产迁移、配置或真实租户写入。
 
 ## Next Action
 
-- 基于 FEAT-160 拆出第一、第二阶段实施计划；先建立共享契约样例和 Semattice 只读适配器，真实只读验收通过后再启用 metadata 写 scope。
+- 先在隔离环境执行 V105 和 AgentCiCi → Semattice 的受权端到端回归，验证只读发现、编译、审批与发布状态机；生产上线需单独获得用户发布授权。
 
 ## Verification
 
-- 文档事实已与 FEAT-118、FEAT-134、FEAT-149、FEAT-158 及两仓库当前本体/metadata/record capability 对照。
-- 本任务为文档设计，不记录未执行的软件测试或生产验证。
+- `mvn -q -Dmaven.repo.local=.m2 -Dtest=SematticeOntologyAdapterTest,SematticeOntologyContractCompilerTest,SematticeOntologyHttpGatewayTest test` 通过；覆盖已发布元数据发现、受限运行时查询、契约稳定性和网关 OACT/幂等边界。
+- 尚未进行真实 Semattice 环境调用或生产迁移，不将本地单元测试记作跨系统上线验证。

@@ -1,14 +1,21 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-05T06:39:16Z
+updated_at: 2026-08-05T16:05:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-08-05T06:39:16Z
+last_run_at: 2026-08-05T16:05:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## 2026-08-05 TASK-268 Semattice 本体第一阶段本地集成
+
+- `backend-focused`：`mvn -q -Dmaven.repo.local=.m2 -Dtest=SematticeOntologyAdapterTest,SematticeOntologyContractCompilerTest,SematticeOntologyHttpGatewayTest test` 通过。覆盖当前已发布元数据发现、受限单对象记录查询、最小公开连接器配置、稳定对象/字段/关系编译，以及服务端 OACT 与幂等调用边界。
+- `production-limit`：未执行 V105、未配置或调用真实 Semattice 租户，也未触发 metadata 发布；该提交仅完成本地实现与单元测试，生产验收需单独发布授权。
+
+- 状态：`passed`
 
 ## 2026-08-05 TASK-267 管理 SPA 路由与接口路径冲突修复
 

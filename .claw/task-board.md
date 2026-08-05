@@ -39,14 +39,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-268 - AgentCiCi 与 Semattice 业务本体四阶段建设
 
-- status: `ready`
+- status: `in_progress`
 - priority: `critical`
 - owner_role: `project-manager`
 - spec_path: `docs/specs/FEAT-160-agentcici-semattice-business-ontology-four-phase.md`
 - task_status_path: `.claw/tasks/TASK-268.md`
 - assignment_path: `n/a`
 - blocked_by: `none`
-- next_action: 基于已批准四阶段设计拆分第一、第二阶段实施计划；先完成 Semattice 只读契约，再启用受控元数据发布。
+- next_action: 第一阶段 AgentCiCi 本地实现已完成并待合入；在隔离环境完成 V105 与跨系统端到端验收后，再按独立发布授权上线。
 
 ### TASK-266 - AI表格业务对象实时列表
 
