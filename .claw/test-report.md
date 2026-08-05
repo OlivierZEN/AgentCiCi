@@ -13,6 +13,7 @@ last_run_status: passed
 ## 2026-08-05 TASK-268 Semattice 本体第一阶段本地集成
 
 - `backend-focused`：`mvn -q -Dmaven.repo.local=.m2 -Dtest=SematticeOntologyAdapterTest,SematticeOntologyContractCompilerTest,SematticeOntologyHttpGatewayTest test` 通过。覆盖当前已发布元数据发现、受限单对象记录查询、最小公开连接器配置、稳定对象/字段/关系编译，以及服务端 OACT 与幂等调用边界。
+- `frontend-build`：`npm run build` 通过；运行治理面板组件通过 TypeScript 类型检查。组件尚未挂入既有本体工作台路由，因此本次不记录页面级视觉或交互验收。
 - `production-limit`：未执行 V105、未配置或调用真实 Semattice 租户，也未触发 metadata 发布；该提交仅完成本地实现与单元测试，生产验收需单独发布授权。
 
 - 状态：`passed`
