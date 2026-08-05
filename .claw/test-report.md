@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-05T07:55:12Z
+updated_at: 2026-08-05T07:59:27Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-08-05T07:55:12Z
+last_run_at: 2026-08-05T07:59:27Z
 last_run_status: passed
 ---
 
@@ -15,6 +15,7 @@ last_run_status: passed
 - `frontend-focused`：`npm test -- src/assistant/AssistantApp.test.ts` 通过（1 test）。
 - `frontend-build`：`npm run build` 通过（TypeScript + Vite）；仅有既有 bundle-size 提示。
 - `scope`：仅为现有当前组织入口和组织名称补充原生 `title` 提示，不改变组织来源、组织切换、管理后台入口、菜单样式或主题。
+- `production-2.8.54`：Git tag/commit 为 `2.8.54 / 9a0fe88bf59f`；backend/frontend ACR index digest 为 `sha256:36d870c55ad8234e2a193823cc4b71153feaabc54b6422ec3a547b648657198e` / `sha256:103cdf2c5cecd864e81d7ec17a832bdc89d7c6def820235b2083e807166cb91c`。发布前备份 `/opt/cici/backups/20260805-155805-before-2.8.54-org-tooltip` 的环境、PostgreSQL、KB、Qdrant 均非空；仅重建 backend/frontend，六容器 healthy，health=UP、版本正确、Nginx 配置通过、`x.agentcici.com` HTTPS=200、HTTP=301。线上页面返回新前端 `assets/index-MIoTtAf-.js`，工件含“当前组织：”提示文本。未使用或伪造受权会话，真实菜单悬浮验收待用户回读。
 
 - 状态：`passed`
 

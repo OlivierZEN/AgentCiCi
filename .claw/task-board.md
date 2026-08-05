@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-271 - 组织切换全称悬浮提示
 
-- status: `ready`
+- status: `done`
 - priority: `medium`
 - owner_role: `frontend-agent`
 - spec_path: `docs/specs/FEAT-161-organization-switch-full-name-tooltip.md`
 - task_status_path: `.claw/tasks/TASK-271.md`
 - assignment_path: `.claw/assignments/TASK-271.yaml`
 - blocked_by: `none`
-- next_action: 为当前组织入口及组织切换菜单的截断名称补充完整名称悬浮提示，并完成桌面端验证。
+- next_action: 已发布 `2.8.54 / 9a0fe88bf59f`；用户可在组织入口和切换菜单中悬停查看完整组织名称。
 
 ### TASK-270 - 悟空开发者 SERVICE Client ID 规范化改名
 

@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-161
 title: 组织切换全称悬浮提示
-status: implementation
+status: completed
 owner_role: frontend-agent
 task_ids: TASK-271
 related_decisions: none
 related_issues: none
-updated_at: 2026-08-05T07:55:12Z
+updated_at: 2026-08-05T07:59:27Z
 updated_by: MANAGER-001
 ---
 
@@ -38,4 +38,4 @@ updated_by: MANAGER-001
 ## 实施进展
 
 - 已完成：当前组织入口使用“当前组织：完整名称”提示，菜单名称使用完整 `companyName` 提示。
-- 已完成：定向前端测试和生产构建通过，等待发布与线上入口验收。
+- 已完成：已发布 `2.8.54 / 9a0fe88bf59f`，线上健康、版本、Nginx、HTTPS/HTTP 与新静态工件检查通过。真实组织菜单悬浮需由受权用户会话完成，发布会话未持有或伪造该凭据。
