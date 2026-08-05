@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-04T15:05:49Z
+updated_at: 2026-08-05T05:08:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,16 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-267 - 机器主体管理页面
+
+- status: `review`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-159-governed-service-principal-admin-ui.md`
+- task_status_path: `.claw/tasks/TASK-267.md`
+- assignment_path: `.claw/assignments/TASK-267.yaml`
+- next_action: 已完成前端实现、定向测试和构建；提交推送后等待发布授权与受权组织管理员验收。
 
 ### TASK-266 - AI表格业务对象实时列表
 

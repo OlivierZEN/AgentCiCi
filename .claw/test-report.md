@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-04T23:57:37Z
+updated_at: 2026-08-05T05:08:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-08-04T23:57:37Z
+last_run_at: 2026-08-05T05:08:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-267 - 机器主体管理页面
+
+- `frontend-focused`：`npm test -- AdminServicePrincipalsPage.test.ts` 通过（2 tests）。覆盖 lifecycle 中文呈现、暂停主体不得轮换密钥以及人类负责人展示。
+- `frontend-build`：`npm run build` 通过（TypeScript + Vite）；仅保留既有 bundle size 提示。
+- `service-principal-contract`：`mvn -q -Dtest=ServicePrincipalServiceTest test` 通过。既有服务契约继续保证轮换产生的新密钥不进入审计记录，并拒绝跨企业的主体操作。
+- `secret-display-boundary`：代码审阅确认列表接口只消费无密钥的投影数据；轮换成功的 `clientSecret` 只存放于页面内存，切换主体/确认已保存均立即清除，未使用 localStorage、URL 参数、日志或埋点。
+- `diff-check`：`git diff --check` 通过。
 
 ## TASK-266 - AI表格业务对象实时列表
 

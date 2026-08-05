@@ -31,6 +31,7 @@ const adminNavItems: AdminNavItem[] = [
     label: "组织架构",
     children: [
       { kind: "link", to: "/admin/users", label: "用户" },
+      { kind: "link", to: "/admin/service-principals", label: "机器主体" },
       { kind: "link", to: "/admin/company", label: "组织简档" },
     ],
   },

@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-04T23:57:37Z
+updated_at: 2026-08-05T05:08:00Z
 updated_by: MANAGER-001
-phase: ai-table-authentication-released
-active_task: none
-next_action: "TASK-266 已发布生产 2.8.49；等待受权成员在 AI表格中回读实际对象和记录。onechat.agentcici.com 的 DNS 解析风险仍需单独修复。"
+phase: governed-service-principal-admin-ui-review
+active_task: TASK-267
+next_action: "TASK-267 已实现机器主体管理页面并进入 review；提交推送后等待用户授权发布，随后以受权组织管理员会话验收。TASK-266 的 AI表格实际记录回读与 onechat.agentcici.com DNS 风险仍独立待办。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-267 / FEAT-159：已实现 AgentCiCi 组织控制台“机器主体”页面，入口位于“组织架构 → 机器主体”，路由为 `/admin/service-principals`。它调用既有的受 ORG_ADMIN 保护 SERVICE Principal API，展示主体、Client ID、最小 scopes、受众、人类负责人及生命周期；支持明确确认后的暂停、恢复与 Client Secret 轮换。新密钥仅存在 React 内存并仅本次显示，切换主体/关闭面板即清除；没有历史密钥读取、浏览器持久化或日志输出。前端定向测试、生产构建、ServicePrincipalService 安全契约测试和 diff 检查通过，尚未发布生产。
 
 - TASK-266 / FEAT-158：已发布生产 `2.8.49 / 760776a354f5`，修复 AI表格目录和记录请求绕过统一 Bearer 会话的问题。`requestAiTable` 现复用 `authFetch(LS_ASSISTANT_TOKEN, ...)`，保留同源 Cookie、Token 更新重试和原有受保护 API 错误语义；浏览器仍不接触 OACT、租户或公司标识，鎏金账房和受控主题结构不变。backend/frontend ACR index digest 为 `sha256:eb931697527bcdfbc8486a7a23910c0f37ddd8b8be0bfd3a356b9499e8ce576c` / `sha256:69f7573a3bbfb9b2f7b41638905e539e866bd95721cd81fbc7a26de2f796f209`，发布前四类备份位于 `/opt/cici/backups/20260805-075621-before-2.8.49-ai-table-auth` 且均非空。六容器 healthy、backend health=UP、版本/Nginx/x HTTPS/HTTP 均通过；匿名与无效 Bearer 的 AI表格目录请求均正确返回 401。当前会话无受权成员 Cookie/测试账号，未伪造真实记录回读。
 

@@ -14,6 +14,7 @@ import AdminDataQualityPage from "./admin/pages/AdminDataQualityPage";
 import AdminToolsPage from "./admin/pages/AdminToolsPage";
 import AdminOpsPage from "./admin/pages/AdminOpsPage";
 import AdminUsersPage from "./admin/pages/AdminUsersPage";
+import AdminServicePrincipalsPage from "./admin/pages/AdminServicePrincipalsPage";
 import AdminCompanyPage from "./admin/pages/AdminCompanyPage";
 import AdminBillingPage from "./admin/pages/AdminBillingPage";
 import AdminIntegrationsPage from "./admin/pages/AdminIntegrationsPage";
@@ -88,6 +89,7 @@ const router = createBrowserRouter(createRoutesFromElements(
             <Route path="ops" element={<AdminOpsPage />} />
             <Route path="billing" element={<AdminBillingPage />} />
             <Route path="users" element={<AdminUsersPage />} />
+            <Route path="service-principals" element={<AdminServicePrincipalsPage />} />
             <Route path="company" element={<AdminCompanyPage />} />
           </Route>
         </Route>
