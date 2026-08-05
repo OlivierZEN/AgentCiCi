@@ -1,0 +1,26 @@
+FROM maven:3.9-eclipse-temurin-21 AS builder
+
+WORKDIR /src
+COPY backend/pom.xml backend/pom.xml
+RUN mvn -q -f backend/pom.xml -DskipTests dependency:go-offline
+COPY backend backend
+RUN mvn -q -f backend/pom.xml -DskipTests package
+
+FROM eclipse-temurin:21-jre
+
+ARG CICI_APP_VERSION=dev
+ARG CICI_GIT_COMMIT=unknown
+
+WORKDIR /app
+COPY --from=builder /src/backend/target/cc-cici-assistant-backend-*.jar /app/app.jar
+
+ENV CICI_APP_VERSION=${CICI_APP_VERSION}
+ENV GIT_COMMIT=${CICI_GIT_COMMIT}
+
+LABEL org.opencontainers.image.title="AgentCiCi Backend"
+LABEL org.opencontainers.image.version="${CICI_APP_VERSION}"
+LABEL org.opencontainers.image.revision="${CICI_GIT_COMMIT}"
+
+EXPOSE 8080
+
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
