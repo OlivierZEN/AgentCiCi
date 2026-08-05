@@ -28,4 +28,5 @@ spec_path: docs/specs/FEAT-160-agentcici-semattice-business-ontology-four-phase.
 
 - `mvn -q -Dmaven.repo.local=.m2 -Dtest=SematticeOntologyLifecycleServiceTest,SematticeOntologyAdapterTest,SematticeOntologyContractCompilerTest,SematticeOntologyHttpGatewayTest test` 通过；覆盖已发布元数据发现、受限运行时查询、契约稳定性、网关 OACT/幂等边界，以及首次发布幂等、独立审批激活和远端漂移阻断。
 - `npm test -- --run src/admin/ontology/ontologyWorkbenchContract.test.ts` 和 `npm run build` 通过；标签、tabpanel 与既有工作台发布门禁可编译、可回归验证。真实桌面浏览器与受权跨系统交互验收仍待隔离环境完成。
+- `OntologyPersistenceIntegrationTest` 已扩展为断言 V105 的 3 张 `ontology_semattice_*` 表；本机未配置 PostgreSQL，Spring Context 在数据源初始化超时，16 个集成断言均未执行。该环境限制不影响已通过的无数据库单元测试，但 V105 必须在隔离数据库和生产发布前完成实际迁移验证。
 - 尚未进行真实 Semattice 环境调用或生产迁移，不将本地单元测试记作跨系统上线验证。

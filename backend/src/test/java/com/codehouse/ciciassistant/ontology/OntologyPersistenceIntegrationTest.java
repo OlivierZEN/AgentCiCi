@@ -116,14 +116,26 @@ class OntologyPersistenceIntegrationTest {
     }
 
     @Test
-    void provenanceMigrationKeepsThirteenTablesAndRejectsManualPackageReferences() {
+    void migrationsKeepSixteenOntologyTablesAndRejectManualPackageReferences() {
         assertThat(jdbcTemplate.queryForObject("""
                         SELECT COUNT(*)
                         FROM information_schema.tables
                         WHERE table_schema = current_schema()
                           AND table_name LIKE 'ontology_%'
                         """, Integer.class))
-                .isEqualTo(13);
+                .isEqualTo(16);
+
+        assertThat(jdbcTemplate.queryForList("""
+                        SELECT table_name
+                        FROM information_schema.tables
+                        WHERE table_schema = current_schema()
+                          AND table_name LIKE 'ontology_semattice_%'
+                        ORDER BY table_name
+                        """, String.class))
+                .containsExactly(
+                        "ontology_semattice_binding",
+                        "ontology_semattice_element_binding",
+                        "ontology_semattice_operation");
 
         assertThatThrownBy(() -> jdbcTemplate.update("""
                         INSERT INTO ontology_workspace
