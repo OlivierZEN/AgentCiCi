@@ -133,7 +133,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - spec_path: `docs/specs/FEAT-145-unified-principal-identity-governance.md`
 - task_status_path: `.claw/tasks/TASK-252.md`
 - assignment_path: `.claw/assignments/TASK-252.yaml`
-- next_action: 已发布 `2.8.41`，SMTP、人工 provisioning 和邀请身份恢复逻辑均已生效；正常管理员邀请首个新成员时，应验证其在完成 Keycloak 邮箱验证和设置密码后的首次 OIDC 登录才从 `PENDING_ACTIVATION` 转为 `ACTIVE`。
+- next_action: 已发布 `2.8.52` 统一密码与邀请落地修复；正常管理员邀请首个新成员时，应验证其完成 Keycloak 邮箱验证、设置密码和首次 OIDC 登录后才从 `PENDING_ACTIVATION` 转为 `ACTIVE`，不得使用非受权账号替代验收。
 
 ### TASK-251 - 全局用户公共编号
 

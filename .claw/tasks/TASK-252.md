@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-252
 status: in_progress
-updated_at: 2026-08-04T14:55:00Z
+updated_at: 2026-08-05T06:39:16Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: project-manager
@@ -15,7 +15,7 @@ spec_path: docs/specs/FEAT-145-unified-principal-identity-governance.md
 ## Current State
 
 - Status: `in_progress`
-- Next action: 修复并发布统一密码生命周期。个人档案不得再修改本地历史密码；需通过 Keycloak 的受控 `UPDATE_PASSWORD` OIDC 动作修改。激活邮件完成后必须落到 `/app` 并由正常 OIDC 事务进入 callback，不能直接落到 callback。
+- Next action: 已发布统一密码生命周期修复；由正常管理员邀请一名真实新成员完成验证邮箱、设置密码和首次 OIDC 登录的业务闭环验收。不得用非受权账号或伪造凭据替代该验收。
 - Deployment scope: `deploy/docker-compose.acr.yml` 仅用于把独立 Keycloak provisioner 配置传入 backend；不修改服务拓扑、网络或证书。
 - Blocked: 无。Keycloak Realm SMTP 已配置，人工 provisioning 已在受控部署环境启用；本次只修复邀请/重绑闭环，不创建未获业务授权的机器主体。
 
@@ -32,6 +32,7 @@ spec_path: docs/specs/FEAT-145-unified-principal-identity-governance.md
 - 本任务只改规格和项目状态，未运行代码测试。
 - 2026-08-05 生产只读诊断：个人档案 `/auth/me/password` 仅写入历史 `account_auth_credential`，而生产登录由 Keycloak 校验，导致页面错误提示“密码已更新”。同时，人工邀请的 Required Actions 邮件配置为回跳 `/auth/oidc/callback`，但该地址要求正常 OIDC 的 `code + state`；`agentcici-bff` 也只允许该 callback。已确认 29 个 AgentCiCi 绑定 Keycloak 用户中 25 个已激活、4 个正常待激活，未发现已绑定用户陷入无密码且无 Required Action 的死锁状态。
 - 本轮修复边界：保留 Keycloak 为唯一密码、MFA 与会话权威；应用发起改密必须使用正常 OIDC 状态/PKCE 事务携带 `kc_action=UPDATE_PASSWORD`，不把明文密码传到 AgentCiCi；邀请邮件回跳调整为 `/app`，Keycloak 客户端精确允许 `/app` 与 `/auth/oidc/callback`。补充前后端/服务端定向测试、生产配置与发布验收。
+- 统一密码/邀请落地（2026-08-05）：个人档案不再提交本地 `/auth/me/password`，而是启动 Keycloak `UPDATE_PASSWORD` 动作，并强制重新认证；OIDC 开启时历史本地密码写接口明确拒绝。人工邀请的 `APP_AUTH_OIDC_PROVISIONING_INVITATION_REDIRECT_URI` 已改为 `https://x.agentcici.com/app`，Keycloak `agentcici-bff` 仅允许该地址及正常 callback。首次 `2.8.51` 发布的公网 smoke 发现 `TenantContextFilter` 漏放行新 `/auth/oidc/password` 路由，未对用户形成成功假象，即刻补测、修复并由 `2.8.52 / 8c9ce75884c5` 覆盖发布。最终线上验证该入口返回 Keycloak 302，具备 `kc_action=UPDATE_PASSWORD`、`prompt=login`、PKCE、state、nonce 和正常 callback redirect URI；六容器 healthy，backend health=UP，公网 x HTTPS=200/HTTP=301。未执行真实改密、未读取或输出密码、令牌或邮件链接。
 - 已实现 V98 Principal/Identity/Service Principal 基座、受控邀请、首次 OIDC 激活和机器账户责任人 API；已在一次性 PostgreSQL 16 中验证 V1→V98 迁移与兼容映射。
 - 已合并主分支并发布 `2.8.22 / 645b53f6ea58`；生产 Flyway V98/V99 成功，24 个既有全局账户与 24 条 Keycloak 身份绑定已回填。Keycloak 专用 `agentcici-provisioner` client 已创建并授予最小管理角色，未启用自动开户。
 - 已发布机器 Keycloak client-credentials → 短期 Semattice OACT 交换边界，并完成 Semattice HUMAN/SERVICE Principal 本地投影发布；公开路由缺少 Bearer 返回 401，开关关闭返回 403。机器开户开关现独立于人类邮件邀请，不因 SMTP 缺失被代码耦合阻断。

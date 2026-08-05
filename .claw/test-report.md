@@ -1,16 +1,24 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-05T05:22:30Z
+updated_at: 2026-08-05T06:39:16Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-08-05T05:22:30Z
+last_run_at: 2026-08-05T06:39:16Z
 last_run_status: passed
 ---
 
 # Test Report
 
 - 状态：`passed`
+
+## TASK-252 - Keycloak 统一密码与邀请落地
+
+- `identity-gate`：`dev-login.py` 与 `check-assignment.py` 均确认 MANAGER-001 对新增密码启动入口、邀请配置校验、过滤器与定向测试拥有当前任务授权。
+- `backend-focused`：`mvn -q -Dmaven.repo.local=.m2 -Dtest=TenantContextFilterTest,AuthControllerTest,KeycloakOidcLoginServiceTest,KeycloakIdentityProvisioningServiceTest test` 通过。覆盖 OIDC 启用时拒绝本地历史密码写入、`UPDATE_PASSWORD` 的 state/nonce/PKCE 参数、邀请回跳只能是 `/app`，以及新的密码启动路由无需现有应用会话即可到达控制器。
+- `frontend-focused`：`npm test -- --run MyEmailAccountsModal.test.ts oidcAutoRedirect.test.ts` 通过（2 files / 6 tests）；个人档案删除旧密码提交，保留明确的“前往统一账号中心修改密码”动作。
+- `build/static`：`npm run build`、`docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config` 与 `git diff --check` 通过。Vite 仅输出既有 bundle 大小提示。
+- `production-2.8.52`：Git tag/commit 为 `2.8.52 / 8c9ce75884c5`；backend/frontend ACR index digest 为 `sha256:5ba1dc5a167bc8605d539587d18e2ddbc9a9b97ddb29db0c50dd9493677b34df` / `sha256:a6d2667ebcc8c0dd42b70415d88ff09c4123a09a267ef78ab144d0952f87685d`。最终发布前备份 `/opt/cici/backups/20260805-143617-before-2.8.52-oidc-password-route` 的环境、PostgreSQL、KB 与 Qdrant 均非空；仅重建 backend/frontend，六容器 healthy，health=UP、版本接口/Nginx 通过、x HTTPS=200/HTTP=301。公网 `/auth/oidc/password?return_to=/app` 实测返回 Keycloak 302，验证 `kc_action=UPDATE_PASSWORD`、`prompt=login`、PKCE、state、nonce 及 callback redirect URI；未使用真实用户密码、令牌或激活链接。首次 `2.8.51` 曾发现该路由被过滤器返回 401，已由 2.8.52 的过滤器测试与线上 smoke 覆盖修复。
 
 ## TASK-267 - 机器主体管理页面
 

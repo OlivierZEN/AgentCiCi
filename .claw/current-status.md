@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-05T05:22:30Z
+updated_at: 2026-08-05T06:39:16Z
 updated_by: MANAGER-001
 phase: governed-service-principal-admin-ui-released
 active_task: none
-next_action: "TASK-267 已发布生产 2.8.50；等待受权组织管理员在“机器主体”页查看真实 SERVICE 投影并按需轮换密钥。TASK-266 的 AI表格实际记录回读与 onechat.agentcici.com DNS 风险仍独立待办。"
+next_action: "TASK-252 统一密码/邀请闭环已发布 2.8.52；等待正常管理员邀请的真实成员完成验证邮箱、设置密码和首次 OIDC 登录。TASK-267 机器主体受权管理员验收、TASK-266 AI表格真实记录回读与 onechat.agentcici.com DNS 风险仍独立待办。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-252 / FEAT-145：已发布生产 `2.8.52 / 8c9ce75884c5`，修复统一身份接入后的两处密码生命周期缺陷。个人档案不再将密码提交给 AgentCiCi，而是启动 Keycloak 的 `UPDATE_PASSWORD` OIDC 动作，并强制重新认证；OIDC 启用时旧本地密码写接口会拒绝，杜绝“页面成功、实际 Keycloak 密码未变”。人工邀请 Required Actions 邮件落地已改为 `/app`，Keycloak `agentcici-bff` 精确白名单仅保留 `/app` 与 `/auth/oidc/callback`。发布前两次完整备份均非空（最终备份 `/opt/cici/backups/20260805-143617-before-2.8.52-oidc-password-route`）；六容器 healthy、health=UP、Nginx 有效、x HTTPS=200/HTTP=301，线上密码入口实际 302 至 Keycloak 且断言 `UPDATE_PASSWORD`、`prompt=login`、PKCE/state/nonce 与正常 callback。未使用任何用户密码、令牌或邮件链接；真实新成员首次激活由正常管理员邀请完成。
 
 - TASK-267 / FEAT-159：已发布生产 `2.8.50 / 82e1c249e622`。AgentCiCi 组织控制台“机器主体”入口位于“组织架构 → 机器主体”，路由为 `/admin/service-principals`；它调用受 ORG_ADMIN 保护的 SERVICE Principal API，展示主体、Client ID、最小 scopes、受众、人类负责人及生命周期，并提供明确确认后的暂停、恢复与 Client Secret 轮换。新密钥仅存在 React 内存并仅本次显示，切换主体/关闭面板即清除；没有历史密钥读取、浏览器持久化或日志输出。发布前四类备份非空，六容器 healthy、backend health=UP、Nginx 有效、`x` HTTPS=200、HTTP=301，匿名机器主体 API 为预期 401；受权管理员真实会话验收待完成。
 
