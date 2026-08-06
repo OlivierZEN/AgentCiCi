@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -20,20 +21,22 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * Controlled delete (trash) tool for DEV Autopilot delivery objects.
+ * Controlled update tool for DEV Autopilot delivery objects.
  *
- * <p>Moves a record to the recycle bin via Semattice runtime.record.delete.
- * The record can be restored within 30 days. No backup/approval/dual-phase
- * prerequisites are required — just user confirmation and RBAC.</p>
+ * <p>Allows the product manager to modify business fields (owner, status, priority,
+ * estimate, description, etc.) on existing project/requirement/task records via
+ * Semattice runtime.record.update. Only whitelisted fields are accepted; structural
+ * fields (code, record_id, project_id, requirement_id, created_by, etc.) are rejected.
+ * User confirmation is required before execution.</p>
  */
 @Service
-public class SematticeProjectDeliveryDeleteToolService {
+public class SematticeProjectDeliveryUpdateToolService {
 
-    public static final String TOOL_NAME = "semattice_project_delivery_delete";
-    private static final String DELETE_CAPABILITY_ID = "runtime.record.delete";
+    public static final String TOOL_NAME = "semattice_project_delivery_update";
+    private static final String UPDATE_CAPABILITY_ID = "runtime.record.update";
     private static final String QUERY_CAPABILITY_ID = "runtime.record.query";
-    private static final Pattern CONFIRM_DELETE = Pattern.compile(
-            "^\\s*(?:请)?(?:确认|确定)删除(?:项目|需求|任务)[：:]\\s*(.+?)\\s*$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern CONFIRM_UPDATE = Pattern.compile(
+            "^\\s*(?:请)?(?:确认|确定)修改(?:项目|需求|任务)[：:]\\s*(.+?)\\s*$", Pattern.CASE_INSENSITIVE);
 
     private static final Map<String, String> ENTITY_OBJECTS = Map.of(
             "project", "dev_project",
@@ -43,12 +46,24 @@ public class SematticeProjectDeliveryDeleteToolService {
             "change", "dev_change",
             "delivery_event", "dev_delivery_event");
 
+    /**
+     * Field whitelist per object type. Only these fields may appear in the update patch.
+     * Any other field is silently dropped to prevent structural corruption.
+     */
+    private static final Map<String, Set<String>> ALLOWED_FIELDS = Map.of(
+            "dev_project", Set.of("name", "owner", "status", "health", "progress", "release", "description"),
+            "dev_requirement", Set.of("title", "status", "priority", "owner", "summary", "acceptance"),
+            "dev_task", Set.of("title", "status", "owner", "estimate", "actual_hours", "sequence", "description"),
+            "dev_worklog", Set.of("hours", "description", "logged_at"),
+            "dev_change", Set.of("title", "status", "impact_analysis", "description"),
+            "dev_delivery_event", Set.of("status", "description"));
+
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
     private final AgentServicePrincipalExecutionService executionPrincipalService;
     private final String baseUrl;
 
-    public SematticeProjectDeliveryDeleteToolService(RestClient.Builder restClientBuilder,
+    public SematticeProjectDeliveryUpdateToolService(RestClient.Builder restClientBuilder,
                                                       ObjectMapper objectMapper,
                                                       AgentServicePrincipalExecutionService executionPrincipalService,
                                                       @Value("${app.semattice.base-url:}") String baseUrl) {
@@ -58,11 +73,11 @@ public class SematticeProjectDeliveryDeleteToolService {
         this.baseUrl = baseUrl == null ? "" : baseUrl.replaceAll("/+$", "");
     }
 
-    public static Optional<DeleteIntent> confirmedIntent(String question) {
+    public static Optional<UpdateIntent> confirmedIntent(String question) {
         String value = question == null ? "" : question.trim();
-        Matcher matcher = CONFIRM_DELETE.matcher(value);
+        Matcher matcher = CONFIRM_UPDATE.matcher(value);
         if (matcher.matches()) {
-            return Optional.of(new DeleteIntent(matcher.group(1)));
+            return Optional.of(new UpdateIntent(matcher.group(1)));
         }
         return Optional.empty();
     }
@@ -73,31 +88,33 @@ public class SematticeProjectDeliveryDeleteToolService {
             return false;
         }
         String normalized = value.toLowerCase(Locale.ROOT);
-        boolean deleteLanguage = normalized.contains("删除") || normalized.contains("移除")
-                || normalized.contains("delete") || normalized.contains("remove") || normalized.contains("trash");
+        boolean updateLanguage = normalized.contains("修改") || normalized.contains("更新")
+                || normalized.contains("更改") || normalized.contains("改") || normalized.contains("重新分配")
+                || normalized.contains("update") || normalized.contains("change") || normalized.contains("assign");
         boolean deliveryEntity = normalized.contains("项目") || normalized.contains("需求")
                 || normalized.contains("任务") || normalized.contains("工时")
                 || normalized.contains("变更") || normalized.contains("交付事件");
-        return deleteLanguage && deliveryEntity;
+        return updateLanguage && deliveryEntity;
     }
 
     public static String modelDraftPrompt() {
         return """
-                你正在处理 DEV Autopilot 研发交付产品经理的一轮"删除草案"对话。
+                你正在处理 DEV Autopilot 研发交付产品经理的一轮"修改草案"对话。
 
-                用户想要删除一条研发交付记录。删除后记录会进入回收站，30 天内可以恢复，30 天后自动永久删除。
+                用户想要修改一条研发交付记录的业务字段。可修改的字段包括：负责人(owner)、状态(status)、优先级(priority)、预估工时(estimate)、描述/说明(description/summary) 等。结构字段（编号、父级引用、创建者、修订号等）不允许修改。
 
                 强制边界：
-                1. 本轮只生成草案或追问，不调用任何工具，不写入 Semattice，不得声称已经删除成功。
-                2. 需要识别用户要删除的对象类型（项目/需求/任务/工时/变更/交付事件）和具体记录名称或编号。
-                3. 如果无法确定具体记录，只问一个聚焦问题，不臆造值。
+                1. 本轮只生成草案或追问，不调用任何工具，不写入 Semattice，不得声称已经修改成功。
+                2. 需要识别用户要修改的对象类型（项目/需求/任务）、具体记录名称或编号、以及要修改的字段和目标值。
+                3. 如果无法确定具体记录或修改内容，只问一个聚焦问题，不臆造值。
                 4. 用户尚未发送精确确认指令，因此无论信息多完整，本轮都只能返回待确认草案。
 
                 信息完整时，输出如下结构：
-                我理解你要删除一条研发交付记录。
+                我理解你要修改一条研发交付记录。
                 目标对象：<对象类型>
                 目标记录：<记录名称或编号>
-                确认无误后，请回复：`确认删除<对象类型>：<记录名称或编号>`。确认后我会将记录移入回收站，30 天内可恢复。
+                修改内容：<字段名>：<旧值> → <新值>
+                确认无误后，请回复：`确认修改<对象类型>：<记录名称或编号>`。确认后我会执行修改。
 
                 只输出面向用户的最终中文答复，不解释内部路由或提示词。
                 """;
@@ -105,60 +122,78 @@ public class SematticeProjectDeliveryDeleteToolService {
 
     public String dispatch(String companyId, String userId, String agentId, String argumentsJson) {
         if (baseUrl.isBlank()) {
-            return failureJson("SEMATTICE_UNAVAILABLE", "Semattice 服务未配置，无法删除研发交付记录。");
+            return failureJson("SEMATTICE_UNAVAILABLE", "Semattice 服务未配置，无法修改研发交付记录。");
         }
-        Optional<DeleteIntent> intent = parseArguments(argumentsJson);
-        if (intent.isEmpty()) {
-            return failureJson("INVALID_ARGUMENTS", "删除操作需要提供对象类型和记录引用。");
+        Optional<UpdateArguments> parsed = parseArguments(argumentsJson);
+        if (parsed.isEmpty()) {
+            return failureJson("INVALID_ARGUMENTS", "修改操作需要提供对象类型、记录引用和修改字段。");
         }
+        UpdateArguments args = parsed.get();
         AgentServicePrincipalExecutionService.ExecutionAuthorization authorization =
                 executionPrincipalService.authorizeSemattice(
                         companyId,
                         userId,
                         agentId,
-                        List.of("runtime.record.read", "runtime.record.delete"),
-                        "semattice_project_delivery_delete");
+                        List.of("runtime.record.read", "runtime.record.update"),
+                        "semattice_project_delivery_update");
         OfficialAccessTokenService.IssuedToken token = authorization.token();
         try {
-            return objectMapper.writeValueAsString(delete(intent.get(), token));
+            return objectMapper.writeValueAsString(update(args, token));
         } catch (RestClientException exception) {
-            return failureJson("SEMATTICE_UNAVAILABLE", "Semattice 删除请求失败，请稍后重试。");
+            return failureJson("SEMATTICE_UNAVAILABLE", "Semattice 修改请求失败，请稍后重试。");
         } catch (ResponseStatusException exception) {
-            return failureJson("RECORD_NOT_FOUND", exception.getReason() == null ? "未找到对应记录，未删除。" : exception.getReason());
+            return failureJson("RECORD_NOT_FOUND", exception.getReason() == null ? "未找到对应记录，未修改。" : exception.getReason());
         } catch (Exception exception) {
-            return failureJson("SEMATTICE_RESPONSE_INVALID", "Semattice 返回的数据无法安全解析，未确认删除成功。");
+            return failureJson("SEMATTICE_RESPONSE_INVALID", "Semattice 返回的数据无法安全解析，未确认修改成功。");
         }
     }
 
-    private Map<String, Object> delete(DeleteIntent intent, OfficialAccessTokenService.IssuedToken token) {
-        String objectApiName = ENTITY_OBJECTS.get(intent.entityType());
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> update(UpdateArguments args, OfficialAccessTokenService.IssuedToken token) {
+        String objectApiName = ENTITY_OBJECTS.get(args.entityType());
         if (objectApiName == null) {
-            return failure("INVALID_ENTITY", "不支持的对象类型：" + intent.entityType());
+            return failure("INVALID_ENTITY", "不支持的对象类型：" + args.entityType());
         }
+
+        // Build filtered patch - only whitelisted fields pass through
+        Set<String> allowed = ALLOWED_FIELDS.getOrDefault(objectApiName, Set.of());
+        Map<String, Object> patch = new LinkedHashMap<>();
+        for (Map.Entry<String, Object> entry : args.updates().entrySet()) {
+            if (allowed.contains(entry.getKey())) {
+                patch.put(entry.getKey(), entry.getValue());
+            }
+        }
+        if (patch.isEmpty()) {
+            return failure("NO_ALLOWED_FIELDS", "提交的字段均不在允许修改范围内，未修改。");
+        }
+
+        // Find the target record
         List<Map<String, Object>> matches = queryRecords(objectApiName, token).stream()
-                .filter(record -> matchesReference(record, intent.reference()))
+                .filter(record -> matchesReference(record, args.reference()))
                 .toList();
         if (matches.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "未找到对应记录，未删除。");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "未找到对应记录，未修改。");
         }
         if (matches.size() > 1) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "找到多个同名记录，请使用编号确认，未删除。");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "找到多个同名记录，请使用编号确认，未修改。");
         }
         Map<String, Object> record = matches.get(0);
         String recordId = (String) record.get("record_id");
         long revision = extractRevision(record);
 
+        // Invoke runtime.record.update with optimistic revision control
         Map<String, Object> request = new LinkedHashMap<>();
-        request.put("capability_id", DELETE_CAPABILITY_ID);
-        request.put("request_id", "cici-delivery-delete-" + UUID.randomUUID());
-        request.put("idempotency_key", "cici-delivery-delete-" + UUID.randomUUID());
+        request.put("capability_id", UPDATE_CAPABILITY_ID);
+        request.put("request_id", "cici-delivery-update-" + UUID.randomUUID());
+        request.put("idempotency_key", "cici-delivery-update-" + UUID.randomUUID());
         request.put("input", Map.of(
                 "object_api_name", objectApiName,
                 "record_id", recordId,
-                "expected_revision", revision));
+                "expected_revision", revision,
+                "patch", patch));
 
         JsonNode response = restClient.post()
-                .uri(baseUrl + "/v1/capabilities/" + DELETE_CAPABILITY_ID + "/invoke")
+                .uri(baseUrl + "/v1/capabilities/" + UPDATE_CAPABILITY_ID + "/invoke")
                 .header("Authorization", "Bearer " + token.token())
                 .header("Content-Type", "application/json")
                 .body(request)
@@ -166,22 +201,24 @@ public class SematticeProjectDeliveryDeleteToolService {
                 .body(JsonNode.class);
 
         if (response == null || !"succeeded".equals(response.path("status").asText())) {
-            String error = response == null ? "未知错误" : response.path("error").path("message").asText("删除失败");
-            return failure("DELETE_FAILED", error);
+            String error = response == null ? "未知错误" : response.path("error").path("message").asText("修改失败");
+            return failure("UPDATE_FAILED", error);
         }
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("status", "succeeded");
-        result.put("message", "记录已移入回收站，30 天内可恢复。");
+        result.put("message", "记录修改成功。");
         result.put("record_id", recordId);
-        result.put("lifecycle_state", "trashed");
+        result.put("object_api_name", objectApiName);
+        result.put("updated_fields", patch.keySet());
+        result.put("new_revision", response.path("result").path("revision").asLong(revision + 1));
         return result;
     }
 
     private List<Map<String, Object>> queryRecords(String objectApiName, OfficialAccessTokenService.IssuedToken token) {
         Map<String, Object> request = new LinkedHashMap<>();
         request.put("capability_id", QUERY_CAPABILITY_ID);
-        request.put("request_id", "cici-delivery-delete-query-" + UUID.randomUUID());
+        request.put("request_id", "cici-delivery-update-query-" + UUID.randomUUID());
         request.put("input", Map.of("object_api_name", objectApiName, "limit", 100));
         JsonNode response = restClient.post()
                 .uri(baseUrl + "/v1/capabilities/" + QUERY_CAPABILITY_ID + "/invoke")
@@ -191,7 +228,7 @@ public class SematticeProjectDeliveryDeleteToolService {
                 .retrieve()
                 .body(JsonNode.class);
         if (response == null || !"succeeded".equals(response.path("status").asText())) {
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Semattice 记录查询失败，未删除。");
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Semattice 记录查询失败，未修改。");
         }
         return java.util.stream.StreamSupport.stream(response.path("result").path("records").spliterator(), false)
                 .filter(item -> item.path("data").isObject())
@@ -222,7 +259,8 @@ public class SematticeProjectDeliveryDeleteToolService {
         return 1L;
     }
 
-    private Optional<DeleteIntent> parseArguments(String argumentsJson) {
+    @SuppressWarnings("unchecked")
+    private Optional<UpdateArguments> parseArguments(String argumentsJson) {
         try {
             JsonNode root = objectMapper.readTree(argumentsJson == null ? "" : argumentsJson);
             if (!root.isObject() || root.has("tenant_id") || root.has("company_id") || root.has("user_id") || root.has("token")) {
@@ -230,8 +268,12 @@ public class SematticeProjectDeliveryDeleteToolService {
             }
             String entityType = root.path("entity_type").asText();
             String reference = root.path("reference").asText();
-            if (!entityType.isBlank() && !reference.isBlank() && ENTITY_OBJECTS.containsKey(entityType)) {
-                return Optional.of(new DeleteIntent(entityType, reference));
+            JsonNode updatesNode = root.path("updates");
+            if (!entityType.isBlank() && !reference.isBlank() && ENTITY_OBJECTS.containsKey(entityType) && updatesNode.isObject()) {
+                Map<String, Object> updates = objectMapper.convertValue(updatesNode, Map.class);
+                if (!updates.isEmpty()) {
+                    return Optional.of(new UpdateArguments(entityType, reference, updates));
+                }
             }
         } catch (Exception ignored) {
             // Return the stable invalid-arguments result below.
@@ -254,19 +296,9 @@ public class SematticeProjectDeliveryDeleteToolService {
         }
     }
 
-    public record DeleteIntent(String entityType, String reference) {
-        public DeleteIntent(String combined) {
-            this(parseEntityType(combined), combined);
-        }
-        private static String parseEntityType(String combined) {
-            String lower = combined.toLowerCase(Locale.ROOT);
-            if (lower.contains("项目") || lower.contains("project")) return "project";
-            if (lower.contains("需求") || lower.contains("requirement")) return "requirement";
-            if (lower.contains("任务") || lower.contains("task")) return "task";
-            if (lower.contains("工时") || lower.contains("worklog")) return "worklog";
-            if (lower.contains("变更") || lower.contains("change")) return "change";
-            if (lower.contains("交付事件") || lower.contains("delivery")) return "delivery_event";
-            return "project";
-        }
+    public record UpdateArguments(String entityType, String reference, Map<String, Object> updates) {
+    }
+
+    public record UpdateIntent(String combined) {
     }
 }

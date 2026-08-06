@@ -5,6 +5,7 @@ import com.codehouse.ciciassistant.crmanalysis.service.CrmProductSalesAnalysisTo
 import com.codehouse.ciciassistant.email.service.EmailToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryDeleteToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryToolService;
+import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryUpdateToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryReviewToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryWriteToolService;
 import com.codehouse.ciciassistant.tool.tavily.TavilyToolService;
@@ -34,6 +35,8 @@ public final class BuiltinToolCatalog {
                     "仅由研发交付产品经理在用户明确确认后调用，创建同租户项目、需求或任务。", "中风险", "project_delivery"),
             new ToolCatalogItem(SematticeProjectDeliveryDeleteToolService.TOOL_NAME, "研发交付记录删除",
                     "仅由研发交付产品经理在用户明确确认后调用，将记录移入回收站（30天可恢复）。", "中风险", "project_delivery"),
+            new ToolCatalogItem(SematticeProjectDeliveryUpdateToolService.TOOL_NAME, "研发交付记录修改",
+                    "仅由研发交付产品经理在用户明确确认后调用，修改项目/需求/任务的负责人、状态、优先级、工时、描述等业务字段。", "中风险", "project_delivery"),
             new ToolCatalogItem(SematticeProjectDeliveryReviewToolService.TOOL_NAME, "研发交付设计与验收评审",
                     SematticeProjectDeliveryReviewToolService.toolDescription(), "高风险", "project_delivery"),
             new ToolCatalogItem("get_pending_approvals", "审批待办拉取", "读取 CloudCC / OA 当前待审批项目。", "中风险", "approval"),
