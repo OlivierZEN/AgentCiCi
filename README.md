@@ -6,7 +6,7 @@
 
 - `backend/`: Java 21 + Spring Boot 3 后端基础工程
 - `frontend/`: React + Vite 前端基础工程
-- `.claw/`: 按 `cloudcc-aidev-guidelines-common` 维护的项目状态文件
+- `.claw/`: 按 `agentic-project-guidelines` 维护的项目状态文件
 - `docs/project-overview.md`: 当前项目总览、模块地图与开发优先级入口
 - `AgentCiCi智能体平台实现设计方案.md`: 当前设计方案（**权限、双入口、接口与表结构**以该文档与代码为准；本 README 为快速索引）
 - 品牌域名：`agentcici.com`（当前代码、部署文件、token key、API key 前缀等技术标识仍可能沿用历史 `cici` 命名，后续如需迁移需单独设计兼容方案）
@@ -147,18 +147,18 @@ cp deploy/acr.env.example deploy/acr.env
 
 Agent Builder 的“评测”与“发布渠道”是两个独立一级 Tab：前者负责评测集、版本质量和发布门禁；后者只负责企微、钉钉、飞书、Web、Open API 等运行入口。
 
-<!-- cc-aidev-guidelines-common:begin -->
+<!-- agentic-project-guidelines:begin -->
 ## AI Development Protocol
 
-This project follows the `cc-aidev-guidelines-common` skill.
+This project follows the `agentic-project-guidelines` skill.
 
 - All AI agents must automatically use this skill before project analysis, planning, implementation, testing, or maintenance.
-- If the current agent does not have this skill installed, install it first from GitHub: https://github.com/CloudCCAI/cloudcc-aidev-guidelines-common
+- If the current agent does not have this skill installed, install it first from GitHub: https://github.com/CloudCCAI/agentic-project-guidelines
 - When the environment supports `AGENTS.md`, treat both this README section and `AGENTS.md` as mandatory project instructions.
 
-本项目遵循 `cc-aidev-guidelines-common` 技能规范。
+本项目遵循 `agentic-project-guidelines` 技能规范。
 
 - 所有 AI 智能体在进行项目分析、规划、编码、测试和维护前，必须自动使用此技能。
-- 如果当前智能体尚未安装此技能，必须先从 GitHub 安装：https://github.com/CloudCCAI/cloudcc-aidev-guidelines-common
+- 如果当前智能体尚未安装此技能，必须先从 GitHub 安装：https://github.com/CloudCCAI/agentic-project-guidelines
 - 如果当前环境支持 `AGENTS.md`，应将 README 中的本节和 `AGENTS.md` 同时视为必须遵守的项目级指令。
-<!-- cc-aidev-guidelines-common:end -->
+<!-- agentic-project-guidelines:end -->

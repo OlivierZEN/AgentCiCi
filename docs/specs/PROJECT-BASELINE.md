@@ -2,8 +2,8 @@
 kind: project-baseline
 title: Project baseline
 version: 3
-updated_at: 2026-05-17T02:16:38Z
-updated_by: ai
+updated_at: 2026-08-05T13:48:58Z
+updated_by: codex
 status: active_reference
 owner_role: shared
 baseline_type: brownfield
@@ -24,6 +24,7 @@ baseline_type: brownfield
   - `backend/`: Java 21 + Spring Boot 3 模块化单体
   - `frontend/`: React + Vite
 - 状态协作目录使用 `.claw/`，不是 `.ai-dev/`。
+- 当前项目治理技能为 `agentic-project-guidelines` `3.10.0`；README 与 AGENTS 的当前声明已统一切换。
 - 前端当前至少有三类主要入口：
   - `/` 助手工作台
   - `/admin/*` 管理后台
@@ -48,7 +49,7 @@ baseline_type: brownfield
   - FEAT-010 平台 Skill / Tool 治理控制面、平台审计与运行时紧急禁用
   - Agent Builder 调试入口已切到后端真实运行优先，前端仅保留接口失败时的模拟兜底
   - FEAT-008 知识库生命周期第二阶段能力已基本落地，但当前按用户要求暂停在人工回归前
-  - 项目状态协议已按 `cc-aidev-guidelines-common` `3.7.0` 刷新并验证：`README.md`、`AGENTS.md` 托管声明块存在，`.claw/` 八个核心状态文件保留，`.claw/integration-queue.md`、`.claw/team-status.md`、异步并行目录骨架以及既有团队身份记录均已保留。
+  - 历史事实：项目状态协议曾按 `cc-aidev-guidelines-common` `3.7.0` 刷新并验证；2026-08-05 起当前协议已切换为 `agentic-project-guidelines`，旧目录与历史记录仅作兼容保留。
 
 ## Verified Current Gaps
 
@@ -62,12 +63,14 @@ baseline_type: brownfield
 
 - 该仓库前一阶段长期把 `current-status.md` 当作“状态 + 历史日志”混合文件使用，因此新会话需要先依赖 `.claw/task-board.md` 和本 baseline 才能避免上下文漂移。
 - 多份设计文档已覆盖不同子系统，但 feature spec 的完备度仍不均衡；对于“实现中但还未独立成 spec”的运维/集成问题，当前仍需通过 task card + issue list 组合承接。
+- 旧协议时期的 `.claw/tasks/`、`.claw/assignments/` 和身份记录不再是新工作的必需状态层；新工作以前向 task-board + feature spec 为准。
 
 ## Pending Verification
 
 - 轮换 `13800000001/哪吒` 的 `cc_username/cc_safetymark` 后，CloudCC `api/cauth/token` 是否恢复成功。
 - 本地补齐可用 Aliyun API key 后，`sales-agent` 的 CloudCC 查询类问题是否会真实触发 CloudCC 工具。
 - 若继续推进平台治理，PolicyBundle 发布/回滚后的 runtime governance 摘要在 `/ai/chat`、`/agents/{agentId}/debug` 与平台页是否仍保持一致。
+- `agentic-project-guidelines` validator 仍会发现迁移前的任务板分区、旧 feature status/front matter 与完成任务保留量漂移；按 Brownfield 模式在相关区域再次修改时渐进清理，不批量改写历史。
 
 ## Legacy Hotspots
 
@@ -101,6 +104,7 @@ baseline_type: brownfield
 ## Adoption Plan
 
 - 继续以 `.claw/` 作为唯一状态目录，不启用 `.ai-dev/` 双写。
+- 当前及后续工作统一使用 `agentic-project-guidelines`；不再启用旧技能特有的 assignment、SSH challenge 或 per-task status 默认门禁。
 - 每次会话默认先读 `.claw/current-status.md`，再按需读 `.claw/task-board.md`、`.claw/issue-list.md`、`.claw/test-report.md`。
 - 非平凡新功能继续优先补独立 feature spec；运维/集成型任务先通过 task card + issue list 承接。
 

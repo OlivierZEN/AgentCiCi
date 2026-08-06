@@ -1,12 +1,26 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-04T15:18:04Z
+updated_at: 2026-08-05T16:02:00Z
 updated_by: MANAGER-001
 status: active
 ---
 
 # DevOps
+
+## 2026-08-05 TASK-274 机器主体 scope 治理发布
+
+- 已发布 AgentCiCi `2.8.57 / 750fb71ab47d`。ACR backend/frontend index digest 为 `sha256:4a3c552bc498fa9e4bef823b3e2c071d4b1e34a05b9e2a2ec590d1a2aa46c13b` / `sha256:1ad603f8e395c340b38f61616242be4076611c40fbb5309d31cc76ff171a2d02`。
+- 发布前备份 `/opt/cici/backups/20260805-235439-before-2.8.57-task274-scope-governance` 包含非空 env、PostgreSQL dump、KB 和 Qdrant。仅 pull/force-recreate backend/frontend；database、Redis、RabbitMQ、Qdrant 保持健康运行。
+- 生产新增 `APP_AUTH_OFFICIAL_ACCESS_SEMATTICE_SERVICE_SCOPES`，允许受治理 SERVICE 使用 `runtime.record.delete`；HUMAN 默认 `APP_AUTH_OFFICIAL_ACCESS_SEMATTICE_SCOPES` 未加入该项。
+- 六容器 healthy，backend `/actuator/health=UP`，frontend Nginx 配置有效，`https://x.agentcici.com/`=200，匿名 `/api/admin/service-principals`=401。管理页页脚回读版本 `2.8.57`。
+- 回滚先用同一管理 API 将大乔恢复为发布前 4 项 scope；如需应用回滚，再恢复备份环境并将 backend/frontend 切回 `2.8.56`。无需轮换 Client Secret。
+
+## 2026-08-05 TASK-273 Keycloak 生产人工运维交接
+
+- SSO 主机为 `115.29.222.70`，Keycloak `26.7.0` 以 `keycloak.service` 运行；PostgreSQL `16.13` 以 `postgresql-16.service` 运行，监听仅限 `127.0.0.1:5432` / `::1:5432`。
+- 实际 Keycloak PostgreSQL 连接值已仅保存在主机 `/root/agentcici-ops-handover/keycloak-postgres.env`（`0600 root:root`）；不得向 Git、工单、聊天或日志复制。`verify-keycloak-postgres.sh` 已完成真实非交互连接验证，且两项 systemd 服务均为 active。
+- 长期人工运维说明见 `docs/keycloak-production-operations-handover.md`。人工接管必须使用人员自己的阿里云控制台与 SSH 公钥；自动化私钥不属于交接物。
 
 ## 2026-08-05 TASK-270 悟空机器凭据恢复
 

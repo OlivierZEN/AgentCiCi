@@ -42,7 +42,7 @@ AgentCiCi 是组织身份和 Semattice 订阅绑定的唯一事实源。任何�
 
 - `APP_NATIVE_AGENTCICI_INTERNAL_HMAC_KEY` = Semattice `AI_NATIVE_AGENTCICI_HMAC_KEY`（`semattice -> AgentCiCi`）。
 - `APP_SEMATTICE_INTERNAL_HMAC_KEY` = Semattice `AI_NATIVE_PROVISIONING_CALLER_KEYS` 中的 `agentcici=<key>`（`AgentCiCi -> Semattice`）。
-- AgentCiCi 还设置 `APP_SEMATTICE_BASE_URL=https://semattice.agentcici.com`；Semattice 设置 `AI_NATIVE_AGENTCICI_BASE_URL=https://onechat.agentcici.com`。
+- AgentCiCi 还设置 `APP_SEMATTICE_BASE_URL=https://semattice.agentcici.com`；Semattice 设置 `AI_NATIVE_AGENTCICI_BASE_URL=https://x.agentcici.com`。
 
 ## 安全与可靠性
 

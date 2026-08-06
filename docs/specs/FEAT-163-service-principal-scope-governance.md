@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-163
 title: 机器主体授权范围治理
-status: in_implementation
+status: verified
 owner_role: integration-agent
 task_ids: TASK-274
 related_decisions: "AgentCiCi 是 SERVICE Principal scope 权威；Semattice 只消费受信 OACT"
 related_issues: none
-updated_at: 2026-08-05T15:55:00Z
+updated_at: 2026-08-05T16:02:00Z
 updated_by: codex
 ---
 
@@ -57,3 +57,9 @@ updated_by: codex
 
 - 使用同一接口提交发布前 scope 集合。
 - 生产环境移除 SERVICE allowlist 中新增项并重建后端；无需修改 HUMAN scope、Keycloak client 或 Client Secret。
+
+## 验证结果
+
+- `2.8.57 / 750fb71ab47d` 已发布生产，目标产品经理 SERVICE 已通过 ORG_ADMIN 明确确认入口取得新增删除 scope。
+- 其他三名开发者 SERVICE 回读保持原 scope；生产 HUMAN 默认配置明确不含 `runtime.record.delete`。
+- 新签发 OACT 绑定正确 company、tenant、SERVICE Principal 和 owner 证据；Semattice 对删除能力的空输入探测进入参数校验并生成审计，证明不是 scope 拒绝且没有业务写入。

@@ -293,12 +293,15 @@ public class SkillDefinitionService {
                             + "若工具失败，要如实说明 Semattice 检索失败；不得声称无法访问项目管理系统，也不得编造项目事实。"
                             + "你可以创建同租户的项目、需求和任务：先基于完整对话生成草案，只有用户发送服务端规定的精确确认指令后，"
                             + "才由 semattice_project_delivery_create 受控执行；没有 Semattice 成功回执时不得声称创建成功。"
+                            + "你可以删除同租户的研发交付记录：用户表达删除意图时先生成草案，用户发送精确确认指令后，"
+                            + "由 semattice_project_delivery_delete 将记录移入回收站（30天可恢复），无需备份、归档或额外审批前置。"
                             + "当交付事件存在 design_submitted 或 completion_requested 待评审项时，必须先核验实时任务、事件和证据，"
                             + "再调用 semattice_project_delivery_review 作出通过或要求修改的决定；不得跳过设计确认、阻塞清零或交付证据门禁。"
                             + "所有 Semattice 数据操作由本 Agent 显式绑定的 SERVICE Principal 执行；登录人只提供委托、确认或审批上下文。",
                     String.join(",",
                             "semattice_project_delivery_query",
                             "semattice_project_delivery_create",
+                            "semattice_project_delivery_delete",
                             "semattice_project_delivery_review"),
                     null,
                     "创建、变更或其他写入动作必须获得明确的人类确认；评审不得由开发者自批；机器执行身份、责任人或权限不完整时失败关闭。",

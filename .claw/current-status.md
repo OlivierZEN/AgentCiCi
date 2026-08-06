@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-05T10:45:24Z
-updated_by: MANAGER-001
+updated_at: 2026-08-05T16:02:00Z
+updated_by: codex
 phase: released
 active_task: none
-next_action: "TASK-272 已完成并发布；等待用户以正常组织管理员会话复核设置页硬刷新后的登录守卫跳转。"
+next_action: "TASK-274 已完成并发布 2.8.57；后续记录清理由父级 INT-006 和 Semattice TASK-065 独立执行。TASK-273 人工运维交接和 TASK-272 登录守卫复核按既有计划继续。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,12 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-274 / FEAT-163：已发布生产 `2.8.57 / 750fb71ab47d`。机器主体 scope 现在通过 ORG_ADMIN 受治理完整替换接口、独立 SERVICE allowlist、明确确认页和脱敏平台审计维护。企业 `org5nszpgj99jaysxv6y` 中仅大乔 `dev-autopilot-product-manager` 新增 `runtime.record.delete`，悟空、后羿、哪吒和 HUMAN 默认 scope 未扩大；Client ID、Client Secret、负责人和生命周期均未变化。新签发 SERVICE OACT 已通过 Semattice 非写入安全探测，未删除业务记录。发布前备份为 `/opt/cici/backups/20260805-235439-before-2.8.57-task274-scope-governance`。
+
+- 项目治理协议已按用户指令从 `cc-aidev-guidelines-common` 切换为 `agentic-project-guidelines` `3.10.0`；README、AGENTS 与 brownfield baseline 已同步。旧任务、旧测试记录和兼容目录中的历史引用不改写，也不再构成当前 assignment/SSH 门禁。
+
+- TASK-273：已完成 Keycloak 生产人工运维交接。SSO 主机 `115.29.222.70` 的 Keycloak `26.7.0` 和 PostgreSQL `16.13` 均处于 active；PostgreSQL 仅监听回环地址。真实数据库连接值已仅写入 `/root/agentcici-ops-handover/keycloak-postgres.env`（`0600 root:root`），并通过 root 专用脚本完成非交互连接验证；仓库只提交不含秘密的交接手册。人工接管仍要求人员使用自己的阿里云控制台与 SSH 身份，未复制或公开自动化私钥。
 
 - TASK-272 / FEAT-162：已发布生产 `2.8.56 / 564fb9fbfd8d`，修复所有组织管理端功能页深链刷新被后端 `/admin/*` 控制器截获的问题。浏览器管理 API 已统一至 `/api/admin/*`，而 `/admin/*` 仅保留 SPA 页面路由。前端定向测试 52/52、完整后端测试、生产构建、Compose/Nginx 配置校验通过；发布前四类备份位于 `/opt/cici/backups/20260805-184240-before-2.8.56`。六容器 healthy、health=UP、版本接口与 Nginx 均正确；匿名 `https://x.agentcici.com/admin/service-principals` 为 `200 text/html` 且含 SPA root，匿名 `/api/admin/service-principals` 仍为预期 JSON 401。未改后端控制器、鉴权或业务数据；`onechat.agentcici.com` 仍无 DNS 解析，未作为成功依据。
 

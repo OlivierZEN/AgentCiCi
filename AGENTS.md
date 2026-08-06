@@ -1,18 +1,18 @@
 # AGENTS
 
-<!-- cc-aidev-guidelines-common:begin -->
+<!-- agentic-project-guidelines:begin -->
 ## Required Skill
 
-- 本项目遵循 `cc-aidev-guidelines-common`。
+- 本项目遵循 `agentic-project-guidelines`。
 - 任何 AI agent 在项目分析、计划、编码、测试或维护前，必须先加载并遵循该技能。
-- 如果当前环境未安装该技能，先从 GitHub 安装：<https://github.com/CloudCCAI/cloudcc-aidev-guidelines-common>
-- 技能可用后，按其流程维护 `README.md`、`AGENTS.md`、`.claw/` 或 `.ai-dev/`、`docs/specs/`。
-<!-- cc-aidev-guidelines-common:end -->
+- 如果当前环境未安装该技能，先从 GitHub 安装：<https://github.com/CloudCCAI/agentic-project-guidelines>
+- 技能可用后，按其 Greenfield 或 Brownfield 流程维护 `README.md`、`AGENTS.md`、`.claw/` 或 `.ai-dev/`、`docs/specs/`。
+<!-- agentic-project-guidelines:end -->
 
 ## 工作方式
 
-- 默认先读 `.claw/current-status.md`；涉及实现、交接或排期时再读 `.claw/task-board.md` 与对应 `.claw/tasks/TASK-xxx.md`。
-- 临时暂停开发身份门禁：自 2026-08-05 起，在项目经理明确宣布该流程正式可用之前，AI agent 不得启用或要求 DevAutopilot Developer SERVICE / `doctor` / 任务认领与设计审批门禁，也不得运行 `.claw` 的 `dev-login.py` / `check-assignment.py` SSH 持钥和任务范围门禁。现有 `.claw/developers/`、`.claw/assignments/` 与历史验证记录只作保留，不作为当前项目编辑的前置条件；功能规格、任务状态、测试证据、最小范围修改、Git 提交和其他安全治理规则继续执行。只有项目经理的后续明确指令可以重新启用这些门禁。
+- 默认先读 `.claw/current-status.md`；涉及实现、交接或排期时再读 `.claw/task-board.md`、关联规格与必要的状态文件。
+- 当前按 `agentic-project-guidelines` 工作，不启用 DevAutopilot Developer SERVICE / `doctor` / assignment SSH 持钥门禁。现有 `.claw/developers/`、`.claw/assignments/`、`.claw/tasks/` 与历史验证记录只作兼容保留，不作为当前项目编辑的前置条件；只有项目经理后续明确建立独立新政策时才重新评估。
 - 新功能、跨模块改动、API/数据结构变化、非平凡重构必须落到 `docs/specs/`；小修可只更新任务状态。
 - 真实验证结果写入 `.claw/test-report.md`；热状态文件只保留当前快照，不堆历史。
 - 功能设计、实现和测试默认不新增移动端兼容实现、移动端布局适配、移动端截图或移动端自动化测试；除非用户明确单独要求，验收只做桌面端产品质量门。
@@ -22,15 +22,8 @@
 
 - 处理 `功能需求` 或 `BUG反馈` 条目并准备分配 task 前，必须先检查反馈内容是否明确给出设计文档、需求文档、方案文档或其他可作为设计依据的链接。
 - 如果反馈内容明确给出设计文档链接，必须先读取该设计文档，并把其中的目标、范围、流程、界面/API/数据设计、验收标准、约束和例外直接转写进对应 `docs/specs/` 文档；`spec` 可保留原始链接作为来源，但不得只放链接而缺少转写后的设计内容。
-- 如果反馈内容没有明确设计文档链接，PM 或执行分配的 agent 必须先完成必要设计，并把设计内容补充到对应 `docs/specs/` 文档后，再创建或更新 `.claw/task-board.md`、`.claw/tasks/TASK-xxx.md` 与 `.claw/assignments/TASK-xxx.yaml` 进行任务分配。
+- 如果反馈内容没有明确设计文档链接，PM 或执行分配的 agent 必须先完成必要设计，并把设计内容补充到对应 `docs/specs/` 文档后，再创建或更新 `.claw/task-board.md` 任务卡进行任务分配。
 - `功能需求` 或 `BUG反馈` 条目分配完成后，必须立即回写对应飞书文档：把原条目状态更新为 `已分配`，并在同一条记录中补充关联 `TASK-xxx`、`docs/specs/FEAT-xxx-*.md`、执行人/assignee；不得只更新本地 `.claw/` 而让飞书原始反馈停留在 `待分配`。
-
-## 任务授权规范
-
-- `.claw/assignments/TASK-xxx.yaml` 中的 `allowed_write_roots` 必须写成可递归匹配的 glob，例如 `frontend/src/**`、`docs/specs/**`、`.claw/tasks/**`；不得只写裸目录如 `frontend/src`，避免身份门禁把子目录文件误判为越界。
-- PM 或执行分配的 agent 更新 assignment 后，必须用 `scripts/check-assignment.py` 或技能包自带 `check-assignment.py` 对任务预期会编辑的代表性文件做一次授权验证；验证失败时先修正 assignment，再让执行 agent 开始编码。
-- PM 或执行分配的 agent 完成任务分配、授权验证和任务状态更新后，必须立即把任务分配内容提交并推送到 `origin/main`，提交范围限于该次分配相关的 `docs/specs/`、`.claw/tasks/`、`.claw/assignments/`、`.claw/task-board.md`、`.claw/current-status.md`、必要的 `.claw/developers/` 授权变更和项目规则文档；不得把执行 agent 的未验证实现代码混入该提交。
-- 如果仓库未内置门禁脚本，仍按已加载的 `cc-aidev-guidelines-common` 技能包脚本执行同等检查，不能因为本地脚本缺失而跳过授权验证。
 
 ## 发布部署治理
 

@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-05T10:45:24Z
+updated_at: 2026-08-05T16:02:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-273 - Keycloak 生产人工运维交接
+
+- status: `done`
+- priority: `high`
+- owner_role: `project-manager`
+- spec_path: `n/a`
+- task_status_path: `.claw/tasks/TASK-273.md`
+- assignment_path: `n/a`
+- blocked_by: `none`
+- next_action: SSO 主机的 root 专用凭据文件与不含秘密的交接手册已就位；人工运维人员需使用自己的云控制台和 SSH 身份完成接管。
 
 ### TASK-272 - 组织管理端深链刷新回退修复
 
@@ -1404,6 +1415,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-274 - 为产品经理 SERVICE 补齐删除权限
+
+- status: `done`
+- priority: `high`
+- owner_role: `integration-agent`
+- spec_path: `docs/specs/FEAT-163-service-principal-scope-governance.md`
+- task_status_path: `.claw/tasks/TASK-274.md`
+- assignment_path: `n/a`
+- blocked_by: `none`
+- next_action: `已发布 2.8.57；仅目标产品经理新增 runtime.record.delete，Semattice OACT 验收通过`
 
 ### TASK-264 - DEV Autopilot 研发身份花名与新增开发者
 

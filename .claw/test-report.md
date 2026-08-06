@@ -1,14 +1,34 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-05T10:45:24Z
-updated_by: MANAGER-001
+updated_at: 2026-08-05T16:02:00Z
+updated_by: codex
 status: active
-last_run_at: 2026-08-05T10:45:24Z
+last_run_at: 2026-08-05T16:02:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## 2026-08-05 TASK-274 机器主体 scope 治理与生产验收
+
+- `backend-focused`：`mvn -q -Dtest=ServicePrincipalServiceTest,OfficialAccessTokenServiceTest test` 通过；覆盖完整替换、SERVICE allowlist、跨企业/撤销/allowlist 外拒绝、脱敏审计，以及 SERVICE-only 删除 scope 不扩散到 HUMAN。
+- `frontend-focused/build`：`npm test -- AdminServicePrincipalsPage.test.ts` 通过 3/3，`npm run build` 通过；仅有既有 bundle-size 提示。Compose config 与 `git diff --check` 通过。
+- `full-backend-limit`：`mvn -q test` 因本机 PostgreSQL 不可达在 Hikari 重试阶段停止，不能记为全量通过；定向契约测试和生产健康验收均通过。
+- `release`：Git tag/commit 为 `2.8.57 / 750fb71ab47d`；backend/frontend ACR index digest 为 `sha256:4a3c552bc498fa9e4bef823b3e2c071d4b1e34a05b9e2a2ec590d1a2aa46c13b` / `sha256:1ad603f8e395c340b38f61616242be4076611c40fbb5309d31cc76ff171a2d02`。
+- `backup/deploy`：备份 `/opt/cici/backups/20260805-235439-before-2.8.57-task274-scope-governance` 的 env、PostgreSQL、KB、Qdrant 均非空；仅重建 backend/frontend。六容器 healthy、backend health=`UP`、Nginx 配置有效、x HTTPS=200，匿名管理 API=401。
+- `authorization`：受权 ORG_ADMIN 管理页回读大乔为原 4 项加 `runtime.record.delete`；悟空、后羿、哪吒均保持原 4 项。平台审计 `id=77` 为 `service_principal.scopes_updated`，不含秘密。
+- `oact/semattice`：新 OACT 绑定目标 SERVICE、company `org5nszpgj99jaysxv6y` 和 tenant，删除 scope 存在；Semattice 空输入探测返回 HTTP 400 / `VALIDATION_FAILED`，而非 403，审计 `audit:req-task274-delete-scope-smoke-20260805`。未提供记录 ID，未删除数据。
+
+- 状态：`passed`
+
+## 2026-08-05 项目治理技能迁移验证
+
+- 状态：`partial`
+- README、AGENTS 当前托管声明已统一为 `agentic-project-guidelines` `3.10.0`；当前声明扫描未发现旧技能引用。
+- `agentic-project-guidelines` validator 对 README/AGENTS 的 guidance error 为 0，证明当前技能名称、托管标记和安装来源均有效。
+- 全量状态校验为 `partial`：仍有 202 条迁移前历史问题，包括 Active 区终态任务 84、旧 feature status 58、缺 YAML front matter 12、旧时区时间戳 22、缺 front matter 字段 19、完成任务保留量 1、其他格式 6。
+- 按 Brownfield Adoption 规则不批量改写历史；后续修改相关任务或规格时渐进修正。本次未运行产品代码测试。
 
 ## 2026-08-05 TASK-272 管理端设置页深链刷新修复（生产 2.8.56）
 
