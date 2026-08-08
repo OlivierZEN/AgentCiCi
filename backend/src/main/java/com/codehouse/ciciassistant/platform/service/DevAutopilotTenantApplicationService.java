@@ -122,9 +122,89 @@ public class DevAutopilotTenantApplicationService {
 
     private View transition(String companyId, String target, String platformActor) {
         Row row = requireExisting(companyId);
-        jdbc.update("UPDATE tenant_application_activation SET desired_state=?,actual_state=?,updated_at=CURRENT_TIMESTAMP WHERE id=?", target, target, row.id());
-        audit.log(companyId, platformActor, "PLATFORM", "tenant_application." + target.toLowerCase(), "tenant_application", row.id(), "DevAutopilot application state changed");
-        return requireView(companyId);
+        if (target.equals(row.actualState())) return view(row);
+        if ("SUSPENDED".equals(target)) return suspendResources(companyId, row, platformActor);
+        return resumeResources(companyId, row, platformActor);
+    }
+
+    /**
+     * The activation row is the runtime fail-closed gate.  Resource lifecycle changes are then
+     * applied underneath it; a Keycloak failure deliberately leaves SUSPENDING in place rather
+     * than accidentally reopening the DevAutopilot API.
+     */
+    private View suspendResources(String companyId, Row row, String platformActor) {
+        jdbc.update("UPDATE tenant_application_activation SET desired_state='SUSPENDED',actual_state='SUSPENDING',last_error_code=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?", row.id());
+        try {
+            setProductManagerBinding(companyId, row.id(), false);
+            for (ServiceResource resource : serviceResources(row.id())) {
+                if (!"SUSPENDED".equals(resource.lifecycleState())) {
+                    principals.suspend(companyId, ownerMemberId(companyId, resource.externalId()), resource.externalId());
+                    jdbc.update("UPDATE tenant_application_resource SET lifecycle_state='SUSPENDED' WHERE id=?", resource.id());
+                }
+            }
+            jdbc.update("UPDATE tenant_application_activation SET actual_state='SUSPENDED',last_error_code=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?", row.id());
+            audit.log(companyId, platformActor, "PLATFORM", "tenant_application.suspended", "tenant_application", row.id(), "DevAutopilot application and tenant resources suspended");
+            return requireView(companyId);
+        } catch (RuntimeException exception) {
+            jdbc.update("UPDATE tenant_application_activation SET actual_state='SUSPENDING',last_error_code='SUSPEND_FAILED',updated_at=CURRENT_TIMESTAMP WHERE id=?", row.id());
+            throw exception;
+        }
+    }
+
+    /** Restore resource credentials before restoring the agent execution binding and application gate. */
+    private View resumeResources(String companyId, Row row, String platformActor) {
+        if (!"SUSPENDED".equals(row.actualState())) throw new ConflictException("only a suspended DevAutopilot application can be resumed");
+        jdbc.update("UPDATE tenant_application_activation SET desired_state='ACTIVE',actual_state='RESUMING',last_error_code=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?", row.id());
+        try {
+            for (ServiceResource resource : serviceResources(row.id())) {
+                if ("SUSPENDED".equals(resource.lifecycleState())) {
+                    principals.activate(companyId, ownerMemberId(companyId, resource.externalId()), resource.externalId());
+                    jdbc.update("UPDATE tenant_application_resource SET lifecycle_state='ACTIVE' WHERE id=?", resource.id());
+                }
+            }
+            setProductManagerBinding(companyId, row.id(), true);
+            jdbc.update("UPDATE tenant_application_activation SET actual_state='ACTIVE',last_error_code=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?", row.id());
+            audit.log(companyId, platformActor, "PLATFORM", "tenant_application.resumed", "tenant_application", row.id(), "DevAutopilot application and tenant resources resumed");
+            return requireView(companyId);
+        } catch (RuntimeException exception) {
+            jdbc.update("UPDATE tenant_application_activation SET actual_state='RESUMING',last_error_code='RESUME_FAILED',updated_at=CURRENT_TIMESTAMP WHERE id=?", row.id());
+            throw exception;
+        }
+    }
+
+    private List<ServiceResource> serviceResources(String activationId) {
+        return jdbc.query("SELECT id,external_id,lifecycle_state FROM tenant_application_resource WHERE activation_id=? AND resource_type='SERVICE_PRINCIPAL' ORDER BY id",
+                (rs, n) -> new ServiceResource(rs.getString(1), rs.getString(2), rs.getString(3)), activationId);
+    }
+
+    private String ownerMemberId(String companyId, String servicePrincipalId) {
+        List<String> ownerIds = jdbc.queryForList("""
+                SELECT owner.company_member_id
+                FROM service_principal_owner owner
+                JOIN company_member member ON member.id=owner.company_member_id
+                WHERE owner.service_principal_id=? AND owner.owner_role='PRIMARY' AND owner.owner_status='ACTIVE'
+                  AND member.company_id=? AND member.member_status='ACTIVE'
+                """, String.class, servicePrincipalId, companyId);
+        if (ownerIds.size() != 1) throw new IllegalStateException("DevAutopilot service principal has no active tenant-local owner");
+        return ownerIds.getFirst();
+    }
+
+    private void setProductManagerBinding(String companyId, String activationId, boolean enabled) {
+        List<BindingTarget> targets = jdbc.query("""
+                SELECT agent.external_id, principal.external_id
+                FROM tenant_application_resource agent
+                JOIN tenant_application_resource principal
+                  ON principal.activation_id=agent.activation_id
+                 AND principal.logical_role='product_manager'
+                 AND principal.resource_type='SERVICE_PRINCIPAL'
+                 AND principal.is_primary=TRUE
+                WHERE agent.activation_id=? AND agent.logical_role='product_manager'
+                  AND agent.resource_type='AGENT' AND agent.is_primary=TRUE
+                """, (rs, n) -> new BindingTarget(rs.getString(1), rs.getString(2)), activationId);
+        if (targets.size() != 1) throw new IllegalStateException("DevAutopilot product-manager resources are incomplete");
+        BindingTarget target = targets.getFirst();
+        execution.configure(companyId, target.agentId(), target.servicePrincipalId(), enabled,
+                ownerMemberId(companyId, target.servicePrincipalId()));
     }
     private void resource(String activationId, String role, String type, String alias, String name, String externalId, boolean primary) {
         jdbc.update("""
@@ -151,6 +231,8 @@ public class DevAutopilotTenantApplicationService {
     }
     private static void require(String v,String name) { if (v==null||v.isBlank()) throw new IllegalArgumentException(name+" is required"); }
     private record Row(String id,String companyId,String templateVersion,String idempotencyKey,String desiredState,String actualState,String sematticeTenantId,String metadataVersionId,String metadataDigest,String lastError) { }
+    private record ServiceResource(String id, String externalId, String lifecycleState) { }
+    private record BindingTarget(String agentId, String servicePrincipalId) { }
     public record ActivationCommand(String idempotencyKey, String productManagerName, String productManagerAlias, String ownerMemberId) { }
     public record DeveloperCommand(String displayName, String resourceAlias, String ownerMemberId) { }
     public record ResourceView(String logicalRole,String resourceType,String resourceAlias,String displayName,String externalId,String lifecycleState,boolean primary) { }
