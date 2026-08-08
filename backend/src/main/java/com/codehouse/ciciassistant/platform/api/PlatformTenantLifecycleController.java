@@ -4,6 +4,7 @@ import com.codehouse.ciciassistant.auth.RequirePlatformRole;
 import com.codehouse.ciciassistant.auth.RoleCodes;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.codehouse.ciciassistant.platform.service.PlatformTenantLifecycleService;
+import com.codehouse.ciciassistant.platform.service.DevAutopilotTenantApplicationService;
 import com.codehouse.ciciassistant.semattice.SematticeProvisioningClient;
 import com.codehouse.ciciassistant.semattice.SematticeProvisioningService;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -32,13 +33,16 @@ public class PlatformTenantLifecycleController {
     private final PlatformTenantLifecycleService tenantLifecycleService;
     private final SematticeProvisioningClient sematticeProvisioningClient;
     private final SematticeProvisioningService sematticeProvisioningService;
+    private final DevAutopilotTenantApplicationService devAutopilotApplications;
 
     public PlatformTenantLifecycleController(PlatformTenantLifecycleService tenantLifecycleService,
                                              SematticeProvisioningClient sematticeProvisioningClient,
-                                             SematticeProvisioningService sematticeProvisioningService) {
+                                             SematticeProvisioningService sematticeProvisioningService,
+                                             DevAutopilotTenantApplicationService devAutopilotApplications) {
         this.tenantLifecycleService = tenantLifecycleService;
         this.sematticeProvisioningClient = sematticeProvisioningClient;
         this.sematticeProvisioningService = sematticeProvisioningService;
+        this.devAutopilotApplications = devAutopilotApplications;
     }
 
     @GetMapping
@@ -68,6 +72,12 @@ public class PlatformTenantLifecycleController {
     public ApiResponse<SematticeProvisioningClient.ProvisioningView> provisionSemattice(
             @PathVariable @Pattern(regexp = "^org[a-z0-9]{17}$") String companyId,
             @Valid @RequestBody SematticeProvisioningRequest request) {
+        // Idempotency: if already provisioned, return existing result instead of re-calling Semattice (which would 409/502)
+        SematticeProvisioningService.BindingView existing = sematticeProvisioningService.getProvisioningStatus(companyId);
+        if ("PROVISIONED".equals(existing.state()) && existing.sematticeTenantId() != null) {
+            return ApiResponse.ok(new SematticeProvisioningClient.ProvisioningView(
+                    existing.companyId(), existing.sematticeTenantId(), "active", "succeeded"), "已开通");
+        }
         return ApiResponse.ok(sematticeProvisioningClient.provision(companyId, request.idempotencyKey(), request.displayName(),
                 request.serviceTier(), request.entitlements()));
     }
@@ -76,6 +86,45 @@ public class PlatformTenantLifecycleController {
     public ApiResponse<SematticeProvisioningService.BindingView> getSematticeProvisioningStatus(
             @PathVariable @Pattern(regexp = "^org[a-z0-9]{17}$") String companyId) {
         return ApiResponse.ok(sematticeProvisioningService.getProvisioningStatus(companyId));
+    }
+
+    @GetMapping("/{companyId}/applications/devautopilot")
+    public ApiResponse<DevAutopilotTenantApplicationService.View> getDevAutopilotApplication(
+            @PathVariable @Pattern(regexp = "^org[a-z0-9]{17}$") String companyId) {
+        return ApiResponse.ok(devAutopilotApplications.get(companyId));
+    }
+
+    @PostMapping("/{companyId}/applications/devautopilot/activations")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
+    public ApiResponse<DevAutopilotTenantApplicationService.View> activateDevAutopilot(
+            @PathVariable @Pattern(regexp = "^org[a-z0-9]{17}$") String companyId,
+            @Valid @RequestBody DevAutopilotActivationRequest request) {
+        return ApiResponse.ok(devAutopilotApplications.activate(companyId,
+                new DevAutopilotTenantApplicationService.ActivationCommand(request.idempotencyKey(), request.productManagerName(),
+                        request.productManagerAlias(), request.ownerMemberId()), actorId()));
+    }
+
+    @PostMapping("/{companyId}/applications/devautopilot/suspensions")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
+    public ApiResponse<DevAutopilotTenantApplicationService.View> suspendDevAutopilot(
+            @PathVariable @Pattern(regexp = "^org[a-z0-9]{17}$") String companyId) {
+        return ApiResponse.ok(devAutopilotApplications.suspend(companyId, actorId()));
+    }
+
+    @PostMapping("/{companyId}/applications/devautopilot/resumptions")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
+    public ApiResponse<DevAutopilotTenantApplicationService.View> resumeDevAutopilot(
+            @PathVariable @Pattern(regexp = "^org[a-z0-9]{17}$") String companyId) {
+        return ApiResponse.ok(devAutopilotApplications.resume(companyId, actorId()));
+    }
+
+    @PostMapping("/{companyId}/applications/devautopilot/developer-principals")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
+    public ApiResponse<DevAutopilotTenantApplicationService.ResourceView> addDevAutopilotDeveloper(
+            @PathVariable @Pattern(regexp = "^org[a-z0-9]{17}$") String companyId,
+            @Valid @RequestBody DevAutopilotDeveloperRequest request) {
+        return ApiResponse.ok(devAutopilotApplications.addDeveloper(companyId,
+                new DevAutopilotTenantApplicationService.DeveloperCommand(request.displayName(), request.resourceAlias(), request.ownerMemberId()), actorId()));
     }
 
     @GetMapping("/{companyId}/retention")
@@ -261,6 +310,17 @@ public class PlatformTenantLifecycleController {
             return entitlements == null || entitlements.isObject();
         }
     }
+
+    public record DevAutopilotActivationRequest(
+            @NotBlank @Pattern(regexp = "^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$") String idempotencyKey,
+            @NotBlank @Size(max = 128) String productManagerName,
+            @NotBlank @Pattern(regexp = "^[a-z][a-z0-9-]{1,47}$") String productManagerAlias,
+            @NotBlank String ownerMemberId) { }
+
+    public record DevAutopilotDeveloperRequest(
+            @NotBlank @Size(max = 128) String displayName,
+            @NotBlank @Pattern(regexp = "^[a-z][a-z0-9-]{1,47}$") String resourceAlias,
+            @NotBlank String ownerMemberId) { }
 
     public record LifecycleActionRequest(String reason) {
     }

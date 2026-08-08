@@ -16759,6 +16759,35 @@ td.skills-data-table__actions > * {
   white-space: nowrap;
 }
 
+.tenant-application-card__setup {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 7px;
+  width: min(100%, 360px);
+}
+
+.tenant-application-card__setup input {
+  min-width: 0;
+  min-height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--platform-line);
+  border-radius: 0;
+  background: var(--platform-surface);
+  color: var(--platform-heading);
+  font: inherit;
+  font-size: 11px;
+}
+
+.tenant-application-card__setup input:focus-visible {
+  outline: 2px solid var(--platform-accent);
+  outline-offset: 1px;
+}
+
+.tenant-application-card__setup .tenant-application-card__primary-action {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
 .tenant-lifecycle__status--active {
   color: var(--platform-success);
 }
