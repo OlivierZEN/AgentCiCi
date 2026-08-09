@@ -8,6 +8,13 @@ status: active
 
 # DevOps
 
+## 2026-08-09 TASK-275 租户 handoff 与统一标识 UAT 发布
+
+- 已按 test channel 发布 `2.8.57-beta.3 / 1b07df5c6f40`。backend/frontend ACR index digest 为 `sha256:490183ac35a30ab7f263383a7140bc387036383a39b1c6d6aec9a858ee644456` / `sha256:1310b43f6bae4a64d1ee912b67023fe3827b38611c8f1e84d18d9d534dcb7479`；UAT 两个容器均为该不可变 image 且 healthy，backend `/system/version` 回读同一 version、imageTag、commit。
+- 发布前备份为 `/data/apps/agentcici/backups/20260809T033000Z-before-2.8.57-beta.3`，含 UAT Compose、root-only 环境文件和非空 PostgreSQL dump；仅重建 backend/frontend，未重启数据与消息基础设施。
+- UAT 同机 gateway 的 `POST /auth/devautopilot/handoff` 匿名返回预期 `401`，`POST /openapi/v1/official/devautopilot/handoff/exchange` 缺 ticket 返回预期 `400`。正常租户用户 handoff 和 Semattice 业务数据回读需使用真实业务会话完成。
+- 回滚：恢复该备份中的 Compose 与受保护环境文件，明确将 backend/frontend 切回 `2.8.57-beta.2` 后仅重建这两个容器；不得使用 `dev`、`uat` 或 `latest` 作为运行版本事实。
+
 ## 2026-08-09 TASK-275 机器主体新增与编辑 UAT 发布
 
 - 已按 test channel 发布 `2.8.57-beta.2 / 2753d268acd9`。backend/frontend ACR index digest 分别为 `sha256:aa50caecfe55aaa8ac6c0b0e1f8494578a21966dda7f8fa0f20dec2303a92cdc` / `sha256:7da4fa653ff8b1de55ea183ea29a09b669708c7419eccd8100699f08179a6a37`；Git tag、运行时 `CICI_APP_VERSION`、前端 `VITE_CICI_APP_VERSION` 和镜像 tag 统一为同一版本。

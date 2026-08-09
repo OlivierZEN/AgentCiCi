@@ -2,7 +2,7 @@
 kind: feature-spec
 feature_id: FEAT-164
 title: DevAutopilot standard tenant application
-status: in_progress
+status: review
 owner_role: integration-agent
 task_ids: TASK-275
 related_decisions: ADR-006, ADR-007, ADR-008
@@ -151,7 +151,8 @@ DevAutopilot 服务端调用 AgentCiCi 的 ticket exchange，并仅在自身短�
 - [x] Semattice 标准基线契约与实现。
 - [x] DevAutopilot runtime gate。
 - [x] 独立 DevAutopilot 缓存的 UAT 发布与运行态验证（使用独立 beta 发布入口）。
-- [ ] 修复同源租户 handoff、UAT 依赖地址与卡片字段事实，并完成租户用户数据回读。
+- [x] 修复同源租户 handoff 与卡片字段事实，并发布 UAT AgentCiCi `2.8.57-beta.3 / 1b07df5c6f40`。
+- [ ] 用正常租户用户回读 Semattice 当前项目数据，并完成双租户隔离验收。
 - [ ] 双租户 UAT E2E（需正常租户 ORG_ADMIN 业务会话，不能由平台运营账号替代）。
 
 ## UAT 发布事实

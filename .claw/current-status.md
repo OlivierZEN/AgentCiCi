@@ -3,9 +3,9 @@ kind: current-status
 version: 4
 updated_at: 2026-08-09T03:20:00Z
 updated_by: codex
-phase: implementation
+phase: review
 active_task: TASK-275
-next_action: "发布 INT-008 租户浏览器 handoff 与统一租户标识修复，并用正常租户用户回读 UAT 数据。"
+next_action: "由正常租户用户从 AgentCiCi 应用入口进入 DevAutopilot，回读 UAT Semattice 数据并完成双租户隔离验收。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-275 / INT-008：平台运营端只负责开通、暂停和恢复应用/数据基线；租户 `ORG_ADMIN` 在 `/admin/service-principals` 使用独立新增 modal 初始化自定义名称的 PM 或开发者机器主体，并从同租户有效 HUMAN 成员中选择负责人。截图复核发现 UAT card 将 Semattice UUID 错当作“数据租户”展示，且前台启动器硬编码生产 URL；现重新打开任务，改为统一展示 `租户标识=company_id`，并以一次性 browser handoff 进入同源 DevAutopilot。未伪造会话、未创建业务账号。
+- TASK-275 / INT-008：平台运营端只负责开通、暂停和恢复应用/数据基线；租户 `ORG_ADMIN` 在 `/admin/service-principals` 使用独立新增 modal 初始化自定义名称的 PM 或开发者机器主体，并从同租户有效 HUMAN 成员中选择负责人。UAT 已发布 `2.8.57-beta.3 / 1b07df5c6f40`：三应用卡片均以 `租户标识=company_id` 展示，DevAutopilot 不显示 Semattice UUID 或产品经理；前台通过一次性 ticket 进入同源 DevAutopilot，浏览器不再传递 OACT。匿名 handoff create=401、exchange 缺 ticket=400，运行容器健康；正常租户业务数据回读待验收，未伪造会话或创建业务账号。
 
 - TASK-274 / FEAT-163：已发布生产 `2.8.57 / 750fb71ab47d`。机器主体 scope 现在通过 ORG_ADMIN 受治理完整替换接口、独立 SERVICE allowlist、明确确认页和脱敏平台审计维护。企业 `org5nszpgj99jaysxv6y` 中仅大乔 `dev-autopilot-product-manager` 新增 `runtime.record.delete`，悟空、后羿、哪吒和 HUMAN 默认 scope 未扩大；Client ID、Client Secret、负责人和生命周期均未变化。新签发 SERVICE OACT 已通过 Semattice 非写入安全探测，未删除业务记录。发布前备份为 `/opt/cici/backups/20260805-235439-before-2.8.57-task274-scope-governance`。
 

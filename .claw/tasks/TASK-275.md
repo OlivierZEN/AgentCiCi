@@ -1,7 +1,7 @@
 ---
 task_id: TASK-275
 integration_id: INT-008
-status: in_progress
+status: review
 primary_project: agentcici
 ---
 
@@ -28,6 +28,7 @@ primary_project: agentcici
 ## 交付状态
 
 - UAT 已发布 `2.8.57-beta.2 / 2753d268acd9`，但截图确认运营卡片仍错误展示 Semattice 内部 UUID，且前台外部入口硬编码生产地址；本任务已重新打开以修复上述事实展示和 browser handoff。
+- 修复已发布 UAT `2.8.57-beta.3 / 1b07df5c6f40`：三张应用卡片统一展示 `租户标识`，DevAutopilot 不再展示 UUID 或产品经理；同源 handoff ticket 的创建、兑换边界和匿名负向已通过。正常租户用户的真实 Semattice 数据回读仍待验收。
 - 正常 ORG_ADMIN 的新增、编辑和双租户隔离业务验收仍待完成；未为验证而创建测试机器主体或读取 Secret。
 - V108 已在 UAT 成功执行；匿名团队管理 API 为预期 `401`。
 - 正常 ORG_ADMIN 的 PM/开发者创建、双租户隔离及暂停/恢复业务验收为待验收项，任务保持 `review`，不阻塞已发布的控制面职责调整。
