@@ -41,6 +41,9 @@ Environment:
   RELEASE_VERSION        Explicit version alias for CICI_RELEASE_VERSION
   CICI_RELEASE_VERSION   Explicit canonical release version
   RELEASE_CHANNEL        production|test, default production
+  RELEASE_PRODUCTION_BASE
+                         Approved production base for a test release when the
+                         production deployment/tag sync is pending
   INITIAL_PRODUCTION_VERSION
                          First production version if no production tag exists, default 2.0.1
   PUSH_LATEST            true|false, default true
@@ -221,7 +224,21 @@ next_production_version() {
 
 next_test_version() {
   local production_version latest latest_beta
-  production_version="$(latest_production_version)"
+  production_version="${RELEASE_PRODUCTION_BASE:-}"
+  if [[ -n "$production_version" ]]; then
+    if ! validate_production_version "$production_version"; then
+      echo "Invalid RELEASE_PRODUCTION_BASE: $production_version" >&2
+      exit 2
+    fi
+    local latest_tagged_production
+    latest_tagged_production="$(latest_production_version)"
+    if [[ -n "$latest_tagged_production" && "$(printf '%s\n%s\n' "$latest_tagged_production" "$production_version" | sort -V | tail -1)" != "$production_version" ]]; then
+      echo "RELEASE_PRODUCTION_BASE must not precede the latest production Git tag: $latest_tagged_production" >&2
+      exit 2
+    fi
+  else
+    production_version="$(latest_production_version)"
+  fi
   if [[ -z "$production_version" ]]; then
     production_version="$INITIAL_PRODUCTION_VERSION"
   fi

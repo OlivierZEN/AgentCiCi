@@ -23,6 +23,7 @@ AgentCiCi already ships backend and frontend images to ACR, but the release vers
 - Production versions use three numeric segments with no letters, for example `2.0.1`.
 - Production auto-generation increments the latest production Git tag by one patch version. Each segment has a maximum value of `12`; when the third segment reaches `12`, the next version carries into the second segment and resets the third segment to `1`. For example `2.0.12` becomes `2.1.1`.
 - Test versions are based on the latest production version and append `-beta.<n>`, for example `2.0.1-beta.1`. Multiple test releases on the same production baseline increment only the beta counter.
+- When the approved production runtime has advanced before its Git production tag is synchronized, release owners must pass `RELEASE_PRODUCTION_BASE=<approved-production-version>` for a test release. The generator rejects a base below the latest production Git tag and starts or increments that base's `-beta.<n>` sequence; it must not fall back to an older Git baseline.
 - Source at release time: `scripts/release-acr.sh` generates or accepts the canonical version before building anything.
 - Same value must be used for:
   - backend image tag: `cici-backend:<version>`
