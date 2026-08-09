@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-09T05:32:00Z
+updated_at: 2026-08-09T06:03:00Z
 updated_by: codex
 phase: review
 active_task: TASK-275
-next_action: "发布 2.8.59-beta.1，验证 OACT activation resolve、Semattice 公网控制台和 handoff workspace，再完成双租户隔离验收。"
+next_action: "使用具备有效成员的第二个 UAT 租户完成正向与跨租户负向验收；当前目标租户完整链路已通过。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-275 / INT-008：UAT 数据库确认当前租户已有产品经理 Agent/SERVICE/执行绑定和两个 developer 资源；故“未生成”的表象来自运行链路断裂，不是资源表为空。真实访问日志证明 handoff issue/exchange 均为 200，但 activation resolve 因 OACT 被通用 JWT 过滤器误判为 401，最终 workspace 503；Semattice console API 虽为 200，却返回内部 HTTP base URL而被前端拒绝。已完成 OACT 专用验签边界、独立 console public base URL、同源 UAT allowlist 和下一生产版本 beta 规则修复，定向后端/前端/版本测试通过，待发布 `2.8.59-beta.1` 后回归。
+- TASK-275 / INT-008：UAT 已发布 `2.8.59-beta.1 / 94ceb612bd71`，专用 RS256 activation 验签与 Semattice 同源 console base URL 已生效。目标租户真实回归 handoff、DevAutopilot consume/workspace、租户 team 与 Semattice console 全部 200；team 精确回读 4 项资源：`天工产品经理` AGENT/SERVICE、`墨子开发者`、`鲁班`，均 ACTIVE。DevAutopilot `1.0.3-beta.2` 已动态呈现这些名称与真实 0 项目空态。第二租户隔离仍待具备有效成员的 UAT 租户。
 
 - TASK-274 / FEAT-163：已发布生产 `2.8.57 / 750fb71ab47d`。机器主体 scope 现在通过 ORG_ADMIN 受治理完整替换接口、独立 SERVICE allowlist、明确确认页和脱敏平台审计维护。企业 `org5nszpgj99jaysxv6y` 中仅大乔 `dev-autopilot-product-manager` 新增 `runtime.record.delete`，悟空、后羿、哪吒和 HUMAN 默认 scope 未扩大；Client ID、Client Secret、负责人和生命周期均未变化。新签发 SERVICE OACT 已通过 Semattice 非写入安全探测，未删除业务记录。发布前备份为 `/opt/cici/backups/20260805-235439-before-2.8.57-task274-scope-governance`。
 

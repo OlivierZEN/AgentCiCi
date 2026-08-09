@@ -34,3 +34,4 @@ primary_project: agentcici
 - V108 已在 UAT 成功执行；匿名团队管理 API 为预期 `401`。
 - UAT 已发布 `2.8.58-beta.1 / 4ffab5c43c0e`：新 activation 自动创建标准 PM Agent/SERVICE/Tool 与执行绑定；早期 activation 通过受平台授权的 `initializations` 显式补齐。正常 ORG_ADMIN 的 PM/开发者创建、双租户隔离及暂停/恢复业务验收仍待完成，任务保持 `in_progress`。
 - 真实 UAT 访问日志已定位 workspace 503：handoff issue/exchange 为 200，随后 activation resolve 因 RS256 OACT 被通用会话 JWT 过滤器误判而返回 401。Semattice 管理入口同时因后端返回内部 HTTP base URL、前端仅允许生产 hostname 而被拒绝。已实现 OACT 专用验签过滤器、独立 console public base URL 与下一生产版本 beta 生成规则，待发布 `2.8.59-beta.1` 并完成真实链路回归。
+- 已发布 `2.8.59-beta.1 / 94ceb612bd71`。目标租户真实 ORG_ADMIN 链路回归：handoff、DevAutopilot consume/workspace、`/api/admin/devautopilot/team`、Semattice console 均为 200；team 回读标准 PM Agent/SERVICE 与两个动态 developer 共 4 个 ACTIVE 资源。当前单租户链路完成，任务仅因第二租户正向/跨租户负向未执行而保持 `in_progress`。

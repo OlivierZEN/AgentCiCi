@@ -1,12 +1,18 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-09T03:30:00Z
+updated_at: 2026-08-09T06:03:00Z
 updated_by: MANAGER-001
 status: active
 ---
 
 # DevOps
+
+## 2026-08-09 TASK-275 OACT activation 与 Semattice console UAT 发布
+
+- UAT 已发布 `2.8.59-beta.1 / 94ceb612bd71`。backend/frontend ACR index digest 分别为 `sha256:cf86c56f6da8dcacb722f950c709f7aedaacf863a667621ca4b35c9e6659b13f`、`sha256:eee359c653a7c25d7e38fa7e4fc94620f6985f19653d7be5e89b4519a38f297c`；运行容器 healthy，内部版本回读一致。
+- 发布前备份 `/data/apps/agentcici/backups/20260809T053537Z-before-2.8.59-beta.1` 包含非空 Compose、受保护环境、PostgreSQL、KB 与 Qdrant 工件。仅更新 backend/frontend；回滚恢复该备份并明确切回上一候选，不回滚 Semattice 或 DevAutopilot 数据。
+- UAT 显式设置 `APP_SEMATTICE_CONSOLE_BASE_URL=https://uat.agentcici.com`；浏览器 console 入口必须落到同源 `/console/`。activation 专用 filter 只匹配官方 DevAutopilot activation 路径，并验证 issuer/audience/authorized party/company/tenant/principal 后才注入受信上下文。
 
 ## 2026-08-09 TASK-275 标准初始化与版本基线 UAT 发布
 

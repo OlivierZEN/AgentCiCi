@@ -1,14 +1,21 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-09T05:10:00Z
+updated_at: 2026-08-09T06:03:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-09T05:10:00Z
+last_run_at: 2026-08-09T06:03:00Z
 last_run_status: partial
 ---
 
 # Test Report
+
+## 2026-08-09 TASK-275 OACT activation 与完整 UAT 链路
+
+- `OfficialAccessTokenServiceTest`、`OfficialDevAutopilotActivationFilterTest`、前端管理域名范围测试、版本规则测试及构建检查通过；发布提交为 `94ceb612bd71`。
+- UAT `2.8.59-beta.1` backend/frontend healthy，内部 `/system/version` 回读 version/imageTag=`2.8.59-beta.1`、gitCommit=`94ceb612bd71`。
+- 目标租户真实 ORG_ADMIN 链路：handoff=200、DevAutopilot consume=200、workspace=200、team=200、Semattice console=200。console URL 为 `https://uat.agentcici.com/console/` 且 fragment 含短期 OACT；未输出令牌。
+- team 精确回读 4 项 ACTIVE：产品经理 AGENT/SERVICE 各 1、developer 2。第二租户隔离未执行，不把单租户通过扩写为完整多租户验收。
 
 ## 2026-08-09 TASK-275 标准 PM 初始化、handoff 与 UAT 版本基线
 
