@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-09T06:03:00Z
+updated_at: 2026-08-09T14:12:00Z
 updated_by: codex
 phase: review
 active_task: TASK-275
-next_action: "使用具备有效成员的第二个 UAT 租户完成正向与跨租户负向验收；当前目标租户完整链路已通过。"
+next_action: "使用具备有效成员的第二个 UAT 租户完成 Principal 初始化正向与跨租户负向验收；目标租户已完成状态与投影修复。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-275 / INT-008：UAT 已发布 `2.8.59-beta.1 / 94ceb612bd71`，专用 RS256 activation 验签与 Semattice 同源 console base URL 已生效。目标租户真实回归 handoff、DevAutopilot consume/workspace、租户 team 与 Semattice console 全部 200；team 精确回读 4 项资源：`天工产品经理` AGENT/SERVICE、`墨子开发者`、`鲁班`，均 ACTIVE。DevAutopilot `1.0.3-beta.2` 已动态呈现这些名称与真实 0 项目空态。第二租户隔离仍待具备有效成员的 UAT 租户。
+- TASK-275 / INT-008：UAT 已发布 `2.8.59-beta.3 / 5be204680e16`，配置修订 `uat-config-20260809T135729Z-666d570`。受管初始化为目标租户建立/协调 HUMAN owner、产品经理和开发者 Semattice Principal；activation 权威回读 `墨子开发者=SUSPENDED`、`鲁班/天工产品经理=ACTIVE`，不再使用历史资源快照覆盖主体状态。普通业务 OACT 继续要求统一身份，只有服务器内部且仅含 `identity.principal.sync` 的初始化令牌允许先建立历史 HUMAN owner 投影。第二租户隔离仍待验收。
 
 - TASK-274 / FEAT-163：已发布生产 `2.8.57 / 750fb71ab47d`。机器主体 scope 现在通过 ORG_ADMIN 受治理完整替换接口、独立 SERVICE allowlist、明确确认页和脱敏平台审计维护。企业 `org5nszpgj99jaysxv6y` 中仅大乔 `dev-autopilot-product-manager` 新增 `runtime.record.delete`，悟空、后羿、哪吒和 HUMAN 默认 scope 未扩大；Client ID、Client Secret、负责人和生命周期均未变化。新签发 SERVICE OACT 已通过 Semattice 非写入安全探测，未删除业务记录。发布前备份为 `/opt/cici/backups/20260805-235439-before-2.8.57-task274-scope-governance`。
 

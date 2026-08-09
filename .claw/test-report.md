@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-09T06:03:00Z
+updated_at: 2026-08-09T14:12:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-09T06:03:00Z
+last_run_at: 2026-08-09T14:12:00Z
 last_run_status: partial
 ---
 
 # Test Report
+
+## 2026-08-09 TASK-275 Principal 权威状态与初始化补偿
+
+- `mvn -q -Dtest=OfficialAccessTokenServiceTest,ServicePrincipalServiceTest test` 与 `mvn -q -DskipTests package` 通过；完整 `mvn test` 仍受本机 PostgreSQL 不可达限制，不记为全量通过。
+- 受管初始化先暴露 UAT scope 缺少 `identity.principal.sync`，随后暴露历史 HUMAN owner 无统一身份绑定；两项均修复在受管源码/配置。普通 HUMAN 业务 OACT 仍拒绝无统一身份账号，仅 server-only Principal bootstrap 令牌例外且 scope 固定为单项 sync。
+- UAT `2.8.59-beta.3 / 5be204680e16` backend/frontend healthy，内部版本精确一致；正式 `POST .../initializations` 返回 200。资源回读为 PM Agent/SERVICE active、鲁班 active、墨子 suspended。
+- 发布后 10 分钟 AgentCiCi error 计数为 0；匿名团队与 DevAutopilot workspace 均为预期 401。第二租户隔离未执行，状态保持 `partial`。
+
+- 状态：`partial`
 
 ## 2026-08-09 TASK-275 OACT activation 与完整 UAT 链路
 

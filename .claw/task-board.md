@@ -24,7 +24,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - depends_on: `TASK-274, cc-semattice TASK-070`
 - integration_id: `INT-008`
 - scope_files: `platform tenant applications, AgentCiCi-to-DevAutopilot handoff, activation persistence, machine-principal create/edit modal, tests, docs`
-- next_action: `由平台管理员执行既有 activation 的“补齐初始化”，再由正常 ORG_ADMIN 回读租户 Semattice 数据并完成双租户隔离验收`
+- next_action: `使用第二个有效 UAT 租户执行 Principal 初始化正向与跨租户负向验收`
 
 ### TASK-273 - Keycloak 生产人工运维交接
 

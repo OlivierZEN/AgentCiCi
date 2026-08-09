@@ -1,12 +1,19 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-09T06:03:00Z
-updated_by: MANAGER-001
+updated_at: 2026-08-09T14:12:00Z
+updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-09 TASK-275 Principal 初始化与生命周期 UAT 发布
+
+- 最终候选为 `2.8.59-beta.3 / 5be204680e16`；backend/frontend ACR index digest 为 `sha256:c25b2a364105f10bd21e947c4f04548dd679ae5408fed64362264551d586cd02` / `sha256:fea65dc783afecd0691081a04a3b32ce49228cc61dd08d5817d1a75839cf9c83`。运行容器 healthy，版本接口与镜像 tag/commit 一致。
+- 配置提交 `666d570` 将 HUMAN/SERVICE 的 `identity.principal.sync` 固化到版本化 UAT override；备份为 `/data/apps/agentcici/config-backups/uat-config-20260809T135729Z-666d570`。配置不含 Token/Secret，未扩大模板业务 scope。
+- beta.3 发布前完整备份为 `/data/apps/agentcici/backups/20260809T140316Z-before-2.8.59-beta.3`，PostgreSQL、KB 与 Qdrant 归档均非空；只重建 backend/frontend，状态服务未重启。前一 beta.2 完整备份为 `/data/apps/agentcici/backups/20260809T134846Z-before-2.8.59-beta.2`。
+- 正式初始化接口返回 200，发布后 AgentCiCi/Semattice/DevAutopilot 近 10 分钟错误扫描均为 0。回滚只切回 AgentCiCi 不可变镜像和对应 override；不得删除已成功建立的 Semattice Principal 投影。
 
 ## 2026-08-09 TASK-275 OACT activation 与 Semattice console UAT 发布
 
