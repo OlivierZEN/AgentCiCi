@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-09T02:00:00Z
+updated_at: 2026-08-09T01:35:00Z
 updated_by: codex
-phase: implementation
+phase: review
 active_task: TASK-275
-next_action: "完成租户自助团队管理、activation 快照缓存与规范 UAT 发布；UAT 必须使用同一 beta 版本注入 backend、frontend 和页脚。"
+next_action: "由正常租户 ORG_ADMIN 会话完成 UAT 的 PM/开发者创建与双租户隔离验收；平台端无需再代填负责人或机器账号。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-275 / INT-008：正在按租户职责重新收敛 DevAutopilot。平台运营端只负责开通、暂停和恢复应用/数据基线；`/admin/service-principals` 由当前 ORG_ADMIN 初始化自定义名称的 PM 或开发者机器主体，负责人、技术别名和模板最小 scope 均由服务端推导。平台页面不再接受人员或机器账号字段。V108 仅将 activation 的历史 initiator 改为可空，避免平台伪造租户负责人；不修改业务数据。
+- TASK-275 / INT-008：已发布 UAT `2.8.57-beta.1 / e5c097adda5f`。平台运营端只负责开通、暂停和恢复应用/数据基线；`/admin/service-principals` 由当前 ORG_ADMIN 初始化自定义名称的 PM 或开发者机器主体，负责人、技术别名和模板最小 scope 均由服务端推导。平台页面不再接受人员或机器账号字段。UAT backend、frontend 与页面版本统一为同一 beta tag，V108 已成功迁移。剩余事项仅为正常租户 ORG_ADMIN 的 PM/开发者创建与双租户隔离业务验收；未伪造会话或创建业务账号。
 
 - TASK-274 / FEAT-163：已发布生产 `2.8.57 / 750fb71ab47d`。机器主体 scope 现在通过 ORG_ADMIN 受治理完整替换接口、独立 SERVICE allowlist、明确确认页和脱敏平台审计维护。企业 `org5nszpgj99jaysxv6y` 中仅大乔 `dev-autopilot-product-manager` 新增 `runtime.record.delete`，悟空、后羿、哪吒和 HUMAN 默认 scope 未扩大；Client ID、Client Secret、负责人和生命周期均未变化。新签发 SERVICE OACT 已通过 Semattice 非写入安全探测，未删除业务记录。发布前备份为 `/opt/cici/backups/20260805-235439-before-2.8.57-task274-scope-governance`。
 

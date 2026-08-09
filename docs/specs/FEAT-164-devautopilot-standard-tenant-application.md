@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-164
 title: DevAutopilot standard tenant application
-status: in_implementation
+status: implemented
 owner_role: integration-agent
 task_ids: TASK-275
 related_decisions: ADR-006, ADR-007, ADR-008
 related_issues: none
-updated_at: 2026-08-09T02:00:00Z
+updated_at: 2026-08-09T01:35:00Z
 updated_by: codex
 ---
 
@@ -136,8 +136,14 @@ tenant_application_operation
 ## 实现进展
 
 - [x] 控制面模型与 migration。
-- [ ] 将团队身份管理迁入 AgentCiCi 租户管理端，移除运营端人员字段。
-- [ ] DevAutopilot activation 快照短时缓存与 UAT 验证。
+- [x] 将团队身份管理迁入 AgentCiCi 租户管理端，移除运营端人员字段。
+- [x] DevAutopilot activation 快照短时缓存与 UAT 发布验证。
 - [x] Semattice 标准基线契约与实现。
 - [x] DevAutopilot runtime gate。
-- [ ] 双租户 UAT E2E。
+- [ ] 双租户 UAT E2E（需正常租户 ORG_ADMIN 业务会话，不能由平台运营账号替代）。
+
+## UAT 发布事实
+
+- `2026-08-09` 已发布 AgentCiCi `2.8.57-beta.1 / e5c097adda5f`；backend/frontend ACR index digest 分别为 `sha256:3b642bf91ee54b9e6d36783ca958b032a88b0a1b8667961190d23bafc1c9d091` 与 `sha256:6f87671503319c8dc06be405fc137d3d6edb6fba90e258918500c6ac90b5bb3c`。
+- UAT `/system/version` 同时返回 Git commit、`version` 和 `imageTag` 为上述 beta 版本；V108 成功，匿名 `/api/admin/devautopilot/team` 为预期 `401`。
+- 平台卡片不再含新增开发者、显示名称、负责人或技术别名输入；租户团队入口固定在“组织架构 → 机器主体”。未持有业务 ORG_ADMIN 会话，故不创建账号、Secret 或业务数据来伪造最终验收。

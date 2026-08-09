@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-09T02:00:00Z
+updated_at: 2026-08-09T01:35:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-09T02:00:00Z
+last_run_at: 2026-08-09T01:35:00Z
 last_run_status: partial
 ---
 
@@ -15,8 +15,10 @@ last_run_status: partial
 - `backend-compile`：`cd backend && mvn -q -Dmaven.repo.local=../.m2 -DskipTests compile` 通过。`mvn -q -Dmaven.repo.local=../.m2 -Dtest=ServicePrincipalServiceTest,ServicePrincipalTokenExchangeServiceTest test` 通过。
 - `frontend-focused/build`：`npm test -- --run src/admin/adminApi.test.ts src/admin/pages/AdminServicePrincipalsPage.test.ts` 通过 4/4；`npm run build` 通过。仅有既有 bundle-size 提示。
 - `devautopilot-runtime`：`npm test` 通过 22/22，包含 activation snapshot 的 tenant、PM Agent 与 SERVICE enrollment 负向验证。
-- `state-validation`：AgentCiCi state validator 尚未作为通过依据，历史 brownfield 状态仍有既有格式问题；DevAutopilot validator 只报告既有 `FEAT-004` 使用历史 `superseded` status。两者都未在本次批量重写。
-- `release`：待按 `scripts/release-acr.sh --dry-run --channel test` 取得不可变 beta 版本后执行 UAT 发布；不得再使用 `dev` 或临时 `:uat` 作为 UI 版本事实。
+- `state-validation`：`agentic-project-guidelines` validator 仍因历史 task board 的终态卡片留在 Active 区等 brownfield 债务退出 1；输出不含 `TASK-275` 或 `FEAT-164` finding。DevAutopilot validator 只报告既有 `FEAT-004` 使用历史 `superseded` status。两者都未在本次批量重写。
+- `release/UAT`：`scripts/release-acr.sh --dry-run --channel test` 与正式发布完成，annotated tag/commit 为 `2.8.57-beta.1 / e5c097adda5f`。backend/frontend ACR index digest 为 `sha256:3b642bf91ee54b9e6d36783ca958b032a88b0a1b8667961190d23bafc1c9d091` / `sha256:6f87671503319c8dc06be405fc137d3d6edb6fba90e258918500c6ac90b5bb3c`；UAT 以同一 tag 重建 backend/frontend，`/system/version` 的 commit/version/imageTag 一致，前端工件包含 `2.8.57-beta.1`。
+- `backup/migration`：发布前备份位于 `/data/apps/agentcici/backups/20260809T013059Z-before-2.8.57-beta.1`，包含 Compose、受保护环境文件和非空 PostgreSQL dump；Flyway V108 成功。仅 backend/frontend 被重建，四个状态服务未重启。
+- `UAT-boundary`：backend/frontend healthy；匿名 `GET /api/admin/devautopilot/team`=401。自动化浏览器未继承正常 ORG_ADMIN 会话，未创建 PM、开发者或 Secret；该正向流程与双租户隔离留给受权业务会话验收。
 
 - 状态：`partial`
 

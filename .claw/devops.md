@@ -1,12 +1,19 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-05T16:02:00Z
+updated_at: 2026-08-09T01:35:00Z
 updated_by: MANAGER-001
 status: active
 ---
 
 # DevOps
+
+## 2026-08-09 TASK-275 DevAutopilot 租户团队职责收敛 UAT 发布
+
+- 已按发布脚本的 test channel 发布 `2.8.57-beta.1 / e5c097adda5f`。backend/frontend ACR index digest 分别为 `sha256:3b642bf91ee54b9e6d36783ca958b032a88b0a1b8667961190d23bafc1c9d091` / `sha256:6f87671503319c8dc06be405fc137d3d6edb6fba90e258918500c6ac90b5bb3c`；Git tag、运行时 `CICI_APP_VERSION`、frontend `VITE_CICI_APP_VERSION` 和镜像 tag 统一为同一版本。
+- UAT 原先错误地以本地 `cici-*:uat` 运行，同时 backend 写为 `2.8.57-beta.2`、frontend 退回 `dev`。现 Compose 显式指向上述不可变 ACR tag，版本接口返回 `e5c097adda5f / 2.8.57-beta.1 / 2.8.57-beta.1`。UAT 主机未配置 ACR 拉取凭据，因此从已验证的本地 ACR 工件加载镜像，未复制或持久化任何 registry 凭据。
+- 发布前备份 `/data/apps/agentcici/backups/20260809T013059Z-before-2.8.57-beta.1` 含 Compose、受保护环境文件和非空 PostgreSQL dump；仅重建 backend/frontend，database、Redis、RabbitMQ、Qdrant 未重启。V108 成功，两个应用容器 healthy，匿名团队 API 为预期 401。
+- 回滚：恢复该备份中的 UAT Compose/环境并仅重建 backend/frontend；V108 只是允许 activation 历史 initiator 为空，可安全保留。不得以 `dev` 或 `:uat` 作为版本事实。
 
 ## 2026-08-05 TASK-274 机器主体 scope 治理发布
 
