@@ -103,6 +103,13 @@ public class PlatformTenantLifecycleController {
                 new DevAutopilotTenantApplicationService.ActivationCommand(request.idempotencyKey()), actorId()));
     }
 
+    @PostMapping("/{companyId}/applications/devautopilot/initializations")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
+    public ApiResponse<DevAutopilotTenantApplicationService.View> reconcileDevAutopilotInitialization(
+            @PathVariable @Pattern(regexp = "^org[a-z0-9]{17}$") String companyId) {
+        return ApiResponse.ok(devAutopilotApplications.reconcileInitialization(companyId, actorId()));
+    }
+
     @PostMapping("/{companyId}/applications/devautopilot/suspensions")
     @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<DevAutopilotTenantApplicationService.View> suspendDevAutopilot(

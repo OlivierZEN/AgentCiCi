@@ -2,7 +2,7 @@
 kind: feature-spec
 feature_id: FEAT-164
 title: DevAutopilot standard tenant application
-status: review
+status: in_progress
 owner_role: integration-agent
 task_ids: TASK-275
 related_decisions: ADR-006, ADR-007, ADR-008
@@ -25,8 +25,8 @@ AgentCiCi 的平台租户应用页已经将 AgentCiCi 和 Semattice 作为独立
 
 - 平台应用目录中增加 `devautopilot` activation 及其操作、资源和审计记录。
 - 开通、重试、暂停、恢复、状态查询；所有操作使用稳定幂等键与关联 ID。
-- 平台只开通应用和数据基线，不代替租户创建或指定任何人、Agent 或机器主体。
-- 租户 ORG_ADMIN 在 AgentCiCi `/admin/service-principals` 的独立新增弹窗中，选择主体类型、租户自定义显示名称和同租户有效 HUMAN 负责人，创建主产品经理 Agent/对应 PM SERVICE Principal，以及任意数量的开发者 SERVICE Principal。
+- 平台开通时自动创建标准研发产品经理 Agent、其 PM SERVICE Principal、受控 Tool binding 与执行绑定，并以该租户最早的 active `OWNER` 或 `ORG_ADMIN` 作为初始 HUMAN owner。
+- 租户 ORG_ADMIN 在 AgentCiCi `/admin/service-principals` 的独立新增弹窗中，按需新增自定义名称的 developer SERVICE Principal；产品经理 Agent 与机器主体的显示名称和负责人可由该租户后续调整。
 - 租户 ORG_ADMIN 可在机器主体详情的独立编辑弹窗中变更显示名称和 HUMAN 负责人；编辑不轮换 Client Secret、不改变 Client ID 或最小权限范围。
 - 受控调用 Semattice 标准基线应用，校验回执、模板版本和资源映射。
 - 平台租户应用页展示依赖、初始化步骤、失败原因、模板版本和生命周期动作。
@@ -82,9 +82,11 @@ tenant_application_operation
 1. 验证 company active、调用者为平台管理员、Semattice 已 `PROVISIONED`、模板版本受支持。
 2. 创建 activation/operation，锁定 `company_id + app_code`。
 3. 请求 Semattice 应用 `devautopilot.standard.v1` 标准基线；已有非模板 metadata 时失败关闭，不覆盖已有模型。
-4. 写入空的租户团队资源清单，不创建默认机器主体或 Secret。
-5. 请求 DevAutopilot 健康/entitlement 探针；所有回执一致后置为 `ACTIVE`。
-6. 租户管理员在 AgentCiCi 租户管理端按需初始化 PM 或开发者。创建 PM 时才创建 Agent、Tool/Skill binding 和 PM SERVICE Principal；创建开发者时才创建 developer SERVICE Principal。
+4. 创建标准 `product_manager` 资源对：租户独立的研发产品经理 Agent、PM SERVICE Principal、最小 Tool binding 与执行绑定。系统生成 Client ID，仅本次返回的 Secret 不写入页面、审计或控制面。
+5. 写入资源清单并以该租户初始 OWNER/ORG_ADMIN 作为 HUMAN owner；不创建默认 developer，租户可按需创建任意数量的开发者。
+6. 请求 DevAutopilot 健康/entitlement 探针；所有回执一致后置为 `ACTIVE`。
+
+早期模板版本只创建 Semattice 基线的已开通租户，平台卡片必须显示“待补齐”并提供受平台管理员授权的 `initializations` 动作。该动作只幂等补齐缺失的标准 PM 资源，不能在 GET、浏览器启动或普通租户读取时隐式创建机器主体。
 
 暂停以 activation 门禁为先：先将 desired state 置为 suspended，使运行时立即 fail closed；随后暂停本 activation 资源清单中的 PM 和 developer SERVICE Principal 并同步 Semattice Principal 状态。任何后续步骤失败时保持 `SUSPENDING` 且入口持续关闭。恢复按反向顺序执行并重新验证。
 
@@ -95,6 +97,7 @@ tenant_application_operation
 | 方法 | 路径 | 语义 |
 |---|---|---|
 | POST | `/api/platform/tenants/{companyId}/applications/devautopilot/activations` | 创建或幂等重放应用与数据基线；输入仅为 `Idempotency-Key` |
+| POST | `/api/platform/tenants/{companyId}/applications/devautopilot/initializations` | 仅补齐早期 activation 缺失的标准 PM Agent/SERVICE/binding |
 | GET | `/api/platform/tenants/{companyId}/applications/devautopilot` | 返回 activation、依赖、资源摘要、最近操作与安全错误码 |
 | POST | `/.../suspensions` | 请求暂停，不删除数据 |
 | POST | `/.../resumptions` | 请求恢复 |
@@ -152,6 +155,7 @@ DevAutopilot 服务端调用 AgentCiCi 的 ticket exchange，并仅在自身短�
 - [x] DevAutopilot runtime gate。
 - [x] 独立 DevAutopilot 缓存的 UAT 发布与运行态验证（使用独立 beta 发布入口）。
 - [x] 修复同源租户 handoff 与卡片字段事实，并发布 UAT AgentCiCi `2.8.57-beta.3 / 1b07df5c6f40`。
+- [ ] 修复 handoff query 首页路由，并将标准 PM Agent/SERVICE/binding 纳入开通与既有租户补齐初始化。
 - [ ] 用正常租户用户回读 Semattice 当前项目数据，并完成双租户隔离验收。
 - [ ] 双租户 UAT E2E（需正常租户 ORG_ADMIN 业务会话，不能由平台运营账号替代）。
 

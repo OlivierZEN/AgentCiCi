@@ -1,7 +1,7 @@
 ---
 task_id: TASK-275
 integration_id: INT-008
-status: review
+status: in_progress
 primary_project: agentcici
 ---
 
@@ -9,7 +9,7 @@ primary_project: agentcici
 
 ## 范围
 
-实现 `devautopilot-standard` 模板 activation、资源编排和应用生命周期。人员、产品经理 Agent 与开发者机器主体必须由 AgentCiCi 租户 ORG_ADMIN 在 `/admin/service-principals` 自主管理，不得放入平台运营端。详情以 `docs/specs/FEAT-164-devautopilot-standard-tenant-application.md` 为准。
+实现 `devautopilot-standard` 模板 activation、资源编排和应用生命周期。开通时自动创建租户独立的标准产品经理 Agent、其受控机器主体和执行绑定；开发者仍由 AgentCiCi 租户 ORG_ADMIN 按需管理，不得放入平台运营端。详情以 `docs/specs/FEAT-164-devautopilot-standard-tenant-application.md` 为准。
 
 ## 边界
 
@@ -19,8 +19,8 @@ primary_project: agentcici
 
 ## 完成条件
 
-- 平台管理员可对已 provisioned 公司幂等开通/暂停/恢复 DevAutopilot，不输入人员或机器账号信息。
-- 租户 ORG_ADMIN 可在 AgentCiCi 管理端的独立弹窗按租户自定义名称、新增唯一 PM 或任意开发者机器主体，并选择同租户有效 HUMAN 负责人；详情中的独立编辑弹窗可修改显示名称与负责人。
+- 平台管理员可对已 provisioned 公司幂等开通/暂停/恢复 DevAutopilot；开通自动生成标准 PM Agent/SERVICE/binding，并使用同租户 OWNER/ORG_ADMIN 作为初始负责人。
+- 租户 ORG_ADMIN 可在 AgentCiCi 管理端按租户自定义名称新增任意开发者机器主体，并可调整 PM 或开发者的显示名称与 HUMAN 负责人。
 - 所有资源、操作和错误按 company 隔离并有审计/关联 ID。
 - 从 AgentCiCi 前台进入 DevAutopilot 时，以一次性 ticket 交接同租户会话，浏览器不得复用或保存 OACT。
 - 定向后端、前端和跨系统 UAT 验证通过；其中正常 ORG_ADMIN 的真实创建、双租户隔离及暂停/恢复使用业务会话完成，不以平台账号替代。
@@ -29,6 +29,7 @@ primary_project: agentcici
 
 - UAT 已发布 `2.8.57-beta.2 / 2753d268acd9`，但截图确认运营卡片仍错误展示 Semattice 内部 UUID，且前台外部入口硬编码生产地址；本任务已重新打开以修复上述事实展示和 browser handoff。
 - 修复已发布 UAT `2.8.57-beta.3 / 1b07df5c6f40`：三张应用卡片统一展示 `租户标识`，DevAutopilot 不再展示 UUID 或产品经理；同源 handoff ticket 的创建、兑换边界和匿名负向已通过。正常租户用户的真实 Semattice 数据回读仍待验收。
+- 截图确认带 handoff query 的首页被静态服务错误返回 404，且现有 activation 仅完成 Semattice 基线，未创建标准 PM Agent/SERVICE。任务已重新打开：修复根路由，并在新开通和显式补齐初始化中创建标准 PM 资源。
 - 正常 ORG_ADMIN 的新增、编辑和双租户隔离业务验收仍待完成；未为验证而创建测试机器主体或读取 Secret。
 - V108 已在 UAT 成功执行；匿名团队管理 API 为预期 `401`。
 - 正常 ORG_ADMIN 的 PM/开发者创建、双租户隔离及暂停/恢复业务验收为待验收项，任务保持 `review`，不阻塞已发布的控制面职责调整。

@@ -4,6 +4,7 @@ import com.codehouse.ciciassistant.agent.service.AgentDefinitionService;
 import com.codehouse.ciciassistant.agent.service.AgentServicePrincipalExecutionService;
 import com.codehouse.ciciassistant.auth.domain.CompanyEntity;
 import com.codehouse.ciciassistant.auth.domain.CompanyRepository;
+import com.codehouse.ciciassistant.auth.RoleCodes;
 import com.codehouse.ciciassistant.auth.service.OfficialAccessTokenService;
 import com.codehouse.ciciassistant.auth.service.ServicePrincipalService;
 import com.codehouse.ciciassistant.common.error.ConflictException;
@@ -24,6 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class DevAutopilotTenantApplicationService {
     private static final String APP = "devautopilot";
+    private static final String PRODUCT_MANAGER_AGENT_ID = "devautopilot-pm";
+    private static final String PRODUCT_MANAGER_DEFAULT_NAME = "研发产品经理";
     private static final Pattern KEY = Pattern.compile("^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$");
     private final JdbcTemplate jdbc;
     private final CompanyRepository companies;
@@ -63,14 +66,16 @@ public class DevAutopilotTenantApplicationService {
         }
         var binding = provisioning.getProvisioningStatus(companyId);
         if (!"PROVISIONED".equals(binding.state()) || binding.sematticeTenantId() == null) throw new ForbiddenException("Semattice must be provisioned before enabling DevAutopilot");
+        String ownerMemberId = initialOwnerMemberId(companyId);
         String activationId = UUID.randomUUID().toString();
         jdbc.update("""
                 INSERT INTO tenant_application_activation(id,company_id,app_code,template_version,idempotency_key,desired_state,actual_state,semattice_tenant_id,created_by_member_id)
                 VALUES (?,?,?,?,?,'ACTIVE','PROVISIONING',?,?)
                 """, activationId, companyId, APP, SematticeDevAutopilotTemplateClient.TEMPLATE_VERSION,
-                command.idempotencyKey(), binding.sematticeTenantId(), null);
+                command.idempotencyKey(), binding.sematticeTenantId(), ownerMemberId);
         try {
             var metadata = template.apply(companyId, command.idempotencyKey());
+            initializeProductManager(companyId, activationId, ownerMemberId);
             jdbc.update("""
                     UPDATE tenant_application_activation SET actual_state='ACTIVE',metadata_version_id=?,metadata_digest=?,updated_at=CURRENT_TIMESTAMP WHERE id=?
                     """,
@@ -87,6 +92,19 @@ public class DevAutopilotTenantApplicationService {
     @Transactional(readOnly = true)
     public View get(String companyId) { requireCompany(companyId); var row = find(companyId); return row == null ? View.notEnabled(companyId) : view(row); }
 
+    /** Repairs an earlier activation that only provisioned Semattice metadata. GET remains read-only. */
+    @Transactional
+    public View reconcileInitialization(String companyId, String platformActor) {
+        Row activation = requireExisting(companyId);
+        if (!"ACTIVE".equals(activation.actualState())) {
+            throw new ForbiddenException("Only an active DevAutopilot application can be initialized");
+        }
+        initializeProductManager(companyId, activation.id(), initialOwnerMemberId(companyId));
+        audit.log(companyId, platformActor, "PLATFORM", "tenant_application.initialization_reconciled", "tenant_application", activation.id(),
+                "DevAutopilot standard tenant resources reconciled");
+        return requireView(companyId);
+    }
+
     @Transactional
     public View suspend(String companyId, String platformActor) { return transition(companyId, "SUSPENDED", platformActor); }
     @Transactional
@@ -99,16 +117,8 @@ public class DevAutopilotTenantApplicationService {
         require(displayName, "displayName");
         Integer count = jdbc.queryForObject("SELECT count(*) FROM tenant_application_resource WHERE activation_id=? AND logical_role='product_manager' AND resource_type='SERVICE_PRINCIPAL'", Integer.class, activation.id());
         if (count != null && count > 0) throw new ConflictException("DevAutopilot product manager already exists for this tenant");
-        Map<String, Object> principal = principals.create(companyId, actorMemberId, ownerMemberId, displayName, "OFFICIAL_APP",
-                OfficialAccessTokenService.SEMATTICE_AUDIENCE, null, pmScopes);
-        String principalId = (String) principal.get("principalId");
         String agentId = "devautopilot-pm-" + UUID.randomUUID().toString().substring(0, 8);
-        agents.create(companyId, new AgentDefinitionService.CreateCommand(agentId, displayName, "DevAutopilot 租户产品经理", "", "gpt-4.1",
-                "你是本租户的研发产品经理，只能通过已绑定的受控工具处理研发交付。", "高风险操作必须确认", "standard", "copilot", "devautopilot.standard.v1", null,
-                null, false, true, "", List.of(), List.of("semattice_project_delivery_query", "semattice_project_delivery_create", "semattice_project_delivery_review"), List.of(), Map.of()));
-        execution.configure(companyId, agentId, principalId, true, actorMemberId);
-        resource(activation.id(), "product_manager", "SERVICE_PRINCIPAL", generatedAlias("product-manager"), displayName, principalId, true);
-        resource(activation.id(), "product_manager", "AGENT", generatedAlias("product-manager-agent"), displayName, agentId, true);
+        Map<String, Object> principal = createProductManagerResources(companyId, activation.id(), displayName, actorMemberId, ownerMemberId, agentId);
         audit.log(companyId, actorMemberId, "ORG_ADMIN", "tenant_application.product_manager_added", "tenant_application", activation.id(), "DevAutopilot product-manager resource added");
         return teamResource(activation.id(), principal);
     }
@@ -131,6 +141,29 @@ public class DevAutopilotTenantApplicationService {
         if (target.equals(row.actualState())) return view(row);
         if ("SUSPENDED".equals(target)) return suspendResources(companyId, row, platformActor);
         return resumeResources(companyId, row, platformActor);
+    }
+
+    private void initializeProductManager(String companyId, String activationId, String ownerMemberId) {
+        List<ResourceView> resources = jdbc.query("SELECT logical_role,resource_type,resource_alias,display_name,external_id,lifecycle_state,is_primary FROM tenant_application_resource WHERE activation_id=? ORDER BY logical_role,resource_type", (rs,n) -> new ResourceView(rs.getString(1),rs.getString(2),rs.getString(3),rs.getString(4),rs.getString(5),rs.getString(6),rs.getBoolean(7)), activationId);
+        boolean hasPrimaryAgent = resources.stream().anyMatch(resource -> "product_manager".equals(resource.logicalRole()) && "AGENT".equals(resource.resourceType()) && resource.primary());
+        boolean hasPrimaryPrincipal = resources.stream().anyMatch(resource -> "product_manager".equals(resource.logicalRole()) && "SERVICE_PRINCIPAL".equals(resource.resourceType()) && resource.primary());
+        if (hasPrimaryAgent && hasPrimaryPrincipal) return;
+        if (hasPrimaryAgent || hasPrimaryPrincipal) throw new IllegalStateException("DevAutopilot product-manager resources are incomplete");
+        createProductManagerResources(companyId, activationId, PRODUCT_MANAGER_DEFAULT_NAME, ownerMemberId, ownerMemberId, PRODUCT_MANAGER_AGENT_ID);
+    }
+
+    private Map<String, Object> createProductManagerResources(String companyId, String activationId, String displayName,
+                                                                String actorMemberId, String ownerMemberId, String agentId) {
+        agents.create(companyId, new AgentDefinitionService.CreateCommand(agentId, displayName, "DevAutopilot 租户产品经理", "", "gpt-4.1",
+                "你是本租户的研发产品经理，只能通过已绑定的受控工具处理研发交付。", "高风险操作必须确认", "standard", "copilot", "devautopilot.standard.v1", null,
+                null, false, true, "", List.of(), List.of("semattice_project_delivery_query", "semattice_project_delivery_create", "semattice_project_delivery_review"), List.of(), Map.of()));
+        Map<String, Object> principal = principals.create(companyId, actorMemberId, ownerMemberId, displayName, "OFFICIAL_APP",
+                OfficialAccessTokenService.SEMATTICE_AUDIENCE, null, pmScopes);
+        String principalId = (String) principal.get("principalId");
+        execution.configure(companyId, agentId, principalId, true, ownerMemberId);
+        resource(activationId, "product_manager", "SERVICE_PRINCIPAL", generatedAlias("product-manager"), displayName, principalId, true);
+        resource(activationId, "product_manager", "AGENT", generatedAlias("product-manager-agent"), displayName, agentId, true);
+        return principal;
     }
 
     /**
@@ -230,6 +263,15 @@ public class DevAutopilotTenantApplicationService {
 
     private static String generatedAlias(String role) {
         return role + "-" + UUID.randomUUID().toString().substring(0, 8);
+    }
+    private String initialOwnerMemberId(String companyId) {
+        List<String> candidates = jdbc.queryForList("""
+                SELECT id FROM company_member
+                WHERE company_id=? AND member_status='ACTIVE' AND role_code IN (?, ?)
+                ORDER BY CASE role_code WHEN ? THEN 0 ELSE 1 END, created_at, id
+                """, String.class, companyId, RoleCodes.OWNER, RoleCodes.ORG_ADMIN, RoleCodes.OWNER);
+        if (candidates.isEmpty()) throw new IllegalStateException("DevAutopilot activation requires an active tenant ORG_ADMIN");
+        return candidates.getFirst();
     }
     private CompanyEntity requireCompany(String companyId) {
         CompanyEntity company = companies.findById(companyId).orElseThrow(() -> new ResourceNotFoundException("tenant not found"));

@@ -23,6 +23,13 @@ type DevAutopilotApplication = {
   resources: Array<{ logicalRole: string; resourceType: string; resourceAlias: string; displayName: string; lifecycleState: string; primary: boolean }>;
 };
 
+function devAutopilotInitializationReady(application: DevAutopilotApplication | null): boolean {
+  if (!application?.enabled) return false;
+  const resources = application.resources ?? [];
+  return resources.some((resource) => resource.logicalRole === "product_manager" && resource.resourceType === "AGENT" && resource.primary && resource.lifecycleState === "ACTIVE")
+    && resources.some((resource) => resource.logicalRole === "product_manager" && resource.resourceType === "SERVICE_PRINCIPAL" && resource.primary && resource.lifecycleState === "ACTIVE");
+}
+
 function sematticeStateLabel(state: SematticeProvisioningState): string {
   switch (state) {
     case "PROVISIONING":
@@ -108,7 +115,7 @@ export default function PlatformTenantApplicationsPage() {
       const { body } = await safeFetchJson(response);
       if (!response.ok || !body?.success) throw new Error(body?.message ?? `HTTP ${response.status}`);
       setDevAutopilot(body.data as DevAutopilotApplication);
-      setMessage("DevAutopilot 已开通。租户管理员可在 AgentCiCi 管理端初始化产品经理与开发者机器主体。");
+      setMessage("DevAutopilot 已开通，已自动初始化研发产品经理智能体及其受控机器主体。开发者由租户管理员按需新增。");
     } catch (err) { setError(err instanceof Error ? err.message : "DevAutopilot 开通失败"); } finally { setBusy(false); }
   }
 
@@ -122,6 +129,18 @@ export default function PlatformTenantApplicationsPage() {
       setDevAutopilot(body.data as DevAutopilotApplication);
       setMessage(action === "suspensions" ? "DevAutopilot 已暂停，运行时入口已关闭。" : "DevAutopilot 已恢复运行。");
     } catch (err) { setError(err instanceof Error ? err.message : "生命周期操作失败"); } finally { setBusy(false); }
+  }
+
+  async function reconcileDevAutopilotInitialization() {
+    if (!companyId) return;
+    setBusy(true); setError(""); setMessage("");
+    try {
+      const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(companyId)}/applications/devautopilot/initializations`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+      const { body } = await safeFetchJson(response);
+      if (!response.ok || !body?.success) throw new Error(body?.message ?? `HTTP ${response.status}`);
+      setDevAutopilot(body.data as DevAutopilotApplication);
+      setMessage("DevAutopilot 标准初始化已完成：产品经理智能体及其受控机器主体已就绪。");
+    } catch (err) { setError(err instanceof Error ? err.message : "DevAutopilot 初始化补齐失败"); } finally { setBusy(false); }
   }
 
   return (
@@ -235,19 +254,19 @@ export default function PlatformTenantApplicationsPage() {
                       <span className="tenant-application-card__icon" aria-hidden="true"><Bot size={22} strokeWidth={1.8} /></span>
                       <div className="tenant-application-card__title">
                         <h4 id="devautopilot-application-title">DevAutopilot 研发交付系统</h4>
-                        <p>租户独立的研发交付数据模型，团队身份由租户管理员管理</p>
+                        <p>开通即初始化产品经理智能体，开发者由租户管理员按需新增</p>
                       </div>
                       <span className={`tenant-application-card__state tenant-application-card__state--${devAutopilot?.actualState === "ACTIVE" ? "healthy" : "not_provisioned"}`}><CheckCircle2 size={14} aria-hidden="true" />{devAutopilot?.actualState === "ACTIVE" ? "运行中" : devAutopilot?.actualState === "SUSPENDED" ? "已暂停" : "未开通"}</span>
                     </div>
                     {devAutopilot?.enabled ? <>
                       <dl className="tenant-application-card__facts">
                         <div><dt>模板版本</dt><dd>{devAutopilot.templateVersion}</dd></div><div><dt>租户标识</dt><dd>{detail.tenant.companyId}</dd></div>
-                        <div><dt>数据底座</dt><dd>Semattice（已绑定）</dd></div><div><dt>资源状态</dt><dd>{devAutopilot.resources.length} 个独立资源</dd></div>
+                        <div><dt>数据底座</dt><dd>Semattice（已绑定）</dd></div><div><dt>初始化状态</dt><dd>{devAutopilotInitializationReady(devAutopilot) ? "已完成" : "待补齐"}</dd></div>
                       </dl>
-                      <div className="tenant-application-card__foot tenant-application-card__foot--action"><span><ShieldCheck size={14} aria-hidden="true" />关闭仅暂停本租户运行入口，不删除数据</span><button type="button" className="platform-button platform-button--primary tenant-application-card__primary-action" disabled={busy} onClick={() => void changeDevAutopilotState(devAutopilot.actualState === "SUSPENDED" ? "resumptions" : "suspensions")}>{devAutopilot.actualState === "SUSPENDED" ? "恢复运行" : "暂停应用"}</button></div>
-                      <p className="skills-data-table__summary">租户团队主体与机器凭据由该租户的 ORG_ADMIN 在 AgentCiCi「组织架构 → 机器主体」中管理。</p>
+                      <div className="tenant-application-card__foot tenant-application-card__foot--action"><span><ShieldCheck size={14} aria-hidden="true" />{devAutopilotInitializationReady(devAutopilot) ? "关闭仅暂停本租户运行入口，不删除数据" : "历史开通记录缺少标准资源，需要补齐初始化"}</span><button type="button" className="platform-button platform-button--primary tenant-application-card__primary-action" disabled={busy} onClick={() => void (devAutopilotInitializationReady(devAutopilot) ? changeDevAutopilotState(devAutopilot.actualState === "SUSPENDED" ? "resumptions" : "suspensions") : reconcileDevAutopilotInitialization())}>{devAutopilotInitializationReady(devAutopilot) ? (devAutopilot.actualState === "SUSPENDED" ? "恢复运行" : "暂停应用") : "补齐初始化"}</button></div>
+                      <p className="skills-data-table__summary">研发产品经理智能体与其机器主体由模板创建，名称和负责人可由该租户的 ORG_ADMIN 在 AgentCiCi 管理端调整；开发者由租户按需新增。</p>
                     </> : <div className="tenant-application-card__foot tenant-application-card__foot--action">
-                      <span>需先开通 Semattice；租户管理员将在自己的管理端初始化团队身份。</span>
+                      <span>需先开通 Semattice；开通后自动创建标准产品经理智能体与机器主体。</span>
                       <button type="button" className="platform-button platform-button--primary tenant-application-card__primary-action" disabled={busy || sematticeProvisioningState !== "PROVISIONED"} onClick={() => void activateDevAutopilot()}>开通 DevAutopilot</button>
                     </div>}
                   </article>
