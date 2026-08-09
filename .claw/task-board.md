@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-275 - DevAutopilot 标准租户应用控制面
 
-- status: `review`
+- status: `in_progress`
 - priority: `critical`
 - owner_role: `integration-agent`
 - spec_path: `docs/specs/FEAT-164-devautopilot-standard-tenant-application.md`
 - depends_on: `TASK-274, cc-semattice TASK-070`
 - integration_id: `INT-008`
-- scope_files: `platform tenant applications, agent/service-principal provisioning, activation persistence, machine-principal create/edit modal, tests, docs`
-- next_action: `UAT 2.8.57-beta.2 已发布；由正常 ORG_ADMIN 回读新增主体、负责人选择与编辑流程，并完成双租户隔离验收`
+- scope_files: `platform tenant applications, AgentCiCi-to-DevAutopilot handoff, activation persistence, machine-principal create/edit modal, tests, docs`
+- next_action: `修复统一租户标识、同源 handoff 与 UAT 依赖地址后，以正常租户用户回读 Semattice 数据`
 
 ### TASK-273 - Keycloak 生产人工运维交接
 

@@ -212,7 +212,7 @@ export default function PlatformTenantApplicationsPage() {
                       </span>
                     </div>
                     <dl className="tenant-application-card__facts">
-                      <div><dt>Company ID</dt><dd>{detail.tenant.companyId}</dd></div>
+                      <div><dt>租户标识</dt><dd>{detail.tenant.companyId}</dd></div>
                       <div><dt>开户来源</dt><dd>AgentCiCi 运营端</dd></div>
                       <div><dt>身份校验</dt><dd>AgentCiCi 受控校验</dd></div>
                       <div><dt>接入方式</dt><dd>HTTP API · MCP · CLI</dd></div>
@@ -241,11 +241,11 @@ export default function PlatformTenantApplicationsPage() {
                     </div>
                     {devAutopilot?.enabled ? <>
                       <dl className="tenant-application-card__facts">
-                        <div><dt>模板版本</dt><dd>{devAutopilot.templateVersion}</dd></div><div><dt>数据租户</dt><dd>{devAutopilot.sematticeTenantId ?? "-"}</dd></div>
-                        <div><dt>产品经理</dt><dd>{devAutopilot.resources.find((item) => item.logicalRole === "product_manager" && item.resourceType === "SERVICE_PRINCIPAL" && item.primary)?.displayName ?? "-"}</dd></div><div><dt>资源状态</dt><dd>{devAutopilot.resources.length} 个独立资源</dd></div>
+                        <div><dt>模板版本</dt><dd>{devAutopilot.templateVersion}</dd></div><div><dt>租户标识</dt><dd>{detail.tenant.companyId}</dd></div>
+                        <div><dt>数据底座</dt><dd>Semattice（已绑定）</dd></div><div><dt>资源状态</dt><dd>{devAutopilot.resources.length} 个独立资源</dd></div>
                       </dl>
                       <div className="tenant-application-card__foot tenant-application-card__foot--action"><span><ShieldCheck size={14} aria-hidden="true" />关闭仅暂停本租户运行入口，不删除数据</span><button type="button" className="platform-button platform-button--primary tenant-application-card__primary-action" disabled={busy} onClick={() => void changeDevAutopilotState(devAutopilot.actualState === "SUSPENDED" ? "resumptions" : "suspensions")}>{devAutopilot.actualState === "SUSPENDED" ? "恢复运行" : "暂停应用"}</button></div>
-                      <p className="skills-data-table__summary">产品经理、开发者与机器凭据由该租户的 ORG_ADMIN 在 AgentCiCi「组织架构 → 机器主体」中管理。</p>
+                      <p className="skills-data-table__summary">租户团队主体与机器凭据由该租户的 ORG_ADMIN 在 AgentCiCi「组织架构 → 机器主体」中管理。</p>
                     </> : <div className="tenant-application-card__foot tenant-application-card__foot--action">
                       <span>需先开通 Semattice；租户管理员将在自己的管理端初始化团队身份。</span>
                       <button type="button" className="platform-button platform-button--primary tenant-application-card__primary-action" disabled={busy || sematticeProvisioningState !== "PROVISIONED"} onClick={() => void activateDevAutopilot()}>开通 DevAutopilot</button>

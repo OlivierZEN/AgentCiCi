@@ -5,6 +5,7 @@ import com.codehouse.ciciassistant.auth.service.KeycloakOidcLoginService;
 import com.codehouse.ciciassistant.auth.service.OfficialAccessTokenService;
 import com.codehouse.ciciassistant.auth.RoleCodes;
 import com.codehouse.ciciassistant.auth.service.CloudccSsoService;
+import com.codehouse.ciciassistant.platform.service.DevAutopilotHandoffService;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.tenant.TenantContext;
@@ -37,17 +38,20 @@ public class AuthController {
     private final CloudccSsoService cloudccSsoService;
     private final KeycloakOidcLoginService keycloakOidcLoginService;
     private final OfficialAccessTokenService officialAccessTokenService;
+    private final DevAutopilotHandoffService devAutopilotHandoffs;
     private final String sematticeBaseUrl;
 
     public AuthController(AuthService authService,
                           CloudccSsoService cloudccSsoService,
                           KeycloakOidcLoginService keycloakOidcLoginService,
                           OfficialAccessTokenService officialAccessTokenService,
+                          DevAutopilotHandoffService devAutopilotHandoffs,
                           @Value("${app.semattice.base-url:}") String sematticeBaseUrl) {
         this.authService = authService;
         this.cloudccSsoService = cloudccSsoService;
         this.keycloakOidcLoginService = keycloakOidcLoginService;
         this.officialAccessTokenService = officialAccessTokenService;
+        this.devAutopilotHandoffs = devAutopilotHandoffs;
         this.sematticeBaseUrl = trimTrailingSlash(sematticeBaseUrl);
     }
 
@@ -172,6 +176,15 @@ public class AuthController {
                 companyId, userId, officialAccessTokenService);
         return ApiResponse.ok(Map.of("redirectUri", sematticeBaseUrl + "/console/#oact=" + issued.token()),
                 "Semattice console access issued");
+    }
+
+    @PostMapping("/devautopilot/handoff")
+    public ApiResponse<Map<String, Object>> createDevAutopilotHandoff() {
+        String companyId = TenantContext.requireCompanyId();
+        String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
+        DevAutopilotHandoffService.HandoffTicket handoff = devAutopilotHandoffs.issue(companyId, userId);
+        return ApiResponse.ok(Map.of("ticket", handoff.ticket(), "expiresInSeconds", handoff.expiresInSeconds()),
+                "DevAutopilot handoff issued");
     }
 
     @PostMapping("/companies")

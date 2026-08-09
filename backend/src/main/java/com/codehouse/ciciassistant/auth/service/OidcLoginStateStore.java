@@ -17,6 +17,7 @@ public class OidcLoginStateStore {
     private static final String TRANSACTION_PREFIX = "auth:oidc:transaction:";
     private static final String COMPLETION_PREFIX = "auth:oidc:completion:";
     private static final String SESSION_PREFIX = "auth:oidc:session:";
+    private static final String DEVAUTOPILOT_HANDOFF_PREFIX = "auth:devautopilot:handoff:";
 
     private final ObjectMapper objectMapper;
     private final StringRedisTemplate redisTemplate;
@@ -45,6 +46,14 @@ public class OidcLoginStateStore {
 
     public LoginCompletion consumeCompletion(String ticket) {
         return consume(COMPLETION_PREFIX + ticket, LoginCompletion.class);
+    }
+
+    public void saveDevAutopilotHandoff(String ticket, DevAutopilotHandoff value, Duration ttl) {
+        save(DEVAUTOPILOT_HANDOFF_PREFIX + ticket, value, ttl);
+    }
+
+    public DevAutopilotHandoff consumeDevAutopilotHandoff(String ticket) {
+        return consume(DEVAUTOPILOT_HANDOFF_PREFIX + ticket, DevAutopilotHandoff.class);
     }
 
     public void saveRefreshSession(String sessionId, String refreshToken, Duration ttl) {
@@ -85,6 +94,10 @@ public class OidcLoginStateStore {
     }
 
     public record LoginCompletion(Map<String, Object> login) {
+    }
+
+    /** Deliberately excludes browser/OACT/refresh tokens. */
+    public record DevAutopilotHandoff(String companyId, String memberId) {
     }
 
     private record RefreshSession(String cipher, String iv, Instant expiresAt) {

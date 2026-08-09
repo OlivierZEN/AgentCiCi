@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-164
 title: DevAutopilot standard tenant application
-status: implemented
+status: in_progress
 owner_role: integration-agent
 task_ids: TASK-275
 related_decisions: ADR-006, ADR-007, ADR-008
 related_issues: none
-updated_at: 2026-08-09T03:05:00Z
+updated_at: 2026-08-09T03:20:00Z
 updated_by: codex
 ---
 
@@ -30,6 +30,7 @@ AgentCiCi 的平台租户应用页已经将 AgentCiCi 和 Semattice 作为独立
 - 租户 ORG_ADMIN 可在机器主体详情的独立编辑弹窗中变更显示名称和 HUMAN 负责人；编辑不轮换 Client Secret、不改变 Client ID 或最小权限范围。
 - 受控调用 Semattice 标准基线应用，校验回执、模板版本和资源映射。
 - 平台租户应用页展示依赖、初始化步骤、失败原因、模板版本和生命周期动作。
+- 平台卡片统一使用 `租户标识 = company_id`，不展示 Semattice 内部 tenant UUID、产品经理或机器主体名称。
 - 暂停应用时关闭运行时授权并暂停本应用拥有的 SERVICE Principal；不删除业务数据。
 
 ### Out Of Scope
@@ -112,6 +113,12 @@ tenant_application_operation
 - Semattice 必须从可信 OACT 推导 tenant/company，并以 Principal、RBAC、RLS、PDP 作为资源端最终门禁。
 - 关闭应用只暂停资源；永久撤销、导出和数据清理走独立保留期/审批流程。
 
+## 用户应用入口与会话交接
+
+AgentCiCi 前台是租户用户进入 DevAutopilot 的唯一浏览器入口。点击应用时，当前已验证的 AgentCiCi 会话只可创建一次性、60 秒有效的 opaque handoff ticket；浏览器跳转到同源 `/devautopilot/?handoff=...`，不得在 URL、localStorage、日志或页面状态中传递 OACT。
+
+DevAutopilot 服务端调用 AgentCiCi 的 ticket exchange，并仅在自身短期 HttpOnly 会话内保存新签发的 OACT。AgentCiCi 的 ticket 状态只含 `company_id` 与成员 ID，不保存任何 bearer token；兑换一次即删除。兑换时重新核验 activation 为 `ACTIVE`，并按该成员签发 60-600 秒的最小 OACT。平台账号没有租户 `company_id`，不能创建 handoff。
+
 ## 跨项目契约
 
 - `INT-008`：本规格为 AgentCiCi 控制面所有者。
@@ -144,6 +151,7 @@ tenant_application_operation
 - [x] Semattice 标准基线契约与实现。
 - [x] DevAutopilot runtime gate。
 - [x] 独立 DevAutopilot 缓存的 UAT 发布与运行态验证（使用独立 beta 发布入口）。
+- [ ] 修复同源租户 handoff、UAT 依赖地址与卡片字段事实，并完成租户用户数据回读。
 - [ ] 双租户 UAT E2E（需正常租户 ORG_ADMIN 业务会话，不能由平台运营账号替代）。
 
 ## UAT 发布事实

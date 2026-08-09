@@ -10,6 +10,7 @@ import com.codehouse.ciciassistant.auth.service.AuthService;
 import com.codehouse.ciciassistant.auth.service.CloudccSsoService;
 import com.codehouse.ciciassistant.auth.service.KeycloakOidcLoginService;
 import com.codehouse.ciciassistant.auth.service.OfficialAccessTokenService;
+import com.codehouse.ciciassistant.platform.service.DevAutopilotHandoffService;
 import org.junit.jupiter.api.Test;
 
 class AuthControllerTest {
@@ -24,6 +25,7 @@ class AuthControllerTest {
                 mock(CloudccSsoService.class),
                 oidc,
                 mock(OfficialAccessTokenService.class),
+                mock(DevAutopilotHandoffService.class),
                 "");
 
         assertThatThrownBy(() -> controller.changeMyPassword(

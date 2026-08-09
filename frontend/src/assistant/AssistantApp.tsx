@@ -726,7 +726,8 @@ const WORKBENCH_METRICS_DEFAULT: WorkbenchMetric[] = [
   { label: "待跟进", value: "—" },
 ];
 
-export const DEV_AUTOPILOT_URL = "https://x.agentcici.com/devautopilot/";
+// Relative so UAT, production, and a tenant-specific host always enter the matching application.
+export const DEV_AUTOPILOT_URL = "/devautopilot/";
 
 export const AI_APPLICATIONS: AiApplication[] = [
   {
@@ -1296,6 +1297,7 @@ export default function AssistantApp() {
   const [authStatus, setAuthStatus] = useState<"guest" | "checking" | "authenticated">(() =>
     auth?.token ? "checking" : "guest",
   );
+  const [launchingDevAutopilot, setLaunchingDevAutopilot] = useState(false);
   const [me, setMe] = useState<MeProfile | null>(null);
   const [input, setInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
@@ -2879,6 +2881,31 @@ export default function AssistantApp() {
     }
   };
 
+  const enterDevAutopilot = async () => {
+    if (launchingDevAutopilot) return;
+    setLaunchingDevAutopilot(true);
+    try {
+      const response = await authFetch(LS_ASSISTANT_TOKEN, "/auth/devautopilot/handoff", {
+        method: "POST",
+      }, {
+        onUnauthorized: () => persistAuth(null),
+      });
+      const { body } = await safeFetchJson<{ ticket?: string }>(response);
+      const ticket = body?.data?.ticket;
+      if (!response.ok || !body?.success || !ticket) {
+        setNotice(`进入 DevAutopilot 失败：${body?.message ?? `HTTP ${response.status}`}`);
+        return;
+      }
+      const target = new URL(DEV_AUTOPILOT_URL, window.location.origin);
+      target.searchParams.set("handoff", ticket);
+      window.location.assign(target.toString());
+    } catch (error) {
+      setNotice(`进入 DevAutopilot 失败：${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setLaunchingDevAutopilot(false);
+    }
+  };
+
   const toggleKb = (id: number) => {
     setSelectedKbIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
   };
@@ -4208,7 +4235,11 @@ export default function AssistantApp() {
                   onClick={() => {
                     if (app.externalUrl) {
                       setAiAppsMenuOpen(false);
-                      window.location.assign(app.externalUrl);
+                      if (app.code === "dev-autopilot") {
+                        void enterDevAutopilot();
+                      } else {
+                        window.location.assign(app.externalUrl);
+                      }
                       return;
                     }
                     setActiveAiAppCode(app.code);
@@ -4216,6 +4247,7 @@ export default function AssistantApp() {
                     setAiAppsMenuOpen(false);
                   }}
                   aria-current={isActive ? "page" : undefined}
+                  disabled={app.code === "dev-autopilot" && launchingDevAutopilot}
                 >
                   <span className="cici-ai-apps-flyout__mark" aria-hidden>{app.shortName}</span>
                   <span className="cici-ai-apps-flyout__text">
