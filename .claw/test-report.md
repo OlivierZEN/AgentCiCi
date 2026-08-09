@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-09T01:35:00Z
+updated_at: 2026-08-09T03:15:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-09T01:35:00Z
+last_run_at: 2026-08-09T03:15:00Z
 last_run_status: partial
 ---
 
 # Test Report
+
+## 2026-08-09 TASK-275 机器主体新增与编辑交互修订
+
+- `backend-focused`：`mvn -q -f backend/pom.xml -Dtest=ServicePrincipalServiceTest test` 通过。覆盖同租户有效 HUMAN owner 校验；创建保留当前 ORG_ADMIN 为操作审计 actor，而主体责任人可独立选择。
+- `frontend-focused/build`：`npm --prefix frontend test -- --run src/admin/pages/AdminServicePrincipalsPage.test.ts src/admin/adminApi.test.ts` 通过（2 files / 5 tests）；`npm --prefix frontend run build` 通过。创建表单已从列表/详情画布移除，新增和编辑均为带遮罩的可访问 modal；仅有既有 bundle-size 提示。
+- `static-check`：`git diff --check` 通过。尚未执行 UAT 发布或正常 ORG_ADMIN 写入，故未创建业务主体或读取/输出 Secret。
+
+- 状态：`passed`
 
 ## 2026-08-09 TASK-275 租户自助团队管理与安全链路收敛
 

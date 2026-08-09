@@ -6,6 +6,7 @@ import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.util.Map;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -43,6 +44,13 @@ public class AdminServicePrincipalController {
     @PostMapping("/{principalId}/rotate-secret")
     public ApiResponse<Map<String, Object>> rotateSecret(@PathVariable String principalId) {
         return ApiResponse.ok(service.rotateSecret(companyId(), actorMemberId(), principalId));
+    }
+
+    @PutMapping("/{principalId}")
+    public ApiResponse<Map<String, Object>> updateProfile(@PathVariable String principalId,
+                                                           @Valid @RequestBody UpdateServicePrincipalProfileRequest request) {
+        return ApiResponse.ok(service.updateProfile(companyId(), actorMemberId(), principalId,
+                request.displayName(), request.ownerMemberId()));
     }
 
     @PutMapping("/{principalId}/scopes")
@@ -95,6 +103,11 @@ public class AdminServicePrincipalController {
     }
 
     public record TransferOwnerRequest(@NotBlank String ownerMemberId) {
+    }
+
+    public record UpdateServicePrincipalProfileRequest(
+            @NotBlank @Size(max = 128) String displayName,
+            @NotBlank String ownerMemberId) {
     }
 
     public record RenameClientIdRequest(@NotBlank String clientId) {

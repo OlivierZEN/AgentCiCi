@@ -7,7 +7,7 @@ owner_role: integration-agent
 task_ids: TASK-275
 related_decisions: ADR-006, ADR-007, ADR-008
 related_issues: none
-updated_at: 2026-08-09T01:35:00Z
+updated_at: 2026-08-09T03:05:00Z
 updated_by: codex
 ---
 
@@ -26,7 +26,8 @@ AgentCiCi 的平台租户应用页已经将 AgentCiCi 和 Semattice 作为独立
 - 平台应用目录中增加 `devautopilot` activation 及其操作、资源和审计记录。
 - 开通、重试、暂停、恢复、状态查询；所有操作使用稳定幂等键与关联 ID。
 - 平台只开通应用和数据基线，不代替租户创建或指定任何人、Agent 或机器主体。
-- 租户 ORG_ADMIN 在 AgentCiCi `/admin/service-principals` 创建主产品经理 Agent/对应 PM SERVICE Principal，以及任意数量的开发者 SERVICE Principal；显示名称由租户自定义。
+- 租户 ORG_ADMIN 在 AgentCiCi `/admin/service-principals` 的独立新增弹窗中，选择主体类型、租户自定义显示名称和同租户有效 HUMAN 负责人，创建主产品经理 Agent/对应 PM SERVICE Principal，以及任意数量的开发者 SERVICE Principal。
+- 租户 ORG_ADMIN 可在机器主体详情的独立编辑弹窗中变更显示名称和 HUMAN 负责人；编辑不轮换 Client Secret、不改变 Client ID 或最小权限范围。
 - 受控调用 Semattice 标准基线应用，校验回执、模板版本和资源映射。
 - 平台租户应用页展示依赖、初始化步骤、失败原因、模板版本和生命周期动作。
 - 暂停应用时关闭运行时授权并暂停本应用拥有的 SERVICE Principal；不删除业务数据。
@@ -97,10 +98,11 @@ tenant_application_operation
 | POST | `/.../suspensions` | 请求暂停，不删除数据 |
 | POST | `/.../resumptions` | 请求恢复 |
 | GET | `/api/admin/devautopilot/team` | 当前租户读取应用状态与团队资源；公司只能从已认证会话推导 |
-| POST | `/api/admin/devautopilot/team/product-managers` | 当前 ORG_ADMIN 创建唯一 PM；输入仅为显示名称，Secret 仅一次返回 |
-| POST | `/api/admin/devautopilot/team/developers` | 当前 ORG_ADMIN 创建一个自定义名称的 developer SERVICE Principal；输入仅为显示名称，Secret 仅一次返回 |
+| POST | `/api/admin/devautopilot/team/product-managers` | 当前 ORG_ADMIN 创建唯一 PM；输入为显示名称和同租户有效 HUMAN `ownerMemberId`，Secret 仅一次返回 |
+| POST | `/api/admin/devautopilot/team/developers` | 当前 ORG_ADMIN 创建一个自定义名称的 developer SERVICE Principal；输入为显示名称和同租户有效 HUMAN `ownerMemberId`，Secret 仅一次返回 |
+| PUT | `/api/admin/service-principals/{principalId}` | 当前 ORG_ADMIN 更新当前租户机器主体的显示名称和 HUMAN `ownerMemberId`；不改变 Client ID、Secret 或 scopes |
 
-平台写接口要求 `Idempotency-Key` 与平台管理员授权；租户团队写接口要求当前租户 `ORG_ADMIN` 会话。两类接口都不接受调用方指定 tenant、负责人、principal、scope、Semattice tenant ID 或 Client Secret；公司、负责人和最小 scope 均由服务端推导。
+平台写接口要求 `Idempotency-Key` 与平台管理员授权；租户团队写接口要求当前租户 `ORG_ADMIN` 会话。平台接口不接受调用方指定 tenant、负责人、principal、scope、Semattice tenant ID 或 Client Secret。租户团队接口只接受同租户 HUMAN `ownerMemberId`，并由服务端校验该成员有效；公司、技术 principal、Client ID 与模板最小 scope 均由服务端推导。
 
 ## 安全与隔离
 
@@ -137,6 +139,7 @@ tenant_application_operation
 
 - [x] 控制面模型与 migration。
 - [x] 将团队身份管理迁入 AgentCiCi 租户管理端，移除运营端人员字段。
+- [ ] 将机器主体新增和编辑收敛为独立 modal；创建时可选择同租户有效 HUMAN 负责人，编辑时可更新显示名称与负责人。
 - [x] DevAutopilot activation 快照短时缓存实现与定向测试。
 - [x] Semattice 标准基线契约与实现。
 - [x] DevAutopilot runtime gate。

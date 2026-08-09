@@ -93,13 +93,13 @@ public class DevAutopilotTenantApplicationService {
     public View resume(String companyId, String platformActor) { return transition(companyId, "ACTIVE", platformActor); }
 
     @Transactional
-    public TeamResourceView createProductManager(String companyId, String displayName, String actorMemberId) {
+    public TeamResourceView createProductManager(String companyId, String displayName, String actorMemberId, String ownerMemberId) {
         Row activation = requireExisting(companyId);
         if (!"ACTIVE".equals(activation.actualState()) || pmScopes.isEmpty()) throw new ForbiddenException("DevAutopilot is not ready to create a product-manager identity");
         require(displayName, "displayName");
         Integer count = jdbc.queryForObject("SELECT count(*) FROM tenant_application_resource WHERE activation_id=? AND logical_role='product_manager' AND resource_type='SERVICE_PRINCIPAL'", Integer.class, activation.id());
         if (count != null && count > 0) throw new ConflictException("DevAutopilot product manager already exists for this tenant");
-        Map<String, Object> principal = principals.create(companyId, actorMemberId, displayName, "OFFICIAL_APP",
+        Map<String, Object> principal = principals.create(companyId, actorMemberId, ownerMemberId, displayName, "OFFICIAL_APP",
                 OfficialAccessTokenService.SEMATTICE_AUDIENCE, null, pmScopes);
         String principalId = (String) principal.get("principalId");
         String agentId = "devautopilot-pm-" + UUID.randomUUID().toString().substring(0, 8);
@@ -114,11 +114,11 @@ public class DevAutopilotTenantApplicationService {
     }
 
     @Transactional
-    public TeamResourceView addDeveloper(String companyId, String displayName, String actorMemberId) {
+    public TeamResourceView addDeveloper(String companyId, String displayName, String actorMemberId, String ownerMemberId) {
         Row activation = requireExisting(companyId);
         if (!"ACTIVE".equals(activation.actualState()) || developerScopes.isEmpty()) throw new ForbiddenException("DevAutopilot is not ready to create a developer identity");
         require(displayName, "displayName");
-        Map<String, Object> principal = principals.create(companyId, actorMemberId, displayName, "THIRD_PARTY",
+        Map<String, Object> principal = principals.create(companyId, actorMemberId, ownerMemberId, displayName, "THIRD_PARTY",
                 OfficialAccessTokenService.SEMATTICE_AUDIENCE, null, developerScopes);
         String principalId = (String) principal.get("principalId");
         resource(activation.id(), "developer", "SERVICE_PRINCIPAL", generatedAlias("developer"), displayName, principalId, false);

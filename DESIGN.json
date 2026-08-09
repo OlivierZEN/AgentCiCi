@@ -286,14 +286,19 @@
         "Product application canvases own their internal padding. The shell must not add a second decorative gutter between the primary rail and the application canvas.",
         "Application picker close controls must reuse cici-product-icon-button and a standard Lucide icon, with no text-glyph close button or inherited shadow layer."
       ],
-      "modals": [
+    "modals": [
         "Any popup, chooser, editor, confirmation, import preview, or publish dialog is a modal window by default unless a feature spec explicitly requires a popover, drawer, toast, or inline disclosure.",
         "Modal windows use a blocking overlay, role=dialog, aria-modal=true, a labelled heading, an opaque warm ivory surface, and a fixed footer when actions are present.",
         "Modal footers use secondary buttons for cancel or close actions and primary champagne-gold buttons for confirm or save actions.",
         "Close controls are quiet icon buttons without bordered button blocks.",
-        "The top-right close x must render as a bare icon or glyph with no visible border, no bordered square or circle, and no button chrome; hover and focus may use a subtle tinted background but must remain borderless."
-      ],
-      "tabs": [
+      "The top-right close x must render as a bare icon or glyph with no visible border, no bordered square or circle, and no button chrome; hover and focus may use a subtle tinted background but must remain borderless."
+    ],
+    "managementForms": [
+      "Creation and inspection must remain separate in authenticated management pages: lists and detail canvases are for scanning and viewing, while create and edit flows open an explicit modal unless a feature spec requires a dedicated route.",
+      "Never leave a persistent create form in the same list/detail canvas as the records it creates. The primary create action opens a labelled modal with only the fields required for that action.",
+      "A record editor may change its allowed governance fields in one explicit modal; it must state which sensitive fields, credentials, or permissions are not changed by that edit."
+    ],
+    "tabs": [
         "Product-page tabs use text tabs, not pills, chips, segmented controls, or bordered mini-cards.",
         "Tabs must never appear as rounded bordered background buttons; inactive, hover, focus, and active states stay backgroundless and shadowless.",
         "Tab rows may use a single Gold Mist Line bottom rule (#ded2bb) when separating tabs from following content; do not wrap the tab row in a rounded container.",

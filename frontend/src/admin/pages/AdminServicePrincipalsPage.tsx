@@ -17,8 +17,17 @@ type ServicePrincipal = {
   availableScopes?: string[];
   lastRotatedAt?: string;
   createdAt?: string;
+  ownerMemberId?: string;
   ownerPublicId?: string;
   ownerDisplayName?: string;
+};
+
+type HumanMember = {
+  id: string;
+  mobile: string;
+  email?: string;
+  nickname?: string;
+  memberStatus?: string;
 };
 
 type RotateSecretResult = {
@@ -92,6 +101,12 @@ export const servicePrincipalPresentation = {
   ownerLabel(item: ServicePrincipal) {
     return item.ownerDisplayName || item.ownerPublicId || "未设置负责人";
   },
+  humanMemberLabel(member: HumanMember) {
+    return member.nickname || member.mobile || member.email || member.id;
+  },
+  activeOwnerCandidates(members: HumanMember[]) {
+    return members.filter((member) => member.memberStatus === "ACTIVE");
+  },
 };
 
 function formatDateTime(value?: string) {
@@ -116,24 +131,33 @@ export default function AdminServicePrincipalsPage() {
   const [replacementScopes, setReplacementScopes] = useState<string[]>([]);
   const [oneTimeSecret, setOneTimeSecret] = useState<RotateSecretResult | null>(null);
   const [devAutopilotTeam, setDevAutopilotTeam] = useState<DevAutopilotTeam | null>(null);
-  const [newTeamMemberName, setNewTeamMemberName] = useState("");
-  const [newTeamMemberRole, setNewTeamMemberRole] = useState<"product-managers" | "developers">("developers");
+  const [members, setMembers] = useState<HumanMember[]>([]);
+  const [teamMemberDialogOpen, setTeamMemberDialogOpen] = useState(false);
+  const [teamMemberForm, setTeamMemberForm] = useState<{ role: "product-managers" | "developers"; displayName: string; ownerMemberId: string }>({
+    role: "developers",
+    displayName: "",
+    ownerMemberId: "",
+  });
+  const [editingPrincipal, setEditingPrincipal] = useState<ServicePrincipal | null>(null);
+  const [profileForm, setProfileForm] = useState({ displayName: "", ownerMemberId: "" });
 
   const selected = useMemo(
     () => items.find((item) => item.principalId === selectedId) ?? items[0] ?? null,
     [items, selectedId],
   );
   const hasProductManager = devAutopilotTeam?.resources.some((item) => item.logicalRole === "product_manager" && item.resourceType === "SERVICE_PRINCIPAL" && item.primary) ?? false;
+  const ownerCandidates = useMemo(() => servicePrincipalPresentation.activeOwnerCandidates(members), [members]);
 
   const load = async (options?: { quiet?: boolean }) => {
     if (!options?.quiet) setLoading(true);
     setNotice("");
     try {
-      const [res, teamRes] = await Promise.all([
+      const [res, teamRes, membersRes] = await Promise.all([
         fetch(adminApi.servicePrincipals(), { headers: { Authorization: `Bearer ${token}` } }),
         fetch(adminApi.devAutopilotTeam(), { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(adminApi.users(), { headers: { Authorization: `Bearer ${token}` } }),
       ]);
-      const [json, teamJson] = await Promise.all([res.json(), teamRes.json()]);
+      const [json, teamJson, membersJson] = await Promise.all([res.json(), teamRes.json(), membersRes.json()]);
       if (!res.ok || !json.success) {
         setNotice(json.message ?? "机器主体加载失败");
         return;
@@ -142,6 +166,7 @@ export default function AdminServicePrincipalsPage() {
       setItems(next);
       setSelectedId((current) => next.some((item) => item.principalId === current) ? current : (next[0]?.principalId ?? ""));
       setDevAutopilotTeam(teamRes.ok && teamJson.success ? teamJson.data as DevAutopilotTeam : null);
+      setMembers(membersRes.ok && membersJson.success ? membersJson.data as HumanMember[] : []);
     } catch {
       setNotice("机器主体加载失败，请检查网络后重试");
     } finally {
@@ -266,15 +291,21 @@ export default function AdminServicePrincipalsPage() {
     setConfirmAction("scopes");
   };
 
+  const openTeamMemberDialog = () => {
+    const defaultOwnerId = ownerCandidates[0]?.id ?? "";
+    setTeamMemberForm({ role: "developers", displayName: "", ownerMemberId: defaultOwnerId });
+    setTeamMemberDialogOpen(true);
+  };
+
   const createDevAutopilotTeamMember = async () => {
-    if (!newTeamMemberName.trim()) return;
+    if (!teamMemberForm.displayName.trim() || !teamMemberForm.ownerMemberId) return;
     setSubmitting(true);
     setNotice("");
     try {
-      const res = await fetch(adminApi.devAutopilotTeam(`/${newTeamMemberRole}`), {
+      const res = await fetch(adminApi.devAutopilotTeam(`/${teamMemberForm.role}`), {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ displayName: newTeamMemberName.trim() }),
+        body: JSON.stringify({ displayName: teamMemberForm.displayName.trim(), ownerMemberId: teamMemberForm.ownerMemberId }),
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
@@ -285,10 +316,41 @@ export default function AdminServicePrincipalsPage() {
       await load({ quiet: true });
       setSelectedId(result.principalId);
       setOneTimeSecret(result);
-      setNewTeamMemberName("");
+      setTeamMemberDialogOpen(false);
       setNotice(`“${result.resource.displayName}”已创建。Client Secret 仅本次显示，请立即写入受管密钥库。`);
     } catch {
       setNotice("研发团队机器主体创建失败，请稍后重试");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openProfileEditor = () => {
+    if (!selected) return;
+    setEditingPrincipal(selected);
+    setProfileForm({ displayName: selected.displayName, ownerMemberId: selected.ownerMemberId ?? "" });
+  };
+
+  const updateProfile = async () => {
+    if (!editingPrincipal || !profileForm.displayName.trim() || !profileForm.ownerMemberId) return;
+    setSubmitting(true);
+    setNotice("");
+    try {
+      const res = await fetch(adminApi.servicePrincipals(`/${encodeURIComponent(editingPrincipal.principalId)}`), {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ displayName: profileForm.displayName.trim(), ownerMemberId: profileForm.ownerMemberId }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        setNotice(json.message ?? "机器主体信息更新失败");
+        return;
+      }
+      setEditingPrincipal(null);
+      setNotice("机器主体信息已更新；Client ID、Client Secret 与授权范围保持不变。");
+      await load({ quiet: true });
+    } catch {
+      setNotice("机器主体信息更新失败，请稍后重试");
     } finally {
       setSubmitting(false);
     }
@@ -320,9 +382,14 @@ export default function AdminServicePrincipalsPage() {
           <h1>机器主体</h1>
           <p className="subtle">由人类负责人委托和治理的 SERVICE 身份。Client Secret 不会被保存或回显。</p>
         </div>
-        <button type="button" className="secondary service-principals-page__refresh" onClick={() => void load()} disabled={loading || submitting}>
-          {loading ? "加载中…" : "刷新列表"}
-        </button>
+        <div className="service-principals-page__header-actions">
+          <button type="button" className="service-principal-button--primary" onClick={openTeamMemberDialog} disabled={submitting || devAutopilotTeam?.actualState !== "ACTIVE" || ownerCandidates.length === 0}>
+            新增机器主体
+          </button>
+          <button type="button" className="secondary service-principals-page__refresh" onClick={() => void load()} disabled={loading || submitting}>
+            {loading ? "加载中…" : "刷新列表"}
+          </button>
+        </div>
       </header>
 
       {notice && <p className="notice service-principals-page__notice" role="status">{notice}</p>}
@@ -336,25 +403,10 @@ export default function AdminServicePrincipalsPage() {
           ) : devAutopilotTeam.actualState !== "ACTIVE" ? (
             <p className="subtle">DevAutopilot 当前为 {servicePrincipalPresentation.statusLabel(devAutopilotTeam.actualState)}，恢复应用后才能管理团队主体。</p>
           ) : (
-            <p className="subtle">名称由本租户定义，负责人自动绑定为当前管理员；系统生成技术标识和模板最小权限。</p>
+            <p className="subtle">名称与人类负责人由本租户定义；系统生成技术标识并固化模板最小权限。</p>
           )}
         </div>
-        <div className="service-principals-team__form">
-          <label>
-            <span>主体类型</span>
-            <select value={newTeamMemberRole} onChange={(event) => setNewTeamMemberRole(event.target.value as "product-managers" | "developers")} disabled={submitting || devAutopilotTeam?.actualState !== "ACTIVE"}>
-              <option value="developers">开发者机器主体</option>
-              <option value="product-managers" disabled={hasProductManager}>产品经理智能体</option>
-            </select>
-          </label>
-          <label>
-            <span>显示名称</span>
-            <input value={newTeamMemberName} onChange={(event) => setNewTeamMemberName(event.target.value)} placeholder={newTeamMemberRole === "developers" ? "例如：悟空" : "例如：大乔"} disabled={submitting || devAutopilotTeam?.actualState !== "ACTIVE"} />
-          </label>
-          <button type="button" className="service-principal-button--primary" disabled={submitting || devAutopilotTeam?.actualState !== "ACTIVE" || !newTeamMemberName.trim() || (newTeamMemberRole === "product-managers" && hasProductManager)} onClick={() => void createDevAutopilotTeamMember()}>
-            {submitting ? "创建中…" : newTeamMemberRole === "developers" ? "新增开发者" : "初始化产品经理"}
-          </button>
-        </div>
+        <p className="service-principals-team__hint">使用“新增机器主体”选择角色、名称和负责人；创建后的密钥仅显示一次。</p>
       </section>
 
       <div className="service-principals-layout">
@@ -404,6 +456,11 @@ export default function AdminServicePrincipalsPage() {
               </div>
 
               <div className="service-principal-detail__actions">
+                {servicePrincipalPresentation.canRenameClientId(selected.lifecycleStatus) && (
+                  <button type="button" className="secondary" onClick={openProfileEditor} disabled={submitting || ownerCandidates.length === 0}>
+                    编辑主体
+                  </button>
+                )}
                 {servicePrincipalPresentation.canRenameClientId(selected.lifecycleStatus) && (
                   <button type="button" className="secondary" onClick={() => setConfirmAction("rename-client-id")} disabled={submitting}>
                     变更 Client ID
@@ -535,6 +592,75 @@ export default function AdminServicePrincipalsPage() {
                 || (confirmAction === "rename-client-id" && !servicePrincipalPresentation.isValidClientId(replacementClientId))
                 || (confirmAction === "scopes" && (replacementScopes.length === 0 || servicePrincipalPresentation.sameScopes(replacementScopes, selected.scopes)))}>
                 {submitting ? "处理中…" : "确认执行"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {teamMemberDialogOpen && (
+        <div className="service-principal-dialog-backdrop" role="presentation">
+          <section className="service-principal-dialog" role="dialog" aria-modal="true" aria-labelledby="create-service-principal-title">
+            <button type="button" className="service-principal-dialog__close" aria-label="关闭新增机器主体" onClick={() => setTeamMemberDialogOpen(false)} disabled={submitting}>×</button>
+            <p className="service-principals-page__eyebrow">DEVAUTOPILOT TEAM</p>
+            <h2 id="create-service-principal-title">新增机器主体</h2>
+            <p>为当前租户初始化模板内的研发角色。Client ID、最小授权范围和密钥由系统生成，密钥只在创建成功后显示一次。</p>
+            <div className="service-principal-dialog__fields">
+              <label className="service-principal-dialog__field">
+                <span>主体类型</span>
+                <select value={teamMemberForm.role} onChange={(event) => setTeamMemberForm((current) => ({ ...current, role: event.target.value as "product-managers" | "developers" }))} disabled={submitting}>
+                  <option value="developers">开发者机器主体</option>
+                  <option value="product-managers" disabled={hasProductManager}>产品经理智能体</option>
+                </select>
+              </label>
+              <label className="service-principal-dialog__field">
+                <span>主体名称</span>
+                <input value={teamMemberForm.displayName} onChange={(event) => setTeamMemberForm((current) => ({ ...current, displayName: event.target.value }))} placeholder={teamMemberForm.role === "developers" ? "例如：悟空" : "例如：大乔"} autoFocus disabled={submitting} />
+              </label>
+              <label className="service-principal-dialog__field">
+                <span>人类负责人</span>
+                <select value={teamMemberForm.ownerMemberId} onChange={(event) => setTeamMemberForm((current) => ({ ...current, ownerMemberId: event.target.value }))} disabled={submitting}>
+                  <option value="" disabled>请选择负责人</option>
+                  {ownerCandidates.map((member) => <option key={member.id} value={member.id}>{servicePrincipalPresentation.humanMemberLabel(member)}</option>)}
+                </select>
+                <small>负责人必须是当前租户的有效人类成员，并承担该主体的日常治理责任。</small>
+              </label>
+            </div>
+            <div className="service-principal-dialog__actions">
+              <button type="button" className="secondary" onClick={() => setTeamMemberDialogOpen(false)} disabled={submitting}>取消</button>
+              <button type="button" className="service-principal-button--primary" onClick={() => void createDevAutopilotTeamMember()} disabled={submitting || !teamMemberForm.displayName.trim() || !teamMemberForm.ownerMemberId || (teamMemberForm.role === "product-managers" && hasProductManager)}>
+                {submitting ? "创建中…" : "创建主体"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {editingPrincipal && (
+        <div className="service-principal-dialog-backdrop" role="presentation">
+          <section className="service-principal-dialog" role="dialog" aria-modal="true" aria-labelledby="edit-service-principal-title">
+            <button type="button" className="service-principal-dialog__close" aria-label="关闭编辑机器主体" onClick={() => setEditingPrincipal(null)} disabled={submitting}>×</button>
+            <p className="service-principals-page__eyebrow">SERVICE IDENTITY</p>
+            <h2 id="edit-service-principal-title">编辑机器主体</h2>
+            <p>更新可治理的主体信息。不会轮换 Client Secret，也不会改变 Client ID 或授权范围。</p>
+            <div className="service-principal-dialog__fields">
+              <label className="service-principal-dialog__field">
+                <span>主体名称</span>
+                <input value={profileForm.displayName} onChange={(event) => setProfileForm((current) => ({ ...current, displayName: event.target.value }))} autoFocus disabled={submitting} />
+              </label>
+              <label className="service-principal-dialog__field">
+                <span>人类负责人</span>
+                <select value={profileForm.ownerMemberId} onChange={(event) => setProfileForm((current) => ({ ...current, ownerMemberId: event.target.value }))} disabled={submitting}>
+                  <option value="" disabled>请选择负责人</option>
+                  {ownerCandidates.map((member) => <option key={member.id} value={member.id}>{servicePrincipalPresentation.humanMemberLabel(member)}</option>)}
+                </select>
+                <small>变更将保留历史责任人与操作审计，不会扩大该主体已有权限。</small>
+              </label>
+            </div>
+            <div className="service-principal-dialog__actions">
+              <button type="button" className="secondary" onClick={() => setEditingPrincipal(null)} disabled={submitting}>取消</button>
+              <button type="button" className="service-principal-button--primary" onClick={() => void updateProfile()} disabled={submitting || !profileForm.displayName.trim() || !profileForm.ownerMemberId}>
+                {submitting ? "保存中…" : "保存变更"}
               </button>
             </div>
           </section>

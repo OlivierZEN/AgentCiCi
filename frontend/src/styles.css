@@ -19066,13 +19066,21 @@ td.skills-data-table__actions > * {
   padding: 8px 12px;
 }
 
+.service-principals-page__header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .service-principals-page__notice {
   margin: -5px 0 12px;
 }
 
 .service-principals-team {
   display: grid;
-  grid-template-columns: minmax(260px, 1.15fr) minmax(420px, 1fr);
+  grid-template-columns: minmax(260px, 1.15fr) minmax(240px, 0.7fr);
   gap: 24px;
   align-items: end;
   margin: 0 0 18px;
@@ -19091,30 +19099,13 @@ td.skills-data-table__actions > * {
   max-width: 620px;
 }
 
-.service-principals-team__form {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.72fr) minmax(150px, 1fr) auto;
-  gap: 10px;
-  align-items: end;
-}
-
-.service-principals-team__form label {
-  display: grid;
-  gap: 5px;
-  color: var(--theme-muted, #7c6d59);
+.service-principals-team__hint {
+  max-width: 330px;
+  margin: 0;
+  color: #7c6d59;
   font-size: 12px;
-}
-
-.service-principals-team__form input,
-.service-principals-team__form select {
-  box-sizing: border-box;
-  min-width: 0;
-  height: 34px;
-}
-
-.service-principals-team__form button {
-  height: 34px;
-  white-space: nowrap;
+  line-height: 1.6;
+  text-align: right;
 }
 
 .service-principals-layout {
@@ -19467,12 +19458,38 @@ td.skills-data-table__actions > * {
 }
 
 .service-principal-dialog {
+  position: relative;
   width: min(440px, 100%);
   padding: 22px;
   border: 1px solid #d3b578;
   border-radius: 10px;
   background: #fffdf8;
   box-shadow: 0 22px 56px rgba(58, 42, 20, 0.22);
+}
+
+.service-principal-dialog__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #6c5b46;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.service-principal-dialog__close:hover:not(:disabled),
+.service-principal-dialog__close:focus-visible:not(:disabled) {
+  background: #f8efd6;
+  color: #382c1f;
+  outline: 1px solid #cdb17b;
+  box-shadow: none;
+  transform: none;
 }
 
 .service-principal-dialog h2 {
@@ -19510,9 +19527,29 @@ td.skills-data-table__actions > * {
   padding: 8px 10px;
 }
 
-.service-principal-dialog__field input:focus {
+.service-principal-dialog__field select {
+  width: 100%;
+  min-height: 38px;
+  box-sizing: border-box;
+  border: 1px solid #cdb17b;
+  border-radius: 6px;
+  background: #fffdf8;
+  color: #382c1f;
+  font-size: 13px;
+  outline: none;
+  padding: 8px 10px;
+}
+
+.service-principal-dialog__field input:focus,
+.service-principal-dialog__field select:focus {
   border-color: #9f7126;
   box-shadow: 0 0 0 3px rgba(184, 137, 45, 0.15);
+}
+
+.service-principal-dialog__fields {
+  display: grid;
+  gap: 12px;
+  margin-top: 15px;
 }
 
 .service-principal-dialog__field small {

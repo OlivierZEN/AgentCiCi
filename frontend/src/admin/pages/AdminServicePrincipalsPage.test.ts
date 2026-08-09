@@ -36,4 +36,14 @@ describe("machine principal presentation", () => {
       ownerDisplayName: "Oliver",
     })).toBe("Oliver");
   });
+
+  it("offers only active tenant humans as selectable owners", () => {
+    const candidates = servicePrincipalPresentation.activeOwnerCandidates([
+      { id: "member-oliver", mobile: "18600000001", nickname: "Oliver", memberStatus: "ACTIVE" },
+      { id: "member-paused", mobile: "18600000002", nickname: "已停用成员", memberStatus: "SUSPENDED" },
+    ]);
+
+    expect(candidates).toEqual([{ id: "member-oliver", mobile: "18600000001", nickname: "Oliver", memberStatus: "ACTIVE" }]);
+    expect(servicePrincipalPresentation.humanMemberLabel(candidates[0])).toBe("Oliver");
+  });
 });

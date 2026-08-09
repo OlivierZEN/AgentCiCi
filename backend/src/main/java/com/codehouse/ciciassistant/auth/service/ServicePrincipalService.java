@@ -49,11 +49,14 @@ public class ServicePrincipalService {
     @Transactional
     public Map<String, Object> create(String companyId, String actorMemberId, String displayName,
                                       String serviceKind, String audience, String requestedClientId, List<String> requestedScopes) {
-        UserEntity owner = userRepository.findByIdAndCompany_Id(actorMemberId, companyId)
-                .orElseThrow(() -> new ForbiddenException("机器账户必须由当前组织的人类成员负责"));
-        if (!UserEntity.STATUS_ACTIVE.equals(owner.getMemberStatus())) {
-            throw new ForbiddenException("机器账户责任人必须是有效的人类成员");
-        }
+        return create(companyId, actorMemberId, actorMemberId, displayName, serviceKind, audience, requestedClientId, requestedScopes);
+    }
+
+    @Transactional
+    public Map<String, Object> create(String companyId, String actorMemberId, String ownerMemberId, String displayName,
+                                      String serviceKind, String audience, String requestedClientId, List<String> requestedScopes) {
+        UserEntity actor = requireActiveMember(companyId, actorMemberId, "只有有效的人类成员可以创建机器账户");
+        UserEntity owner = requireActiveMember(companyId, ownerMemberId, "机器账户责任人必须是同组织有效人类成员");
         String name = required(displayName, "displayName");
         String kind = enumValue(serviceKind, "serviceKind", "OFFICIAL_APP", "THIRD_PARTY", "AUTOMATION", "SYSTEM");
         String targetAudience = required(audience, "audience");
@@ -72,7 +75,7 @@ public class ServicePrincipalService {
             jdbcTemplate.update("""
                     INSERT INTO principal (id, principal_type, lifecycle_status, display_name, created_by_principal_id, created_at, updated_at)
                     VALUES (?, 'SERVICE', 'ACTIVE', ?, ?, ?, ?)
-                    """, principalId, name, owner.getAccountId(), now, now);
+                    """, principalId, name, actor.getAccountId(), now, now);
             jdbcTemplate.update("""
                     INSERT INTO service_principal (principal_id, public_id, service_kind, client_id, credential_mode, token_audience, created_at, updated_at)
                     VALUES (?, ?, ?, ?, 'CLIENT_SECRET', ?, ?, ?)
@@ -89,7 +92,7 @@ public class ServicePrincipalService {
                     INSERT INTO service_principal_scope (service_principal_id, scope_code, created_at)
                     VALUES (?, ?, ?)
                     """, principalId, scope, now));
-            audit(companyId, owner.getAccountId(), "created", principalId, "机器账户已创建，密钥仅返回一次");
+            audit(companyId, actor.getAccountId(), "created", principalId, "机器账户已创建，密钥仅返回一次");
         } catch (RuntimeException persistenceFailure) {
             try {
                 keycloak.deleteServiceClient(clientId);
@@ -294,6 +297,40 @@ public class ServicePrincipalService {
         if ("REVOKED".equals(service.lifecycleStatus())) {
             throw new ForbiddenException("已撤销机器账户不能移交负责人");
         }
+        if (replacePrimaryOwner(principalId, newOwner)) {
+            audit(companyId, actor.getAccountId(), "owner_transferred", principalId,
+                    "机器账户负责人已移交给 " + newOwner.getAccountId());
+        }
+        return requireView(companyId, principalId);
+    }
+
+    @Transactional
+    public Map<String, Object> updateProfile(String companyId, String actorMemberId, String principalId,
+                                             String displayName, String ownerMemberId) {
+        UserEntity actor = requireActiveMember(companyId, actorMemberId, "只有有效的人类成员可以编辑机器账户");
+        UserEntity owner = requireActiveMember(companyId, ownerMemberId, "负责人必须是同组织有效人类成员");
+        GovernedService service = requireGoverned(companyId, principalId);
+        if ("REVOKED".equals(service.lifecycleStatus())) {
+            throw new ForbiddenException("已撤销机器账户不能编辑");
+        }
+        String name = required(displayName, "displayName");
+        Timestamp now = Timestamp.from(Instant.now());
+        jdbcTemplate.update("UPDATE principal SET display_name=?, updated_at=? WHERE id=?", name, now, principalId);
+        boolean ownerChanged = replacePrimaryOwner(principalId, owner);
+        audit(companyId, actor.getAccountId(), "profile_updated", principalId,
+                "机器账户显示名称已更新" + (ownerChanged ? "，负责人已更新为 " + owner.getAccountId() : ""));
+        return requireView(companyId, principalId);
+    }
+
+    private boolean replacePrimaryOwner(String principalId, UserEntity newOwner) {
+        List<String> currentOwners = jdbcTemplate.queryForList("""
+                SELECT company_member_id
+                FROM service_principal_owner
+                WHERE service_principal_id=? AND owner_role='PRIMARY' AND owner_status='ACTIVE'
+                """, String.class, principalId);
+        if (currentOwners.size() == 1 && newOwner.getId().equals(currentOwners.getFirst())) {
+            return false;
+        }
         Timestamp now = Timestamp.from(Instant.now());
         jdbcTemplate.update("""
                 UPDATE service_principal_owner
@@ -306,9 +343,7 @@ public class ServicePrincipalService {
                 ON CONFLICT(service_principal_id,owner_principal_id,company_member_id) DO UPDATE
                 SET owner_role='PRIMARY',owner_status='ACTIVE',assigned_at=excluded.assigned_at,revoked_at=NULL
                 """, principalId, newOwner.getAccountId(), newOwner.getId(), now);
-        audit(companyId, actor.getAccountId(), "owner_transferred", principalId,
-                "机器账户负责人已移交给 " + newOwner.getAccountId());
-        return requireView(companyId, principalId);
+        return true;
     }
 
     private UserEntity requireActiveMember(String companyId, String memberId, String message) {

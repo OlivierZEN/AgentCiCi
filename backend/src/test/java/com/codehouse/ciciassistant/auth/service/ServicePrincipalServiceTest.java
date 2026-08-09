@@ -128,6 +128,18 @@ class ServicePrincipalServiceTest {
                 .hasMessageContaining("未授权");
     }
 
+    @Test
+    void rejectsAnOwnerOutsideTheCurrentTenantBeforeUpdatingAPrincipal() {
+        UserEntity actor = activeMember("account-director");
+        when(users.findByIdAndCompany_Id("member-director", "company-a")).thenReturn(Optional.of(actor));
+        when(users.findByIdAndCompany_Id("member-other-company", "company-a")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.updateProfile(
+                "company-a", "member-director", "principal-developer", "悟空", "member-other-company"))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessageContaining("同组织有效人类成员");
+    }
+
     @SuppressWarnings({"unchecked", "rawtypes"})
     private void stubGovernedService(String principalId, String companyId, String clientId, String status) throws Exception {
         when(jdbc.query(anyString(), any(RowMapper.class), eq(principalId), eq(companyId)))

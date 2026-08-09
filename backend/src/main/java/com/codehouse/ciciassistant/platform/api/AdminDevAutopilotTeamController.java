@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Tenant-side team management. Company and human owner always come from the authenticated session. */
+/** Tenant-side team management. Company and actor come from the authenticated session; owner is tenant-local. */
 @RestController
 @RequestMapping("/admin/devautopilot/team")
 @RequireOrgAdmin
@@ -33,13 +33,13 @@ public class AdminDevAutopilotTeamController {
     @PostMapping("/product-managers")
     public ApiResponse<DevAutopilotTenantApplicationService.TeamResourceView> createProductManager(
             @Valid @RequestBody CreateTeamMemberRequest request) {
-        return ApiResponse.ok(applications.createProductManager(companyId(), request.displayName(), actorMemberId()));
+        return ApiResponse.ok(applications.createProductManager(companyId(), request.displayName(), actorMemberId(), request.ownerMemberId()));
     }
 
     @PostMapping("/developers")
     public ApiResponse<DevAutopilotTenantApplicationService.TeamResourceView> createDeveloper(
             @Valid @RequestBody CreateTeamMemberRequest request) {
-        return ApiResponse.ok(applications.addDeveloper(companyId(), request.displayName(), actorMemberId()));
+        return ApiResponse.ok(applications.addDeveloper(companyId(), request.displayName(), actorMemberId(), request.ownerMemberId()));
     }
 
     private String companyId() {
@@ -50,6 +50,8 @@ public class AdminDevAutopilotTeamController {
         return TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
     }
 
-    public record CreateTeamMemberRequest(@NotBlank @Size(max = 128) String displayName) {
+    public record CreateTeamMemberRequest(
+            @NotBlank @Size(max = 128) String displayName,
+            @NotBlank String ownerMemberId) {
     }
 }

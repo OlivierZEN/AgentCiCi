@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-09T01:35:00Z
+updated_at: 2026-08-09T03:05:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-275 - DevAutopilot 标准租户应用控制面
 
-- status: `review`
+- status: `in_progress`
 - priority: `critical`
 - owner_role: `integration-agent`
 - spec_path: `docs/specs/FEAT-164-devautopilot-standard-tenant-application.md`
 - depends_on: `TASK-274, cc-semattice TASK-070`
 - integration_id: `INT-008`
-- scope_files: `platform tenant applications, agent/service-principal provisioning, activation persistence, frontend, tests, docs`
-- next_action: `已发布 UAT 2.8.57-beta.1；由正常 ORG_ADMIN 完成 PM/开发者创建与双租户隔离验收`
+- scope_files: `platform tenant applications, agent/service-principal provisioning, activation persistence, machine-principal create/edit modal, tests, docs`
+- next_action: `实现并发布独立新增/编辑机器主体弹窗；负责人由 ORG_ADMIN 选择同租户有效 HUMAN 成员`
 
 ### TASK-273 - Keycloak 生产人工运维交接
 
