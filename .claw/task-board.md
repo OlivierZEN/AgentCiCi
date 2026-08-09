@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-09T03:30:00Z
+updated_at: 2026-08-09T05:10:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -24,7 +24,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - depends_on: `TASK-274, cc-semattice TASK-070`
 - integration_id: `INT-008`
 - scope_files: `platform tenant applications, AgentCiCi-to-DevAutopilot handoff, activation persistence, machine-principal create/edit modal, tests, docs`
-- next_action: `发布 handoff 根路由和标准 PM 自动初始化修复，再由平台管理员补齐现有 activation 并回读租户 Semattice 数据`
+- next_action: `由平台管理员执行既有 activation 的“补齐初始化”，再由正常 ORG_ADMIN 回读租户 Semattice 数据并完成双租户隔离验收`
 
 ### TASK-273 - Keycloak 生产人工运维交接
 

@@ -8,6 +8,13 @@ status: active
 
 # DevOps
 
+## 2026-08-09 TASK-275 标准初始化与版本基线 UAT 发布
+
+- UAT 已发布 `2.8.58-beta.1 / 4ffab5c43c0e`。backend/frontend ACR index digest 为 `sha256:a83273b7c7690270bdce9888be18b5cfb9dfaac88e727e8c25ca0848c6b3f6d8` / `sha256:0fe35f9adcd7b63979b00734fc736f6c33a34640f0626631b4e2f36e85d857c9`；运行两个容器的 image、`CICI_APP_VERSION` 与 backend `/system/version` 同为该版本/提交。
+- 生产运行版本已为 `2.8.58`，因此测试发布以显式 `RELEASE_PRODUCTION_BASE=2.8.58` 生成 `2.8.58-beta.1`。发布脚本现在拒绝将测试版本回退到低于仓库最新 production tag 的基线；`uat.secrets.env` 不保存版本或 image tag，受管 UAT Compose 使用仓库的 ACR 覆盖层只重建 backend/frontend。
+- UAT 主机无 ACR 拉取授权，已导入经本地 linux/amd64 构建核验的两项镜像，未复制或持久化 registry 凭据。发布前备份为 `/data/apps/agentcici/backups/20260809T050558Z-before-2.8.58-beta.1`，Compose、受保护环境文件、PostgreSQL、KB 与 Qdrant 工件均非空；database、Redis、RabbitMQ、Qdrant 未重启。
+- 匿名 `POST /auth/devautopilot/handoff`=401、匿名 `POST /api/platform/tenants/{companyId}/applications/devautopilot/initializations`=401；后者说明 Nginx `/api/platform` rewrite 与控制器路径正确。正常平台管理员仅可显式补齐既有 activation；未伪造业务会话或创建主体。
+
 ## 2026-08-09 TASK-275 租户 handoff 与统一标识 UAT 发布
 
 - 已按 test channel 发布 `2.8.57-beta.3 / 1b07df5c6f40`。backend/frontend ACR index digest 为 `sha256:490183ac35a30ab7f263383a7140bc387036383a39b1c6d6aec9a858ee644456` / `sha256:1310b43f6bae4a64d1ee912b67023fe3827b38611c8f1e84d18d9d534dcb7479`；UAT 两个容器均为该不可变 image 且 healthy，backend `/system/version` 回读同一 version、imageTag、commit。

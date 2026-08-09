@@ -32,4 +32,4 @@ primary_project: agentcici
 - 截图确认带 handoff query 的首页被静态服务错误返回 404，且现有 activation 仅完成 Semattice 基线，未创建标准 PM Agent/SERVICE。任务已重新打开：修复根路由，并在新开通和显式补齐初始化中创建标准 PM 资源。
 - 正常 ORG_ADMIN 的新增、编辑和双租户隔离业务验收仍待完成；未为验证而创建测试机器主体或读取 Secret。
 - V108 已在 UAT 成功执行；匿名团队管理 API 为预期 `401`。
-- 正常 ORG_ADMIN 的 PM/开发者创建、双租户隔离及暂停/恢复业务验收为待验收项，任务保持 `review`，不阻塞已发布的控制面职责调整。
+- UAT 已发布 `2.8.58-beta.1 / 4ffab5c43c0e`：新 activation 自动创建标准 PM Agent/SERVICE/Tool 与执行绑定；早期 activation 通过受平台授权的 `initializations` 显式补齐。正常 ORG_ADMIN 的 PM/开发者创建、双租户隔离及暂停/恢复业务验收仍待完成，任务保持 `in_progress`。

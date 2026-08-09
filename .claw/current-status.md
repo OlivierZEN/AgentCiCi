@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-09T03:20:00Z
+updated_at: 2026-08-09T05:10:00Z
 updated_by: codex
 phase: review
 active_task: TASK-275
-next_action: "由正常租户用户从 AgentCiCi 应用入口进入 DevAutopilot，回读 UAT Semattice 数据并完成双租户隔离验收。"
+next_action: "由平台管理员对既有 DevAutopilot activation 执行一次“补齐初始化”，再由正常租户用户从 AgentCiCi 应用入口进入并完成 Semattice 数据与双租户隔离验收。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-275 / INT-008：平台运营端只负责开通、暂停和恢复应用/数据基线；租户 `ORG_ADMIN` 在 `/admin/service-principals` 使用独立新增 modal 初始化自定义名称的 PM 或开发者机器主体，并从同租户有效 HUMAN 成员中选择负责人。UAT 已发布 `2.8.57-beta.3 / 1b07df5c6f40`：三应用卡片均以 `租户标识=company_id` 展示，DevAutopilot 不显示 Semattice UUID 或产品经理；前台通过一次性 ticket 进入同源 DevAutopilot，浏览器不再传递 OACT。匿名 handoff create=401、exchange 缺 ticket=400，运行容器健康；正常租户业务数据回读待验收，未伪造会话或创建业务账号。
+- TASK-275 / INT-008：平台运营端只负责开通、暂停、恢复及既有 activation 的显式“补齐初始化”；租户 `ORG_ADMIN` 在 `/admin/service-principals` 使用独立新增 modal 管理自定义名称的 PM 或开发者机器主体。UAT 已发布 `2.8.58-beta.1 / 4ffab5c43c0e`：新开通租户会以同租户 OWNER/ORG_ADMIN 自动创建标准 PM Agent、SERVICE、最小 Tool 与执行绑定；既有 activation 显示“待补齐”而不隐式创建。卡片统一使用 `租户标识=company_id`，不显示 Semattice UUID 或产品经理；DevAutopilot handoff query 入口已返回应用 HTML。匿名 handoff 与 `/api/platform/.../initializations` 均正确 401；正常租户业务数据、初始化写入及双租户隔离仍待受权会话验收。
 
 - TASK-274 / FEAT-163：已发布生产 `2.8.57 / 750fb71ab47d`。机器主体 scope 现在通过 ORG_ADMIN 受治理完整替换接口、独立 SERVICE allowlist、明确确认页和脱敏平台审计维护。企业 `org5nszpgj99jaysxv6y` 中仅大乔 `dev-autopilot-product-manager` 新增 `runtime.record.delete`，悟空、后羿、哪吒和 HUMAN 默认 scope 未扩大；Client ID、Client Secret、负责人和生命周期均未变化。新签发 SERVICE OACT 已通过 Semattice 非写入安全探测，未删除业务记录。发布前备份为 `/opt/cici/backups/20260805-235439-before-2.8.57-task274-scope-governance`。
 

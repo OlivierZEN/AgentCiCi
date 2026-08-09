@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-09T03:30:00Z
+updated_at: 2026-08-09T05:10:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-09T03:30:00Z
+last_run_at: 2026-08-09T05:10:00Z
 last_run_status: partial
 ---
 
 # Test Report
+
+## 2026-08-09 TASK-275 标准 PM 初始化、handoff 与 UAT 版本基线
+
+- `backend/frontend`：`mvn -q -DskipTests compile`、`mvn -q -Dtest=DevAutopilotHandoffServiceTest test`、`npm test -- --run src/assistant/AssistantApp.test.ts` 与 `npm run build` 均通过；前端仅有既有 bundle-size 提示。新增 activation 编排以同租户 OWNER/ORG_ADMIN 推导初始负责人，缺少二者时失败关闭。
+- `DevAutopilot`：`npm test` 24/24 通过，包含 `/?handoff=...` 静态根路径解析；`node --check src/server.js` 与 `node --check public/app.js` 通过。UAT `1.0.2-beta.3 / 2e1596c139f2` 的 handoff 入口为 `200 text/html`，不再返回静态 404。
+- `UAT-release`：按生产 `2.8.58` 基线发布 AgentCiCi `2.8.58-beta.1 / 4ffab5c43c0e`；backend/frontend healthy，health=`UP`，版本/imageTag/commit 一致。匿名 handoff=401、匿名 `/api/platform/.../initializations`=401，均为预期授权边界。
+- `UAT-boundary`：自动化浏览器未附着正常平台或 ORG_ADMIN 会话，故未调用真实补齐初始化、未创建主体或业务数据。平台管理员补齐既有 activation、正常租户 handoff 及双租户 Semattice 隔离仍为待验收项。
+
+- 状态：`partial`
 
 ## 2026-08-09 TASK-275 机器主体新增与编辑交互修订
 
