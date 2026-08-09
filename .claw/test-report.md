@@ -14,7 +14,7 @@ last_run_status: partial
 
 - `backend-compile`：`cd backend && mvn -q -Dmaven.repo.local=../.m2 -DskipTests compile` 通过。`mvn -q -Dmaven.repo.local=../.m2 -Dtest=ServicePrincipalServiceTest,ServicePrincipalTokenExchangeServiceTest test` 通过。
 - `frontend-focused/build`：`npm test -- --run src/admin/adminApi.test.ts src/admin/pages/AdminServicePrincipalsPage.test.ts` 通过 4/4；`npm run build` 通过。仅有既有 bundle-size 提示。
-- `devautopilot-runtime`：独立仓库 `npm test` 通过 22/22，包含 activation snapshot 的 tenant、PM Agent 与 SERVICE enrollment 负向验证；该应用尚未具有经核验的 UAT 发布入口，未拿生产发布脚本越权部署。
+- `devautopilot-runtime`：独立仓库 `npm test` 通过 22/22，包含 activation snapshot 的 tenant、PM Agent 与 SERVICE enrollment 负向验证；已通过独立 beta UAT 发布入口上线 `1.0.2-beta.1 / 1204ab74d375`，运行健康为 integrated/ok，未使用生产发布脚本。
 - `state-validation`：`agentic-project-guidelines` validator 仍因历史 task board 的终态卡片留在 Active 区等 brownfield 债务退出 1；输出不含 `TASK-275` 或 `FEAT-164` finding。DevAutopilot validator 只报告既有 `FEAT-004` 使用历史 `superseded` status。两者都未在本次批量重写。
 - `release/UAT`：`scripts/release-acr.sh --dry-run --channel test` 与正式发布完成，annotated tag/commit 为 `2.8.57-beta.1 / e5c097adda5f`。backend/frontend ACR index digest 为 `sha256:3b642bf91ee54b9e6d36783ca958b032a88b0a1b8667961190d23bafc1c9d091` / `sha256:6f87671503319c8dc06be405fc137d3d6edb6fba90e258918500c6ac90b5bb3c`；UAT 以同一 tag 重建 backend/frontend，`/system/version` 的 commit/version/imageTag 一致，前端工件包含 `2.8.57-beta.1`。
 - `backup/migration`：发布前备份位于 `/data/apps/agentcici/backups/20260809T013059Z-before-2.8.57-beta.1`，包含 Compose、受保护环境文件和非空 PostgreSQL dump；Flyway V108 成功。仅 backend/frontend 被重建，四个状态服务未重启。

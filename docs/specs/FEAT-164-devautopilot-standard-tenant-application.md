@@ -140,11 +140,11 @@ tenant_application_operation
 - [x] DevAutopilot activation 快照短时缓存实现与定向测试。
 - [x] Semattice 标准基线契约与实现。
 - [x] DevAutopilot runtime gate。
-- [ ] 独立 DevAutopilot 缓存的 UAT 发布与运行态验证（不得使用其生产发布脚本）。
+- [x] 独立 DevAutopilot 缓存的 UAT 发布与运行态验证（使用独立 beta 发布入口）。
 - [ ] 双租户 UAT E2E（需正常租户 ORG_ADMIN 业务会话，不能由平台运营账号替代）。
 
 ## UAT 发布事实
 
 - `2026-08-09` 已发布 AgentCiCi `2.8.57-beta.1 / e5c097adda5f`；backend/frontend ACR index digest 分别为 `sha256:3b642bf91ee54b9e6d36783ca958b032a88b0a1b8667961190d23bafc1c9d091` 与 `sha256:6f87671503319c8dc06be405fc137d3d6edb6fba90e258918500c6ac90b5bb3c`。
-- AgentCiCi UAT `/system/version` 同时返回 Git commit、`version` 和 `imageTag` 为上述 beta 版本；V108 成功，匿名 `/api/admin/devautopilot/team` 为预期 `401`。独立 DevAutopilot 缓存仅完成仓库提交与定向测试，未将其生产发布脚本用于 UAT。
+- AgentCiCi UAT `/system/version` 同时返回 Git commit、`version` 和 `imageTag` 为上述 beta 版本；V108 成功，匿名 `/api/admin/devautopilot/team` 为预期 `401`。独立 DevAutopilot 已通过其独立 beta 发布入口上线 UAT `1.0.2-beta.1 / 1204ab74d375`，运行健康为 integrated/ok；未使用其生产发布脚本。
 - 平台卡片不再含新增开发者、显示名称、负责人或技术别名输入；租户团队入口固定在“组织架构 → 机器主体”。未持有业务 ORG_ADMIN 会话，故不创建账号、Secret 或业务数据来伪造最终验收。

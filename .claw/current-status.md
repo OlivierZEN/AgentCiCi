@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-275 / INT-008：已发布 AgentCiCi UAT `2.8.57-beta.1 / e5c097adda5f`。平台运营端只负责开通、暂停和恢复应用/数据基线；`/admin/service-principals` 由当前 ORG_ADMIN 初始化自定义名称的 PM 或开发者机器主体，负责人、技术别名和模板最小 scope 均由服务端推导。平台页面不再接受人员或机器账号字段。AgentCiCi UAT backend、frontend 与页面版本统一为同一 beta tag，V108 已成功迁移。独立 DevAutopilot 的 15 秒 activation 缓存已在其仓库完成测试并提交，尚待该应用自己的 UAT 发布入口交付；未用其生产脚本越权部署。剩余事项为正常租户 ORG_ADMIN 的 PM/开发者创建、双租户隔离及独立应用运行态验收；未伪造会话或创建业务账号。
+- TASK-275 / INT-008：已发布 AgentCiCi UAT `2.8.57-beta.1 / e5c097adda5f` 与独立 DevAutopilot UAT `1.0.2-beta.1 / 1204ab74d375`。平台运营端只负责开通、暂停和恢复应用/数据基线；`/admin/service-principals` 由当前 ORG_ADMIN 初始化自定义名称的 PM 或开发者机器主体，负责人、技术别名和模板最小 scope 均由服务端推导。平台页面不再接受人员或机器账号字段。AgentCiCi UAT backend、frontend 与页面版本统一为同一 beta tag，V108 已成功迁移；DevAutopilot 15 秒 activation 缓存已在 UAT 运行。剩余事项为正常租户 ORG_ADMIN 的 PM/开发者创建、双租户隔离及暂停/恢复业务验收；未伪造会话或创建业务账号。
 
 - TASK-274 / FEAT-163：已发布生产 `2.8.57 / 750fb71ab47d`。机器主体 scope 现在通过 ORG_ADMIN 受治理完整替换接口、独立 SERVICE allowlist、明确确认页和脱敏平台审计维护。企业 `org5nszpgj99jaysxv6y` 中仅大乔 `dev-autopilot-product-manager` 新增 `runtime.record.delete`，悟空、后羿、哪吒和 HUMAN 默认 scope 未扩大；Client ID、Client Secret、负责人和生命周期均未变化。新签发 SERVICE OACT 已通过 Semattice 非写入安全探测，未删除业务记录。发布前备份为 `/opt/cici/backups/20260805-235439-before-2.8.57-task274-scope-governance`。
 
