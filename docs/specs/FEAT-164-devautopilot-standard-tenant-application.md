@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-164
 title: DevAutopilot standard tenant application
-status: implemented
+status: in_implementation
 owner_role: integration-agent
 task_ids: TASK-275
 related_decisions: ADR-006, ADR-007, ADR-008
 related_issues: none
-updated_at: 2026-08-08T00:00:00Z
+updated_at: 2026-08-09T02:00:00Z
 updated_by: codex
 ---
 
@@ -25,8 +25,8 @@ AgentCiCi 的平台租户应用页已经将 AgentCiCi 和 Semattice 作为独立
 
 - 平台应用目录中增加 `devautopilot` activation 及其操作、资源和审计记录。
 - 开通、重试、暂停、恢复、状态查询；所有操作使用稳定幂等键与关联 ID。
-- 为每个租户创建一个主产品经理 Agent 和对应 PM SERVICE Principal；显示名称由开通表单提供。
-- 为每个租户创建开发者角色配置；租户管理员随后可按需新增任意数量的开发者 SERVICE Principal，名称由租户自定义。
+- 平台只开通应用和数据基线，不代替租户创建或指定任何人、Agent 或机器主体。
+- 租户 ORG_ADMIN 在 AgentCiCi `/admin/service-principals` 创建主产品经理 Agent/对应 PM SERVICE Principal，以及任意数量的开发者 SERVICE Principal；显示名称由租户自定义。
 - 受控调用 Semattice 标准基线应用，校验回执、模板版本和资源映射。
 - 平台租户应用页展示依赖、初始化步骤、失败原因、模板版本和生命周期动作。
 - 暂停应用时关闭运行时授权并暂停本应用拥有的 SERVICE Principal；不删除业务数据。
@@ -80,9 +80,9 @@ tenant_application_operation
 1. 验证 company active、调用者为平台管理员、Semattice 已 `PROVISIONED`、模板版本受支持。
 2. 创建 activation/operation，锁定 `company_id + app_code`。
 3. 请求 Semattice 应用 `devautopilot.standard.v1` 标准基线；已有非模板 metadata 时失败关闭，不覆盖已有模型。
-4. 创建本租户 PM SERVICE Principal、PM Agent、Tool/Skill binding，并将资源映射写入 activation。
-5. 写入开发者角色配置；不创建默认 developer secret。
-6. 请求 DevAutopilot 健康/entitlement 探针；所有回执一致后置为 `ACTIVE`。
+4. 写入空的租户团队资源清单，不创建默认机器主体或 Secret。
+5. 请求 DevAutopilot 健康/entitlement 探针；所有回执一致后置为 `ACTIVE`。
+6. 租户管理员在 AgentCiCi 租户管理端按需初始化 PM 或开发者。创建 PM 时才创建 Agent、Tool/Skill binding 和 PM SERVICE Principal；创建开发者时才创建 developer SERVICE Principal。
 
 暂停以 activation 门禁为先：先将 desired state 置为 suspended，使运行时立即 fail closed；随后暂停本 activation 资源清单中的 PM 和 developer SERVICE Principal 并同步 Semattice Principal 状态。任何后续步骤失败时保持 `SUSPENDING` 且入口持续关闭。恢复按反向顺序执行并重新验证。
 
@@ -92,20 +92,21 @@ tenant_application_operation
 
 | 方法 | 路径 | 语义 |
 |---|---|---|
-| POST | `/api/platform/tenants/{companyId}/applications/devautopilot/activations` | 创建或幂等重放开通操作；输入模板版本、PM 显示名/别名/owner 和 `Idempotency-Key` |
+| POST | `/api/platform/tenants/{companyId}/applications/devautopilot/activations` | 创建或幂等重放应用与数据基线；输入仅为 `Idempotency-Key` |
 | GET | `/api/platform/tenants/{companyId}/applications/devautopilot` | 返回 activation、依赖、资源摘要、最近操作与安全错误码 |
 | POST | `/.../suspensions` | 请求暂停，不删除数据 |
 | POST | `/.../resumptions` | 请求恢复 |
-| POST | `/.../developer-principals` | 创建一个租户自定义名称的 developer SERVICE Principal；Secret 仅一次返回 |
-| PATCH | `/.../resources/{resourceId}` | 更新 display name/resource alias/owner；不得改变角色或越权 scope |
+| GET | `/api/admin/devautopilot/team` | 当前租户读取应用状态与团队资源；公司只能从已认证会话推导 |
+| POST | `/api/admin/devautopilot/team/product-managers` | 当前 ORG_ADMIN 创建唯一 PM；输入仅为显示名称，Secret 仅一次返回 |
+| POST | `/api/admin/devautopilot/team/developers` | 当前 ORG_ADMIN 创建一个自定义名称的 developer SERVICE Principal；输入仅为显示名称，Secret 仅一次返回 |
 
-所有写接口要求 `Idempotency-Key`、平台管理员授权、company path 与已认证操作范围一致；状态更新使用 revision 并在冲突时返回 409。资源 API 不接受调用方指定 tenant、principal、scope、Semattice tenant ID 或 Client Secret。
+平台写接口要求 `Idempotency-Key` 与平台管理员授权；租户团队写接口要求当前租户 `ORG_ADMIN` 会话。两类接口都不接受调用方指定 tenant、负责人、principal、scope、Semattice tenant ID 或 Client Secret；公司、负责人和最小 scope 均由服务端推导。
 
 ## 安全与隔离
 
 - 每个 PM Agent、SERVICE Principal、Client 和 Secret 都属于且仅属于一个 `company_id`。
 - PM SERVICE 仅具备标准模板的 Semattice 最小 scope；developer 仅具有 developer scope。租户不能通过改显示名改变角色。
-- DevAutopilot 在每个请求前向 AgentCiCi 解析 activation，缺失/暂停/未知状态一律拒绝；不得依赖前端隐藏入口。
+- DevAutopilot 以可信 OACT 解析 company/tenant/principal，并使用短时、按租户的 activation 快照缓存避免控制面短暂抖动阻塞业务；未开通、暂停、身份不一致和缓存过期后无法复核仍一律拒绝。
 - Semattice 必须从可信 OACT 推导 tenant/company，并以 Principal、RBAC、RLS、PDP 作为资源端最终门禁。
 - 关闭应用只暂停资源；永久撤销、导出和数据清理走独立保留期/审批流程。
 
@@ -135,7 +136,8 @@ tenant_application_operation
 ## 实现进展
 
 - [x] 控制面模型与 migration。
-- [x] AgentCiCi 编排/API/平台页面。
+- [ ] 将团队身份管理迁入 AgentCiCi 租户管理端，移除运营端人员字段。
+- [ ] DevAutopilot activation 快照短时缓存与 UAT 验证。
 - [x] Semattice 标准基线契约与实现。
 - [x] DevAutopilot runtime gate。
 - [ ] 双租户 UAT E2E。

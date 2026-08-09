@@ -24,7 +24,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - depends_on: `TASK-274, cc-semattice TASK-070`
 - integration_id: `INT-008`
 - scope_files: `platform tenant applications, agent/service-principal provisioning, activation persistence, frontend, tests, docs`
-- next_action: `实现 migration 与 activation 编排；保留已有 Semattice provisioning 幂等修复`
+- next_action: `将租户团队身份从运营端迁入 /admin/service-principals；精简 activation 运行时门禁并按规范发布 UAT`
 
 ### TASK-273 - Keycloak 生产人工运维交接
 

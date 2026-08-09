@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-05T16:02:00Z
+updated_at: 2026-08-09T02:00:00Z
 updated_by: codex
-phase: released
-active_task: none
-next_action: "TASK-274 已完成并发布 2.8.57；后续记录清理由父级 INT-006 和 Semattice TASK-065 独立执行。TASK-273 人工运维交接和 TASK-272 登录守卫复核按既有计划继续。"
+phase: implementation
+active_task: TASK-275
+next_action: "完成租户自助团队管理、activation 快照缓存与规范 UAT 发布；UAT 必须使用同一 beta 版本注入 backend、frontend 和页脚。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-275 / INT-008：正在按租户职责重新收敛 DevAutopilot。平台运营端只负责开通、暂停和恢复应用/数据基线；`/admin/service-principals` 由当前 ORG_ADMIN 初始化自定义名称的 PM 或开发者机器主体，负责人、技术别名和模板最小 scope 均由服务端推导。平台页面不再接受人员或机器账号字段。V108 仅将 activation 的历史 initiator 改为可空，避免平台伪造租户负责人；不修改业务数据。
 
 - TASK-274 / FEAT-163：已发布生产 `2.8.57 / 750fb71ab47d`。机器主体 scope 现在通过 ORG_ADMIN 受治理完整替换接口、独立 SERVICE allowlist、明确确认页和脱敏平台审计维护。企业 `org5nszpgj99jaysxv6y` 中仅大乔 `dev-autopilot-product-manager` 新增 `runtime.record.delete`，悟空、后羿、哪吒和 HUMAN 默认 scope 未扩大；Client ID、Client Secret、负责人和生命周期均未变化。新签发 SERVICE OACT 已通过 Semattice 非写入安全探测，未删除业务记录。发布前备份为 `/opt/cici/backups/20260805-235439-before-2.8.57-task274-scope-governance`。
 

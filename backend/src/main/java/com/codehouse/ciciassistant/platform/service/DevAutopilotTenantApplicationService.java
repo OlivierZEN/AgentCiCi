@@ -25,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class DevAutopilotTenantApplicationService {
     private static final String APP = "devautopilot";
     private static final Pattern KEY = Pattern.compile("^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$");
-    private static final Pattern ALIAS = Pattern.compile("^[a-z][a-z0-9-]{1,47}$");
     private final JdbcTemplate jdbc;
     private final CompanyRepository companies;
     private final SematticeProvisioningService provisioning;
@@ -56,8 +55,7 @@ public class DevAutopilotTenantApplicationService {
     public View activate(String companyId, ActivationCommand command, String platformActor) {
         requireCompany(companyId);
         require(command.idempotencyKey(), "idempotencyKey");
-        if (!KEY.matcher(command.idempotencyKey()).matches() || !ALIAS.matcher(command.productManagerAlias()).matches()) throw new IllegalArgumentException("invalid activation key or resource alias");
-        if (pmScopes.isEmpty()) throw new IllegalStateException("DevAutopilot product-manager scopes are not configured");
+        if (!KEY.matcher(command.idempotencyKey()).matches()) throw new IllegalArgumentException("invalid activation key");
         var existing = find(companyId);
         if (existing != null) {
             if (!existing.idempotencyKey().equals(command.idempotencyKey()) || !"ACTIVE".equals(existing.actualState())) throw new ConflictException("DevAutopilot activation already exists for this tenant");
@@ -70,19 +68,9 @@ public class DevAutopilotTenantApplicationService {
                 INSERT INTO tenant_application_activation(id,company_id,app_code,template_version,idempotency_key,desired_state,actual_state,semattice_tenant_id,created_by_member_id)
                 VALUES (?,?,?,?,?,'ACTIVE','PROVISIONING',?,?)
                 """, activationId, companyId, APP, SematticeDevAutopilotTemplateClient.TEMPLATE_VERSION,
-                command.idempotencyKey(), binding.sematticeTenantId(), command.ownerMemberId());
+                command.idempotencyKey(), binding.sematticeTenantId(), null);
         try {
             var metadata = template.apply(companyId, command.idempotencyKey());
-            Map<String, Object> principal = principals.create(companyId, command.ownerMemberId(), command.productManagerName(),
-                    "OFFICIAL_APP", OfficialAccessTokenService.SEMATTICE_AUDIENCE, null, pmScopes);
-            String principalId = (String) principal.get("principalId");
-            String agentId = "devautopilot-pm-" + UUID.randomUUID().toString().substring(0, 8);
-            agents.create(companyId, new AgentDefinitionService.CreateCommand(agentId, command.productManagerName(), "DevAutopilot 租户产品经理", "", "gpt-4.1",
-                    "你是本租户的研发产品经理，只能通过已绑定的受控工具处理研发交付。", "高风险操作必须确认", "standard", "copilot", "devautopilot.standard.v1", null,
-                    null, false, true, "", List.of(), List.of("semattice_project_delivery_query", "semattice_project_delivery_create", "semattice_project_delivery_review"), List.of(), Map.of()));
-            execution.configure(companyId, agentId, principalId, true, command.ownerMemberId());
-            resource(activationId, "product_manager", "SERVICE_PRINCIPAL", command.productManagerAlias(), command.productManagerName(), principalId, true);
-            resource(activationId, "product_manager", "AGENT", command.productManagerAlias() + "-agent", command.productManagerName(), agentId, true);
             jdbc.update("""
                     UPDATE tenant_application_activation SET actual_state='ACTIVE',metadata_version_id=?,metadata_digest=?,updated_at=CURRENT_TIMESTAMP WHERE id=?
                     """,
@@ -105,19 +93,37 @@ public class DevAutopilotTenantApplicationService {
     public View resume(String companyId, String platformActor) { return transition(companyId, "ACTIVE", platformActor); }
 
     @Transactional
-    public ResourceView addDeveloper(String companyId, DeveloperCommand command, String platformActor) {
+    public TeamResourceView createProductManager(String companyId, String displayName, String actorMemberId) {
+        Row activation = requireExisting(companyId);
+        if (!"ACTIVE".equals(activation.actualState()) || pmScopes.isEmpty()) throw new ForbiddenException("DevAutopilot is not ready to create a product-manager identity");
+        require(displayName, "displayName");
+        Integer count = jdbc.queryForObject("SELECT count(*) FROM tenant_application_resource WHERE activation_id=? AND logical_role='product_manager' AND resource_type='SERVICE_PRINCIPAL'", Integer.class, activation.id());
+        if (count != null && count > 0) throw new ConflictException("DevAutopilot product manager already exists for this tenant");
+        Map<String, Object> principal = principals.create(companyId, actorMemberId, displayName, "OFFICIAL_APP",
+                OfficialAccessTokenService.SEMATTICE_AUDIENCE, null, pmScopes);
+        String principalId = (String) principal.get("principalId");
+        String agentId = "devautopilot-pm-" + UUID.randomUUID().toString().substring(0, 8);
+        agents.create(companyId, new AgentDefinitionService.CreateCommand(agentId, displayName, "DevAutopilot 租户产品经理", "", "gpt-4.1",
+                "你是本租户的研发产品经理，只能通过已绑定的受控工具处理研发交付。", "高风险操作必须确认", "standard", "copilot", "devautopilot.standard.v1", null,
+                null, false, true, "", List.of(), List.of("semattice_project_delivery_query", "semattice_project_delivery_create", "semattice_project_delivery_review"), List.of(), Map.of()));
+        execution.configure(companyId, agentId, principalId, true, actorMemberId);
+        resource(activation.id(), "product_manager", "SERVICE_PRINCIPAL", generatedAlias("product-manager"), displayName, principalId, true);
+        resource(activation.id(), "product_manager", "AGENT", generatedAlias("product-manager-agent"), displayName, agentId, true);
+        audit.log(companyId, actorMemberId, "ORG_ADMIN", "tenant_application.product_manager_added", "tenant_application", activation.id(), "DevAutopilot product-manager resource added");
+        return teamResource(activation.id(), principal);
+    }
+
+    @Transactional
+    public TeamResourceView addDeveloper(String companyId, String displayName, String actorMemberId) {
         Row activation = requireExisting(companyId);
         if (!"ACTIVE".equals(activation.actualState()) || developerScopes.isEmpty()) throw new ForbiddenException("DevAutopilot is not ready to create a developer identity");
-        require(command.displayName(), "displayName");
-        if (!ALIAS.matcher(command.resourceAlias()).matches()) throw new IllegalArgumentException("invalid developer resource alias");
-        Integer duplicates = jdbc.queryForObject("SELECT count(*) FROM tenant_application_resource WHERE activation_id=? AND resource_alias=?", Integer.class, activation.id(), command.resourceAlias());
-        if (duplicates != null && duplicates > 0) throw new ConflictException("developer resource alias already exists in this tenant");
-        Map<String, Object> principal = principals.create(companyId, command.ownerMemberId(), command.displayName(), "THIRD_PARTY",
+        require(displayName, "displayName");
+        Map<String, Object> principal = principals.create(companyId, actorMemberId, displayName, "THIRD_PARTY",
                 OfficialAccessTokenService.SEMATTICE_AUDIENCE, null, developerScopes);
         String principalId = (String) principal.get("principalId");
-        resource(activation.id(), "developer", "SERVICE_PRINCIPAL", command.resourceAlias(), command.displayName(), principalId, false);
-        audit.log(companyId, platformActor, "PLATFORM", "tenant_application.developer_added", "tenant_application", activation.id(), "DevAutopilot developer resource added");
-        return jdbc.queryForObject("SELECT logical_role,resource_type,resource_alias,display_name,external_id,lifecycle_state,is_primary FROM tenant_application_resource WHERE activation_id=? AND external_id=?", (rs,n)->new ResourceView(rs.getString(1),rs.getString(2),rs.getString(3),rs.getString(4),rs.getString(5),rs.getString(6),rs.getBoolean(7)), activation.id(), principalId);
+        resource(activation.id(), "developer", "SERVICE_PRINCIPAL", generatedAlias("developer"), displayName, principalId, false);
+        audit.log(companyId, actorMemberId, "ORG_ADMIN", "tenant_application.developer_added", "tenant_application", activation.id(), "DevAutopilot developer resource added");
+        return teamResource(activation.id(), principal);
     }
 
     private View transition(String companyId, String target, String platformActor) {
@@ -201,6 +207,7 @@ public class DevAutopilotTenantApplicationService {
                 WHERE agent.activation_id=? AND agent.logical_role='product_manager'
                   AND agent.resource_type='AGENT' AND agent.is_primary=TRUE
                 """, (rs, n) -> new BindingTarget(rs.getString(1), rs.getString(2)), activationId);
+        if (targets.isEmpty()) return;
         if (targets.size() != 1) throw new IllegalStateException("DevAutopilot product-manager resources are incomplete");
         BindingTarget target = targets.getFirst();
         execution.configure(companyId, target.agentId(), target.servicePrincipalId(), enabled,
@@ -211,6 +218,18 @@ public class DevAutopilotTenantApplicationService {
                 INSERT INTO tenant_application_resource(id,activation_id,logical_role,resource_type,resource_alias,display_name,external_id,lifecycle_state,is_primary)
                 VALUES (?,?,?,?,?,?,?,'ACTIVE',?)
                 """, UUID.randomUUID().toString(), activationId, role, type, alias, name, externalId, primary);
+    }
+
+    private TeamResourceView teamResource(String activationId, Map<String, Object> principal) {
+        String principalId = (String) principal.get("principalId");
+        ResourceView resource = jdbc.queryForObject("SELECT logical_role,resource_type,resource_alias,display_name,external_id,lifecycle_state,is_primary FROM tenant_application_resource WHERE activation_id=? AND external_id=?",
+                (rs, n) -> new ResourceView(rs.getString(1), rs.getString(2), rs.getString(3), rs.getString(4), rs.getString(5), rs.getString(6), rs.getBoolean(7)), activationId, principalId);
+        return new TeamResourceView(resource, principalId, (String) principal.get("clientId"), (String) principal.get("clientSecret"),
+                (String) principal.get("credentialNotice"));
+    }
+
+    private static String generatedAlias(String role) {
+        return role + "-" + UUID.randomUUID().toString().substring(0, 8);
     }
     private CompanyEntity requireCompany(String companyId) {
         CompanyEntity company = companies.findById(companyId).orElseThrow(() -> new ResourceNotFoundException("tenant not found"));
@@ -233,9 +252,9 @@ public class DevAutopilotTenantApplicationService {
     private record Row(String id,String companyId,String templateVersion,String idempotencyKey,String desiredState,String actualState,String sematticeTenantId,String metadataVersionId,String metadataDigest,String lastError) { }
     private record ServiceResource(String id, String externalId, String lifecycleState) { }
     private record BindingTarget(String agentId, String servicePrincipalId) { }
-    public record ActivationCommand(String idempotencyKey, String productManagerName, String productManagerAlias, String ownerMemberId) { }
-    public record DeveloperCommand(String displayName, String resourceAlias, String ownerMemberId) { }
+    public record ActivationCommand(String idempotencyKey) { }
     public record ResourceView(String logicalRole,String resourceType,String resourceAlias,String displayName,String externalId,String lifecycleState,boolean primary) { }
+    public record TeamResourceView(ResourceView resource, String principalId, String clientId, String clientSecret, String credentialNotice) { }
     public record View(String companyId,boolean enabled,String templateVersion,String desiredState,String actualState,String sematticeTenantId,String metadataVersionId,String metadataDigest,String lastErrorCode,List<ResourceView> resources) {
         static View notEnabled(String companyId) { return new View(companyId,false,null,"NOT_ENABLED","NOT_ENABLED",null,null,null,null,List.of()); }
     }

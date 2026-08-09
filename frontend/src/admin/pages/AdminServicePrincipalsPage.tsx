@@ -29,6 +29,16 @@ type RotateSecretResult = {
   credentialNotice?: string;
 };
 
+type DevAutopilotTeam = {
+  enabled: boolean;
+  actualState: string;
+  resources: Array<{ logicalRole: string; resourceType: string; displayName: string; externalId: string; primary: boolean }>;
+};
+
+type TeamResourceResult = RotateSecretResult & {
+  resource: { logicalRole: string; resourceType: string; displayName: string; externalId: string };
+};
+
 const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
   timeZone: "Asia/Shanghai",
   year: "numeric",
@@ -105,18 +115,25 @@ export default function AdminServicePrincipalsPage() {
   const [replacementClientId, setReplacementClientId] = useState("");
   const [replacementScopes, setReplacementScopes] = useState<string[]>([]);
   const [oneTimeSecret, setOneTimeSecret] = useState<RotateSecretResult | null>(null);
+  const [devAutopilotTeam, setDevAutopilotTeam] = useState<DevAutopilotTeam | null>(null);
+  const [newTeamMemberName, setNewTeamMemberName] = useState("");
+  const [newTeamMemberRole, setNewTeamMemberRole] = useState<"product-managers" | "developers">("developers");
 
   const selected = useMemo(
     () => items.find((item) => item.principalId === selectedId) ?? items[0] ?? null,
     [items, selectedId],
   );
+  const hasProductManager = devAutopilotTeam?.resources.some((item) => item.logicalRole === "product_manager" && item.resourceType === "SERVICE_PRINCIPAL" && item.primary) ?? false;
 
   const load = async (options?: { quiet?: boolean }) => {
     if (!options?.quiet) setLoading(true);
     setNotice("");
     try {
-      const res = await fetch(adminApi.servicePrincipals(), { headers: { Authorization: `Bearer ${token}` } });
-      const json = await res.json();
+      const [res, teamRes] = await Promise.all([
+        fetch(adminApi.servicePrincipals(), { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(adminApi.devAutopilotTeam(), { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      const [json, teamJson] = await Promise.all([res.json(), teamRes.json()]);
       if (!res.ok || !json.success) {
         setNotice(json.message ?? "机器主体加载失败");
         return;
@@ -124,6 +141,7 @@ export default function AdminServicePrincipalsPage() {
       const next = (json.data ?? []) as ServicePrincipal[];
       setItems(next);
       setSelectedId((current) => next.some((item) => item.principalId === current) ? current : (next[0]?.principalId ?? ""));
+      setDevAutopilotTeam(teamRes.ok && teamJson.success ? teamJson.data as DevAutopilotTeam : null);
     } catch {
       setNotice("机器主体加载失败，请检查网络后重试");
     } finally {
@@ -136,7 +154,7 @@ export default function AdminServicePrincipalsPage() {
   }, [token]);
 
   useEffect(() => {
-    setOneTimeSecret(null);
+    setOneTimeSecret((current) => current?.principalId === selected?.principalId ? current : null);
     setConfirmAction(null);
     setReplacementClientId("");
     setReplacementScopes([]);
@@ -248,6 +266,34 @@ export default function AdminServicePrincipalsPage() {
     setConfirmAction("scopes");
   };
 
+  const createDevAutopilotTeamMember = async () => {
+    if (!newTeamMemberName.trim()) return;
+    setSubmitting(true);
+    setNotice("");
+    try {
+      const res = await fetch(adminApi.devAutopilotTeam(`/${newTeamMemberRole}`), {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ displayName: newTeamMemberName.trim() }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        setNotice(json.message ?? "研发团队机器主体创建失败");
+        return;
+      }
+      const result = json.data as TeamResourceResult;
+      await load({ quiet: true });
+      setSelectedId(result.principalId);
+      setOneTimeSecret(result);
+      setNewTeamMemberName("");
+      setNotice(`“${result.resource.displayName}”已创建。Client Secret 仅本次显示，请立即写入受管密钥库。`);
+    } catch {
+      setNotice("研发团队机器主体创建失败，请稍后重试");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const copySecret = async () => {
     if (!oneTimeSecret) return;
     try {
@@ -280,6 +326,36 @@ export default function AdminServicePrincipalsPage() {
       </header>
 
       {notice && <p className="notice service-principals-page__notice" role="status">{notice}</p>}
+
+      <section className="service-principals-team" aria-labelledby="devautopilot-team-title">
+        <div>
+          <p className="service-principals-page__eyebrow">DEVAUTOPILOT TEAM</p>
+          <h2 id="devautopilot-team-title">研发交付团队</h2>
+          {!devAutopilotTeam?.enabled ? (
+            <p className="subtle">当前租户尚未开通 DevAutopilot。请联系平台运营先完成应用开通。</p>
+          ) : devAutopilotTeam.actualState !== "ACTIVE" ? (
+            <p className="subtle">DevAutopilot 当前为 {servicePrincipalPresentation.statusLabel(devAutopilotTeam.actualState)}，恢复应用后才能管理团队主体。</p>
+          ) : (
+            <p className="subtle">名称由本租户定义，负责人自动绑定为当前管理员；系统生成技术标识和模板最小权限。</p>
+          )}
+        </div>
+        <div className="service-principals-team__form">
+          <label>
+            <span>主体类型</span>
+            <select value={newTeamMemberRole} onChange={(event) => setNewTeamMemberRole(event.target.value as "product-managers" | "developers")} disabled={submitting || devAutopilotTeam?.actualState !== "ACTIVE"}>
+              <option value="developers">开发者机器主体</option>
+              <option value="product-managers" disabled={hasProductManager}>产品经理智能体</option>
+            </select>
+          </label>
+          <label>
+            <span>显示名称</span>
+            <input value={newTeamMemberName} onChange={(event) => setNewTeamMemberName(event.target.value)} placeholder={newTeamMemberRole === "developers" ? "例如：悟空" : "例如：大乔"} disabled={submitting || devAutopilotTeam?.actualState !== "ACTIVE"} />
+          </label>
+          <button type="button" className="service-principal-button--primary" disabled={submitting || devAutopilotTeam?.actualState !== "ACTIVE" || !newTeamMemberName.trim() || (newTeamMemberRole === "product-managers" && hasProductManager)} onClick={() => void createDevAutopilotTeamMember()}>
+            {submitting ? "创建中…" : newTeamMemberRole === "developers" ? "新增开发者" : "初始化产品经理"}
+          </button>
+        </div>
+      </section>
 
       <div className="service-principals-layout">
         <aside className="service-principal-list" aria-label="机器主体列表">

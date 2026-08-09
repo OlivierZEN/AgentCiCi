@@ -1,14 +1,24 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-05T16:02:00Z
+updated_at: 2026-08-09T02:00:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-05T16:02:00Z
-last_run_status: passed
+last_run_at: 2026-08-09T02:00:00Z
+last_run_status: partial
 ---
 
 # Test Report
+
+## 2026-08-09 TASK-275 租户自助团队管理与安全链路收敛
+
+- `backend-compile`：`cd backend && mvn -q -Dmaven.repo.local=../.m2 -DskipTests compile` 通过。`mvn -q -Dmaven.repo.local=../.m2 -Dtest=ServicePrincipalServiceTest,ServicePrincipalTokenExchangeServiceTest test` 通过。
+- `frontend-focused/build`：`npm test -- --run src/admin/adminApi.test.ts src/admin/pages/AdminServicePrincipalsPage.test.ts` 通过 4/4；`npm run build` 通过。仅有既有 bundle-size 提示。
+- `devautopilot-runtime`：`npm test` 通过 22/22，包含 activation snapshot 的 tenant、PM Agent 与 SERVICE enrollment 负向验证。
+- `state-validation`：AgentCiCi state validator 尚未作为通过依据，历史 brownfield 状态仍有既有格式问题；DevAutopilot validator 只报告既有 `FEAT-004` 使用历史 `superseded` status。两者都未在本次批量重写。
+- `release`：待按 `scripts/release-acr.sh --dry-run --channel test` 取得不可变 beta 版本后执行 UAT 发布；不得再使用 `dev` 或临时 `:uat` 作为 UI 版本事实。
+
+- 状态：`partial`
 
 ## 2026-08-05 TASK-274 机器主体 scope 治理与生产验收
 

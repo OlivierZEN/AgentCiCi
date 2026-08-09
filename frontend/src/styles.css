@@ -19070,6 +19070,53 @@ td.skills-data-table__actions > * {
   margin: -5px 0 12px;
 }
 
+.service-principals-team {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.15fr) minmax(420px, 1fr);
+  gap: 24px;
+  align-items: end;
+  margin: 0 0 18px;
+  padding: 0 0 16px;
+  border-bottom: 1px solid var(--theme-border, #ddcfb7);
+}
+
+.service-principals-team h2 {
+  margin: 0 0 5px;
+  color: var(--theme-text, #302a22);
+  font-size: 17px;
+}
+
+.service-principals-team .subtle {
+  margin: 0;
+  max-width: 620px;
+}
+
+.service-principals-team__form {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.72fr) minmax(150px, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.service-principals-team__form label {
+  display: grid;
+  gap: 5px;
+  color: var(--theme-muted, #7c6d59);
+  font-size: 12px;
+}
+
+.service-principals-team__form input,
+.service-principals-team__form select {
+  box-sizing: border-box;
+  min-width: 0;
+  height: 34px;
+}
+
+.service-principals-team__form button {
+  height: 34px;
+  white-space: nowrap;
+}
+
 .service-principals-layout {
   display: grid;
   grid-template-columns: minmax(258px, 0.72fr) minmax(0, 1.8fr);

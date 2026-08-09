@@ -14,4 +14,7 @@ export const adminApi = {
   servicePrincipals(path = "") {
     return this.path(`/service-principals${path}`);
   },
+  devAutopilotTeam(path = "") {
+    return this.path(`/devautopilot/team${path}`);
+  },
 };

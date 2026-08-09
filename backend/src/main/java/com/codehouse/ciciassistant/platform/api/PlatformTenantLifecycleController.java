@@ -100,8 +100,7 @@ public class PlatformTenantLifecycleController {
             @PathVariable @Pattern(regexp = "^org[a-z0-9]{17}$") String companyId,
             @Valid @RequestBody DevAutopilotActivationRequest request) {
         return ApiResponse.ok(devAutopilotApplications.activate(companyId,
-                new DevAutopilotTenantApplicationService.ActivationCommand(request.idempotencyKey(), request.productManagerName(),
-                        request.productManagerAlias(), request.ownerMemberId()), actorId()));
+                new DevAutopilotTenantApplicationService.ActivationCommand(request.idempotencyKey()), actorId()));
     }
 
     @PostMapping("/{companyId}/applications/devautopilot/suspensions")
@@ -116,15 +115,6 @@ public class PlatformTenantLifecycleController {
     public ApiResponse<DevAutopilotTenantApplicationService.View> resumeDevAutopilot(
             @PathVariable @Pattern(regexp = "^org[a-z0-9]{17}$") String companyId) {
         return ApiResponse.ok(devAutopilotApplications.resume(companyId, actorId()));
-    }
-
-    @PostMapping("/{companyId}/applications/devautopilot/developer-principals")
-    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
-    public ApiResponse<DevAutopilotTenantApplicationService.ResourceView> addDevAutopilotDeveloper(
-            @PathVariable @Pattern(regexp = "^org[a-z0-9]{17}$") String companyId,
-            @Valid @RequestBody DevAutopilotDeveloperRequest request) {
-        return ApiResponse.ok(devAutopilotApplications.addDeveloper(companyId,
-                new DevAutopilotTenantApplicationService.DeveloperCommand(request.displayName(), request.resourceAlias(), request.ownerMemberId()), actorId()));
     }
 
     @GetMapping("/{companyId}/retention")
@@ -312,15 +302,7 @@ public class PlatformTenantLifecycleController {
     }
 
     public record DevAutopilotActivationRequest(
-            @NotBlank @Pattern(regexp = "^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$") String idempotencyKey,
-            @NotBlank @Size(max = 128) String productManagerName,
-            @NotBlank @Pattern(regexp = "^[a-z][a-z0-9-]{1,47}$") String productManagerAlias,
-            @NotBlank String ownerMemberId) { }
-
-    public record DevAutopilotDeveloperRequest(
-            @NotBlank @Size(max = 128) String displayName,
-            @NotBlank @Pattern(regexp = "^[a-z][a-z0-9-]{1,47}$") String resourceAlias,
-            @NotBlank String ownerMemberId) { }
+            @NotBlank @Pattern(regexp = "^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$") String idempotencyKey) { }
 
     public record LifecycleActionRequest(String reason) {
     }
