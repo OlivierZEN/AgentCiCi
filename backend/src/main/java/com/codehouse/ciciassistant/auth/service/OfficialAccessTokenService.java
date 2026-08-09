@@ -90,7 +90,7 @@ public class OfficialAccessTokenService {
 
     /** Server-only token used to establish the member projection before dependent SERVICE projections. */
     public IssuedToken issueForSematticePrincipalSync(UserEntity member) {
-        return issueForSemattice(member, List.of("identity.principal.sync"));
+        return issueForSemattice(member, List.of("identity.principal.sync"), List.of(), false);
     }
 
     /**
@@ -191,17 +191,24 @@ public class OfficialAccessTokenService {
     }
 
     private IssuedToken issueForSemattice(UserEntity member, List<String> issuedScopes) {
-        return issueForSemattice(member, issuedScopes, List.of());
+        return issueForSemattice(member, issuedScopes, List.of(), true);
     }
 
     private IssuedToken issueForSemattice(UserEntity member, List<String> issuedScopes, List<String> approvals) {
+        return issueForSemattice(member, issuedScopes, approvals, true);
+    }
+
+    private IssuedToken issueForSemattice(UserEntity member, List<String> issuedScopes, List<String> approvals,
+                                          boolean requireUnifiedIdentity) {
         requireEnabled();
         if (!UserEntity.STATUS_ACTIVE.equals(member.getMemberStatus())
                 || !"ACTIVE".equalsIgnoreCase(member.getCompany().getStatus())) {
             throw new ForbiddenException("当前成员或公司不可访问数据平台");
         }
-        AccountExternalIdentityEntity identity = identityRepository.findByAccount_Id(member.getAccountId())
-                .orElseThrow(() -> new ForbiddenException("当前账号尚未绑定统一身份"));
+        AccountExternalIdentityEntity identity = identityRepository.findByAccount_Id(member.getAccountId()).orElse(null);
+        if (requireUnifiedIdentity && identity == null) {
+            throw new ForbiddenException("当前账号尚未绑定统一身份");
+        }
         SematticeProvisioningBindingEntity binding = bindingRepository.findByCompanyId(member.getCompany().getId())
                 .filter(value -> SematticeProvisioningBindingEntity.PROVISIONED.equals(value.getState()))
                 .filter(value -> hasText(value.getSematticeTenantId()))
@@ -221,7 +228,6 @@ public class OfficialAccessTokenService {
                 .claim("company_id", member.getCompany().getId())
                 .claim("principal_id", member.getAccountId())
                 .claim("principal_type", "HUMAN")
-                .claim("keycloak_subject", identity.getSubject())
                 .claim("member_id", member.getId())
                 .claim("account_id", member.getAccountId())
                 .claim("roles", List.of(member.getRoleCode()))
@@ -232,6 +238,9 @@ public class OfficialAccessTokenService {
                 .id(UUID.randomUUID().toString())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(expiresAt));
+        if (identity != null) {
+            builder.claim("keycloak_subject", identity.getSubject());
+        }
         List<String> verifiedApprovals = approvals == null ? List.of() : approvals.stream().filter(OfficialAccessTokenService::hasText).distinct().toList();
         if (!verifiedApprovals.isEmpty()) {
             builder.claim("approvals", verifiedApprovals);

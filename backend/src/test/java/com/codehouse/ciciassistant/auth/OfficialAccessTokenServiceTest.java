@@ -102,8 +102,13 @@ class OfficialAccessTokenServiceTest {
         SematticeProvisioningBindingRepository bindingRepository = org.mockito.Mockito.mock(SematticeProvisioningBindingRepository.class);
         SematticeMetadataApprovalService approvalService = org.mockito.Mockito.mock(SematticeMetadataApprovalService.class);
         UserAccountEntity account = new UserAccountEntity("13902400998");
-        UserEntity member = new UserEntity(new CompanyEntity("orgbbbbbbbbbbbbbbbbb", "测试公司", "ACTIVE"), account, "OWNER");
+        CompanyEntity company = new CompanyEntity("orgbbbbbbbbbbbbbbbbb", "测试公司", "ACTIVE");
+        UserEntity member = new UserEntity(company, account, "OWNER");
+        SematticeProvisioningBindingEntity binding = new SematticeProvisioningBindingEntity(
+                "reservation-2", company.getId(), "idempotency-2");
+        binding.complete("22222222-2222-4222-8222-222222222222", "operation-2", true, null);
         when(identityRepository.findByAccount_Id(account.getId())).thenReturn(Optional.empty());
+        when(bindingRepository.findByCompanyId(company.getId())).thenReturn(Optional.of(binding));
         OfficialAccessTokenService service = new OfficialAccessTokenService(
                 identityRepository,
                 bindingRepository,
@@ -112,13 +117,21 @@ class OfficialAccessTokenServiceTest {
                 "https://x.agentcici.com",
                 "oact-test-1",
                 Base64.getEncoder().encodeToString(keys.getPrivate().getEncoded()),
-                List.of("metadata.version.read"),
+                List.of("metadata.version.read", "identity.principal.sync"),
                 List.of("metadata.version.read"),
                 600);
 
         assertThatThrownBy(() -> service.issueForSemattice(member))
                 .isInstanceOf(ForbiddenException.class)
                 .hasMessageContaining("尚未绑定统一身份");
+
+        OfficialAccessTokenService.IssuedToken projection = service.issueForSematticePrincipalSync(member);
+        Claims claims = Jwts.parser().verifyWith(KeyFactory.getInstance("RSA").generatePublic(new RSAPublicKeySpec(
+                        ((RSAPrivateCrtKey) keys.getPrivate()).getModulus(),
+                        ((RSAPrivateCrtKey) keys.getPrivate()).getPublicExponent())))
+                .build().parseSignedClaims(projection.token()).getPayload();
+        assertThat(claims.get("scope", String.class)).isEqualTo("identity.principal.sync");
+        assertThat(claims.get("keycloak_subject")).isNull();
     }
 
     @Test
