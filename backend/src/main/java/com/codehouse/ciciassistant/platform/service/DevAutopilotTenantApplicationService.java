@@ -76,6 +76,7 @@ public class DevAutopilotTenantApplicationService {
         try {
             var metadata = template.apply(companyId, command.idempotencyKey());
             initializeProductManager(companyId, activationId, ownerMemberId);
+            reconcilePrincipalProjections(companyId, activationId, platformActor);
             jdbc.update("""
                     UPDATE tenant_application_activation SET actual_state='ACTIVE',metadata_version_id=?,metadata_digest=?,updated_at=CURRENT_TIMESTAMP WHERE id=?
                     """,
@@ -100,6 +101,7 @@ public class DevAutopilotTenantApplicationService {
             throw new ForbiddenException("Only an active DevAutopilot application can be initialized");
         }
         initializeProductManager(companyId, activation.id(), initialOwnerMemberId(companyId));
+        reconcilePrincipalProjections(companyId, activation.id(), platformActor);
         audit.log(companyId, platformActor, "PLATFORM", "tenant_application.initialization_reconciled", "tenant_application", activation.id(),
                 "DevAutopilot standard tenant resources reconciled");
         return requireView(companyId);
@@ -150,6 +152,12 @@ public class DevAutopilotTenantApplicationService {
         if (hasPrimaryAgent && hasPrimaryPrincipal) return;
         if (hasPrimaryAgent || hasPrimaryPrincipal) throw new IllegalStateException("DevAutopilot product-manager resources are incomplete");
         createProductManagerResources(companyId, activationId, PRODUCT_MANAGER_DEFAULT_NAME, ownerMemberId, ownerMemberId, PRODUCT_MANAGER_AGENT_ID);
+    }
+
+    private void reconcilePrincipalProjections(String companyId, String activationId, String actorPrincipalId) {
+        for (ServiceResource resource : serviceResources(activationId)) {
+            principals.synchronizeProjection(companyId, resource.externalId(), actorPrincipalId);
+        }
     }
 
     private Map<String, Object> createProductManagerResources(String companyId, String activationId, String displayName,
@@ -212,7 +220,13 @@ public class DevAutopilotTenantApplicationService {
     }
 
     private List<ServiceResource> serviceResources(String activationId) {
-        return jdbc.query("SELECT id,external_id,lifecycle_state FROM tenant_application_resource WHERE activation_id=? AND resource_type='SERVICE_PRINCIPAL' ORDER BY id",
+        return jdbc.query("""
+                SELECT resource.id,resource.external_id,COALESCE(principal.lifecycle_status,'DISABLED')
+                FROM tenant_application_resource resource
+                LEFT JOIN principal ON principal.id=resource.external_id
+                WHERE resource.activation_id=? AND resource.resource_type='SERVICE_PRINCIPAL'
+                ORDER BY resource.id
+                """,
                 (rs, n) -> new ServiceResource(rs.getString(1), rs.getString(2), rs.getString(3)), activationId);
     }
 
@@ -255,7 +269,14 @@ public class DevAutopilotTenantApplicationService {
 
     private TeamResourceView teamResource(String activationId, Map<String, Object> principal) {
         String principalId = (String) principal.get("principalId");
-        ResourceView resource = jdbc.queryForObject("SELECT logical_role,resource_type,resource_alias,display_name,external_id,lifecycle_state,is_primary FROM tenant_application_resource WHERE activation_id=? AND external_id=?",
+        ResourceView resource = jdbc.queryForObject("""
+                SELECT resource.logical_role,resource.resource_type,resource.resource_alias,
+                       COALESCE(authority.display_name,resource.display_name),resource.external_id,
+                       COALESCE(authority.lifecycle_status,'DISABLED'),resource.is_primary
+                FROM tenant_application_resource resource
+                LEFT JOIN principal authority ON authority.id=resource.external_id
+                WHERE resource.activation_id=? AND resource.external_id=?
+                """,
                 (rs, n) -> new ResourceView(rs.getString(1), rs.getString(2), rs.getString(3), rs.getString(4), rs.getString(5), rs.getString(6), rs.getBoolean(7)), activationId, principalId);
         return new TeamResourceView(resource, principalId, (String) principal.get("clientId"), (String) principal.get("clientSecret"),
                 (String) principal.get("credentialNotice"));
@@ -287,7 +308,21 @@ public class DevAutopilotTenantApplicationService {
         return rows.isEmpty() ? null : rows.getFirst();
     }
     private View view(Row row) {
-        List<ResourceView> resources = jdbc.query("SELECT logical_role,resource_type,resource_alias,display_name,external_id,lifecycle_state,is_primary FROM tenant_application_resource WHERE activation_id=? ORDER BY logical_role,resource_type", (rs,n)->new ResourceView(rs.getString(1),rs.getString(2),rs.getString(3),rs.getString(4),rs.getString(5),rs.getString(6),rs.getBoolean(7)), row.id());
+        List<ResourceView> resources = jdbc.query("""
+                SELECT resource.logical_role,resource.resource_type,resource.resource_alias,
+                       CASE WHEN resource.resource_type='SERVICE_PRINCIPAL'
+                            THEN COALESCE(authority.display_name,resource.display_name)
+                            ELSE resource.display_name END,
+                       resource.external_id,
+                       CASE WHEN resource.resource_type='SERVICE_PRINCIPAL'
+                            THEN COALESCE(authority.lifecycle_status,'DISABLED')
+                            ELSE resource.lifecycle_state END,
+                       resource.is_primary
+                FROM tenant_application_resource resource
+                LEFT JOIN principal authority ON authority.id=resource.external_id
+                WHERE resource.activation_id=?
+                ORDER BY resource.logical_role,resource.resource_type
+                """, (rs,n)->new ResourceView(rs.getString(1),rs.getString(2),rs.getString(3),rs.getString(4),rs.getString(5),rs.getString(6),rs.getBoolean(7)), row.id());
         return new View(row.companyId(), true, row.templateVersion(), row.desiredState(), row.actualState(), row.sematticeTenantId(), row.metadataVersionId(), row.metadataDigest(), row.lastError(), resources);
     }
     private static void require(String v,String name) { if (v==null||v.isBlank()) throw new IllegalArgumentException(name+" is required"); }

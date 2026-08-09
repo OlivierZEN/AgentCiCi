@@ -14,6 +14,7 @@ import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.auth.domain.UserRepository;
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.platform.service.PlatformAuditService;
+import com.codehouse.ciciassistant.semattice.SematticePrincipalProjectionClient;
 import java.sql.ResultSet;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +35,7 @@ class ServicePrincipalServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ServicePrincipalService(jdbc, users, keycloak, audit,
+        service = new ServicePrincipalService(jdbc, users, keycloak, audit, mock(SematticePrincipalProjectionClient.class),
                 List.of("identity.principal.sync", "runtime.record.read", "runtime.record.update"),
                 List.of("identity.principal.sync", "runtime.record.read", "runtime.record.update", "runtime.record.delete"));
     }

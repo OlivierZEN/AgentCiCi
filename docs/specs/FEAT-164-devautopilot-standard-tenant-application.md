@@ -7,7 +7,7 @@ owner_role: integration-agent
 task_ids: TASK-275
 related_decisions: ADR-006, ADR-007, ADR-008
 related_issues: none
-updated_at: 2026-08-09T05:32:00Z
+updated_at: 2026-08-09T07:20:00Z
 updated_by: codex
 ---
 
@@ -84,11 +84,14 @@ tenant_application_operation
 3. 请求 Semattice 应用 `devautopilot.standard.v1` 标准基线；已有非模板 metadata 时失败关闭，不覆盖已有模型。
 4. 创建标准 `product_manager` 资源对：租户独立的研发产品经理 Agent、PM SERVICE Principal、最小 Tool binding 与执行绑定。系统生成 Client ID，仅本次返回的 Secret 不写入页面、审计或控制面。
 5. 写入资源清单并以该租户初始 OWNER/ORG_ADMIN 作为 HUMAN owner；不创建默认 developer，租户可按需创建任意数量的开发者。
-6. 请求 DevAutopilot 健康/entitlement 探针；所有回执一致后置为 `ACTIVE`。
+6. 通过 AgentCiCi 签发的短时、仅服务端使用的 OACT，先投影 HUMAN owner，再逐个调用 Semattice `identity.principal.sync` 投影 PM/developer SERVICE；投影必须携带 AgentCiCi 权威生命周期，不能把 suspended/disabled 主体写成 active。
+7. 请求 DevAutopilot 健康/entitlement 探针；metadata、Agent、Principal、执行绑定和 Principal 投影全部回执一致后置为 `ACTIVE`。
 
 早期模板版本只创建 Semattice 基线的已开通租户，平台卡片必须显示“待补齐”并提供受平台管理员授权的 `initializations` 动作。该动作只幂等补齐缺失的标准 PM 资源，不能在 GET、浏览器启动或普通租户读取时隐式创建机器主体。
 
 暂停以 activation 门禁为先：先将 desired state 置为 suspended，使运行时立即 fail closed；随后暂停本 activation 资源清单中的 PM 和 developer SERVICE Principal 并同步 Semattice Principal 状态。任何后续步骤失败时保持 `SUSPENDING` 且入口持续关闭。恢复按反向顺序执行并重新验证。
+
+`tenant_application_resource.lifecycle_state` 只保留编排快照，团队/activation 对外读取 SERVICE 资源时必须联表读取 AgentCiCi `principal.lifecycle_status` 作为当前权威状态；Principal 缺失按不可用处理，禁止用快照 ACTIVE 兜底。机器主体独立暂停、恢复、撤销、改名或负责人变更时，同步更新控制面快照并触发 Semattice 投影；远端短暂失败不重新开放主体，后续 `initializations` 必须可幂等补偿。
 
 ## API 契约
 
@@ -158,6 +161,8 @@ DevAutopilot 服务端调用 AgentCiCi 的 ticket exchange，并仅在自身短�
 - [x] 将标准 PM Agent/SERVICE/Tool/execution binding 纳入新开通与既有租户显式补齐初始化。
 - [x] activation resolve 使用专用 RS256 OACT 验签边界，不再把 OACT 误交给 AgentCiCi 会话 JWT 解析器。
 - [x] Semattice 浏览器控制台使用独立公网 base URL；UAT 同源 `/console/` 不再返回或校验内部 `192.168.*` 地址。
+- [ ] Principal 权威生命周期与 activation 资源读模型统一；停用开发者不得在 DevAutopilot 显示为可派单。
+- [ ] 开通/补齐初始化自动投影 HUMAN owner、PM SERVICE 和 developer SERVICE 到 Semattice，并可补偿既有 activation。
 - [ ] 用正常租户用户回读 Semattice 当前项目数据，并完成双租户隔离验收。
 - [ ] 双租户 UAT E2E（需正常租户 ORG_ADMIN 业务会话，不能由平台运营账号替代）。
 

@@ -4,6 +4,7 @@ import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.auth.domain.UserRepository;
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.platform.service.PlatformAuditService;
+import com.codehouse.ciciassistant.semattice.SematticePrincipalProjectionClient;
 import java.security.SecureRandom;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -27,18 +28,21 @@ public class ServicePrincipalService {
     private final UserRepository userRepository;
     private final KeycloakIdentityProvisioningService keycloak;
     private final PlatformAuditService audit;
+    private final SematticePrincipalProjectionClient projections;
     private final List<String> sematticeAllowedScopes;
 
     public ServicePrincipalService(JdbcTemplate jdbcTemplate,
                                    UserRepository userRepository,
                                    KeycloakIdentityProvisioningService keycloak,
                                    PlatformAuditService audit,
+                                   SematticePrincipalProjectionClient projections,
                                    @Value("${app.auth.official-access.semattice-scopes:}") List<String> sematticeHumanScopes,
                                    @Value("${app.auth.official-access.semattice-service-scopes:}") List<String> sematticeServiceScopes) {
         this.jdbcTemplate = jdbcTemplate;
         this.userRepository = userRepository;
         this.keycloak = keycloak;
         this.audit = audit;
+        this.projections = projections;
         List<String> humanScopes = sematticeHumanScopes == null ? List.of() : sematticeHumanScopes.stream()
                 .filter(scope -> scope != null && !scope.isBlank()).map(String::trim).distinct().toList();
         List<String> serviceScopes = sematticeServiceScopes == null ? List.of() : sematticeServiceScopes.stream()
@@ -93,6 +97,7 @@ public class ServicePrincipalService {
                     VALUES (?, ?, ?)
                     """, principalId, scope, now));
             audit(companyId, actor.getAccountId(), "created", principalId, "机器账户已创建，密钥仅返回一次");
+            projections.syncService(owner, principalId, name, publicId, clientId, "ACTIVE");
         } catch (RuntimeException persistenceFailure) {
             try {
                 keycloak.deleteServiceClient(clientId);
@@ -209,6 +214,7 @@ public class ServicePrincipalService {
                     replacement, now, now, principalId);
             audit(companyId, actor.getAccountId(), "client_id_renamed", principalId,
                     "机器账户 Client ID 已更新为 " + replacement);
+            synchronizeProjectionSafely(companyId, principalId, actor.getAccountId());
         } catch (RuntimeException persistenceFailure) {
             try {
                 keycloak.renameServiceClient(replacement, service.clientId());
@@ -255,7 +261,9 @@ public class ServicePrincipalService {
             keycloak.setServiceClientEnabled(service.clientId(), false);
             Timestamp now = Timestamp.from(Instant.now());
             jdbcTemplate.update("UPDATE principal SET lifecycle_status='SUSPENDED', suspended_at=?, updated_at=? WHERE id=?", now, now, principalId);
+            updateApplicationResource(principalId, "SUSPENDED", null);
             audit(companyId, actor.getAccountId(), "suspended", principalId, "机器账户已暂停");
+            synchronizeProjectionSafely(companyId, principalId, actor.getAccountId());
         }
         return requireView(companyId, principalId);
     }
@@ -270,7 +278,9 @@ public class ServicePrincipalService {
         keycloak.setServiceClientEnabled(service.clientId(), true);
         Timestamp now = Timestamp.from(Instant.now());
         jdbcTemplate.update("UPDATE principal SET lifecycle_status='ACTIVE', suspended_at=NULL, updated_at=? WHERE id=?", now, principalId);
+        updateApplicationResource(principalId, "ACTIVE", null);
         audit(companyId, actor.getAccountId(), "activated", principalId, "机器账户已恢复");
+        synchronizeProjectionSafely(companyId, principalId, actor.getAccountId());
         return requireView(companyId, principalId);
     }
 
@@ -284,7 +294,9 @@ public class ServicePrincipalService {
             jdbcTemplate.update("UPDATE principal SET lifecycle_status='REVOKED', suspended_at=NULL, revoked_at=?, updated_at=? WHERE id=?", now, now, principalId);
             jdbcTemplate.update("UPDATE principal_identity SET binding_status='REVOKED', updated_at=? WHERE principal_id=?", now, principalId);
             jdbcTemplate.update("UPDATE service_principal_owner SET owner_status='REVOKED', revoked_at=? WHERE service_principal_id=? AND owner_status<>'REVOKED'", now, principalId);
+            updateApplicationResource(principalId, "REVOKED", null);
             audit(companyId, actor.getAccountId(), "revoked", principalId, "机器账户已永久撤销");
+            synchronizeProjectionSafely(companyId, principalId, actor.getAccountId());
         }
         return requireView(companyId, principalId);
     }
@@ -301,6 +313,7 @@ public class ServicePrincipalService {
             audit(companyId, actor.getAccountId(), "owner_transferred", principalId,
                     "机器账户负责人已移交给 " + newOwner.getAccountId());
         }
+        synchronizeProjectionSafely(companyId, principalId, actor.getAccountId());
         return requireView(companyId, principalId);
     }
 
@@ -316,10 +329,42 @@ public class ServicePrincipalService {
         String name = required(displayName, "displayName");
         Timestamp now = Timestamp.from(Instant.now());
         jdbcTemplate.update("UPDATE principal SET display_name=?, updated_at=? WHERE id=?", name, now, principalId);
+        updateApplicationResource(principalId, null, name);
         boolean ownerChanged = replacePrimaryOwner(principalId, owner);
         audit(companyId, actor.getAccountId(), "profile_updated", principalId,
                 "机器账户显示名称已更新" + (ownerChanged ? "，负责人已更新为 " + owner.getAccountId() : ""));
+        synchronizeProjectionSafely(companyId, principalId, actor.getAccountId());
         return requireView(companyId, principalId);
+    }
+
+    /** Strict synchronization is used by provisioning/reconciliation; lifecycle writes use the safe wrapper below. */
+    public void synchronizeProjection(String companyId, String principalId, String actorPrincipalId) {
+        Map<String, Object> principal = requireView(companyId, principalId);
+        String ownerMemberId = String.valueOf(principal.get("ownerMemberId"));
+        UserEntity owner = requireActiveMember(companyId, ownerMemberId, "机器账户责任人必须是同组织有效人类成员");
+        projections.syncService(owner, principalId, String.valueOf(principal.get("displayName")),
+                String.valueOf(principal.get("publicId")), String.valueOf(principal.get("clientId")),
+                String.valueOf(principal.get("lifecycleStatus")));
+    }
+
+    private void synchronizeProjectionSafely(String companyId, String principalId, String actorPrincipalId) {
+        try {
+            synchronizeProjection(companyId, principalId, actorPrincipalId);
+        } catch (RuntimeException exception) {
+            audit(companyId, actorPrincipalId, "projection_sync_deferred", principalId,
+                    "Semattice 主体投影同步已延后，将由租户应用初始化补偿");
+        }
+    }
+
+    private void updateApplicationResource(String principalId, String lifecycleStatus, String displayName) {
+        if (lifecycleStatus != null) {
+            jdbcTemplate.update("UPDATE tenant_application_resource SET lifecycle_state=? WHERE external_id=? AND resource_type='SERVICE_PRINCIPAL'",
+                    lifecycleStatus, principalId);
+        }
+        if (displayName != null) {
+            jdbcTemplate.update("UPDATE tenant_application_resource SET display_name=? WHERE external_id=? AND resource_type='SERVICE_PRINCIPAL'",
+                    displayName, principalId);
+        }
     }
 
     private boolean replacePrimaryOwner(String principalId, UserEntity newOwner) {

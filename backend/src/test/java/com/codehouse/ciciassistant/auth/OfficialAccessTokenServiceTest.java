@@ -151,6 +151,7 @@ class OfficialAccessTokenServiceTest {
         assertThat(claims.get("principal_type", String.class)).isEqualTo("SERVICE");
         assertThat(claims.get("owner_principal_id", String.class)).isEqualTo(ownerPrincipalId);
         assertThat(claims.get("client_id", String.class)).isEqualTo("agentcici-data-sync");
+        assertThat(claims.get("lifecycle_status", String.class)).isEqualTo("ACTIVE");
         assertThat(claims.get("actor_type", String.class)).isEqualTo("service");
         assertThat(claims.get("delegated_by_principal_id", String.class)).isEqualTo(ownerPrincipalId);
         assertThat(claims.get("delegation_policy", String.class)).isEqualTo("PRIMARY_OWNER");

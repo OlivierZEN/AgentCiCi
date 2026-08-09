@@ -88,6 +88,11 @@ public class OfficialAccessTokenService {
                 metadataApprovalService.approvedIdsForRequester(member.getCompany().getId(), member.getId()));
     }
 
+    /** Server-only token used to establish the member projection before dependent SERVICE projections. */
+    public IssuedToken issueForSematticePrincipalSync(UserEntity member) {
+        return issueForSemattice(member, List.of("identity.principal.sync"));
+    }
+
     /**
      * Signs the resource-facing token after the caller has resolved an active service principal,
      * its accountable human owner, tenant binding and persisted scope grants.
@@ -110,6 +115,29 @@ public class OfficialAccessTokenService {
                                                 List<String> requestedScopes,
                                                 String delegatedByPrincipalId,
                                                 String delegationPolicy) {
+        return issueForSematticeServiceInternal(principalId, ownerPrincipalId, clientId, tenantId, companyId,
+                requestedScopes, delegatedByPrincipalId, delegationPolicy, "ACTIVE");
+    }
+
+    public IssuedToken issueForSematticeServiceProjection(String principalId,
+                                                          String ownerPrincipalId,
+                                                          String clientId,
+                                                          String tenantId,
+                                                          String companyId,
+                                                          String lifecycleStatus) {
+        return issueForSematticeServiceInternal(principalId, ownerPrincipalId, clientId, tenantId, companyId,
+                List.of("identity.principal.sync"), null, null, lifecycleStatus);
+    }
+
+    private IssuedToken issueForSematticeServiceInternal(String principalId,
+                                                          String ownerPrincipalId,
+                                                          String clientId,
+                                                          String tenantId,
+                                                          String companyId,
+                                                          List<String> requestedScopes,
+                                                          String delegatedByPrincipalId,
+                                                          String delegationPolicy,
+                                                          String lifecycleStatus) {
         requireEnabled();
         requireUuid(principalId, "service principal");
         requireUuid(ownerPrincipalId, "service owner");
@@ -122,6 +150,11 @@ public class OfficialAccessTokenService {
         List<String> issuedScopes = normalizeScopes(requestedScopes);
         if (issuedScopes.isEmpty() || issuedScopes.stream().anyMatch(scope -> !sematticeServiceScopes.contains(scope))) {
             throw new ForbiddenException("机器账户 scope 未获官方应用授权");
+        }
+        String lifecycle = hasText(lifecycleStatus) ? lifecycleStatus.trim().toUpperCase() : "ACTIVE";
+        if ("REVOKED".equals(lifecycle)) lifecycle = "DISABLED";
+        if (!List.of("ACTIVE", "SUSPENDED", "DISABLED").contains(lifecycle)) {
+            throw new ForbiddenException("机器账户生命周期状态无效");
         }
 
         Instant now = Instant.now();
@@ -137,6 +170,7 @@ public class OfficialAccessTokenService {
                 .claim("principal_type", "SERVICE")
                 .claim("owner_principal_id", ownerPrincipalId)
                 .claim("client_id", clientId)
+                .claim("lifecycle_status", lifecycle)
                 .claim("scope", String.join(" ", issuedScopes))
                 .claim("actor_type", "service")
                 .claim("authorized_party", "agentcici");
