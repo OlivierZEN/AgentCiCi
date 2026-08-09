@@ -1,12 +1,19 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-09T01:35:00Z
+updated_at: 2026-08-09T03:30:00Z
 updated_by: MANAGER-001
 status: active
 ---
 
 # DevOps
+
+## 2026-08-09 TASK-275 机器主体新增与编辑 UAT 发布
+
+- 已按 test channel 发布 `2.8.57-beta.2 / 2753d268acd9`。backend/frontend ACR index digest 分别为 `sha256:aa50caecfe55aaa8ac6c0b0e1f8494578a21966dda7f8fa0f20dec2303a92cdc` / `sha256:7da4fa653ff8b1de55ea183ea29a09b669708c7419eccd8100699f08179a6a37`；Git tag、运行时 `CICI_APP_VERSION`、前端 `VITE_CICI_APP_VERSION` 和镜像 tag 统一为同一版本。
+- UAT 主机缺少 ACR 拉取凭据，已仅传入已验证的 linux/amd64 backend/frontend 工件并加载到本机 Docker；未复制或持久化 registry 凭据。发布前备份为 `/data/apps/agentcici/backups/20260809T025000Z-before-2.8.57-beta.2`，包含 Compose、受保护环境文件和非空 PostgreSQL dump。
+- 仅强制重建 backend/frontend；database、Redis、RabbitMQ、Qdrant 未重启。两个应用容器 healthy，backend `health=UP`，`/system/version=2753d268acd9 / 2.8.57-beta.2 / 2.8.57-beta.2`，frontend `nginx -t` 通过，外部管理页为 200，匿名团队 API 为预期 401。
+- 回滚：恢复上述备份中的 `docker-compose.uat.yml` 和 `uat.secrets.env`，仅重建 backend/frontend；或将两项 image tag 明确切回 `2.8.57-beta.1`。不得使用 `dev`、`uat` 或 `latest` 作为运行版本事实。
 
 ## 2026-08-09 TASK-275 DevAutopilot 租户团队职责收敛 UAT 发布
 

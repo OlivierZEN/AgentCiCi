@@ -26,6 +26,7 @@ primary_project: agentcici
 
 ## 交付状态
 
-- UAT 已发布 `2.8.57-beta.1 / e5c097adda5f`，backend/frontend 均使用同一不可变 ACR 工件，运行时和页脚版本一致；当前进入新增/编辑机器主体交互修订。
+- UAT 已发布 `2.8.57-beta.2 / 2753d268acd9`，backend/frontend 均使用同一不可变 ACR 工件，运行时和前端工件版本一致；新增和编辑机器主体已改为独立 modal，负责人只能选择同租户有效 HUMAN 成员。
+- 正常 ORG_ADMIN 的新增、编辑和双租户隔离业务验收仍待完成；未为验证而创建测试机器主体或读取 Secret。
 - V108 已在 UAT 成功执行；匿名团队管理 API 为预期 `401`。
 - 正常 ORG_ADMIN 的 PM/开发者创建、双租户隔离及暂停/恢复业务验收为待验收项，任务保持 `review`，不阻塞已发布的控制面职责调整。

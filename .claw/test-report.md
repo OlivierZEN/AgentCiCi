@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-09T03:15:00Z
+updated_at: 2026-08-09T03:30:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-09T03:15:00Z
+last_run_at: 2026-08-09T03:30:00Z
 last_run_status: partial
 ---
 
@@ -15,6 +15,8 @@ last_run_status: partial
 - `backend-focused`：`mvn -q -f backend/pom.xml -Dtest=ServicePrincipalServiceTest test` 通过。覆盖同租户有效 HUMAN owner 校验；创建保留当前 ORG_ADMIN 为操作审计 actor，而主体责任人可独立选择。
 - `frontend-focused/build`：`npm --prefix frontend test -- --run src/admin/pages/AdminServicePrincipalsPage.test.ts src/admin/adminApi.test.ts` 通过（2 files / 5 tests）；`npm --prefix frontend run build` 通过。创建表单已从列表/详情画布移除，新增和编辑均为带遮罩的可访问 modal；仅有既有 bundle-size 提示。
 - `static-check`：`git diff --check` 通过。尚未执行 UAT 发布或正常 ORG_ADMIN 写入，故未创建业务主体或读取/输出 Secret。
+- `release/UAT`：`scripts/release-acr.sh --dry-run --channel test` 后发布 `2.8.57-beta.2 / 2753d268acd9`；backend/frontend ACR index digest 为 `sha256:aa50caecfe55aaa8ac6c0b0e1f8494578a21966dda7f8fa0f20dec2303a92cdc` / `sha256:7da4fa653ff8b1de55ea183ea29a09b669708c7419eccd8100699f08179a6a37`。UAT backend/frontend 均为该 tag，`/actuator/health=UP`，`/system/version` 的 commit/version/imageTag 一致，Nginx 配置通过；外部管理页为 `200 text/html`，匿名团队 API 为预期 `401`。
+- `UAT-boundary`：当前自动化浏览器未附着可用的正常 ORG_ADMIN 标签页，故未执行真实新增/编辑写操作；该业务验收仍需受权租户会话完成。
 
 - 状态：`passed`
 
