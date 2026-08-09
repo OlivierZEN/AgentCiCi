@@ -46,7 +46,7 @@ public class AuthController {
                           KeycloakOidcLoginService keycloakOidcLoginService,
                           OfficialAccessTokenService officialAccessTokenService,
                           DevAutopilotHandoffService devAutopilotHandoffs,
-                          @Value("${app.semattice.base-url:}") String sematticeBaseUrl) {
+                          @Value("${app.semattice.console-base-url:${app.semattice.base-url:}}") String sematticeBaseUrl) {
         this.authService = authService;
         this.cloudccSsoService = cloudccSsoService;
         this.keycloakOidcLoginService = keycloakOidcLoginService;

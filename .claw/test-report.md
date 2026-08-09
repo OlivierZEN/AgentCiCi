@@ -2286,3 +2286,9 @@ last_run_status: partial
 - 线上能力验收：生产 OACT 调用 `runtime.record.query` 返回 `DAS-DEMO:星轨移动销售助手:执行中`。
 - 线上对话验收：生产 `dev-autopilot-pm` 对“现在有哪些项目在执行”返回项目 35% 进度、2 项进行中任务、5.5 小时工时和 2 项变更；通用无法访问提示为 false。
 - 发布：`2.8.31 / 5c8953a3284d`；发布前备份四项均非空，backend/frontend healthy，后端 health `UP`、Nginx 校验及 `https://x.agentcici.com/` 200 通过。
+## 2026-08-09 TASK-275 UAT activation 与 Semattice 入口根因回归
+
+- UAT 真实访问证据：`POST /auth/devautopilot/handoff=200`、`POST /devautopilot/api/session/consume=200`，同秒 `GET /devautopilot/api/workspace=503`；AgentCiCi activation、Semattice binding、PM Agent/SERVICE/执行绑定和四项 activation resource 均存在且 ACTIVE。
+- 根因：DevAutopilot 使用短期 RS256 OACT 查询 `/openapi/v1/official/devautopilot/activation`，但 AgentCiCi 通用 `TenantContextFilter` 按 HS application JWT 解析所有 Bearer，合法 OACT 被返回 401。新增仅作用于 activation resolve 的 OACT 验签过滤器，校验 signature、kid、issuer、audience、authorized party 及 company/tenant/principal 上下文，并在进入通用过滤器前移除 Authorization header。
+- Semattice 根因：`/auth/semattice/console=200`，但 controller 复用了内部 API base URL，前端又只接受生产 hostname。新增 `APP_SEMATTICE_CONSOLE_BASE_URL`，UAT 覆盖为 `https://uat.agentcici.com`，前端允许当前受信同源或生产 Semattice hostname。
+- 测试：`mvn -q -Dmaven.repo.local=.m2 -Dtest=OfficialAccessTokenServiceTest,OfficialDevAutopilotActivationFilterTest,TenantContextFilterTest,DevAutopilotHandoffServiceTest test` 通过；`npm test -- --run src/admin/adminAuthScope.test.ts` 3/3 通过；`npm run build` 通过；`bash scripts/test-release-versioning.sh` 通过并断言生产 `2.8.58` 的首个 UAT 候选为 `2.8.59-beta.1`；`git diff --check` 通过。

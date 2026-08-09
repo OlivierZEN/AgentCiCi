@@ -7,7 +7,7 @@ owner_role: integration-agent
 task_ids: TASK-275
 related_decisions: ADR-006, ADR-007, ADR-008
 related_issues: none
-updated_at: 2026-08-09T05:10:00Z
+updated_at: 2026-08-09T05:32:00Z
 updated_by: codex
 ---
 
@@ -156,6 +156,8 @@ DevAutopilot 服务端调用 AgentCiCi 的 ticket exchange，并仅在自身短�
 - [x] 独立 DevAutopilot 缓存的 UAT 发布与运行态验证（使用独立 beta 发布入口）。
 - [x] 修复同源租户 handoff 与卡片字段事实，并发布 UAT AgentCiCi `2.8.57-beta.3 / 1b07df5c6f40`。
 - [x] 将标准 PM Agent/SERVICE/Tool/execution binding 纳入新开通与既有租户显式补齐初始化。
+- [x] activation resolve 使用专用 RS256 OACT 验签边界，不再把 OACT 误交给 AgentCiCi 会话 JWT 解析器。
+- [x] Semattice 浏览器控制台使用独立公网 base URL；UAT 同源 `/console/` 不再返回或校验内部 `192.168.*` 地址。
 - [ ] 用正常租户用户回读 Semattice 当前项目数据，并完成双租户隔离验收。
 - [ ] 双租户 UAT E2E（需正常租户 ORG_ADMIN 业务会话，不能由平台运营账号替代）。
 
@@ -166,3 +168,4 @@ DevAutopilot 服务端调用 AgentCiCi 的 ticket exchange，并仅在自身短�
 - AgentCiCi UAT `/system/version` 同时返回 Git commit、`version` 和 `imageTag` 为上述 beta 版本；V108 成功，匿名 `/api/admin/devautopilot/team` 为预期 `401`。独立 DevAutopilot 已通过其独立 beta 发布入口上线 UAT `1.0.2-beta.1 / 1204ab74d375`，运行健康为 integrated/ok；未使用其生产发布脚本。
 - 平台卡片不再含新增开发者、显示名称、负责人或技术别名输入；租户团队入口固定在“组织架构 → 机器主体”。未持有业务 ORG_ADMIN 会话，故不创建账号、Secret 或业务数据来伪造最终验收。
 - `2026-08-09` 已发布 AgentCiCi `2.8.58-beta.1 / 4ffab5c43c0e`。该版本按生产 `2.8.58` 基线发布，修复测试版本不得回退到旧 Git production tag 的生成规则，并使用版本化 UAT Compose 覆盖层只重建 backend/frontend。备份为 `/data/apps/agentcici/backups/20260809T050558Z-before-2.8.58-beta.1`；两个容器 healthy，backend `health=UP`、`/system/version` 的 version/imageTag/commit 一致。匿名 `POST /api/platform/.../initializations`=401，证明真实前端 API 路由到后端；正常平台管理员补齐与租户 E2E 未伪造执行。
+- `2026-08-09` 用户真实 UAT 请求证明 handoff issue/exchange 均为 200，但 activation resolve 为 401 并被 DevAutopilot 映射成 workspace 503；同一时段 Semattice console ticket API 为 200，但响应含内部 HTTP 地址而被浏览器安全校验拒绝。代码修复与发布目标为生产 `2.8.58` 的下一候选 `2.8.59-beta.1`。

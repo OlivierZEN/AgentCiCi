@@ -88,6 +88,11 @@ class OfficialAccessTokenServiceTest {
         assertThat(claims.get("membership_version", String.class)).isNotBlank();
         assertThat(service.jwks().get("keys")).isNotNull();
         assertThat(issued.expiresAt()).isAfter(claims.getIssuedAt().toInstant());
+        OfficialAccessTokenService.VerifiedContext verified = service.verifyDevAutopilotContext(issued.token());
+        assertThat(verified.companyId()).isEqualTo(company.getId());
+        assertThat(verified.tenantId()).isEqualTo("11111111-1111-4111-8111-111111111111");
+        assertThat(verified.principalId()).isEqualTo(account.getId());
+        assertThat(verified.principalType()).isEqualTo("HUMAN");
     }
 
     @Test

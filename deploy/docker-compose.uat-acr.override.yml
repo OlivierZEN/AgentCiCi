@@ -11,6 +11,7 @@ services:
     image: ${ACR_IMAGE_PREFIX:-op-registry.cloudcc.cn/cloudcc-ai-native}/cici-backend:${CICI_IMAGE_TAG:?set CICI_IMAGE_TAG}
     environment:
       CICI_APP_VERSION: ${CICI_APP_VERSION:?set CICI_APP_VERSION}
+      APP_SEMATTICE_CONSOLE_BASE_URL: ${APP_SEMATTICE_CONSOLE_BASE_URL:-https://uat.agentcici.com}
 
   frontend:
     image: ${ACR_IMAGE_PREFIX:-op-registry.cloudcc.cn/cloudcc-ai-native}/cici-frontend:${CICI_IMAGE_TAG:?set CICI_IMAGE_TAG}

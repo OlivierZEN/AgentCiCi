@@ -51,9 +51,44 @@ assert_invalid_version_rejected() {
   fi
 }
 
+assert_next_test_version() {
+  local current_version="$1"
+  local existing_beta="$2"
+  local expected_version="$3"
+  local case_dir="$TMP_DIR/test-${current_version//./-}-${existing_beta:-none}"
+  local remote_dir="$case_dir/remote.git"
+  local repo_dir="$case_dir/repo"
+
+  git init --bare "$remote_dir" >/dev/null
+  git init "$repo_dir" >/dev/null
+  git -C "$repo_dir" config user.email 'release-test@example.invalid'
+  git -C "$repo_dir" config user.name 'release-version-test'
+  mkdir -p "$repo_dir/scripts"
+  cp "$ROOT_DIR/scripts/release-acr.sh" "$repo_dir/scripts/release-acr.sh"
+  chmod +x "$repo_dir/scripts/release-acr.sh"
+  git -C "$repo_dir" add scripts/release-acr.sh
+  git -C "$repo_dir" commit -m 'test fixture' >/dev/null
+  git -C "$repo_dir" remote add origin "$remote_dir"
+  git -C "$repo_dir" tag "$current_version"
+  if [[ -n "$existing_beta" ]]; then
+    git -C "$repo_dir" tag "$existing_beta"
+  fi
+  git -C "$repo_dir" push origin HEAD --tags >/dev/null
+
+  local release_output actual_version
+  release_output="$(cd "$repo_dir" && ./scripts/release-acr.sh --dry-run --test)"
+  actual_version="$(printf '%s\n' "$release_output" | awk '/^[[:space:]]+version:/ { print $2; exit }')"
+  [[ "$actual_version" == "$expected_version" ]] || {
+    echo "expected next test version $expected_version after $current_version, got $actual_version" >&2
+    exit 1
+  }
+}
+
 assert_next_version 2.8.364 2.8.365
 assert_next_version 2.8.365 2.9.1
 assert_next_version 2.12.365 3.0.1
+assert_next_test_version 2.8.58 "" 2.8.59-beta.1
+assert_next_test_version 2.8.58 2.8.59-beta.2 2.8.59-beta.3
 assert_invalid_version_rejected
 
 echo 'release versioning tests passed'

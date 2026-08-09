@@ -36,6 +36,7 @@ describe("admin auth async scope", () => {
     expect(shellSource).toContain('target.hash.startsWith("#oact=")');
     expect(shellSource).toContain('window.location.assign(target.toString())');
     expect(shellSource).toContain("Semattice 管理端");
+    expect(shellSource).toContain('new Set([window.location.hostname, "semattice.agentcici.com"])');
     expect(shellSource).not.toContain("cici_semattice_token");
     expect(stylesSource).toMatch(/\.admin-product-switch__menu\s*\{[^}]*left:\s*0;/s);
     expect(stylesSource).not.toMatch(/\.admin-product-switch__menu\s*\{[^}]*right:\s*0;/s);

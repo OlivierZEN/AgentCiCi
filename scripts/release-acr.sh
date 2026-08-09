@@ -42,8 +42,9 @@ Environment:
   CICI_RELEASE_VERSION   Explicit canonical release version
   RELEASE_CHANNEL        production|test, default production
   RELEASE_PRODUCTION_BASE
-                         Approved production base for a test release when the
-                         production deployment/tag sync is pending
+                         Approved current production version for a test release
+                         when the production deployment/tag sync is pending;
+                         the beta targets its next production version
   INITIAL_PRODUCTION_VERSION
                          First production version if no production tag exists, default 2.0.1
   PUSH_LATEST            true|false, default true
@@ -223,28 +224,30 @@ next_production_version() {
 }
 
 next_test_version() {
-  local production_version latest latest_beta
-  production_version="${RELEASE_PRODUCTION_BASE:-}"
-  if [[ -n "$production_version" ]]; then
-    if ! validate_production_version "$production_version"; then
-      echo "Invalid RELEASE_PRODUCTION_BASE: $production_version" >&2
+  local current_production target_production latest latest_beta
+  current_production="${RELEASE_PRODUCTION_BASE:-}"
+  if [[ -n "$current_production" ]]; then
+    if ! validate_production_version "$current_production"; then
+      echo "Invalid RELEASE_PRODUCTION_BASE: $current_production" >&2
       exit 2
     fi
     local latest_tagged_production
     latest_tagged_production="$(latest_production_version)"
-    if [[ -n "$latest_tagged_production" && "$(printf '%s\n%s\n' "$latest_tagged_production" "$production_version" | sort -V | tail -1)" != "$production_version" ]]; then
+    if [[ -n "$latest_tagged_production" && "$(printf '%s\n%s\n' "$latest_tagged_production" "$current_production" | sort -V | tail -1)" != "$current_production" ]]; then
       echo "RELEASE_PRODUCTION_BASE must not precede the latest production Git tag: $latest_tagged_production" >&2
       exit 2
     fi
   else
-    production_version="$(latest_production_version)"
+    current_production="$(latest_production_version)"
   fi
-  if [[ -z "$production_version" ]]; then
-    production_version="$INITIAL_PRODUCTION_VERSION"
+  if [[ -z "$current_production" ]]; then
+    target_production="$INITIAL_PRODUCTION_VERSION"
+  else
+    target_production="$(increment_production_version "$current_production")"
   fi
   latest="$(
-    git -C "$ROOT_DIR" tag --list "${production_version}-beta.*" |
-      awk -v base="$production_version" '
+    git -C "$ROOT_DIR" tag --list "${target_production}-beta.*" |
+      awk -v base="$target_production" '
         index($0, base "-beta.") == 1 {
           rest = substr($0, length(base) + 7)
           if (match(rest, /^[0-9]+$/)) {
@@ -259,7 +262,7 @@ next_test_version() {
     latest=0
   fi
   latest_beta="$((latest + 1))"
-  printf '%s-beta.%d' "$production_version" "$latest_beta"
+  printf '%s-beta.%d' "$target_production" "$latest_beta"
 }
 
 next_release_version() {

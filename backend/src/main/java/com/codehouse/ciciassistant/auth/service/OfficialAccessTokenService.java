@@ -8,6 +8,7 @@ import com.codehouse.ciciassistant.auth.domain.SematticeProvisioningBindingRepos
 import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.semattice.SematticeMetadataApprovalService;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.JwtBuilder;
 import java.math.BigInteger;
@@ -15,8 +16,10 @@ import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.MessageDigest;
 import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.interfaces.RSAPrivateCrtKey;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.RSAPublicKeySpec;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Date;
@@ -218,6 +221,54 @@ public class OfficialAccessTokenService {
         return Map.of("keys", List.of(key));
     }
 
+    /**
+     * Verifies the short-lived OACT presented back to AgentCiCi by DevAutopilot.
+     * This is deliberately separate from the application-session JWT parser: OACT is RS256,
+     * audience-bound and only accepted at the dedicated activation resolve boundary.
+     */
+    public VerifiedContext verifyDevAutopilotContext(String token) {
+        requireEnabled();
+        if (!hasText(token)) {
+            throw new ForbiddenException("DevAutopilot 官方访问令牌缺失");
+        }
+        try {
+            var signed = Jwts.parser().verifyWith(verificationKey()).build().parseSignedClaims(token.trim());
+            Claims claims = signed.getPayload();
+            if (!keyId.equals(signed.getHeader().getKeyId())
+                    || !issuer.equals(claims.getIssuer())
+                    || claims.getAudience() == null
+                    || !claims.getAudience().contains(SEMATTICE_AUDIENCE)
+                    || !"agentcici".equals(claims.get("authorized_party", String.class))) {
+                throw new ForbiddenException("DevAutopilot 官方访问令牌不受信");
+            }
+            String companyId = trim(claims.get("company_id", String.class));
+            String tenantId = trim(claims.get("tenant_id", String.class));
+            String principalId = trim(claims.get("principal_id", String.class));
+            String principalType = trim(claims.get("principal_type", String.class));
+            if (!hasText(companyId) || !hasText(tenantId) || !hasText(principalId)
+                    || !("HUMAN".equals(principalType) || "SERVICE".equals(principalType))) {
+                throw new ForbiddenException("DevAutopilot 官方访问令牌上下文不完整");
+            }
+            return new VerifiedContext(companyId, tenantId, principalId, principalType);
+        } catch (ForbiddenException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new ForbiddenException("DevAutopilot 官方访问令牌无效或已过期");
+        }
+    }
+
+    private PublicKey verificationKey() {
+        try {
+            if (!(privateKey instanceof RSAPrivateCrtKey rsaPrivateKey)) {
+                throw new IllegalStateException("Official access signing key is not RSA CRT key");
+            }
+            return KeyFactory.getInstance("RSA").generatePublic(new RSAPublicKeySpec(
+                    rsaPrivateKey.getModulus(), rsaPrivateKey.getPublicExponent()));
+        } catch (Exception ex) {
+            throw new IllegalStateException("Unable to derive official access verification key", ex);
+        }
+    }
+
     private void requireEnabled() {
         if (!enabled) {
             throw new ForbiddenException("官方应用访问令牌尚未启用");
@@ -292,6 +343,9 @@ public class OfficialAccessTokenService {
                               String tenantId,
                               String companyId,
                               List<String> scopes) {
+    }
+
+    public record VerifiedContext(String companyId, String tenantId, String principalId, String principalType) {
     }
 
 }

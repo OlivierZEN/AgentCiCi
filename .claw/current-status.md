@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-09T05:10:00Z
+updated_at: 2026-08-09T05:32:00Z
 updated_by: codex
 phase: review
 active_task: TASK-275
-next_action: "由平台管理员对既有 DevAutopilot activation 执行一次“补齐初始化”，再由正常租户用户从 AgentCiCi 应用入口进入并完成 Semattice 数据与双租户隔离验收。"
+next_action: "发布 2.8.59-beta.1，验证 OACT activation resolve、Semattice 公网控制台和 handoff workspace，再完成双租户隔离验收。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-275 / INT-008：平台运营端只负责开通、暂停、恢复及既有 activation 的显式“补齐初始化”；租户 `ORG_ADMIN` 在 `/admin/service-principals` 使用独立新增 modal 管理自定义名称的 PM 或开发者机器主体。UAT 已发布 `2.8.58-beta.1 / 4ffab5c43c0e`：新开通租户会以同租户 OWNER/ORG_ADMIN 自动创建标准 PM Agent、SERVICE、最小 Tool 与执行绑定；既有 activation 显示“待补齐”而不隐式创建。卡片统一使用 `租户标识=company_id`，不显示 Semattice UUID 或产品经理；DevAutopilot handoff query 入口已返回应用 HTML。匿名 handoff 与 `/api/platform/.../initializations` 均正确 401；正常租户业务数据、初始化写入及双租户隔离仍待受权会话验收。
+- TASK-275 / INT-008：UAT 数据库确认当前租户已有产品经理 Agent/SERVICE/执行绑定和两个 developer 资源；故“未生成”的表象来自运行链路断裂，不是资源表为空。真实访问日志证明 handoff issue/exchange 均为 200，但 activation resolve 因 OACT 被通用 JWT 过滤器误判为 401，最终 workspace 503；Semattice console API 虽为 200，却返回内部 HTTP base URL而被前端拒绝。已完成 OACT 专用验签边界、独立 console public base URL、同源 UAT allowlist 和下一生产版本 beta 规则修复，定向后端/前端/版本测试通过，待发布 `2.8.59-beta.1` 后回归。
 
 - TASK-274 / FEAT-163：已发布生产 `2.8.57 / 750fb71ab47d`。机器主体 scope 现在通过 ORG_ADMIN 受治理完整替换接口、独立 SERVICE allowlist、明确确认页和脱敏平台审计维护。企业 `org5nszpgj99jaysxv6y` 中仅大乔 `dev-autopilot-product-manager` 新增 `runtime.record.delete`，悟空、后羿、哪吒和 HUMAN 默认 scope 未扩大；Client ID、Client Secret、负责人和生命周期均未变化。新签发 SERVICE OACT 已通过 Semattice 非写入安全探测，未删除业务记录。发布前备份为 `/opt/cici/backups/20260805-235439-before-2.8.57-task274-scope-governance`。
 

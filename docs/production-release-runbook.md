@@ -81,8 +81,8 @@ mvn -q -Dmaven.repo.local=.m2 -DskipTests compile
 
 - 生产版本由三段纯数字组成，不带字母，例如 `2.0.1`。
 - 生产版本由当前最新生产 Git tag 递增一个版本。主、次版本段最大值为 `12`，修订版本段最大值为 `365`；修订段达到 `365` 后向次版本进位，并把修订段重置为 `1`。例如 `2.8.365` 的下一版是 `2.9.1`；`2.12.365` 的下一版是 `3.0.1`。
-- 测试版本以当前最新生产版本为基础追加 `-beta.<n>`。例如当前最新生产版本为 `2.0.1` 时，第一次测试发布是 `2.0.1-beta.1`，后续同一生产基线的测试发布依次为 `2.0.1-beta.2`、`2.0.1-beta.3`。
-- 若生产运行版本已推进、但对应 Git production tag 尚未同步到当前仓库，测试发布必须由发布负责人显式提供已核定的 `RELEASE_PRODUCTION_BASE=<生产版本>`；脚本会拒绝低于仓库最新生产 tag 的值，并据此从 `<生产版本>-beta.1` 开始计数。不得沿用旧 Git tag 基线生成 UAT 版本。
+- 测试版本永远指向“下一生产版本”，格式为 `<下一生产版本>-beta.<n>`。例如当前生产为 `2.0.1`，第一次 UAT 发布必须是 `2.0.2-beta.1`，后续候选依次为 `2.0.2-beta.2`、`2.0.2-beta.3`；UAT 通过后去掉预发布后缀发布同一目标 `2.0.2`。
+- 若生产运行版本已推进、但对应 Git production tag 尚未同步到当前仓库，测试发布必须由发布负责人显式提供已核定的 `RELEASE_PRODUCTION_BASE=<当前生产版本>`；脚本会拒绝低于仓库最新生产 tag 的值，并据此生成 `<下一生产版本>-beta.1`。不得把当前生产版本再次作为 UAT 目标。
 - 如果没有任何生产 Git tag，脚本从 `2.0.1` 开始生成；可通过 `INITIAL_PRODUCTION_VERSION` 覆盖首个生产基线。
 
 ```bash
@@ -96,7 +96,7 @@ export REMOTE=root@47.97.119.160
 # 只查看下一版测试号
 ./scripts/release-acr.sh --dry-run --channel test
 
-# 生产已是 2.8.58，但 Git production tag 尚待同步时
+# 生产已是 2.8.58、下一生产目标为 2.8.59，但 Git production tag 尚待同步时
 RELEASE_PRODUCTION_BASE=2.8.58 ./scripts/release-acr.sh --dry-run --channel test
 ```
 
