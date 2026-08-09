@@ -1,0 +1,16 @@
+# UAT application-release override. Keep the stateful UAT compose file intact;
+# only the stateless AgentCiCi application services use the immutable release tag.
+#
+# Required at deployment time (do not put these values in the managed secret file):
+#   CICI_IMAGE_TAG=<release-version>
+#   CICI_APP_VERSION=<release-version>
+# Optional:
+#   ACR_IMAGE_PREFIX=op-registry.cloudcc.cn/cloudcc-ai-native
+services:
+  backend:
+    image: ${ACR_IMAGE_PREFIX:-op-registry.cloudcc.cn/cloudcc-ai-native}/cici-backend:${CICI_IMAGE_TAG:?set CICI_IMAGE_TAG}
+    environment:
+      CICI_APP_VERSION: ${CICI_APP_VERSION:?set CICI_APP_VERSION}
+
+  frontend:
+    image: ${ACR_IMAGE_PREFIX:-op-registry.cloudcc.cn/cloudcc-ai-native}/cici-frontend:${CICI_IMAGE_TAG:?set CICI_IMAGE_TAG}

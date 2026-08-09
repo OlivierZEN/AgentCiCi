@@ -229,6 +229,22 @@ echo "$BACKUP_DIR"
 
 ## 7. 线上发布
 
+### 7.0 UAT 应用服务覆盖编排
+
+UAT 的状态服务由受管 `docker-compose.uat.yml` 持有，发布 AgentCiCi 时不得编辑其机密环境文件来保存版本号，也不得重建 database、Redis、RabbitMQ 或 Qdrant。仓库中的 `deploy/docker-compose.uat-acr.override.yml` 是 UAT 的版本化覆盖层，只覆盖 backend 与 frontend 的不可变镜像及 `CICI_APP_VERSION`。
+
+在已完成备份、镜像可用且版本号与 Git tag 一致后，以同一对非机密临时变量执行：
+
+```bash
+CICI_IMAGE_TAG=<release-version> CICI_APP_VERSION=<release-version> \
+docker compose --env-file uat.secrets.env \
+  -f docker-compose.uat.yml \
+  -f docker-compose.uat-acr.override.yml \
+  up -d --no-deps --force-recreate backend frontend
+```
+
+`uat.secrets.env` 只保存机密与运行时业务配置，严禁写入 `CICI_IMAGE_TAG`、`CICI_APP_VERSION` 或镜像 tag。发布后必须回读两个容器的 image、`/system/version`、health 与同源入口；失败时仅以同样的覆盖层切回上一不可变 tag。
+
 ### 7.1 更新线上镜像 tag
 
 登录服务器，确认 `/opt/cici/deploy/acr.env`：
