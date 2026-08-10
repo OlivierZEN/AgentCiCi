@@ -35,6 +35,7 @@ public class ModelProviderService {
     public static final String PROVIDER_OPENAI = "openai";
     public static final String PROVIDER_DEEPSEEK = "deepseek";
     public static final String PROVIDER_ONEKEYTOKEN = "onekeytoken";
+    public static final String ONEKEYTOKEN_AUTO_MODEL = "onekeytoken/auto";
 
     private static final String FETCH_OPENAI_STYLE = "openai-compatible";
     private static final String FETCH_OLLAMA = "ollama";
@@ -488,7 +489,7 @@ public class ModelProviderService {
         String requestBody;
         try {
             requestBody = objectMapper.writeValueAsString(Map.of(
-                    "model", "onekeytoken/auto",
+                    "model", ONEKEYTOKEN_AUTO_MODEL,
                     "messages", List.of(Map.of("role", "user", "content", "Reply with OK only.")),
                     "max_tokens", 8,
                     "temperature", 0,
@@ -511,13 +512,14 @@ public class ModelProviderService {
             }
             String routedModel = response.path("routing").path("model_used").asText("").trim();
             if (routedModel.isBlank()) {
-                routedModel = response.path("model").asText("onekeytoken/auto").trim();
+                routedModel = response.path("model").asText(ONEKEYTOKEN_AUTO_MODEL).trim();
             }
             return Map.of(
                     "providerCode", PROVIDER_ONEKEYTOKEN,
                     "ok", true,
                     "checkMode", "live_chat_completions",
-                    "validatedModel", routedModel,
+                    "validatedModel", ONEKEYTOKEN_AUTO_MODEL,
+                    "resolvedModel", routedModel,
                     "modelCount", 0,
                     "sampleModels", List.of(),
                     "catalogSource", "unavailable",

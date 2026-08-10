@@ -131,6 +131,12 @@ export function readValidatedModel(data: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+export function readResolvedModel(data: unknown): string {
+  if (!data || typeof data !== "object") return "";
+  const value = (data as { resolvedModel?: unknown }).resolvedModel;
+  return typeof value === "string" ? value.trim() : "";
+}
+
 export function catalogEmptyMessage(catalogSource: CatalogSource, modelCount: number): string {
   if (catalogSource === "unavailable" && modelCount === 0) {
     return "当前厂商未开放远程模型枚举，暂无可选模型。";
@@ -157,6 +163,7 @@ export default function PlatformModelsPage() {
   const [allModelsSearch, setAllModelsSearch] = useState("");
   const [allModelsCatalogSource, setAllModelsCatalogSource] = useState<CatalogSource>("remote");
   const [validatedModel, setValidatedModel] = useState("");
+  const [resolvedModel, setResolvedModel] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -301,11 +308,16 @@ export default function PlatformModelsPage() {
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "检测失败");
       const checkedModel = readValidatedModel(json.data);
+      const checkedResolvedModel = readResolvedModel(json.data);
       setValidatedModel(checkedModel);
+      setResolvedModel(checkedResolvedModel);
       const validatedModelNotice = checkedModel
         ? `，已验证路由模型 ${checkedModel}`
         : "";
-      setNotice(`检测成功${validatedModelNotice}，可用模型 ${Number(json.data?.modelCount ?? 0)} 个。`);
+      const resolvedModelNotice = checkedResolvedModel && checkedResolvedModel !== checkedModel
+        ? `，本次实际路由 ${checkedResolvedModel}`
+        : "";
+      setNotice(`检测成功${validatedModelNotice}${resolvedModelNotice}，可用模型 ${Number(json.data?.modelCount ?? 0)} 个。`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "检测失败");
     } finally {
@@ -443,7 +455,7 @@ export default function PlatformModelsPage() {
       const nextModels = dedupeModels([...selectedModelNamesOfProvider(selected.providerCode), validatedModel]);
       await saveSelectedModels(selected.providerCode, nextModels);
       setProviderModels((current) => dedupeModels([...current, validatedModel]));
-      setNotice(`已将检测确认的模型 ${validatedModel} 加入平台模型目录。`);
+      setNotice(`已将检测确认的路由别名 ${validatedModel} 加入平台模型目录。`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "加入平台模型目录失败");
     } finally {
@@ -463,6 +475,7 @@ export default function PlatformModelsPage() {
     setApiKey("");
     setProviderEnabled(Boolean(selected.enabled));
     setValidatedModel("");
+    setResolvedModel("");
     void loadProviderModels(selected.providerCode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.providerCode, selected?.enabled]);
@@ -608,14 +621,17 @@ export default function PlatformModelsPage() {
 
                   {selected.providerCode === "onekeytoken" && validatedModel ? (
                     <div className="platform-console__banner platform-console__banner--success">
-                      <span>本次检测已确认可用路由模型：{validatedModel}</span>
+                      <span>
+                        本次检测已确认可用路由别名：{validatedModel}
+                        {resolvedModel && resolvedModel !== validatedModel ? `；本次实际路由：${resolvedModel}` : ""}
+                      </span>
                       <button
                         type="button"
                         className="platform-button platform-button--primary"
                         onClick={() => void addValidatedModel()}
                         disabled={busy || selectedModels.has(selectedModelKey(selected.providerCode, validatedModel))}
                       >
-                        {selectedModels.has(selectedModelKey(selected.providerCode, validatedModel)) ? "已加入模型目录" : "加入模型目录"}
+                        {selectedModels.has(selectedModelKey(selected.providerCode, validatedModel)) ? "已加入路由目录" : "加入路由目录"}
                       </button>
                     </div>
                   ) : null}

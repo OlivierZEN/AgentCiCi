@@ -70,7 +70,8 @@ class PlatformModelProviderIntegrationTest {
                                     """.formatted(draftBaseUrl, draftKey)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.checkMode").value("live_chat_completions"))
-                    .andExpect(jsonPath("$.data.validatedModel").value("qwen3.5-flash"))
+                    .andExpect(jsonPath("$.data.validatedModel").value("onekeytoken/auto"))
+                    .andExpect(jsonPath("$.data.resolvedModel").value("qwen3.5-flash"))
                     .andExpect(jsonPath("$.data.catalogSource").value("unavailable"))
                     .andExpect(jsonPath("$.data.modelCount").value(0))
                     .andExpect(jsonPath("$.data.sampleModels").isEmpty());

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildProviderCheckRequest, catalogEmptyMessage, readValidatedModel } from "./PlatformModelsPage";
+import { buildProviderCheckRequest, catalogEmptyMessage, readResolvedModel, readValidatedModel } from "./PlatformModelsPage";
 
 describe("OneKeyToken provider check request", () => {
   it("sends the current unsaved form draft without preserving surrounding whitespace", () => {
@@ -20,5 +20,10 @@ describe("provider catalog capability", () => {
     expect(readValidatedModel({ validatedModel: " onekeytoken/auto " })).toBe("onekeytoken/auto");
     expect(readValidatedModel({ validatedModel: 42 })).toBe("");
     expect(readValidatedModel(null)).toBe("");
+  });
+
+  it("keeps the gateway-resolved model as diagnostic information", () => {
+    expect(readResolvedModel({ resolvedModel: " qwen3.5-flash " })).toBe("qwen3.5-flash");
+    expect(readResolvedModel({ resolvedModel: 42 })).toBe("");
   });
 });
