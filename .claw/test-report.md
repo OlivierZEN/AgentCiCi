@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-10T08:27:30Z
+updated_at: 2026-08-10T10:06:51Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-10T08:27:30Z
+last_run_at: 2026-08-10T10:06:51Z
 last_run_status: partial
 ---
 
 # Test Report
+
+## 2026-08-10 TASK-275 第二租户 Semattice 开通与 DevAutopilot 前置门禁
+
+- 受权平台管理员在 UAT `2.8.59-beta.11` 的第二测试租户页面点击“开通 Semattice”，页面返回“Semattice 已开通，并已完成企业身份绑定”；应用汇总从 1 变为 2，卡片状态为运行中。
+- 随后点击“开通 DevAutopilot”返回 `DevAutopilot activation requires an active tenant ORG_ADMIN`。该结果符合标准模板需要同租户 active HUMAN owner 的安全与业务前置条件。
+- UAT 只读数据库回读：主测试租户有 3 个 ACTIVE 成员及 ACTIVE DevAutopilot activation；第二测试租户只有 1 个 `OWNER/PENDING_ACTIVATION`，Semattice binding 为 `PROVISIONED`，且 DevAutopilot activation 为 0。失败请求没有留下半初始化 activation。
+- 自动化回归 `DevAutopilotHandoffServiceTest,OfficialDevAutopilotActivationFilterTest,SematticeProjectDeliveryToolServiceTest,SematticeProjectDeliveryWriteToolServiceTest,SematticeProjectDeliveryReviewToolServiceTest,AgentServicePrincipalExecutionServiceTest` 共 13 项，Failures=0、Errors=0。
+- 状态：`partial`。仍需第二租户 Owner 完成邮件激活/首次 OIDC 登录，以及 Demo Company 正常员工完成产品经理截图原句对话回归。
 
 ## 2026-08-10 TASK-276 新租户 Owner OIDC provisioning 本地验证
 

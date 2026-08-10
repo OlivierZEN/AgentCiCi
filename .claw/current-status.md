@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-10T10:02:00Z
+updated_at: 2026-08-10T10:06:51Z
 updated_by: codex
 phase: release
 active_task: TASK-275
-next_action: "由 Demo Company 正常租户用户在天工产品经理新会话中重试“能帮我创建一个项目吗”，确认返回 DevAutopilot/Semattice 创建草案而非 CRM 限制说明；随后完成第二租户正向与跨租户负向隔离验收。"
+next_action: "由 Demo Company 正常租户用户在天工产品经理新会话中重试“能帮我创建一个项目吗”；同时由第二测试租户 Owner 完成邮件激活和首次 OIDC 登录，使成员从 PENDING_ACTIVATION 转为 ACTIVE，再继续该租户 DevAutopilot 开通与跨租户负向验收。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-275 / INT-008 双租户 UAT：平台管理员已对第二测试租户 `orgvdd8xckmvc8r5yi6q` 通过正式按钮开通 Semattice，页面和数据库回读均为 `PROVISIONED`，且两个测试租户的 Semattice tenant 标识均存在。随后正式 DevAutopilot 开通按预期失败关闭为 `DevAutopilot activation requires an active tenant ORG_ADMIN`；只读回读确认该租户唯一 `OWNER` 仍为 `PENDING_ACTIVATION`，没有 activation 或机器主体遗留。该门禁不能由平台账号、直接写库或虚构负责人绕过；需 Owner 完成邮件激活和首次 OIDC 登录后继续。Demo Company 的正常员工产品经理对话回归仍需业务登录。
 
 - TASK-275 / INT-008：已发布 UAT `2.8.59-beta.11 / 4b0be4c4328e`，修复租户标准产品经理只绑定 Tool、未绑定 `semattice-project-delivery-management` Skill 而把“项目”误解为 CRM 项目的缺陷。完成态现在还要求 always-on Skill、当前发布工作流的不可变 Skill 引用及已发布 Skill 版本；真实页面先从“已完成”纠正为“待补齐”，平台管理员通过正式按钮补偿后恢复“已完成”。只读回读确认 `天工产品经理 / devautopilot-pm-09653ab9` 工作流 v2 已发布，5 个研发交付 Tool、标准 Skill binding 和 workflow Skill v1 引用完整，领域提示断言通过。平台会话不能替代租户员工会话，截图原句的最终对话回归仍需正常租户用户执行。
 

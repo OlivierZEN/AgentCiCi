@@ -1,12 +1,18 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-10T10:02:00Z
+updated_at: 2026-08-10T10:06:51Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-10 TASK-275 第二测试租户应用开通前置状态
+
+- 通过 UAT 平台正式生命周期接口为 `orgvdd8xckmvc8r5yi6q` 开通 Semattice；权威 binding 为 `PROVISIONED`，不涉及镜像发布、容器重启或数据库直写。
+- DevAutopilot 开通因缺少 active `OWNER/ORG_ADMIN` 失败关闭；唯一 Owner 尚处于 `PENDING_ACTIVATION`，activation 表无该租户记录。后续只允许在 Owner 邮件激活和首次 OIDC 登录完成后重试，不以平台身份或直接写库补造负责人。
+- 本次状态变化仅新增该租户 Semattice provisioning；如需撤销，应走 Semattice 独立生命周期管理，不通过删除 AgentCiCi 数据回滚。
 
 ## 2026-08-10 TASK-275 UAT beta.11 产品经理领域 Skill 初始化
 
