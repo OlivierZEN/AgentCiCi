@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-10T10:32:11Z
+updated_at: 2026-08-10T10:44:58Z
 updated_by: codex
 board_status: active
 ---
@@ -36,7 +36,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `ISSUE-2026-08-10-new-tenant-owner-missing-oidc (second-tenant E2E only)`
 - integration_id: `INT-008`
 - scope_files: `platform tenant applications, AgentCiCi-to-DevAutopilot handoff, activation persistence, machine-principal create/edit modal, tests, docs`
-- next_action: `发布 beta.12 的 DevAutopilot 专用 identity.principal.read，联动消费方回归 active/suspended 开发者状态；第二租户待 Owner 激活后继续隔离验收`
+- next_action: `主租户三仓链路已通过；等待第二测试租户 Owner 激活后完成正向开通与跨租户负向验收`
 
 ### TASK-273 - Keycloak 生产人工运维交接
 

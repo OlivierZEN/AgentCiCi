@@ -2377,3 +2377,5 @@ last_run_status: partial
 - 用户提供的 Demo Company 测试账号经正常 OIDC 登录；员工首页可见“天工产品经理”。新会话发送“能帮我创建一个项目吗”，`onekeytoken/auto` 返回研发项目名称追问和创建草案语义，不再出现 CRM 限制说明，领域对话回归通过；未实际创建项目。
 - 正常进入 DevAutopilot 后 handoff/consume/workspace 成功，Semattice 实时项目数为 0；墨子正确显示休息不可派单，鲁班错误显示身份未同步。Semattice 数据只读回读已证明墨子 suspended、鲁班 active，故定位为目录读取授权缺失而非投影缺失。
 - `OfficialAccessTokenServiceTest,DevAutopilotHandoffServiceTest` 通过。专用 handoff token 精确包含 `identity.principal.read`，并断言不含 `authorization.manage`；通用 Semattice token 保持不变。
+- UAT `2.8.59-beta.12 / b070676f411a`：backend/frontend healthy，容器网络 health=UP，Nginx 有效，近期 backend 错误匹配 0；匿名 `/auth/me=401`。发布前备份六项非空，仅重建应用容器，状态服务 ID 哈希保持 `b5dca5759af2a9cfb0ed4285fdb3b01c9af02db33eb2bfbabfa347fe728de2bc`。
+- 真实新 handoff：AgentCiCi 页面版本 beta.12，DevAutopilot 页面版本 `1.0.4-beta.1`；Semattice 0 项目、墨子不可派单、鲁班可派单，未出现身份目录不可用。

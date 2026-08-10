@@ -1198,3 +1198,9 @@ status: active
 - 发布前备份：`/data/apps/agentcici/backups/20260810T091307Z-before-2.8.59-beta.9`；Compose、UAT secrets、PostgreSQL dump、KB 与 Qdrant 备份均非空。
 - 仅重建 backend/frontend；状态服务容器 ID 哈希发布前后均为 `8868a49fbf84497e4da99ba3ef6af95b6ad206d507d5304d958cc5aec974cd77`。两个应用容器 healthy，health=`UP`，版本/镜像/Git commit 一致，Nginx 配置有效。
 - 受权平台 UI 已完成配置纠正；只读数据库回读 `selectedModels=[onekeytoken/auto]`，五个场景路由均为 OneKeyToken `onekeytoken/auto`，不存在 `qwen3.5-flash` 目录或固定路由。
+
+## 2026-08-10 UAT `2.8.59-beta.12` - DevAutopilot 只读身份目录授权
+
+- Git tag/commit：`2.8.59-beta.12 / b070676f411a`。ACR index digest：backend `sha256:1941ae7da12b821a01782336b4500da4d6b09ae61a5fbc77b9043db48e3b7087`；frontend `sha256:81d84e6592215b46a5032ce3b3eb4cbbf70f5d5444f2d8f5693b43f7777ed3fe`。
+- 发布前备份：`/data/apps/agentcici/backups/20260810T103604Z-before-2.8.59-beta.12`，Compose、UAT secrets、PostgreSQL、KB 与 Qdrant 均非空。精确 amd64 镜像离线加载，仅重建 backend/frontend；四个状态服务 ID 哈希发布前后保持 `b5dca5759af2a9cfb0ed4285fdb3b01c9af02db33eb2bfbabfa347fe728de2bc`。
+- backend/frontend healthy，容器网络 health=`UP`，版本/镜像/Git commit 一致，Nginx 有效，近期错误匹配为 0。DevAutopilot handoff 仅追加 `identity.principal.read`，不追加 `authorization.manage`；真实员工新 handoff 已验证目录读取和 active/suspended 状态。
