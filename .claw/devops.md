@@ -1177,3 +1177,11 @@ status: active
 - 发布前备份：`/data/apps/agentcici/backups/20260810T084734Z-before-2.8.59-beta.8`；Compose、UAT secrets、PostgreSQL dump、KB 与 Qdrant 备份均非空。
 - UAT 主机继续使用精确 amd64 镜像离线加载，仅重建 backend/frontend；PostgreSQL、Qdrant、RabbitMQ 容器 ID 哈希发布前后均为 `8868a49fbf84497e4da99ba3ef6af95b6ad206d507d5304d958cc5aec974cd77`。
 - backend/frontend healthy，后端 health=`UP`，`/system/version` 回读 `2.8.59-beta.8 / 8213646b4fa3`，Nginx 配置有效。平台模型和租户初始化均通过受权 UI/API 完成，不保存或回读 API Key、Client Secret 或 OACT。
+
+## 2026-08-10 UAT `2.8.59-beta.9` - OneKeyToken 自动路由语义修正
+
+- Git tag/commit：`2.8.59-beta.9 / 534a3baff64e`。
+- ACR index digest：backend `sha256:e829bfffbaacb958ec9479607c38b41d375dd0adea8d301ca0f31042980d7886`；frontend `sha256:470fa51d907bae73830ea0209a8dc932ee51992b804c110cad50d2226bb213e7`。linux/amd64 manifest digest 分别为 `sha256:06762fc79ea9374ffbe6653df1cb48593000c8269e4aac9c9f967ebc9df26189` 与 `sha256:8a59e0a37d2c732f221fe690474638894254a19cdd6633ce08f31432f2425980`。
+- 发布前备份：`/data/apps/agentcici/backups/20260810T091307Z-before-2.8.59-beta.9`；Compose、UAT secrets、PostgreSQL dump、KB 与 Qdrant 备份均非空。
+- 仅重建 backend/frontend；状态服务容器 ID 哈希发布前后均为 `8868a49fbf84497e4da99ba3ef6af95b6ad206d507d5304d958cc5aec974cd77`。两个应用容器 healthy，health=`UP`，版本/镜像/Git commit 一致，Nginx 配置有效。
+- 受权平台 UI 已完成配置纠正；只读数据库回读 `selectedModels=[onekeytoken/auto]`，五个场景路由均为 OneKeyToken `onekeytoken/auto`，不存在 `qwen3.5-flash` 目录或固定路由。

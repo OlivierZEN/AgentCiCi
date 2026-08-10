@@ -5,7 +5,7 @@ title: 厂商模型目录能力边界
 status: approved
 task_id: TASK-218
 source: 用户截图反馈（无外部设计文档链接）
-updated_at: 2026-08-10T08:53:59Z
+updated_at: 2026-08-10T09:24:12Z
 updated_by: codex
 ---
 
@@ -28,7 +28,7 @@ updated_by: codex
 
 - ProviderDef 不再为 OneKeyToken 声明本地默认模型。
 - 对不支持远程枚举的厂商，`models/fetch` 成功返回 `count: 0`、空 `models/modelDetails`、`catalogSource: unavailable`、`remoteFetchSupported: false`，不访问或伪造 `/models`。
-- OneKeyToken 检测成功的 `modelCount` 为 0，`sampleModels` 为空，目录来源为 `unavailable`；`validatedModel` 仍可反映网关本次路由结果。
+- OneKeyToken 检测成功的 `modelCount` 为 0，`sampleModels` 为空，目录来源为 `unavailable`。请求中直接验证的稳定别名为 `validatedModel=onekeytoken/auto`；响应中的下游 `routing.model_used` 或 `model` 仅作为 `resolvedModel` 诊断信息，不具备目录或直接可调用证明。
 - 对支持远程枚举的厂商，不改变其现有远程请求与解析逻辑。
 
 ## 交互与视觉
@@ -38,7 +38,7 @@ updated_by: codex
 - 弹窗标题不再使用“预设模型”。
 - 无远程枚举时显示“当前厂商未开放远程模型枚举，暂无可选模型”，且数量为 `0 / 0`。
 - 已选模型区继续只展示运营人员已经保存的模型；无已选模型时保留既有说明。
-- 检测成功且服务端返回实际 `validatedModel` 时，页面显示该次已验证模型，并允许运营人员显式点击“加入模型目录”；检测本身仍不自动保存，也不把该模型声明为远程目录枚举结果。
+- 检测成功时，页面显示已验证路由别名 `onekeytoken/auto`，并可由运营人员显式加入路由目录；网关下游实际模型只显示为诊断信息，不能保存为目录项。检测本身仍不自动保存。
 
 ## 验收标准
 
@@ -47,7 +47,7 @@ updated_by: codex
 3. 前端点击 OneKeyToken“全部模型”时显示 0/0 的厂商未开放枚举空态，不出现“预设模型”或三个本地模型名称。
 4. 已保存的模型选择不被此次改动删除；远程可枚举厂商行为不回归。
 5. 后端集成测试和前端定向测试覆盖上述边界，桌面端检查覆盖空态、加载和既有已选模型显示。
-6. `validatedModel` 只有在真实检测成功后才可由运营人员显式加入；不得硬编码模型名、检测即自动保存或把它计入远程目录数量。
+6. `validatedModel` 只有在 `onekeytoken/auto` 真实检测成功后才允许显式加入；`resolvedModel` 不得加入目录、设为场景路由或计入远程目录数量。
 
 ## 非目标
 

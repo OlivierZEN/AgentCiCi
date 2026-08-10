@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-10T08:53:59Z
+updated_at: 2026-08-10T09:24:12Z
 updated_by: codex
 phase: release
 active_task: TASK-275
@@ -22,7 +22,9 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-275 / INT-008：已发布 UAT `2.8.59-beta.8 / 8213646b4fa3`。OneKeyToken 真实检测成功并返回 `qwen3.5-flash`，运营人员已显式加入平台模型目录并绑定 chat 路由；未伪造远程模型目录，也未自动保存未经验证模型。平台管理员随后通过正式 `initializations` 完成目标租户补偿，页面回读“初始化状态=已完成”。只读数据库证据确认 `天工产品经理 / devautopilot-pm-09653ab9` 已启用、`published_version_id=2`、工作流 `PUBLISHED`、`web` 渠道启用，受控 SERVICE 为 `ACTIVE`。补偿事务同时调用 Semattice Principal 投影，任一步失败均不会返回成功。当前平台会话不能替代租户员工会话，员工首页最终可见和创建会话仍需正常租户用户刷新验证；第二租户隔离仍待完成。
+- TASK-275 / FEAT-123：已发布 UAT `2.8.59-beta.9 / 534a3baff64e`，纠正 beta.8 将 OneKeyToken 下游实际路由误当成目录模型的语义错误。检测现在返回并保存直接验证的稳定路由别名 `onekeytoken/auto`，`qwen3.5-flash` 仅作为该次 `resolvedModel` 诊断信息。UAT 已移除错误的 `qwen3.5-flash` 目录项，五个场景路由全部回读为 `onekeytoken/auto`；实时 Chat Completions 检测成功，OneKeyToken 远程目录仍为 0。DevAutopilot 初始化状态保持“已完成”。
+
+- TASK-275 / INT-008：UAT `2.8.59-beta.8 / 8213646b4fa3` 完成了目标租户初始化，但曾错误地把 OneKeyToken 响应中的下游实际路由 `qwen3.5-flash` 当作可保存目录模型；该模型配置错误已由 beta.9 移除。beta.8 的初始化事实仍有效：页面回读“初始化状态=已完成”，只读数据库确认 `天工产品经理 / devautopilot-pm-09653ab9` 已启用、工作流 `PUBLISHED`、`web` 渠道启用，受控 SERVICE 为 `ACTIVE`。当前平台会话不能替代租户员工会话，员工首页最终可见和创建会话仍需正常租户用户刷新验证；第二租户隔离仍待完成。
 
 - TASK-275 / INT-008：已发布 UAT `2.8.59-beta.7 / 7e309a39394d`。应用卡片完成态改为服务端权威检查，必须同时回读已发布 PM Agent、启用的 `web` 渠道和有效 SERVICE 主体；目标租户现在正确显示“待补齐”并提供按钮。平台管理员真实点击后被 Agent 生产就绪门禁拒绝：UAT 平台 7 个厂商均无凭据、已选模型数为 0，聊天场景没有可用模型。该依赖不能通过直接写库或发布无运行模型的假 Agent 绕过；模型页面已交给平台管理员配置。
 

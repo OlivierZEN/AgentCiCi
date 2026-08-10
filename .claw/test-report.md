@@ -2341,8 +2341,16 @@ last_run_status: partial
 ## 2026-08-10 TASK-275 OneKeyToken 已验证模型与 UAT beta.8 初始化闭环
 
 - 前端定向测试：`PlatformModelsPage.test.tsx` 3/3、`PlatformTenantApplicationsPage.test.ts` 2/2 通过；TypeScript/Vite 生产构建通过，仅有既有大 chunk warning。
-- 浏览器真实检测：已配置的 OneKeyToken Chat Completions 检测成功并返回 `validatedModel=qwen3.5-flash`；点击“加入模型目录”后平台已选模型为 1，chat 场景路由更新成功。远程目录能力仍为不可枚举，不把检测模型伪装成 `/models` 目录。
+- 浏览器真实检测：已配置的 OneKeyToken Chat Completions 检测成功；beta.8 曾把响应中的 `resolvedModel=qwen3.5-flash` 错当成 `validatedModel` 加入目录，该解释和配置已由 beta.9 纠正，不能作为模型列表证据。
 - 平台管理员通过正式“补齐初始化”操作得到成功提示，目标租户卡片由“待补齐”变为“已完成”；没有数据库直写或未授权资源创建。
 - UAT 数据库只读回读：`天工产品经理 / devautopilot-pm-09653ab9` 为 enabled，`published_version_id=2`；工作流 v1 为 `PUBLISHED`；`web` binding enabled；主 SERVICE execution binding enabled、OFFICIAL_APP、PRIMARY owner ACTIVE。
 - 当前浏览器平台会话访问 `/app` 到达独立登录边界，不能作为 Demo Company 员工会话。服务端首页筛选所需的 published/web/enabled 条件已满足，但员工首页实际可见和创建会话仍待正常租户用户刷新验收。
 - `validate-state.py .claw` 已执行；TASK-275、FEAT-123、FEAT-164 与 current-status 未产生校验错误。全局校验仍因仓库既有的历史任务归档、旧规格状态/front matter 和旧时间格式债务返回 1，本任务未批量改写这些历史事实。
+
+## 2026-08-10 TASK-275 OneKeyToken 自动路由语义修正与 UAT beta.9
+
+- 服务端：检测请求固定使用 `model=onekeytoken/auto`；成功响应返回 `validatedModel=onekeytoken/auto`，下游 `routing.model_used/model` 单独返回为 `resolvedModel`，目录能力继续为 `unavailable/0`。
+- 前端：只允许把经过直接调用的 `onekeytoken/auto` 加入路由目录；下游实际模型仅展示诊断，不再保存为目录项或场景路由。定向测试 6/6、生产构建和后端 `-DskipTests package` 通过。
+- 后端 `PlatformModelProviderIntegrationTest` 已更新预期，但本机 PostgreSQL `localhost:5432` 不可达，Spring Context 在 Flyway 连接阶段失败，未进入测试方法；未误报后端集成测试通过。
+- UAT 浏览器真实检测回读：`validatedModel=onekeytoken/auto`、本次 `resolvedModel=qwen3.5-flash`、远程可用模型 0。错误的 `qwen3.5-flash` 已移除；数据库只读回读 OneKeyToken `selectedModels=[onekeytoken/auto]`，五个场景路由全部为 `onekeytoken/auto`。
+- DevAutopilot 租户卡片继续为“运行中 / 初始化已完成”，版本显示 `2.8.59-beta.9`。
