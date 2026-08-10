@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-10T08:05:58Z
+updated_at: 2026-08-10T08:18:59Z
 updated_by: codex
 phase: release
 active_task: TASK-276
-next_action: "提交新租户 Owner OIDC provisioning 修复，发布新的 2.8.59-beta.N 到 UAT，并执行真实激活状态回读。"
+next_action: "发布包含数据库 trigger 字段 refresh 修复的新 UAT beta，并重新执行真实 Owner 激活状态回读。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-276 / FEAT-165：生产只读诊断确认目标新租户 Owner 在 AgentCiCi 账户、登录标识、成员、外部身份和 Keycloak 中均不存在；生产 `2.8.58 / 63371f92d9ae` 的租户开通代码仍只创建本地密码与 Owner 成员，未执行 HUMAN provisioning。修复现已复用 `KeycloakIdentityProvisioningService`，统一认证模式要求 Owner 邮箱、禁止写本地密码、按激活结果设置成员状态，并向平台页返回激活提示。新增测试、相关身份服务回归、后端打包和前端测试/构建通过；下一步仅发布并验收 UAT，不修改生产。
+- TASK-276 / FEAT-165：UAT 已发布 `2.8.59-beta.4 / 1d74f436ec7d`，6 容器 healthy、版本和匿名边界通过。真实开通首次暴露新账号同事务读取不到 PostgreSQL trigger 生成的 `public_id`，API 失败关闭；独立回读确认目标账户、标识、租户、成员和外部身份均为 0，未残留部分数据。现已让账号插入 `saveAndFlush` 后 `EntityManager.refresh` 再进入 OIDC provisioning，并新增时序测试；待发布下一 beta 重验，不修改生产。
 
 - TASK-275 / INT-008：UAT 已发布 `2.8.59-beta.3 / 5be204680e16`，配置修订 `uat-config-20260809T135729Z-666d570`。受管初始化为目标租户建立/协调 HUMAN owner、产品经理和开发者 Semattice Principal；activation 权威回读 `墨子开发者=SUSPENDED`、`鲁班/天工产品经理=ACTIVE`，不再使用历史资源快照覆盖主体状态。普通业务 OACT 继续要求统一身份，只有服务器内部且仅含 `identity.principal.sync` 的初始化令牌允许先建立历史 HUMAN owner 投影。第二租户隔离仍待验收。
 

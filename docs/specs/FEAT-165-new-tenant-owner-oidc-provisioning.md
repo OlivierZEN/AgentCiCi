@@ -7,7 +7,7 @@ owner_role: backend-agent
 task_ids: TASK-276
 related_decisions: none
 related_issues: ISSUE-2026-08-10-new-tenant-owner-missing-oidc
-updated_at: 2026-08-10T08:05:58Z
+updated_at: 2026-08-10T08:18:59Z
 updated_by: codex
 ---
 
@@ -60,6 +60,7 @@ updated_by: codex
    - 新账号不创建本地密码凭据；
    - 在同一租户开通事务中调用 `ensureHumanIdentity`；
    - 依据 `activationRequired` 设置 Owner 成员状态。
+   - 新账号插入后显式 flush/refresh，确保同一事务中的 provisioning 能读取数据库 trigger 生成的不可变 `public_id`。
 3. provisioning 未启用时保留原本地兼容路径：新账号仍要求至少 8 位初始密码并写入本地凭据。
 4. 复用既有账号时由 provisioning 服务核验既有绑定、邮箱和不可变 public ID；已激活账号保持 `ACTIVE`，待激活账号保持 `PENDING_ACTIVATION`。
 5. Keycloak 异常向上返回，Spring 事务回滚本地租户、账号、成员、密码和审计写入，禁止部分本地租户被展示为成功。
@@ -97,7 +98,8 @@ updated_by: codex
 
 - 已完成生产只读诊断和生产提交代码核对。
 - 已完成失败测试复现、统一认证/兼容模式实现、Owner provisioning 定向测试、相关身份服务回归、后端打包和前端定向测试/构建。
-- 本机数据库集成测试仍受 PostgreSQL 未启动限制，不扩写为全量通过；待完成 UAT 发布和真实 Keycloak/AgentCiCi 回读。
+- `2.8.59-beta.4` 真实调用暴露并验证了 `public_id` trigger 列未回填到当前 persistence context 的缺口；API 失败关闭且目标本地五类记录均为 0。已补 flush/refresh 与时序测试。
+- 本机数据库集成测试仍受 PostgreSQL 未启动限制，不扩写为全量通过；待发布下一 UAT beta 并完成真实 Keycloak/AgentCiCi 回读。
 
 ## 交接说明
 

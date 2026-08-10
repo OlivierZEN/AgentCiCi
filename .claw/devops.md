@@ -8,6 +8,13 @@ status: active
 
 # DevOps
 
+## 2026-08-10 TASK-276 UAT beta.4 与回滚点
+
+- 发布 `2.8.59-beta.4 / 1d74f436ec7d`，backend/frontend ACR index digest 分别为 `sha256:426b59ed143ba5984478ce62bd49a9d718c98f819ee9d666eab77b55cc7bc97d` 与 `sha256:8c1057639b5c0127841dadebcd34e3b41ead81a9132b6a6492a98ab69d736adf`。
+- 完整备份位于 `/data/apps/agentcici/backups/20260810T081112Z-before-2.8.59-beta.4-task276`，Compose、受保护环境、PostgreSQL、KB 与 Qdrant 工件均非空且权限为 `0600`。
+- UAT 主机 ACR 登录态缺失，未复制凭据；将同一 `linux/amd64` 不可变镜像通过 SSH 流式 `docker load` 导入。只重建 backend/frontend，6 容器 healthy，health=`UP`、版本/commit/imageTag 一致、Nginx 有效、首页 200、匿名租户 API 401、启动错误计数 0。
+- 真实租户创建因数据库 trigger `public_id` 未刷新而失败关闭，未遗留账户、标识、租户、成员或外部身份；beta.4 保持运行，下一 beta 仅重建 backend/frontend。回滚目标仍为 `2.8.59-beta.3`。
+
 ## 2026-08-09 TASK-275 Principal 初始化与生命周期 UAT 发布
 
 - 最终候选为 `2.8.59-beta.3 / 5be204680e16`；backend/frontend ACR index digest 为 `sha256:c25b2a364105f10bd21e947c4f04548dd679ae5408fed64362264551d586cd02` / `sha256:fea65dc783afecd0691081a04a3b32ce49228cc61dd08d5817d1a75839cf9c83`。运行容器 healthy，版本接口与镜像 tag/commit 一致。

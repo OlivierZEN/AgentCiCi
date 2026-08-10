@@ -11,6 +11,7 @@ import com.codehouse.ciciassistant.auth.domain.UserAccountEntity;
 import com.codehouse.ciciassistant.auth.domain.UserAccountRepository;
 import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.auth.domain.UserRepository;
+import jakarta.persistence.EntityManager;
 import java.util.Locale;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ public class CompanyProvisioningService {
     private final AccountAuthCredentialRepository accountAuthCredentialRepository;
     private final AccountLoginIdentifierRepository accountLoginIdentifierRepository;
     private final UserRepository userRepository;
+    private final EntityManager entityManager;
     private final CompanyIdGenerator companyIdGenerator;
     private final PasswordHashService passwordHashService;
 
@@ -32,6 +34,7 @@ public class CompanyProvisioningService {
                                            AccountAuthCredentialRepository accountAuthCredentialRepository,
                                            AccountLoginIdentifierRepository accountLoginIdentifierRepository,
                                            UserRepository userRepository,
+                                           EntityManager entityManager,
                                            CompanyIdGenerator companyIdGenerator,
                                            PasswordHashService passwordHashService) {
         this.companyRepository = companyRepository;
@@ -39,6 +42,7 @@ public class CompanyProvisioningService {
         this.accountAuthCredentialRepository = accountAuthCredentialRepository;
         this.accountLoginIdentifierRepository = accountLoginIdentifierRepository;
         this.userRepository = userRepository;
+        this.entityManager = entityManager;
         this.companyIdGenerator = companyIdGenerator;
         this.passwordHashService = passwordHashService;
     }
@@ -71,10 +75,14 @@ public class CompanyProvisioningService {
         UserAccountEntity account = new UserAccountEntity(mobileNorm);
         account.setDisplayName(trimToNull(displayName));
         account.setEmail(trimToNull(email));
-        UserAccountEntity saved = userAccountRepository.save(account);
+        UserAccountEntity saved = userAccountRepository.saveAndFlush(account);
+        // PostgreSQL assigns immutable public_id in a BEFORE INSERT trigger. JPA does not
+        // hydrate insertable=false trigger columns automatically, so refresh before any
+        // same-transaction OIDC provisioning reads the account from the persistence context.
+        entityManager.refresh(saved);
         ensureMobileIdentifier(saved, mobileNorm);
         syncEmailIdentifier(saved, trimToNull(email));
-        return userAccountRepository.save(saved);
+        return saved;
     }
 
     @Transactional

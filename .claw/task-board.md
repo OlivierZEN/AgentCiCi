@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-10T08:05:58Z
+updated_at: 2026-08-10T08:18:59Z
 updated_by: codex
 board_status: active
 ---
@@ -24,7 +24,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-276.md`
 - blocked_by: `none`
 - scope_files: `PlatformTenantLifecycleService, Keycloak HUMAN provisioning, focused tests, UAT release evidence`
-- next_action: `发布新的 UAT beta，并用官方租户开通 API 验证 Owner Keycloak identity、绑定与待激活状态`
+- next_action: `发布包含 public_id trigger refresh 修复的新 beta，并重试官方租户开通 API 验证 Owner identity、绑定与待激活状态`
 
 ### TASK-275 - DevAutopilot 标准租户应用控制面
 

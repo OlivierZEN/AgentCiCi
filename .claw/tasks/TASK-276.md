@@ -7,7 +7,7 @@ priority: critical
 owner_role: backend-agent
 claimed_by: codex
 spec_path: docs/specs/FEAT-165-new-tenant-owner-oidc-provisioning.md
-updated_at: 2026-08-10T08:05:58Z
+updated_at: 2026-08-10T08:18:59Z
 updated_by: codex
 ---
 
@@ -29,4 +29,4 @@ updated_by: codex
 
 ## 下一步
 
-提交已验证修复，发布新的 UAT beta，并通过官方 API 与受管存储回读真实 Owner 激活状态。
+发布包含 `public_id` trigger refresh 修复的新 UAT beta，并通过官方 API 与受管存储回读真实 Owner 激活状态。
