@@ -125,6 +125,12 @@ export function buildProviderCheckRequest(enabled: boolean, apiBaseUrl: string, 
   };
 }
 
+export function readValidatedModel(data: unknown): string {
+  if (!data || typeof data !== "object") return "";
+  const value = (data as { validatedModel?: unknown }).validatedModel;
+  return typeof value === "string" ? value.trim() : "";
+}
+
 export function catalogEmptyMessage(catalogSource: CatalogSource, modelCount: number): string {
   if (catalogSource === "unavailable" && modelCount === 0) {
     return "当前厂商未开放远程模型枚举，暂无可选模型。";
@@ -150,6 +156,7 @@ export default function PlatformModelsPage() {
   const [allModelsLoading, setAllModelsLoading] = useState(false);
   const [allModelsSearch, setAllModelsSearch] = useState("");
   const [allModelsCatalogSource, setAllModelsCatalogSource] = useState<CatalogSource>("remote");
+  const [validatedModel, setValidatedModel] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -293,10 +300,12 @@ export default function PlatformModelsPage() {
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "检测失败");
-      const validatedModel = typeof json.data?.validatedModel === "string" && json.data.validatedModel.trim()
-        ? `，已验证路由模型 ${json.data.validatedModel.trim()}`
+      const checkedModel = readValidatedModel(json.data);
+      setValidatedModel(checkedModel);
+      const validatedModelNotice = checkedModel
+        ? `，已验证路由模型 ${checkedModel}`
         : "";
-      setNotice(`检测成功${validatedModel}，可用模型 ${Number(json.data?.modelCount ?? 0)} 个。`);
+      setNotice(`检测成功${validatedModelNotice}，可用模型 ${Number(json.data?.modelCount ?? 0)} 个。`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "检测失败");
     } finally {
@@ -426,6 +435,22 @@ export default function PlatformModelsPage() {
     }
   }
 
+  async function addValidatedModel() {
+    if (!selected || !validatedModel) return;
+    setBusy(true);
+    setError("");
+    try {
+      const nextModels = dedupeModels([...selectedModelNamesOfProvider(selected.providerCode), validatedModel]);
+      await saveSelectedModels(selected.providerCode, nextModels);
+      setProviderModels((current) => dedupeModels([...current, validatedModel]));
+      setNotice(`已将检测确认的模型 ${validatedModel} 加入平台模型目录。`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "加入平台模型目录失败");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   useEffect(() => {
     void loadProviders();
     void loadModelRoutes();
@@ -437,6 +462,7 @@ export default function PlatformModelsPage() {
     setApiBaseUrl(selected.apiBaseUrl || selected.defaultBaseUrl);
     setApiKey("");
     setProviderEnabled(Boolean(selected.enabled));
+    setValidatedModel("");
     void loadProviderModels(selected.providerCode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.providerCode, selected?.enabled]);
@@ -579,6 +605,20 @@ export default function PlatformModelsPage() {
                       </div>
                     </div>
                   </div>
+
+                  {selected.providerCode === "onekeytoken" && validatedModel ? (
+                    <div className="platform-console__banner platform-console__banner--success">
+                      <span>本次检测已确认可用路由模型：{validatedModel}</span>
+                      <button
+                        type="button"
+                        className="platform-button platform-button--primary"
+                        onClick={() => void addValidatedModel()}
+                        disabled={busy || selectedModels.has(selectedModelKey(selected.providerCode, validatedModel))}
+                      >
+                        {selectedModels.has(selectedModelKey(selected.providerCode, validatedModel)) ? "已加入模型目录" : "加入模型目录"}
+                      </button>
+                    </div>
+                  ) : null}
 
                   <div className="model-section model-section--target">
                     <div className="model-section__head">
