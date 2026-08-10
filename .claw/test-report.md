@@ -2371,3 +2371,9 @@ last_run_status: partial
 - UAT：最终版本 `2.8.59-beta.11 / 4b0be4c4328e`，backend/frontend healthy、health `UP`、版本回读一致、Nginx 校验通过。真实平台页面先显示“待补齐”，点击正式补齐按钮后成功提示并回到“已完成”。
 - 数据库只读回读：`devautopilot-pm-09653ab9` 当前工作流 v2 / `PUBLISHED`；有效 Tool 为 query/create/review/update/delete；`semattice-project-delivery-management` 为 always-on，工作流固定 Skill v1 / `PUBLISHED`；Spec 与 Skill prompt 领域断言 `domain_prompt_ready=true`。
 - 当前可控会话是平台管理员，不是 Demo Company 员工；未伪造租户会话或创建真实项目。截图原句的最终对话回归由正常租户用户在新会话中完成。
+
+## 2026-08-10 TASK-275 员工领域对话与身份目录最小权限
+
+- 用户提供的 Demo Company 测试账号经正常 OIDC 登录；员工首页可见“天工产品经理”。新会话发送“能帮我创建一个项目吗”，`onekeytoken/auto` 返回研发项目名称追问和创建草案语义，不再出现 CRM 限制说明，领域对话回归通过；未实际创建项目。
+- 正常进入 DevAutopilot 后 handoff/consume/workspace 成功，Semattice 实时项目数为 0；墨子正确显示休息不可派单，鲁班错误显示身份未同步。Semattice 数据只读回读已证明墨子 suspended、鲁班 active，故定位为目录读取授权缺失而非投影缺失。
+- `OfficialAccessTokenServiceTest,DevAutopilotHandoffServiceTest` 通过。专用 handoff token 精确包含 `identity.principal.read`，并断言不含 `authorization.manage`；通用 Semattice token 保持不变。

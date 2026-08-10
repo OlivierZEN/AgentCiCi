@@ -77,6 +77,10 @@ class OfficialAccessTokenServiceTest {
         assertThat(claims.get("keycloak_subject", String.class)).isEqualTo("keycloak-user-subject");
         assertThat(claims.get("scope", String.class)).isEqualTo("metadata.version.read record.read");
         assertThat(issued.scopes()).containsExactly("metadata.version.read", "record.read");
+        OfficialAccessTokenService.IssuedToken devAutopilotToken = service.issueForDevAutopilot(member);
+        assertThat(devAutopilotToken.scopes())
+                .containsExactly("metadata.version.read", "record.read", "identity.principal.read")
+                .doesNotContain("authorization.manage");
         OfficialAccessTokenService.IssuedToken consoleToken = service.issueForSematticeConsole(member);
         assertThat(consoleToken.scopes())
                 .containsExactly("metadata.version.read", "record.read", "audit.read");

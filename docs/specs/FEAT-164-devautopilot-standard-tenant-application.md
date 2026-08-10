@@ -125,6 +125,8 @@ AgentCiCi 前台是租户用户进入 DevAutopilot 的唯一浏览器入口。�
 
 DevAutopilot 服务端调用 AgentCiCi 的 ticket exchange，并仅在自身短期 HttpOnly 会话内保存新签发的 OACT。AgentCiCi 的 ticket 状态只含 `company_id` 与成员 ID，不保存任何 bearer token；兑换一次即删除。兑换时重新核验 activation 为 `ACTIVE`，并按该成员签发 60-600 秒的最小 OACT。平台账号没有租户 `company_id`，不能创建 handoff。
 
+该 handoff OACT 在通用 Semattice 运行 scope 之外仅追加 `identity.principal.read`，用于调用 HUMAN-only、租户路由的 `identity.principal.directory` 并同步开发者 active/suspended 状态。不得为此签发 `authorization.manage`，也不得改用 Principal 管理列表或状态写接口。该 scope 属于已开通应用的只读运行契约，不改变机器主体的新增、编辑、暂停和恢复仍由同租户 ORG_ADMIN 管理的边界。
+
 ## 跨项目契约
 
 - `INT-008`：本规格为 AgentCiCi 控制面所有者。

@@ -385,12 +385,12 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
-    public OfficialAccessTokenService.IssuedToken issueSematticeOfficialAccessForRuntime(String companyId,
-                                                                                            String userId,
-                                                                                            OfficialAccessTokenService tokenService) {
+    public OfficialAccessTokenService.IssuedToken issueSematticeOfficialAccessForDevAutopilot(String companyId,
+                                                                                                 String userId,
+                                                                                                 OfficialAccessTokenService tokenService) {
         UserEntity user = userRepository.findByIdAndCompany_Id(userId, companyId)
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
-        return tokenService.issueForSemattice(user);
+        return tokenService.issueForDevAutopilot(user);
     }
 
     @Transactional

@@ -21,6 +21,7 @@ import java.security.interfaces.RSAPrivateCrtKey;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.RSAPublicKeySpec;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -38,6 +39,7 @@ import org.springframework.stereotype.Service;
 public class OfficialAccessTokenService {
 
     public static final String SEMATTICE_AUDIENCE = "semattice-api";
+    public static final String IDENTITY_PRINCIPAL_READ_SCOPE = "identity.principal.read";
 
     private final AccountExternalIdentityRepository identityRepository;
     private final SematticeProvisioningBindingRepository bindingRepository;
@@ -81,6 +83,15 @@ public class OfficialAccessTokenService {
 
     public IssuedToken issueForSemattice(UserEntity member) {
         return issueForSemattice(member, sematticeScopes);
+    }
+
+    /** Tenant-scoped HUMAN token for the activated DevAutopilot application. */
+    public IssuedToken issueForDevAutopilot(UserEntity member) {
+        List<String> scopes = new ArrayList<>(sematticeScopes);
+        if (!scopes.contains(IDENTITY_PRINCIPAL_READ_SCOPE)) {
+            scopes.add(IDENTITY_PRINCIPAL_READ_SCOPE);
+        }
+        return issueForSemattice(member, List.copyOf(scopes));
     }
 
     public IssuedToken issueForSematticeConsole(UserEntity member) {

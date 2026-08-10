@@ -52,7 +52,7 @@ public class DevAutopilotHandoffService {
             throw new UnauthorizedException("DevAutopilot 登录票据已过期或已使用");
         }
         requireActive(handoff.companyId());
-        OfficialAccessTokenService.IssuedToken issued = authService.issueSematticeOfficialAccessForRuntime(
+        OfficialAccessTokenService.IssuedToken issued = authService.issueSematticeOfficialAccessForDevAutopilot(
                 handoff.companyId(), handoff.memberId(), tokenService);
         return new ExchangedAccess(issued.token(), issued.expiresAt(), issued.tenantId(), issued.companyId());
     }
