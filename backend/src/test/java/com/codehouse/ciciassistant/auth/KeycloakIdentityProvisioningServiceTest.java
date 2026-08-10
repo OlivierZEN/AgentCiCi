@@ -265,6 +265,75 @@ class KeycloakIdentityProvisioningServiceTest {
         }
     }
 
+    @Test
+    void verifiesAnAlreadyActiveBoundHumanWithoutCreatingCredentialsOrRequiringLocalEmail() throws Exception {
+        UserAccountEntity account = account("account-5", "U2026QR78ST90", null);
+        AccountExternalIdentityRepository identities = Mockito.mock(AccountExternalIdentityRepository.class);
+        UserAccountRepository accounts = Mockito.mock(UserAccountRepository.class);
+
+        HttpServer server = server(exchange -> {
+            String path = exchange.getRequestURI().getPath();
+            if (path.endsWith("/protocol/openid-connect/token")) {
+                respond(exchange, 200, "{\"access_token\":\"provisioner-token\"}");
+            } else if (path.endsWith("/users/active-recovery-subject")) {
+                respond(exchange, 200, """
+                        {"id":"active-recovery-subject","enabled":true,
+                         "emailVerified":true,"requiredActions":[]}
+                        """);
+            } else {
+                respond(exchange, 404, "");
+            }
+        });
+        try {
+            AccountExternalIdentityEntity identity = new AccountExternalIdentityEntity(
+                    account, issuer(server), "active-recovery-subject");
+            when(identities.findByAccount_Id(account.getId())).thenReturn(java.util.Optional.of(identity));
+
+            KeycloakIdentityProvisioningService.ActiveHumanIdentity result = provisioningService(
+                    identities, accounts, issuer(server), true).requireActiveHumanIdentity(account);
+
+            assertThat(result.subject()).isEqualTo("active-recovery-subject");
+            verify(identities, never()).saveAndFlush(any());
+            verify(accounts, never()).save(any());
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void rejectsABoundHumanThatStillRequiresPasswordSetupForOwnerRecovery() throws Exception {
+        UserAccountEntity account = account("account-6", "U2026UV12WX34", "pending@example.com");
+        AccountExternalIdentityRepository identities = Mockito.mock(AccountExternalIdentityRepository.class);
+        UserAccountRepository accounts = Mockito.mock(UserAccountRepository.class);
+
+        HttpServer server = server(exchange -> {
+            String path = exchange.getRequestURI().getPath();
+            if (path.endsWith("/protocol/openid-connect/token")) {
+                respond(exchange, 200, "{\"access_token\":\"provisioner-token\"}");
+            } else if (path.endsWith("/users/pending-recovery-subject")) {
+                respond(exchange, 200, """
+                        {"id":"pending-recovery-subject","enabled":true,
+                         "emailVerified":false,"requiredActions":["VERIFY_EMAIL","UPDATE_PASSWORD"]}
+                        """);
+            } else {
+                respond(exchange, 404, "");
+            }
+        });
+        try {
+            AccountExternalIdentityEntity identity = new AccountExternalIdentityEntity(
+                    account, issuer(server), "pending-recovery-subject");
+            when(identities.findByAccount_Id(account.getId())).thenReturn(java.util.Optional.of(identity));
+
+            assertThatThrownBy(() -> provisioningService(identities, accounts, issuer(server), true)
+                    .requireActiveHumanIdentity(account))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessage("目标账号尚未完成统一身份激活");
+            verify(identities, never()).saveAndFlush(any());
+        } finally {
+            server.stop(0);
+        }
+    }
+
     private KeycloakIdentityProvisioningService service(boolean humanEnabled, boolean machineEnabled, String redirectUri) {
         return new KeycloakIdentityProvisioningService(
                 Mockito.mock(AccountExternalIdentityRepository.class),

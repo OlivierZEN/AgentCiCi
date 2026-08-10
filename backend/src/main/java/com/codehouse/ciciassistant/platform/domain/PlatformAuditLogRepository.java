@@ -11,6 +11,12 @@ public interface PlatformAuditLogRepository extends JpaRepository<PlatformAuditL
 
     List<PlatformAuditLogEntity> findTop100ByCompanyIdOrderByIdDesc(String companyId);
 
+    boolean existsByCompanyIdAndEventTypeAndResourceKeyAndDetailContaining(
+            String companyId,
+            String eventType,
+            String resourceKey,
+            String detailFragment);
+
     @Query("""
             select item from PlatformAuditLogEntity item
             where item.companyId = :companyId

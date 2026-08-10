@@ -1,14 +1,24 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-10T10:06:51Z
+updated_at: 2026-08-10T11:29:15Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-10T10:06:51Z
+last_run_at: 2026-08-10T11:29:15Z
 last_run_status: partial
 ---
 
 # Test Report
+
+## 2026-08-10 TASK-276 / TASK-277 Owner 身份协调与启动死锁恢复
+
+- 后端定向测试 `KeycloakIdentityProvisioningServiceTest` 11/11、`PlatformTenantOwnerRecoveryServiceTest` 4/4、`PlatformTenantOwnerIdentityServiceTest` 6/6、`PlatformTenantOwnerProvisioningTest` 5/5 通过，合计 26 项，Failures=0、Errors=0。
+- `mvn -q -DskipTests package` 通过。常规协调只作用于当前唯一 Owner；异常恢复只在没有有效 Owner 时接受已完成 OIDC 激活的账号，使用悲观锁串行所有权变更，相同目标幂等，不设置密码、不删除旧 Owner。
+- 前端 `PlatformTenantApplicationsPage.test.ts` 4/4 与 `npm run build` 通过；构建仅有既有 bundle-size 提示。页面显示脱敏 Owner 身份状态，创建/协调通过独立确认 modal 完成，未在应用卡片中长期堆放表单。
+- 完整 `mvn -q test` 在 `KnowledgeBaseLifecycleIntegrationTest` 初始化阶段因本机 PostgreSQL 未启动持续重试，人工停止并退出 130；不能记为全量套件通过，发布后以 UAT 真实 PostgreSQL、Keycloak、权限和浏览器链路补验。
+- `git diff --check` 通过；状态校验器仍报告迁移前历史 task/spec/front matter 债务，本次新增 FEAT-165/166 状态已修正为合法 `in_implementation`，未批量改写无关历史。
+
+- 状态：`partial`（本地实现通过，等待不可变 UAT 发布与真实恢复验收）
 
 ## 2026-08-10 TASK-275 第二租户 Semattice 开通与 DevAutopilot 前置门禁
 

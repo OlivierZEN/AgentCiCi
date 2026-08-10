@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-10T10:44:58Z
+updated_at: 2026-08-10T11:29:15Z
 updated_by: codex
-phase: review
-active_task: TASK-275
-next_action: "主租户三仓链路已验收；等待第二测试租户 Owner 完成激活和首次 OIDC 登录，再执行 DevAutopilot 正向开通与跨租户负向验收。"
+phase: implementation
+active_task: TASK-277
+next_action: "提交并发布下一 AgentCiCi UAT beta；通过正式 Owner 恢复接口让第二租户复用已激活 Demo 账号，再完成 DevAutopilot 开通和双租户隔离验收。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,10 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-276 / TASK-277：Owner 常规身份协调与无有效 Owner 启动死锁恢复均已本地实现。后端 4 类 26 项定向测试、package、前端 4 项测试与生产构建通过；完整后端套件因本机 PostgreSQL 未启动在连接重试阶段停止。恢复只接受远端已激活 HUMAN，通过悲观锁串行所有权变更，保留原待激活 Owner；页面常规协调使用脱敏状态和独立确认 modal，不设置或展示密码。待提交并发布下一 UAT beta。
+
+- TASK-277 / FEAT-166：用户已确认在“租户应用”页增加当前 Owner 身份协调入口。范围为脱敏状态、公共编号二次确认、受管 HUMAN provisioning、成员激活状态回写、幂等与平台审计；不替换 Owner，不直接写生产数据库，不自动发布。
 
 - TASK-275 / INT-008 已发布 UAT `2.8.59-beta.12 / b070676f411a`。发布前完整备份 `/data/apps/agentcici/backups/20260810T103604Z-before-2.8.59-beta.12`，仅重建 backend/frontend，四个状态服务 ID 未变；健康、版本、Nginx、匿名 401 与错误日志通过。真实员工重新 handoff 到 DevAutopilot `1.0.4-beta.1` 后，0 项目空工作台正常，墨子 suspended 不可派单、鲁班 active 可派单，证明 `identity.principal.read → identity.principal.directory` 闭环通过且未授予 `authorization.manage`。第二测试租户 Owner 仍为 `PENDING_ACTIVATION`，仅双租户验收待完成。
 

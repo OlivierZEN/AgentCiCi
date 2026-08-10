@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-10T10:44:58Z
+updated_at: 2026-08-10T11:29:15Z
 updated_by: codex
 board_status: active
 ---
@@ -15,16 +15,27 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-277 - 平台租户 Owner 统一身份协调入口
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-166-platform-tenant-owner-identity-reconciliation.md`
+- blocked_by: `none`
+- scope_files: `PlatformTenantOwnerIdentityService, PlatformTenantLifecycleController, PlatformTenantApplicationsPage, focused tests, styles, docs`
+- next_action: `API、页面和本地测试已完成；随 TASK-276 发布下一 UAT beta并完成桌面验收`
+
 ### TASK-276 - 新租户 Owner 统一身份开通修复与 UAT 发布
 
-- status: `review`
+- status: `in_progress`
 - priority: `critical`
 - owner_role: `backend-agent`
 - spec_path: `docs/specs/FEAT-165-new-tenant-owner-oidc-provisioning.md`
 - task_status_path: `.claw/tasks/TASK-276.md`
 - blocked_by: `none`
 - scope_files: `PlatformTenantLifecycleService, Keycloak HUMAN provisioning, focused tests, UAT release evidence`
-- next_action: `等待 Owner 完成 UAT 邮件激活和首次 OIDC 登录，再回读成员 ACTIVE 并决定测试租户清理`
+- next_action: `实现并发布无有效 Owner 租户的受控恢复，复用已激活 Demo 测试账号接管第二租户后继续双租户验收`
 
 ### TASK-275 - DevAutopilot 标准租户应用控制面
 

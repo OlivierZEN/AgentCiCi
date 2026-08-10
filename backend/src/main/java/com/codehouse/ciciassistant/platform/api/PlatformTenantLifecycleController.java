@@ -4,6 +4,8 @@ import com.codehouse.ciciassistant.auth.RequirePlatformRole;
 import com.codehouse.ciciassistant.auth.RoleCodes;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.codehouse.ciciassistant.platform.service.PlatformTenantLifecycleService;
+import com.codehouse.ciciassistant.platform.service.PlatformTenantOwnerRecoveryService;
+import com.codehouse.ciciassistant.platform.service.PlatformTenantOwnerIdentityService;
 import com.codehouse.ciciassistant.platform.service.DevAutopilotTenantApplicationService;
 import com.codehouse.ciciassistant.semattice.SematticeProvisioningClient;
 import com.codehouse.ciciassistant.semattice.SematticeProvisioningService;
@@ -34,15 +36,21 @@ public class PlatformTenantLifecycleController {
     private final SematticeProvisioningClient sematticeProvisioningClient;
     private final SematticeProvisioningService sematticeProvisioningService;
     private final DevAutopilotTenantApplicationService devAutopilotApplications;
+    private final PlatformTenantOwnerRecoveryService ownerRecoveryService;
+    private final PlatformTenantOwnerIdentityService ownerIdentityService;
 
     public PlatformTenantLifecycleController(PlatformTenantLifecycleService tenantLifecycleService,
                                              SematticeProvisioningClient sematticeProvisioningClient,
                                              SematticeProvisioningService sematticeProvisioningService,
-                                             DevAutopilotTenantApplicationService devAutopilotApplications) {
+                                             DevAutopilotTenantApplicationService devAutopilotApplications,
+                                             PlatformTenantOwnerRecoveryService ownerRecoveryService,
+                                             PlatformTenantOwnerIdentityService ownerIdentityService) {
         this.tenantLifecycleService = tenantLifecycleService;
         this.sematticeProvisioningClient = sematticeProvisioningClient;
         this.sematticeProvisioningService = sematticeProvisioningService;
         this.devAutopilotApplications = devAutopilotApplications;
+        this.ownerRecoveryService = ownerRecoveryService;
+        this.ownerIdentityService = ownerIdentityService;
     }
 
     @GetMapping
@@ -63,6 +71,37 @@ public class PlatformTenantLifecycleController {
                         request.initialPassword(),
                         request.provisionNote()
                 ),
+                actorId(),
+                actorRole()));
+    }
+
+    @PostMapping("/{companyId}/owner-recoveries")
+    @RequirePlatformRole(RoleCodes.PLATFORM_ADMIN)
+    public ApiResponse<PlatformTenantOwnerRecoveryService.OwnerRecoveryView> recoverOwner(
+            @PathVariable @Pattern(regexp = "^org[a-z0-9]{17}$") String companyId,
+            @Valid @RequestBody OwnerRecoveryRequest request) {
+        return ApiResponse.ok(ownerRecoveryService.recover(
+                companyId,
+                request.replacementOwnerMobile(),
+                actorId(),
+                actorRole()));
+    }
+
+    @GetMapping("/{companyId}/owner-identity")
+    public ApiResponse<PlatformTenantOwnerIdentityService.OwnerIdentityView> getOwnerIdentity(
+            @PathVariable @Pattern(regexp = "^org[a-z0-9]{17}$") String companyId) {
+        return ApiResponse.ok(ownerIdentityService.get(companyId));
+    }
+
+    @PostMapping("/{companyId}/owner-identity/reconciliations")
+    @RequirePlatformRole(RoleCodes.PLATFORM_ADMIN)
+    public ApiResponse<PlatformTenantOwnerIdentityService.OwnerIdentityView> reconcileOwnerIdentity(
+            @PathVariable @Pattern(regexp = "^org[a-z0-9]{17}$") String companyId,
+            @Valid @RequestBody OwnerIdentityReconciliationRequest request) {
+        return ApiResponse.ok(ownerIdentityService.reconcile(
+                companyId,
+                request.publicId(),
+                request.idempotencyKey(),
                 actorId(),
                 actorRole()));
     }
@@ -293,6 +332,19 @@ public class PlatformTenantLifecycleController {
             String ownerEmail,
             String initialPassword,
             String provisionNote
+    ) {
+    }
+
+    public record OwnerRecoveryRequest(
+            @NotBlank
+            @Pattern(regexp = "^1\\d{10}$", message = "must be an 11-digit mainland China mobile number")
+            String replacementOwnerMobile
+    ) {
+    }
+
+    public record OwnerIdentityReconciliationRequest(
+            @NotBlank @Pattern(regexp = "^U[0-9A-Z]{12}$") String publicId,
+            @NotBlank @Pattern(regexp = "^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$") String idempotencyKey
     ) {
     }
 

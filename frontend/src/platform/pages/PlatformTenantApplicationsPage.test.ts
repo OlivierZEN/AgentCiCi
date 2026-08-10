@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { devAutopilotInitializationReady, type DevAutopilotApplication } from "./PlatformTenantApplicationsPage";
+import {
+  devAutopilotInitializationReady,
+  ownerIdentityStatus,
+  type DevAutopilotApplication,
+  type TenantOwnerIdentity,
+} from "./PlatformTenantApplicationsPage";
 
 function application(overrides: Partial<DevAutopilotApplication>): DevAutopilotApplication {
   return {
@@ -29,5 +34,32 @@ describe("DevAutopilot initialization readiness", () => {
     ];
 
     expect(devAutopilotInitializationReady(application({ resources }))).toBe(true);
+  });
+});
+
+describe("tenant Owner identity status", () => {
+  const identity: TenantOwnerIdentity = {
+    companyId: "org3989ajn55ev8eqj51",
+    memberId: "member-1",
+    displayName: "UAT Owner",
+    maskedEmail: "o***@example.test",
+    maskedMobile: "139****0002",
+    publicId: "U2026WVBJQGYU",
+    memberStatus: "ACTIVE",
+    identityState: "MISSING",
+    recoverable: true,
+  };
+
+  it("explains a missing OIDC binding as a recoverable login fault", () => {
+    expect(ownerIdentityStatus(identity)).toEqual({
+      label: "统一身份缺失",
+      description: "本地 Owner 已存在，但尚未建立统一身份，当前无法通过 OIDC 登录。",
+      tone: "danger",
+    });
+  });
+
+  it("distinguishes pending activation from an active identity", () => {
+    expect(ownerIdentityStatus({ ...identity, identityState: "PENDING_ACTIVATION", memberStatus: "PENDING_ACTIVATION" }).label).toBe("等待用户激活");
+    expect(ownerIdentityStatus({ ...identity, identityState: "ACTIVE", recoverable: false }).label).toBe("身份正常");
   });
 });

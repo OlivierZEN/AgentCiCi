@@ -151,6 +151,38 @@ public class KeycloakIdentityProvisioningService {
         return result;
     }
 
+    /**
+     * Verifies that an already-bound HUMAN identity can immediately complete an
+     * OIDC login.  This is intentionally read-only and is used by governed
+     * tenant-owner recovery: it never creates a user, sends an activation mail,
+     * or changes credentials.
+     */
+    public ActiveHumanIdentity requireActiveHumanIdentity(UserAccountEntity account) {
+        if (!humanProvisioningEnabled) {
+            throw new IllegalStateException("统一身份邀请开通尚未启用");
+        }
+        AccountExternalIdentityEntity identity = identityRepository.findByAccount_Id(account.getId())
+                .orElseThrow(() -> new IllegalStateException("目标账号尚未绑定统一身份"));
+        if (!issuer.equals(trimTrailingSlash(identity.getIssuer()))) {
+            throw new IllegalStateException("目标账号统一身份签发方不匹配");
+        }
+        try {
+            KeycloakUser user = readUser(obtainAdminToken(), identity.getSubject());
+            if (user == null) {
+                throw new IllegalStateException("目标账号统一身份不存在");
+            }
+            if (requiresActivation(user)) {
+                throw new IllegalStateException("目标账号尚未完成统一身份激活");
+            }
+            return new ActiveHumanIdentity(identity.getSubject());
+        } catch (Exception ex) {
+            if (ex instanceof IllegalStateException illegalStateException) {
+                throw illegalStateException;
+            }
+            throw new IllegalStateException("目标账号统一身份状态校验失败", ex);
+        }
+    }
+
     public boolean isEnabled() {
         return humanProvisioningEnabled;
     }
@@ -575,6 +607,9 @@ public class KeycloakIdentityProvisioningService {
     }
 
     public record ProvisionResult(boolean alreadyBound, boolean activationRequired, String subject) {
+    }
+
+    public record ActiveHumanIdentity(String subject) {
     }
 
     private record KeycloakUser(String subject, JsonNode representation) {

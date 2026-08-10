@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { Bot, Boxes, CheckCircle2, CircleDashed, Database, ShieldCheck } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { AlertTriangle, Bot, Boxes, CheckCircle2, CircleDashed, Database, Mail, ShieldCheck, UserRound } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { PLATFORM_API_BASE } from "../../constants";
 import { safeFetchJson } from "../../utils/http";
@@ -23,6 +24,31 @@ export type DevAutopilotApplication = {
   metadataVersionId?: string | null;
   resources: Array<{ logicalRole: string; resourceType: string; resourceAlias: string; displayName: string; lifecycleState: string; primary: boolean }>;
 };
+
+export type TenantOwnerIdentity = {
+  companyId: string;
+  memberId: string;
+  displayName: string;
+  maskedEmail: string;
+  maskedMobile: string;
+  publicId: string;
+  memberStatus: string;
+  identityState: "MISSING" | "PENDING_ACTIVATION" | "ACTIVE" | "BLOCKED";
+  recoverable: boolean;
+};
+
+export function ownerIdentityStatus(identity: TenantOwnerIdentity | null): { label: string; description: string; tone: string } {
+  switch (identity?.identityState) {
+    case "MISSING":
+      return { label: "统一身份缺失", description: "本地 Owner 已存在，但尚未建立统一身份，当前无法通过 OIDC 登录。", tone: "danger" };
+    case "PENDING_ACTIVATION":
+      return { label: "等待用户激活", description: "统一身份已建立，Owner 需要完成邮件验证和密码设置。", tone: "pending" };
+    case "ACTIVE":
+      return { label: "身份正常", description: "Owner 已完成统一身份激活，可通过 OIDC 登录。", tone: "healthy" };
+    default:
+      return { label: "暂不可恢复", description: "Owner 当前状态不允许执行统一身份协调，请先完成成员治理。", tone: "blocked" };
+  }
+}
 
 export function devAutopilotInitializationReady(application: DevAutopilotApplication | null): boolean {
   if (!application?.enabled) return false;
@@ -55,6 +81,12 @@ export default function PlatformTenantApplicationsPage() {
   const [busy, setBusy] = useState(false);
   const [sematticeProvisioningState, setSematticeProvisioningState] = useState<SematticeProvisioningState>("NOT_PROVISIONED");
   const [devAutopilot, setDevAutopilot] = useState<DevAutopilotApplication | null>(null);
+  const [ownerIdentity, setOwnerIdentity] = useState<TenantOwnerIdentity | null>(null);
+  const [ownerModalOpen, setOwnerModalOpen] = useState(false);
+  const [ownerConfirmation, setOwnerConfirmation] = useState("");
+  const [ownerBusy, setOwnerBusy] = useState(false);
+  const ownerTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const ownerConfirmationRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!isPlatformCompanyId(companyId)) {
@@ -62,14 +94,65 @@ export default function PlatformTenantApplicationsPage() {
       return;
     }
     if (!token) return;
-    void Promise.all([fetchTenantDetail(token, companyId), fetchSematticeProvisioning(token, companyId), fetchDevAutopilot(token, companyId)])
-      .then(([tenantDetail, provisioning, application]) => {
+    void Promise.all([fetchTenantDetail(token, companyId), fetchSematticeProvisioning(token, companyId), fetchDevAutopilot(token, companyId), fetchOwnerIdentity(token, companyId)])
+      .then(([tenantDetail, provisioning, application, identity]) => {
         setDetail(tenantDetail);
         setSematticeProvisioningState(provisioning.state === "RESERVED" ? "PROVISIONING" : provisioning.state);
         setDevAutopilot(application);
+        setOwnerIdentity(identity);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "加载租户应用失败"));
   }, [token, companyId, navigate]);
+
+  useEffect(() => {
+    if (ownerModalOpen) {
+      globalThis.requestAnimationFrame(() => ownerConfirmationRef.current?.focus());
+    }
+  }, [ownerModalOpen]);
+
+  useEffect(() => {
+    if (!ownerModalOpen) return undefined;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !ownerBusy) closeOwnerModal();
+    };
+    globalThis.addEventListener("keydown", closeOnEscape);
+    return () => globalThis.removeEventListener("keydown", closeOnEscape);
+  }, [ownerModalOpen, ownerBusy]);
+
+  function closeOwnerModal() {
+    setOwnerModalOpen(false);
+    setOwnerConfirmation("");
+    globalThis.requestAnimationFrame(() => ownerTriggerRef.current?.focus());
+  }
+
+  async function reconcileOwnerIdentity() {
+    if (!companyId || !ownerIdentity || ownerConfirmation !== ownerIdentity.publicId) return;
+    setOwnerBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(companyId)}/owner-identity/reconciliations`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          publicId: ownerIdentity.publicId,
+          idempotencyKey: `owner-identity-${companyId}-${globalThis.crypto?.randomUUID?.() ?? Date.now()}`,
+        }),
+      });
+      const { body } = await safeFetchJson(response);
+      if (!response.ok || !body?.success) throw new Error(body?.message ?? `HTTP ${response.status}`);
+      const updated = body.data as TenantOwnerIdentity;
+      setOwnerIdentity(updated);
+      setMessage(updated.identityState === "ACTIVE"
+        ? "Owner 统一身份已协调并处于可登录状态。"
+        : "Owner 统一身份已建立，激活邮件已发送，请通知 Owner 完成验证和密码设置。");
+      closeOwnerModal();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Owner 统一身份协调失败");
+    } finally {
+      setOwnerBusy(false);
+    }
+  }
 
   async function provisionSemattice() {
     if (!companyId || !detail || sematticeProvisioningState === "PROVISIONING") return;
@@ -145,6 +228,8 @@ export default function PlatformTenantApplicationsPage() {
     } catch (err) { setError(err instanceof Error ? err.message : "DevAutopilot 初始化补齐失败"); } finally { setBusy(false); }
   }
 
+  const ownerStatus = ownerIdentityStatus(ownerIdentity);
+
   return (
     <div className="admin-page skills-catalog platform-page platform-tenants-page">
       <header className="skills-catalog__header platform-page-head">
@@ -173,6 +258,46 @@ export default function PlatformTenantApplicationsPage() {
                   <p className="skills-data-table__summary">{detail.tenant.companyId}</p>
                 </div>
               </div>
+
+              {ownerIdentity ? (
+                <section className={`platform-console__section tenant-owner-identity tenant-owner-identity--${ownerStatus.tone}`} aria-labelledby="tenant-owner-identity-title">
+                  <div className="tenant-owner-identity__head">
+                    <span className="tenant-owner-identity__icon" aria-hidden="true"><UserRound size={20} strokeWidth={1.8} /></span>
+                    <div>
+                      <div className="tenant-owner-identity__title-line">
+                        <h3 id="tenant-owner-identity-title" className="platform-console__subheading">Owner 身份</h3>
+                        <span className="tenant-owner-identity__state">{ownerStatus.label}</span>
+                      </div>
+                      <p className="skills-data-table__summary">{ownerStatus.description}</p>
+                    </div>
+                  </div>
+                  <dl className="tenant-owner-identity__facts">
+                    <div><dt>Owner</dt><dd>{ownerIdentity.displayName}</dd></div>
+                    <div><dt>邮箱</dt><dd>{ownerIdentity.maskedEmail}</dd></div>
+                    <div><dt>手机号</dt><dd>{ownerIdentity.maskedMobile}</dd></div>
+                    <div><dt>成员状态</dt><dd>OWNER · {ownerIdentity.memberStatus}</dd></div>
+                    <div><dt>统一身份</dt><dd>{ownerIdentity.identityState === "MISSING" ? "未绑定" : ownerIdentity.identityState === "PENDING_ACTIVATION" ? "已绑定 · 待激活" : ownerIdentity.identityState === "ACTIVE" ? "已绑定 · 可登录" : "已绑定 · 受限"}</dd></div>
+                    <div><dt>公共编号</dt><dd>{ownerIdentity.publicId}</dd></div>
+                  </dl>
+                  <div className="tenant-owner-identity__foot">
+                    <span><ShieldCheck size={14} aria-hidden="true" />仅平台管理员可操作；不会改变 Owner 角色或重新创建租户。</span>
+                    {ownerIdentity.recoverable ? (
+                      <button
+                        ref={ownerTriggerRef}
+                        type="button"
+                        className="platform-button platform-button--primary tenant-owner-identity__action"
+                        onClick={() => {
+                          setOwnerConfirmation("");
+                          setOwnerModalOpen(true);
+                        }}
+                      >
+                        {ownerIdentity.identityState === "MISSING" ? <ShieldCheck size={15} aria-hidden="true" /> : <Mail size={15} aria-hidden="true" />}
+                        {ownerIdentity.identityState === "MISSING" ? "修复统一身份并发送激活邮件" : "重发激活邮件"}
+                      </button>
+                    ) : null}
+                  </div>
+                </section>
+              ) : null}
 
               <section className="platform-console__section tenant-applications" aria-labelledby="tenant-applications-title">
                 <div className="tenant-applications__heading">
@@ -280,6 +405,57 @@ export default function PlatformTenantApplicationsPage() {
           )}
         </section>
       </div>
+
+      {ownerModalOpen && detail && ownerIdentity ? createPortal((
+        <div className="tenant-lifecycle__modal-backdrop platform-modal-scope" role="presentation" onMouseDown={(event) => {
+          if (event.currentTarget === event.target && !ownerBusy) closeOwnerModal();
+        }}>
+          <div className="tenant-lifecycle__modal tenant-owner-identity__modal" role="dialog" aria-modal="true" aria-labelledby="tenant-owner-reconcile-title">
+            <div className="tenant-lifecycle__modal-head">
+              <div className="tenant-owner-identity__modal-title">
+                <span className="tenant-owner-identity__warning" aria-hidden="true"><AlertTriangle size={18} /></span>
+                <div>
+                  <p className="platform-section-label">Owner 身份协调</p>
+                  <h2 id="tenant-owner-reconcile-title" className="platform-console__heading">确认当前 Owner</h2>
+                </div>
+              </div>
+              <button type="button" className="tenant-lifecycle__modal-close" onClick={closeOwnerModal} disabled={ownerBusy} aria-label="关闭">×</button>
+            </div>
+            <div className="tenant-lifecycle__modal-body">
+              <p className="skills-data-table__summary">系统会补齐当前 Owner 的统一身份；仍需激活时，只重发邮箱验证与密码设置邮件。</p>
+              <div className="tenant-owner-identity__subject">
+                <span>{detail.tenant.name}</span>
+                <strong>{ownerIdentity.displayName} · {ownerIdentity.maskedEmail}</strong>
+                <code>{ownerIdentity.publicId}</code>
+              </div>
+              <p className="tenant-lifecycle__field-help">该操作不转让 Owner、不设置密码，也不改动租户业务数据；结果写入平台审计。</p>
+              <label>
+                <span>输入 Owner 公共编号以确认</span>
+                <input
+                  ref={ownerConfirmationRef}
+                  value={ownerConfirmation}
+                  onChange={(event) => setOwnerConfirmation(event.target.value.toUpperCase())}
+                  placeholder={ownerIdentity.publicId}
+                  autoComplete="off"
+                  disabled={ownerBusy}
+                />
+                <small className="tenant-lifecycle__field-help">仅当输入内容与当前 Owner 完全一致时才可继续。</small>
+              </label>
+            </div>
+            <div className="tenant-lifecycle__modal-foot">
+              <button type="button" className="platform-button platform-button--secondary" onClick={closeOwnerModal} disabled={ownerBusy}>取消</button>
+              <button
+                type="button"
+                className="platform-button platform-button--primary"
+                onClick={() => void reconcileOwnerIdentity()}
+                disabled={ownerBusy || ownerConfirmation !== ownerIdentity.publicId}
+              >
+                {ownerBusy ? "正在协调身份…" : "确认协调"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ), document.body) : null}
     </div>
   );
 }
@@ -289,4 +465,11 @@ async function fetchDevAutopilot(token: string, companyId: string): Promise<DevA
   const { body } = await safeFetchJson(response);
   if (!response.ok || !body?.success) throw new Error(body?.message ?? `HTTP ${response.status}`);
   return body.data as DevAutopilotApplication;
+}
+
+async function fetchOwnerIdentity(token: string, companyId: string): Promise<TenantOwnerIdentity> {
+  const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(companyId)}/owner-identity`, { headers: { Authorization: `Bearer ${token}` } });
+  const { body } = await safeFetchJson(response);
+  if (!response.ok || !body?.success) throw new Error(body?.message ?? `HTTP ${response.status}`);
+  return body.data as TenantOwnerIdentity;
 }

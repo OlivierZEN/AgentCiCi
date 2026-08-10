@@ -44,6 +44,14 @@ public class PlatformAuditService {
         return repository.findTop100ByCompanyIdOrderByIdDesc(companyId);
     }
 
+    public boolean hasEventDetail(String companyId,
+                                  String eventType,
+                                  String resourceKey,
+                                  String detailFragment) {
+        return repository.existsByCompanyIdAndEventTypeAndResourceKeyAndDetailContaining(
+                companyId, eventType, resourceKey, detailFragment);
+    }
+
     public Map<String, Object> query(String companyId, PlatformAuditLogQuery query) {
         Instant to = query.to() == null ? Instant.now() : query.to();
         Instant from = query.from() == null ? to.minus(Duration.ofDays(7)) : query.from();

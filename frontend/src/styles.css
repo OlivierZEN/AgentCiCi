@@ -16555,6 +16555,193 @@ td.skills-data-table__actions > * {
   padding-top: 2px;
 }
 
+.tenant-owner-identity {
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--platform-line);
+  border-radius: 12px;
+  background: var(--platform-surface);
+}
+
+.tenant-owner-identity--danger {
+  border-color: color-mix(in srgb, var(--platform-danger) 40%, var(--platform-line));
+}
+
+.tenant-owner-identity--pending {
+  border-color: var(--platform-line-bright);
+}
+
+.tenant-owner-identity--healthy {
+  border-color: color-mix(in srgb, var(--platform-success) 34%, var(--platform-line));
+}
+
+.tenant-owner-identity__head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 11px;
+  align-items: start;
+}
+
+.tenant-owner-identity__icon,
+.tenant-owner-identity__warning {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  color: var(--platform-accent-strong);
+}
+
+.tenant-owner-identity--danger .tenant-owner-identity__icon,
+.tenant-owner-identity__warning {
+  color: var(--platform-danger);
+}
+
+.tenant-owner-identity__title-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.tenant-owner-identity__state {
+  color: var(--platform-accent-strong);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.tenant-owner-identity--danger .tenant-owner-identity__state {
+  color: var(--platform-danger);
+}
+
+.tenant-owner-identity--healthy .tenant-owner-identity__state {
+  color: var(--platform-success);
+}
+
+.tenant-owner-identity__head .skills-data-table__summary {
+  margin-top: 4px;
+}
+
+.tenant-owner-identity__facts {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin: 0;
+  border-top: 1px solid var(--platform-line);
+  border-bottom: 1px solid var(--platform-line);
+}
+
+.tenant-owner-identity__facts div {
+  min-width: 0;
+  padding: 10px 12px;
+  border-right: 1px solid var(--platform-line);
+}
+
+.tenant-owner-identity__facts div:last-child {
+  border-right: 0;
+}
+
+.tenant-owner-identity__facts dt {
+  color: var(--platform-muted);
+  font-size: 11px;
+}
+
+.tenant-owner-identity__facts dd {
+  overflow: hidden;
+  margin: 4px 0 0;
+  color: var(--platform-heading);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tenant-owner-identity__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 34px;
+  color: var(--platform-muted);
+  font-size: 11px;
+}
+
+.tenant-owner-identity__foot > span,
+.tenant-owner-identity__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tenant-owner-identity__action {
+  flex: 0 0 auto;
+  min-height: 34px;
+}
+
+.tenant-owner-identity__modal {
+  width: min(560px, 100%);
+}
+
+.tenant-owner-identity__modal-title {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.tenant-owner-identity__modal-title .tenant-owner-identity__warning {
+  width: 34px;
+  height: 34px;
+  color: var(--platform-accent-strong);
+}
+
+.tenant-owner-identity__modal-title .platform-section-label {
+  margin-bottom: 3px;
+  color: var(--platform-accent-strong);
+}
+
+.tenant-owner-identity__subject {
+  display: grid;
+  gap: 3px;
+  padding: 11px 13px;
+  border: 1px solid var(--platform-line);
+  border-radius: 8px;
+  background: var(--platform-panel-2);
+}
+
+.tenant-owner-identity__subject span,
+.tenant-owner-identity__subject code {
+  color: var(--platform-muted);
+  font-size: 11px;
+}
+
+.tenant-owner-identity__subject strong {
+  color: var(--platform-heading);
+  font-size: 13px;
+}
+
+.tenant-owner-identity__effects {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tenant-owner-identity__effects li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--platform-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.tenant-owner-identity__effects svg {
+  flex: 0 0 auto;
+  color: var(--platform-success);
+}
+
 .tenant-applications__heading {
   display: flex;
   align-items: end;
@@ -16873,6 +17060,30 @@ td.skills-data-table__actions > * {
   place-items: center;
   padding: 24px;
   background: rgba(43, 34, 23, 0.28);
+}
+
+.platform-modal-scope {
+  --platform-bg: var(--theme-canvas);
+  --platform-bg-2: var(--theme-canvas-alt);
+  --platform-ink: var(--theme-text);
+  --platform-heading: var(--theme-text);
+  --platform-muted: var(--theme-text-muted);
+  --platform-line: var(--theme-line);
+  --platform-line-strong: var(--theme-line-strong);
+  --platform-line-bright: var(--theme-line-strong);
+  --platform-surface: var(--theme-surface);
+  --platform-panel: var(--theme-surface);
+  --platform-panel-2: var(--theme-surface-muted);
+  --platform-panel-3: var(--theme-surface-strong);
+  --platform-accent: var(--theme-accent);
+  --platform-accent-soft: var(--theme-accent-soft);
+  --platform-accent-strong: var(--theme-accent-strong);
+  --platform-danger: var(--theme-danger);
+  --platform-danger-soft: var(--theme-danger-soft);
+  --platform-success: var(--theme-success);
+  --platform-success-soft: var(--theme-success-soft);
+  color: var(--theme-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 .tenant-lifecycle__modal {
