@@ -13,8 +13,9 @@ import {
 } from "./platformTenantsShared";
 
 type SematticeProvisioningState = "NOT_PROVISIONED" | "PROVISIONING" | "PROVISIONED" | "FAILED";
-type DevAutopilotApplication = {
+export type DevAutopilotApplication = {
   enabled: boolean;
+  initializationReady?: boolean;
   templateVersion?: string | null;
   desiredState: string;
   actualState: string;
@@ -23,8 +24,9 @@ type DevAutopilotApplication = {
   resources: Array<{ logicalRole: string; resourceType: string; resourceAlias: string; displayName: string; lifecycleState: string; primary: boolean }>;
 };
 
-function devAutopilotInitializationReady(application: DevAutopilotApplication | null): boolean {
+export function devAutopilotInitializationReady(application: DevAutopilotApplication | null): boolean {
   if (!application?.enabled) return false;
+  if (typeof application.initializationReady === "boolean") return application.initializationReady;
   const resources = application.resources ?? [];
   return resources.some((resource) => resource.logicalRole === "product_manager" && resource.resourceType === "AGENT" && resource.primary && resource.lifecycleState === "ACTIVE")
     && resources.some((resource) => resource.logicalRole === "product_manager" && resource.resourceType === "SERVICE_PRINCIPAL" && resource.primary && resource.lifecycleState === "ACTIVE");

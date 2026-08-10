@@ -338,7 +338,33 @@ public class DevAutopilotTenantApplicationService {
                 WHERE resource.activation_id=?
                 ORDER BY resource.logical_role,resource.resource_type
                 """, (rs,n)->new ResourceView(rs.getString(1),rs.getString(2),rs.getString(3),rs.getString(4),rs.getString(5),rs.getString(6),rs.getBoolean(7)), row.id());
-        return new View(row.companyId(), true, row.templateVersion(), row.desiredState(), row.actualState(), row.sematticeTenantId(), row.metadataVersionId(), row.metadataDigest(), row.lastError(), resources);
+        return new View(row.companyId(), true, row.templateVersion(), row.desiredState(), row.actualState(), row.sematticeTenantId(), row.metadataVersionId(), row.metadataDigest(),
+                initializationReady(row.companyId(), row.id()), row.lastError(), resources);
+    }
+    boolean initializationReady(String companyId, String activationId) {
+        Boolean ready = jdbc.queryForObject("""
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM tenant_application_resource resource
+                    JOIN agent_definition agent
+                      ON agent.company_id=? AND agent.agent_id=resource.external_id
+                    JOIN agent_channel_binding channel
+                      ON channel.company_id=agent.company_id AND channel.agent_id=agent.agent_id
+                     AND channel.channel_id='web' AND channel.enabled=TRUE
+                    WHERE resource.activation_id=? AND resource.logical_role='product_manager'
+                      AND resource.resource_type='AGENT' AND resource.is_primary=TRUE
+                      AND agent.enabled=TRUE AND agent.published_version_id IS NOT NULL
+                ) AND EXISTS (
+                    SELECT 1
+                    FROM tenant_application_resource resource
+                    JOIN principal authority ON authority.id=resource.external_id
+                    WHERE resource.activation_id=? AND resource.logical_role='product_manager'
+                      AND resource.resource_type='SERVICE_PRINCIPAL' AND resource.is_primary=TRUE
+                      AND authority.principal_type='SERVICE'
+                      AND authority.lifecycle_status IN ('ACTIVE','SUSPENDED')
+                )
+                """, Boolean.class, companyId, activationId, activationId);
+        return Boolean.TRUE.equals(ready);
     }
     private static void require(String v,String name) { if (v==null||v.isBlank()) throw new IllegalArgumentException(name+" is required"); }
     private record Row(String id,String companyId,String templateVersion,String idempotencyKey,String desiredState,String actualState,String sematticeTenantId,String metadataVersionId,String metadataDigest,String lastError) { }
@@ -347,7 +373,7 @@ public class DevAutopilotTenantApplicationService {
     public record ActivationCommand(String idempotencyKey) { }
     public record ResourceView(String logicalRole,String resourceType,String resourceAlias,String displayName,String externalId,String lifecycleState,boolean primary) { }
     public record TeamResourceView(ResourceView resource, String principalId, String clientId, String clientSecret, String credentialNotice) { }
-    public record View(String companyId,boolean enabled,String templateVersion,String desiredState,String actualState,String sematticeTenantId,String metadataVersionId,String metadataDigest,String lastErrorCode,List<ResourceView> resources) {
-        static View notEnabled(String companyId) { return new View(companyId,false,null,"NOT_ENABLED","NOT_ENABLED",null,null,null,null,List.of()); }
+    public record View(String companyId,boolean enabled,String templateVersion,String desiredState,String actualState,String sematticeTenantId,String metadataVersionId,String metadataDigest,boolean initializationReady,String lastErrorCode,List<ResourceView> resources) {
+        static View notEnabled(String companyId) { return new View(companyId,false,null,"NOT_ENABLED","NOT_ENABLED",null,null,null,false,null,List.of()); }
     }
 }
