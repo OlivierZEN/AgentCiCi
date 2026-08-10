@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-09T14:12:00Z
+updated_at: 2026-08-10T08:05:58Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-09T14:12:00Z
+last_run_at: 2026-08-10T08:05:58Z
 last_run_status: partial
 ---
 
 # Test Report
+
+## 2026-08-10 TASK-276 新租户 Owner OIDC provisioning 本地验证
+
+- 先以旧实现执行 `PlatformTenantOwnerProvisioningTest`，统一认证场景因仍要求本地初始密码而失败，复现根因；实现后 5/5 通过，覆盖 Keycloak provisioning、邮箱必填、本地兼容模式、既有统一账号复用与远端失败关闭。
+- `PlatformTenantOwnerProvisioningTest,AdminUserServiceTest,KeycloakIdentityProvisioningServiceTest`、后端 `-DskipTests package`、前端平台租户共享逻辑 3/3 与生产构建通过；前端仅有既有 bundle-size 提示。
+- 历史 `PlatformTenantLifecycleIntegrationTest` 报告时间为 2026-08-09，失败原因是本机 PostgreSQL `localhost:5432` 未启动，不作为本次结果；真实数据库/Keycloak 正向链路待 UAT 验收。
+
+- 状态：`partial`
 
 ## 2026-08-09 TASK-275 Principal 权威状态与初始化补偿
 

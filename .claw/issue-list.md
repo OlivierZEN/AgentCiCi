@@ -1,14 +1,20 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-07-22T02:29:33Z
-updated_by: MANAGER-001
+updated_at: 2026-08-10T08:05:58Z
+updated_by: codex
 status: active
 ---
 
 # Issue List
 
 ## Open Issues
+
+- ISSUE-2026-08-10-new-tenant-owner-missing-oidc:
+  - Symptom: 平台开通的新租户 Owner 无法通过生产 OIDC 登录；目标邮箱和手机号在 AgentCiCi 与 Keycloak 均无有效身份记录，登录事件为 `user_not_found`。
+  - Verified root cause: 生产 `2.8.58 / 63371f92d9ae` 的 `PlatformTenantLifecycleService.createTenant` 只创建本地账号、密码凭据和 Owner 成员，不调用 `KeycloakIdentityProvisioningService`；管理访问日志也未出现该目标的成功成员邀请请求。
+  - Resolution progress: TASK-276 / FEAT-165 已在统一认证模式下改为 Keycloak HUMAN provisioning、外部身份绑定与待激活状态，定向测试和构建通过；正在发布 UAT 验证，不直接写生产数据库。
+  - Status: fixing (critical; awaiting UAT verification).
 
 - ISSUE-2026-08-05-ai-table-auth-header:
   - Symptom: 已登录用户在 `https://x.agentcici.com/app` 打开 AI表格时，目录请求显示 `Authentication required`，无法读取业务对象。

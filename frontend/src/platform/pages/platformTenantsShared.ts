@@ -120,6 +120,7 @@ export type TenantProvisionResult = {
   ownerMemberId: string;
   ownerAccountId: string;
   reusedExistingAccount: boolean;
+  ownerActivationRequired: boolean;
 };
 
 type LegacyCompanyIdentity = {

@@ -5,6 +5,7 @@ import com.codehouse.ciciassistant.auth.domain.CompanyRepository;
 import com.codehouse.ciciassistant.auth.domain.UserAccountEntity;
 import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.auth.service.CompanyProvisioningService;
+import com.codehouse.ciciassistant.auth.service.KeycloakIdentityProvisioningService;
 import com.codehouse.ciciassistant.common.security.SecretKeyMatcher;
 import com.codehouse.ciciassistant.kb.service.VectorDeleteResult;
 import com.codehouse.ciciassistant.kb.service.VectorStoreAuditResult;
@@ -268,6 +269,7 @@ public class PlatformTenantLifecycleService {
 
     private final CompanyRepository companyRepository;
     private final CompanyProvisioningService companyProvisioningService;
+    private final KeycloakIdentityProvisioningService keycloakIdentityProvisioningService;
     private final CompanyRetentionPolicyRepository retentionPolicyRepository;
     private final CompanyPurgeJobRepository purgeJobRepository;
     private final CompanyExportJobRepository exportJobRepository;
@@ -283,6 +285,7 @@ public class PlatformTenantLifecycleService {
 
     public PlatformTenantLifecycleService(CompanyRepository companyRepository,
                                           CompanyProvisioningService companyProvisioningService,
+                                          KeycloakIdentityProvisioningService keycloakIdentityProvisioningService,
                                           CompanyRetentionPolicyRepository retentionPolicyRepository,
                                           CompanyPurgeJobRepository purgeJobRepository,
                                           CompanyExportJobRepository exportJobRepository,
@@ -297,6 +300,7 @@ public class PlatformTenantLifecycleService {
                                           @Value("${app.lifecycle.purge-worker-lease-minutes:60}") long purgeWorkerLeaseMinutes) {
         this.companyRepository = companyRepository;
         this.companyProvisioningService = companyProvisioningService;
+        this.keycloakIdentityProvisioningService = keycloakIdentityProvisioningService;
         this.retentionPolicyRepository = retentionPolicyRepository;
         this.purgeJobRepository = purgeJobRepository;
         this.exportJobRepository = exportJobRepository;
@@ -327,9 +331,13 @@ public class PlatformTenantLifecycleService {
         if (ownerEmail != null && !ownerEmail.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
             throw new IllegalArgumentException("邮箱格式不正确");
         }
+        boolean unifiedIdentityEnabled = keycloakIdentityProvisioningService.isEnabled();
+        if (unifiedIdentityEnabled && ownerEmail == null) {
+            throw new IllegalArgumentException("统一认证启用时 Owner 邮箱不能为空");
+        }
 
         UserAccountEntity existingAccount = companyProvisioningService.findMobileAccount(ownerMobile).orElse(null);
-        if (existingAccount == null) {
+        if (existingAccount == null && !unifiedIdentityEnabled) {
             String initialPassword = requireText(command.initialPassword(), "首次 Owner 账号需要初始密码");
             if (initialPassword.length() < 8) {
                 throw new IllegalArgumentException("初始密码至少需要 8 位");
@@ -340,10 +348,18 @@ public class PlatformTenantLifecycleService {
         UserAccountEntity account = existingAccount != null
                 ? existingAccount
                 : companyProvisioningService.createMobileAccount(ownerMobile, command.ownerDisplayName(), ownerEmail);
-        if (existingAccount == null) {
+        if (existingAccount == null && !unifiedIdentityEnabled) {
             companyProvisioningService.assignPasswordCredential(account, command.initialPassword().trim());
         }
+        KeycloakIdentityProvisioningService.ProvisionResult identity = unifiedIdentityEnabled
+                ? keycloakIdentityProvisioningService.ensureHumanIdentity(account)
+                : null;
         UserEntity owner = companyProvisioningService.createOwnerMembership(org, account, command.ownerDisplayName());
+        if (identity != null) {
+            owner.setMemberStatus(identity.activationRequired()
+                    ? UserEntity.STATUS_PENDING_ACTIVATION
+                    : UserEntity.STATUS_ACTIVE);
+        }
         retentionPolicyRepository.findById(org.getId())
                 .orElseGet(() -> retentionPolicyRepository.save(new CompanyRetentionPolicyEntity(org.getId())));
         platformAuditService.log(
@@ -360,7 +376,8 @@ public class PlatformTenantLifecycleService {
                 org.getStatus(),
                 owner.getId(),
                 account.getId(),
-                existingAccount != null
+                existingAccount != null,
+                identity != null && identity.activationRequired()
         );
     }
 
@@ -1458,7 +1475,8 @@ public class PlatformTenantLifecycleService {
             String status,
             String ownerMemberId,
             String ownerAccountId,
-            boolean reusedExistingAccount
+            boolean reusedExistingAccount,
+            boolean ownerActivationRequired
     ) {
     }
 

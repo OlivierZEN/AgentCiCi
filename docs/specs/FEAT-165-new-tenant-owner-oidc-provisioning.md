@@ -1,0 +1,105 @@
+---
+kind: feature-spec
+feature_id: FEAT-165
+title: 新租户 Owner 统一身份开通
+status: in_implementation
+owner_role: backend-agent
+task_ids: TASK-276
+related_decisions: none
+related_issues: ISSUE-2026-08-10-new-tenant-owner-missing-oidc
+updated_at: 2026-08-10T08:05:58Z
+updated_by: codex
+---
+
+# FEAT-165 - 新租户 Owner 统一身份开通
+
+## 背景与目标
+
+生产 `2.8.58` 的平台“开通新租户”路径只创建本地账号、密码凭据和 Owner 成员，没有调用 Keycloak HUMAN provisioning。生产登录入口已经使用 OIDC，因此新租户 Owner 即使完成平台开通，也不能在 Keycloak 中通过邮箱或手机号登录。
+
+本功能使平台开通的新租户 Owner 与普通成员邀请遵循同一统一身份生命周期：建立 Keycloak 用户和 AgentCiCi issuer/subject 绑定，发送邮箱验证与设置密码动作，并在首次成功 OIDC 登录前保持 `PENDING_ACTIVATION`。
+
+## 范围
+
+### In Scope
+
+- 统一认证启用时，新 Owner 邮箱必填，不再要求或写入本地初始密码。
+- 新建或复用全局账号后调用受管 Keycloak HUMAN provisioning。
+- 根据 Keycloak 激活状态将 Owner 成员置为 `PENDING_ACTIVATION` 或 `ACTIVE`。
+- 保持现有租户 ID、Owner 角色、保留策略和平台审计语义。
+- 为统一认证启用、兼容模式、复用既有账号和 provisioning 失败补充自动化测试。
+- 发布到 UAT 并通过真实 Keycloak/AgentCiCi 回读验证。
+
+### Out Of Scope
+
+- 不修改生产租户或生产用户数据。
+- 不直接写 Keycloak 或 AgentCiCi 数据库修复用户。
+- 不改变普通租户成员邀请和首次 OIDC 激活协议。
+- 不修改 Semattice 或 DevAutopilot 仓库及其业务数据库。
+
+## 用户场景
+
+- 平台管理员输入租户名称、Owner 手机号、邮箱和显示名开通租户。
+- 系统创建租户及 Owner 后，向 Owner 邮箱发送统一账号初始化邮件。
+- Owner 完成邮箱验证和设置密码，通过 OIDC 首次登录后成员从 `PENDING_ACTIVATION` 转为 `ACTIVE`。
+- 若手机号已属于既有统一账号，则复用已验证身份；不得创建重复 Keycloak 用户或重置已激活用户密码。
+- Keycloak 创建或邀请失败时 API 必须失败关闭，不得返回“新租户已开通”的假成功。
+
+## 现状与约束
+
+- `PlatformTenantLifecycleService.createTenant` 当前调用 `assignPasswordCredential`，但不调用 `KeycloakIdentityProvisioningService`。
+- `AdminUserService.inviteMember` 已具备 HUMAN provisioning 与 `PENDING_ACTIVATION` 状态语义，应复用相同服务，不复制 Keycloak 管理协议。
+- 浏览器、日志、Git 和状态文档不得包含管理员 token、Client Secret、邮件动作链接或用户密码。
+- UAT 运行版本必须为不可变 `2.8.59-beta.N`，只重建 backend/frontend。
+
+## 方案设计
+
+1. `PlatformTenantLifecycleService` 注入 `KeycloakIdentityProvisioningService`。
+2. 当 HUMAN provisioning 启用时：
+   - 要求 Owner 邮箱非空且格式有效；
+   - 新账号不创建本地密码凭据；
+   - 在同一租户开通事务中调用 `ensureHumanIdentity`；
+   - 依据 `activationRequired` 设置 Owner 成员状态。
+3. provisioning 未启用时保留原本地兼容路径：新账号仍要求至少 8 位初始密码并写入本地凭据。
+4. 复用既有账号时由 provisioning 服务核验既有绑定、邮箱和不可变 public ID；已激活账号保持 `ACTIVE`，待激活账号保持 `PENDING_ACTIVATION`。
+5. Keycloak 异常向上返回，Spring 事务回滚本地租户、账号、成员、密码和审计写入，禁止部分本地租户被展示为成功。
+
+## 接口与数据影响
+
+- `POST /platform/tenants` 请求结构保持兼容。
+- 统一认证启用时 `ownerEmail` 从业务可选变为必填；`initialPassword` 可省略且不落本地密码凭据。
+- 响应新增向后兼容布尔字段 `ownerActivationRequired`，平台页据此提示 Owner 查收统一账号激活邮件；成员状态仍通过既有成员查询接口回读。
+- 不新增数据库迁移。
+
+## 任务拆分
+
+- `TASK-276`：实现、测试、UAT 发布和验收。
+
+## 验收标准
+
+- 定向测试证明统一认证启用时调用 HUMAN provisioning、Owner 状态正确且不写本地密码。
+- provisioning 失败时租户开通请求失败，本地事务不提交。
+- 兼容模式仍要求并验证初始密码。
+- UAT 使用全新隔离手机号/邮箱开通租户后：
+  - `user_account`、EMAIL/MOBILE identifier、`company_member`、`account_external_identity` 均存在；
+  - Keycloak 用户 enabled，subject 与绑定一致；
+  - 未完成邮件动作前成员为 `PENDING_ACTIVATION`；
+  - 不输出密码、token、secret 或完整邮件动作链接。
+- backend/frontend healthy，版本、Git commit 和 image tag 一致；匿名受保护接口仍为 401。
+
+## 风险与回滚
+
+- 风险：外部 Keycloak 写入不能由本地数据库事务天然回滚。当前 provisioning 服务先保存绑定再发送动作邮件；UAT 必须验证失败重试不会创建重复用户。后续如发现远端已创建、本地事务回滚的窗口，需增加受治理 reconciliation，而不是直接改库。
+- 风险：既有平台调用方仍传 `initialPassword`。接口继续接受该字段，但统一认证模式不将其作为 Owner 登录凭据。
+- 回滚：UAT 仅将 backend/frontend 切回 `2.8.59-beta.3`；无数据库迁移。隔离验收租户按正式租户生命周期清理，不直接删除表记录。
+
+## 实现进展
+
+- 已完成生产只读诊断和生产提交代码核对。
+- 已完成失败测试复现、统一认证/兼容模式实现、Owner provisioning 定向测试、相关身份服务回归、后端打包和前端定向测试/构建。
+- 本机数据库集成测试仍受 PostgreSQL 未启动限制，不扩写为全量通过；待完成 UAT 发布和真实 Keycloak/AgentCiCi 回读。
+
+## 交接说明
+
+- 先读 `TASK-276`、本规格、`docs/production-release-runbook.md` §7.0。
+- 生产目标用户尚未创建，不在本任务中写入生产。

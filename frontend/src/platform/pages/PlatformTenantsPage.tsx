@@ -71,7 +71,11 @@ export default function PlatformTenantsPage() {
       };
       const created = await createTenant(token, payload);
       setProvisionModalOpen(false);
-      setMessage(created.reusedExistingAccount ? "新租户已开通，已复用既有 Owner 账号。" : "新租户已开通。");
+      setMessage(created.ownerActivationRequired
+        ? "新租户已开通，Owner 完成邮件中的统一账号激活后即可登录。"
+        : created.reusedExistingAccount
+          ? "新租户已开通，已复用并关联既有 Owner 统一账号。"
+          : "新租户已开通。");
       const detailPath = tenantApplicationsPath(created.companyId);
       if (detailPath) {
         navigate(detailPath, { state: { flash: "新租户已开通" } });
@@ -216,7 +220,7 @@ export default function PlatformTenantsPage() {
               </button>
             </div>
             <div className="tenant-lifecycle__modal-body">
-              <p className="skills-data-table__summary">填写必要信息后即可直接开通租户；若手机号已绑定账号，系统会复用该账号并补充租户 Owner 关系。</p>
+              <p className="skills-data-table__summary">填写 Owner 手机号和邮箱后开通租户。新 Owner 将收到统一账号激活邮件；若手机号已绑定账号，系统会复用该账号并补充 Owner 关系。</p>
               <div className="platform-console__form-grid tenant-lifecycle__provision-form">
                 <label>
                   <span>租户名称</span>
@@ -231,18 +235,18 @@ export default function PlatformTenantsPage() {
                   <input value={form.ownerDisplayName} onChange={(event) => setForm((prev) => ({ ...prev, ownerDisplayName: event.target.value }))} placeholder="张三" />
                 </label>
                 <label>
-                  <span>Owner 邮箱</span>
-                  <input value={form.ownerEmail} onChange={(event) => setForm((prev) => ({ ...prev, ownerEmail: event.target.value }))} placeholder="zhangsan@example.com" />
+                  <span>Owner 邮箱（统一账号激活必填）</span>
+                  <input type="email" value={form.ownerEmail} onChange={(event) => setForm((prev) => ({ ...prev, ownerEmail: event.target.value }))} placeholder="zhangsan@example.com" required />
                 </label>
                 <label className="tenant-lifecycle__field--full">
-                  <span>初始密码</span>
+                  <span>本地兼容密码</span>
                   <input
                     type="password"
                     value={form.initialPassword}
                     onChange={(event) => setForm((prev) => ({ ...prev, initialPassword: event.target.value }))}
-                    placeholder="仅首次创建全局账号时需要"
+                    placeholder="统一认证环境无需填写"
                   />
-                  <small className="tenant-lifecycle__field-help">若手机号已存在，全局账号将被复用，原密码不会被覆盖。</small>
+                  <small className="tenant-lifecycle__field-help">仅关闭统一认证的本地兼容环境使用；UAT 和生产由 Owner 在激活邮件中设置统一账号密码。</small>
                 </label>
                 <label className="tenant-lifecycle__field--full">
                   <span>平台开通备注</span>
@@ -258,7 +262,10 @@ export default function PlatformTenantsPage() {
                 type="button"
                 className="platform-button platform-button--primary"
                 onClick={() => void submitProvision()}
-                disabled={busy || !form.tenantName.trim() || !/^1\d{10}$/.test(form.ownerMobile.trim())}
+                disabled={busy
+                  || !form.tenantName.trim()
+                  || !/^1\d{10}$/.test(form.ownerMobile.trim())
+                  || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.ownerEmail.trim())}
               >
                 确认开通
               </button>
