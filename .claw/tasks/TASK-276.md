@@ -2,12 +2,12 @@
 kind: task-status
 task_id: TASK-276
 title: 新租户 Owner 统一身份开通修复与 UAT 发布
-status: in_progress
+status: review
 priority: critical
 owner_role: backend-agent
 claimed_by: codex
 spec_path: docs/specs/FEAT-165-new-tenant-owner-oidc-provisioning.md
-updated_at: 2026-08-10T08:18:59Z
+updated_at: 2026-08-10T08:27:30Z
 updated_by: codex
 ---
 
@@ -24,9 +24,9 @@ updated_by: codex
 - [x] 定向自动化测试和后端编译通过。
 - [x] 自动化测试证明统一认证 Owner 建立 identity/binding 语义与正确成员状态。
 - [x] 本地初始密码不再作为统一认证 Owner 的凭据。
-- [ ] UAT 不可变版本发布、备份、健康、版本和匿名边界验收通过。
-- [ ] 隔离 UAT 租户完成受管回读，测试数据有可审计清理方案。
+- [x] UAT 不可变版本发布、备份、健康、版本和匿名边界验收通过。
+- [x] 隔离 UAT 租户完成受管回读，测试数据保留至 Owner 首次登录验收后再走正式租户生命周期清理。
 
 ## 下一步
 
-发布包含 `public_id` trigger refresh 修复的新 UAT beta，并通过官方 API 与受管存储回读真实 Owner 激活状态。
+Owner 查收 UAT 激活邮件并完成邮箱验证/设置密码；随后回读首次 OIDC 登录和成员 `ACTIVE`，再决定保留或按正式生命周期清理测试租户。

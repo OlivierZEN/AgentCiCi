@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-10T08:24:24Z
+updated_at: 2026-08-10T08:27:30Z
 updated_by: codex
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-276 - 新租户 Owner 统一身份开通修复与 UAT 发布
 
-- status: `in_progress`
+- status: `review`
 - priority: `critical`
 - owner_role: `backend-agent`
 - spec_path: `docs/specs/FEAT-165-new-tenant-owner-oidc-provisioning.md`
 - task_status_path: `.claw/tasks/TASK-276.md`
 - blocked_by: `none`
 - scope_files: `PlatformTenantLifecycleService, Keycloak HUMAN provisioning, focused tests, UAT release evidence`
-- next_action: `发布包含 public_id trigger refresh 修复的新 beta，并重试官方租户开通 API 验证 Owner identity、绑定与待激活状态`
+- next_action: `等待 Owner 完成 UAT 邮件激活和首次 OIDC 登录，再回读成员 ACTIVE 并决定测试租户清理`
 
 ### TASK-275 - DevAutopilot 标准租户应用控制面
 

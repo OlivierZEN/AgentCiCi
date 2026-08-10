@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-165
 title: 新租户 Owner 统一身份开通
-status: in_implementation
+status: implemented
 owner_role: backend-agent
 task_ids: TASK-276
 related_decisions: none
 related_issues: ISSUE-2026-08-10-new-tenant-owner-missing-oidc
-updated_at: 2026-08-10T08:18:59Z
+updated_at: 2026-08-10T08:27:30Z
 updated_by: codex
 ---
 
@@ -99,7 +99,8 @@ updated_by: codex
 - 已完成生产只读诊断和生产提交代码核对。
 - 已完成失败测试复现、统一认证/兼容模式实现、Owner provisioning 定向测试、相关身份服务回归、后端打包和前端定向测试/构建。
 - `2.8.59-beta.4` 真实调用暴露并验证了 `public_id` trigger 列未回填到当前 persistence context 的缺口；API 失败关闭且目标本地五类记录均为 0。已补 flush/refresh 与时序测试。
-- 本机数据库集成测试仍受 PostgreSQL 未启动限制，不扩写为全量通过；待发布下一 UAT beta 并完成真实 Keycloak/AgentCiCi 回读。
+- `2.8.59-beta.6` 真实开通和独立回读已证明账号、EMAIL/MOBILE 标识、Owner 待激活状态、外部 subject、Keycloak enabled/Required Actions 与无本地密码凭据；等待 Owner 邮件激活和首次登录后将规格转为 `verified`。
+- 本机数据库集成测试仍受 PostgreSQL 未启动限制，不扩写为全量通过；UAT 真实数据库/Keycloak 已作为正向运行证据。
 
 ## 交接说明
 

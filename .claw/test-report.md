@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-10T08:18:59Z
+updated_at: 2026-08-10T08:27:30Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-10T08:18:59Z
+last_run_at: 2026-08-10T08:27:30Z
 last_run_status: partial
 ---
 
@@ -16,9 +16,12 @@ last_run_status: partial
 - `PlatformTenantOwnerProvisioningTest,AdminUserServiceTest,KeycloakIdentityProvisioningServiceTest`、后端 `-DskipTests package`、前端平台租户共享逻辑 3/3 与生产构建通过；前端仅有既有 bundle-size 提示。
 - UAT `2.8.59-beta.4 / 1d74f436ec7d` 的健康、版本、Nginx、首页 200 与匿名租户 API 401 通过；真实创建因同事务内 JPA 未刷新 PostgreSQL trigger 生成的 `public_id` 而失败关闭。失败后账户、标识、租户、成员、外部身份精确计数均为 0。
 - 已增加 `CompanyProvisioningServiceTest`，证明新账号 `saveAndFlush -> EntityManager.refresh -> 登录标识` 的顺序；该测试与 5 项 Owner 测试、相关身份服务回归及后端打包通过。待下一 beta 真实重验。
+- UAT `2.8.59-beta.6 / 9563aa2e37cf` 真实重验通过：租户 `orgvdd8xckmvc8r5yi6q`、账户与两类登录标识唯一，成员为 `OWNER/PENDING_ACTIVATION`，外部 subject 与 Keycloak User 一致，本地 PASSWORD credential=0；Keycloak enabled、邮箱未验证且 Required Actions 同时含 `VERIFY_EMAIL`/`UPDATE_PASSWORD`。
+- beta.6 的 6 容器 healthy，health=`UP`，版本/commit/imageTag 一致，Nginx 有效、首页 200、匿名租户 API 401、backend/frontend 近 15 分钟错误计数 0。Owner 尚未点击邮件，首次登录与成员 `ACTIVE` 回读保持 `partial`。
+- 额外发现 Realm User Profile 未声明两个 ownership 属性，Keycloak 将其静默丢弃；不阻断当前 subject 绑定与邮箱激活，但严格恢复路径会失败关闭，已单列 issue，不以一次性 UAT patch 掩盖。
 - 历史 `PlatformTenantLifecycleIntegrationTest` 报告时间为 2026-08-09，失败原因是本机 PostgreSQL `localhost:5432` 未启动，不作为本次结果；真实数据库/Keycloak 正向链路待 UAT 验收。
 
-- 状态：`partial`
+- 状态：`partial`（系统侧通过，等待 Owner 邮件激活与首次登录）
 
 ## 2026-08-09 TASK-275 Principal 权威状态与初始化补偿
 

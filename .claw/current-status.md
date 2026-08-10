@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-10T08:24:24Z
+updated_at: 2026-08-10T08:27:30Z
 updated_by: codex
 phase: release
 active_task: TASK-275
@@ -24,7 +24,7 @@ read_next:
 
 - TASK-275 / INT-008：已发布 UAT `2.8.59-beta.5 / 0edfc3567f85`。标准产品经理 Agent 的新建与既有租户补齐初始化现在都必须绑定 `web`、使用标准 Spec 编译并通过生产就绪门禁发布；员工首页继续只展示内置或已发布 Agent。UAT 只读回读确认目标租户 `天工产品经理 / devautopilot-pm-09653ab9` 仍为 `published_version_id=NULL` 且无 channel binding，说明代码已上线但既有租户尚未执行一次正式 `initializations` 补偿。当前可控浏览器没有平台登录态，未绕过授权、未直接写数据库；待平台管理员执行补偿后完成首页可见性验收。
 
-- TASK-276 / FEAT-165：UAT 已发布 `2.8.59-beta.4 / 1d74f436ec7d`，6 容器 healthy、版本和匿名边界通过。真实开通首次暴露新账号同事务读取不到 PostgreSQL trigger 生成的 `public_id`，API 失败关闭；独立回读确认目标账户、标识、租户、成员和外部身份均为 0，未残留部分数据。现已让账号插入 `saveAndFlush` 后 `EntityManager.refresh` 再进入 OIDC provisioning，并新增时序测试；待发布下一 beta 重验，不修改生产。
+- TASK-276 / FEAT-165：已发布 UAT `2.8.59-beta.6 / 9563aa2e37cf`。真实开通创建租户 `orgvdd8xckmvc8r5yi6q`，Owner EMAIL/MOBILE 标识、OWNER/PENDING_ACTIVATION 成员、OIDC issuer/subject 绑定与 Keycloak enabled 用户均一致，本地密码凭据为 0；Required Actions 为 `VERIFY_EMAIL`、`UPDATE_PASSWORD`。6 容器 healthy，health=`UP`、版本/Nginx/首页/匿名 401/错误日志均通过。测试租户保留给 Owner 完成邮件激活和首次登录；生产未修改。
 
 - TASK-275 / INT-008：UAT 已发布 `2.8.59-beta.3 / 5be204680e16`，配置修订 `uat-config-20260809T135729Z-666d570`。受管初始化为目标租户建立/协调 HUMAN owner、产品经理和开发者 Semattice Principal；activation 权威回读 `墨子开发者=SUSPENDED`、`鲁班/天工产品经理=ACTIVE`，不再使用历史资源快照覆盖主体状态。普通业务 OACT 继续要求统一身份，只有服务器内部且仅含 `identity.principal.sync` 的初始化令牌允许先建立历史 HUMAN owner 投影。第二租户隔离仍待验收。
 

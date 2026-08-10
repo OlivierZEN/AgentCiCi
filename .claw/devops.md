@@ -1,12 +1,19 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-09T14:12:00Z
+updated_at: 2026-08-10T08:27:30Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-10 TASK-276 UAT beta.6
+
+- 发布 `2.8.59-beta.6 / 9563aa2e37cf`；backend/frontend ACR index digest 为 `sha256:85b6dd15e737f4328ec37e6ddeb2baeb9a1b337a3acde8d06593a5e0ec11baf1` / `sha256:b9fce4c004dbe0a9a7f2ce9e381f96df153161e1f0b5658facd1599d410ab55d`。
+- 发布前完整备份 `/data/apps/agentcici/backups/20260810T082214Z-before-2.8.59-beta.6-task276` 的 Compose、受保护环境、PostgreSQL、KB 与 Qdrant 均非空且 `0600`。沿用无凭据落盘的 SSH 流式镜像导入，只重建 backend/frontend。
+- UAT 6 容器 healthy，health=`UP`，`version/imageTag=2.8.59-beta.6`、`gitCommit=9563aa2e37cf`，Nginx 有效、首页 200、匿名租户 API 401、近 15 分钟应用错误计数 0。
+- 正式 API 创建测试租户 `orgvdd8xckmvc8r5yi6q`；Owner 保持待激活，测试租户在用户完成邮件激活和首次登录前保留。回滚仅切回 beta.4 或 beta.3，不回滚数据库来删除已创建测试租户。
 
 ## 2026-08-10 TASK-276 UAT beta.4 与回滚点
 

@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-08-10T08:05:58Z
+updated_at: 2026-08-10T08:27:30Z
 updated_by: codex
 status: active
 ---
@@ -13,8 +13,15 @@ status: active
 - ISSUE-2026-08-10-new-tenant-owner-missing-oidc:
   - Symptom: 平台开通的新租户 Owner 无法通过生产 OIDC 登录；目标邮箱和手机号在 AgentCiCi 与 Keycloak 均无有效身份记录，登录事件为 `user_not_found`。
   - Verified root cause: 生产 `2.8.58 / 63371f92d9ae` 的 `PlatformTenantLifecycleService.createTenant` 只创建本地账号、密码凭据和 Owner 成员，不调用 `KeycloakIdentityProvisioningService`；管理访问日志也未出现该目标的成功成员邀请请求。
-  - Resolution progress: TASK-276 / FEAT-165 已在统一认证模式下改为 Keycloak HUMAN provisioning、外部身份绑定与待激活状态，定向测试和构建通过；正在发布 UAT 验证，不直接写生产数据库。
-  - Status: fixing (critical; awaiting UAT verification).
+  - Resolution progress: TASK-276 / FEAT-165 已发布 UAT `2.8.59-beta.6`；真实 Owner 的账户、EMAIL/MOBILE 标识、PENDING_ACTIVATION 成员、外部 subject、Keycloak enabled 与 Required Actions 均通过回读，本地密码为 0。不直接写生产数据库。
+  - Status: fixing (critical; UAT system verification passed, awaiting Owner email activation and first login before production release decision).
+
+- ISSUE-2026-08-10-keycloak-ownership-attributes-not-managed:
+  - Symptom: UAT Keycloak 新 HUMAN User 已正确创建和绑定，但 Admin API 回读中 `agentcici_public_id`、`agentcici_account_id` 自定义属性为空。
+  - Verified root cause: Realm User Profile 仅声明 `username/email/firstName/lastName/phoneNumber/role/tenant`，`unmanagedAttributePolicy` 未启用；Keycloak 对 provisioning 请求中的两个未声明属性静默丢弃。
+  - Impact: 不影响当前 subject 绑定、邮件激活和邮箱登录，但本地 binding 丢失后的严格 ownership recovery 无法满足双属性证明，会按设计失败关闭。
+  - Resolution plan: 由 Keycloak 配置事实源所有者声明两个 server-managed、用户不可编辑属性，先在 UAT readback，再评估生产变更；不得以一次性数据库或未受管 Realm patch 代替。
+  - Status: open (high; does not block TASK-276 UAT login test).
 
 - ISSUE-2026-08-05-ai-table-auth-header:
   - Symptom: 已登录用户在 `https://x.agentcici.com/app` 打开 AI表格时，目录请求显示 `Authentication required`，无法读取业务对象。
