@@ -7,7 +7,7 @@ owner_role: integration-agent
 task_ids: TASK-275
 related_decisions: ADR-006, ADR-007, ADR-008
 related_issues: none
-updated_at: 2026-08-09T07:20:00Z
+updated_at: 2026-08-10T09:20:00Z
 updated_by: codex
 ---
 
@@ -82,7 +82,7 @@ tenant_application_operation
 1. 验证 company active、调用者为平台管理员、Semattice 已 `PROVISIONED`、模板版本受支持。
 2. 创建 activation/operation，锁定 `company_id + app_code`。
 3. 请求 Semattice 应用 `devautopilot.standard.v1` 标准基线；已有非模板 metadata 时失败关闭，不覆盖已有模型。
-4. 创建标准 `product_manager` 资源对：租户独立的研发产品经理 Agent、PM SERVICE Principal、最小 Tool binding 与执行绑定。系统生成 Client ID，仅本次返回的 Secret 不写入页面、审计或控制面。
+4. 创建标准 `product_manager` 资源对：租户独立的研发产品经理 Agent、PM SERVICE Principal、最小 Tool binding 与执行绑定。产品经理 Agent 必须绑定 `web` 入口、以平台签名标准 Spec 编译并发布；只有 `published_version_id` 回读成功才允许初始化继续。系统生成 Client ID，仅本次返回的 Secret 不写入页面、审计或控制面。
 5. 写入资源清单并以该租户初始 OWNER/ORG_ADMIN 作为 HUMAN owner；不创建默认 developer，租户可按需创建任意数量的开发者。
 6. 通过 AgentCiCi 签发的短时、仅服务端使用的 OACT，先投影 HUMAN owner，再逐个调用 Semattice `identity.principal.sync` 投影 PM/developer SERVICE；投影必须携带 AgentCiCi 权威生命周期，不能把 suspended/disabled 主体写成 active。
 7. 请求 DevAutopilot 健康/entitlement 探针；metadata、Agent、Principal、执行绑定和 Principal 投影全部回执一致后置为 `ACTIVE`。
@@ -140,6 +140,7 @@ DevAutopilot 服务端调用 AgentCiCi 的 ticket exchange，并仅在自身短�
 - 暂停后所有入口 fail closed，恢复后仅恢复对应租户的原资源。
 - 新增 developer 账号不会影响其他账号；密钥只一次显示、轮换和暂停均限于本租户。
 - UAT 验证包含 AgentCiCi、Semattice、DevAutopilot 三侧关联 ID、回滚和负向隔离证据。
+- 开通或补齐初始化完成后，产品经理 Agent 必须出现在该租户员工首页的智能体列表，并可从首页创建会话；仅创建未发布草稿不算初始化成功。
 
 ## 风险与回滚
 
@@ -159,6 +160,7 @@ DevAutopilot 服务端调用 AgentCiCi 的 ticket exchange，并仅在自身短�
 - [x] 独立 DevAutopilot 缓存的 UAT 发布与运行态验证（使用独立 beta 发布入口）。
 - [x] 修复同源租户 handoff 与卡片字段事实，并发布 UAT AgentCiCi `2.8.57-beta.3 / 1b07df5c6f40`。
 - [x] 将标准 PM Agent/SERVICE/Tool/execution binding 纳入新开通与既有租户显式补齐初始化。
+- [x] 标准 PM Agent 初始化补齐 `web` 渠道、标准 Spec 编译与幂等发布；既有未发布 Agent 可由 `initializations` 补偿。
 - [x] activation resolve 使用专用 RS256 OACT 验签边界，不再把 OACT 误交给 AgentCiCi 会话 JWT 解析器。
 - [x] Semattice 浏览器控制台使用独立公网 base URL；UAT 同源 `/console/` 不再返回或校验内部 `192.168.*` 地址。
 - [ ] Principal 权威生命周期与 activation 资源读模型统一；停用开发者不得在 DevAutopilot 显示为可派单。

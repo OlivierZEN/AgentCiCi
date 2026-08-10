@@ -34,6 +34,7 @@ public class DevAutopilotTenantApplicationService {
     private final SematticeDevAutopilotTemplateClient template;
     private final ServicePrincipalService principals;
     private final AgentDefinitionService agents;
+    private final DevAutopilotProductManagerAgentPublisher productManagerAgentPublisher;
     private final AgentServicePrincipalExecutionService execution;
     private final PlatformAuditService audit;
     private final List<String> pmScopes;
@@ -44,12 +45,14 @@ public class DevAutopilotTenantApplicationService {
                                                  SematticeDevAutopilotTemplateClient template,
                                                  ServicePrincipalService principals,
                                                  AgentDefinitionService agents,
+                                                 DevAutopilotProductManagerAgentPublisher productManagerAgentPublisher,
                                                  AgentServicePrincipalExecutionService execution,
                                                  PlatformAuditService audit,
                                                  @Value("${app.devautopilot.template.pm-scopes:}") List<String> pmScopes,
                                                  @Value("${app.devautopilot.template.developer-scopes:}") List<String> developerScopes) {
         this.jdbc = jdbc; this.companies = companies; this.provisioning = provisioning; this.template = template;
-        this.principals = principals; this.agents = agents; this.execution = execution; this.audit = audit;
+        this.principals = principals; this.agents = agents; this.productManagerAgentPublisher = productManagerAgentPublisher;
+        this.execution = execution; this.audit = audit;
         this.pmScopes = pmScopes == null ? List.of() : pmScopes.stream().filter(v -> v != null && !v.isBlank()).map(String::trim).distinct().toList();
         this.developerScopes = developerScopes == null ? List.of() : developerScopes.stream().filter(v -> v != null && !v.isBlank()).map(String::trim).distinct().toList();
     }
@@ -149,7 +152,16 @@ public class DevAutopilotTenantApplicationService {
         List<ResourceView> resources = jdbc.query("SELECT logical_role,resource_type,resource_alias,display_name,external_id,lifecycle_state,is_primary FROM tenant_application_resource WHERE activation_id=? ORDER BY logical_role,resource_type", (rs,n) -> new ResourceView(rs.getString(1),rs.getString(2),rs.getString(3),rs.getString(4),rs.getString(5),rs.getString(6),rs.getBoolean(7)), activationId);
         boolean hasPrimaryAgent = resources.stream().anyMatch(resource -> "product_manager".equals(resource.logicalRole()) && "AGENT".equals(resource.resourceType()) && resource.primary());
         boolean hasPrimaryPrincipal = resources.stream().anyMatch(resource -> "product_manager".equals(resource.logicalRole()) && "SERVICE_PRINCIPAL".equals(resource.resourceType()) && resource.primary());
-        if (hasPrimaryAgent && hasPrimaryPrincipal) return;
+        if (hasPrimaryAgent && hasPrimaryPrincipal) {
+            String agentId = resources.stream()
+                    .filter(resource -> "product_manager".equals(resource.logicalRole())
+                            && "AGENT".equals(resource.resourceType()) && resource.primary())
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalStateException("DevAutopilot primary product-manager Agent is missing"))
+                    .externalId();
+            productManagerAgentPublisher.ensurePublished(companyId, agentId);
+            return;
+        }
         if (hasPrimaryAgent || hasPrimaryPrincipal) throw new IllegalStateException("DevAutopilot product-manager resources are incomplete");
         createProductManagerResources(companyId, activationId, PRODUCT_MANAGER_DEFAULT_NAME, ownerMemberId, ownerMemberId, PRODUCT_MANAGER_AGENT_ID);
     }
@@ -164,7 +176,10 @@ public class DevAutopilotTenantApplicationService {
                                                                 String actorMemberId, String ownerMemberId, String agentId) {
         agents.create(companyId, new AgentDefinitionService.CreateCommand(agentId, displayName, "DevAutopilot 租户产品经理", "", "gpt-4.1",
                 "你是本租户的研发产品经理，只能通过已绑定的受控工具处理研发交付。", "高风险操作必须确认", "standard", "copilot", "devautopilot.standard.v1", null,
-                null, false, true, "", List.of(), List.of("semattice_project_delivery_query", "semattice_project_delivery_create", "semattice_project_delivery_review"), List.of(), Map.of()));
+                null, false, true, DevAutopilotProductManagerAgentPublisher.STANDARD_SPEC, List.of(),
+                List.of("semattice_project_delivery_query", "semattice_project_delivery_create", "semattice_project_delivery_review"),
+                List.of("web"), Map.of()));
+        productManagerAgentPublisher.ensurePublished(companyId, agentId);
         Map<String, Object> principal = principals.create(companyId, actorMemberId, ownerMemberId, displayName, "OFFICIAL_APP",
                 OfficialAccessTokenService.SEMATTICE_AUDIENCE, null, pmScopes);
         String principalId = (String) principal.get("principalId");
