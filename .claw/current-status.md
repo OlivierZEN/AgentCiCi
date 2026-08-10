@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-10T08:27:30Z
+updated_at: 2026-08-10T08:40:57Z
 updated_by: codex
 phase: release
 active_task: TASK-275
-next_action: "由已登录的平台管理员对 org00000000000000001 执行一次 DevAutopilot initializations 幂等补偿，再回读 PM Agent published_version_id/web 渠道并刷新员工首页。"
+next_action: "先由平台管理员在 UAT 配置至少一个带有效凭据的平台聊天模型并加入模型目录/聊天路由，再重试 org00000000000000001 的 DevAutopilot initializations。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-275 / INT-008：已发布 UAT `2.8.59-beta.7 / 7e309a39394d`。应用卡片完成态改为服务端权威检查，必须同时回读已发布 PM Agent、启用的 `web` 渠道和有效 SERVICE 主体；目标租户现在正确显示“待补齐”并提供按钮。平台管理员真实点击后被 Agent 生产就绪门禁拒绝：UAT 平台 7 个厂商均无凭据、已选模型数为 0，聊天场景没有可用模型。该依赖不能通过直接写库或发布无运行模型的假 Agent 绕过；模型页面已交给平台管理员配置。
 
 - TASK-275 / INT-008：已发布 UAT `2.8.59-beta.5 / 0edfc3567f85`。标准产品经理 Agent 的新建与既有租户补齐初始化现在都必须绑定 `web`、使用标准 Spec 编译并通过生产就绪门禁发布；员工首页继续只展示内置或已发布 Agent。UAT 只读回读确认目标租户 `天工产品经理 / devautopilot-pm-09653ab9` 仍为 `published_version_id=NULL` 且无 channel binding，说明代码已上线但既有租户尚未执行一次正式 `initializations` 补偿。当前可控浏览器没有平台登录态，未绕过授权、未直接写数据库；待平台管理员执行补偿后完成首页可见性验收。
 

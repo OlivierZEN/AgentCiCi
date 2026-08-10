@@ -1161,3 +1161,11 @@ status: active
 - UAT 主机未持有 ACR 登录态，使用精确 linux/amd64 镜像离线传输并加载；仅 force-recreate backend/frontend，PostgreSQL、Redis、RabbitMQ、Qdrant 容器 ID 哈希保持不变。
 - 发布后：backend/frontend 与四个状态服务 healthy，`/actuator/health={"status":"UP"}`，`/system/version=2.8.59-beta.5 / 0edfc3567f85`，Nginx 配置有效。
 - 既有租户业务资源不会随容器升级隐式变更。目标租户 PM Agent 仍未发布且无 `web` 渠道，必须由平台管理员调用 `/api/platform/tenants/org00000000000000001/applications/devautopilot/initializations`；不得直接写数据库。完成后应只读回读 `published_version_id`、`web` binding，并刷新员工首页验证可见性。
+
+## 2026-08-10 UAT `2.8.59-beta.7` - 初始化就绪态修复
+
+- Git tag/commit：`2.8.59-beta.7 / 7e309a39394d`；backend/frontend ACR index digest 分别为 `sha256:430408e61eca2056a442e36c6a754233824f6ba3153ab3eb908a2e39ba9c0ae8` 与 `sha256:96280e57c6da595969a2460b29216b0a4c176a0bd3b06b89ccc4f9bb837aadc1`。
+- 发布前备份：`/data/apps/agentcici/backups/20260810T083412Z-before-2.8.59-beta.7`，Compose、UAT secrets、PostgreSQL、KB、Qdrant 六项均非空。
+- 仅重建 backend/frontend；四个状态服务容器 ID 哈希发布前后均为 `b5dca5759af2a9cfb0ed4285fdb3b01c9af02db33eb2bfbabfa347fe728de2bc`。两个应用容器 healthy，health `UP`，版本、镜像和 Git commit 一致，Nginx 配置有效。
+- 首次 ACR 推送在鉴权连接处被远端重置且未创建 tag，原版本安全重试后成功。UAT 主机仍以离线精确 linux/amd64 镜像加载方式部署，不保存 ACR 凭据。
+- 平台管理员真实补齐被“平台已选模型为 0”阻断。该环境配置必须通过平台模型治理页面补齐有效凭据、模型目录和 chat 路由；不得用数据库直写或无模型发布规避。

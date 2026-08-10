@@ -2330,3 +2330,10 @@ last_run_status: partial
 - UAT 发布：`2.8.59-beta.5 / 0edfc3567f85`，backend/frontend ACR index digest 分别为 `sha256:6690ad74814ee308c4a42ccb300031474c5eb9cf00c7952babd84b9e7d082216` 与 `sha256:5068c400597ea2ca83faeb3ca9938884f8bf6c75b6ade6267480b1361b9668e6`。发布前备份 `/data/apps/agentcici/backups/20260810T092900Z-before-2.8.59-beta.5` 六项均非空；仅重建 backend/frontend，状态服务容器 ID 未变；health `UP`、版本和 Nginx 校验通过。
 - 既有租户回读：`org00000000000000001` 的 `天工产品经理 / devautopilot-pm-09653ab9` 仍为 `enabled=true, published_version_id=NULL`，且 `agent_channel_binding` 为 0 行。结论是部署成功但受治理补偿尚未执行；当前可控浏览器无平台登录态，未绕过授权或直接写库。最终首页可见性验收待平台管理员执行一次正式 `initializations`。
 - 项目状态校验：`validate-state.py .claw` 已执行但未通过，失败项为仓库既有的历史 task-board 归档、旧规格状态枚举/front matter 和旧时间格式债务；本次 TASK-275 状态卡与 FEAT-164 未新增校验错误，未在本任务中批量改写历史治理事实。
+
+## 2026-08-10 TASK-275 初始化完成态权威判定与 UAT beta.7
+
+- 后端定向测试：`DevAutopilotTenantApplicationReadinessTest`、`DevAutopilotProductManagerAgentPublisherTest`、`DevAutopilotHandoffServiceTest` 通过。
+- 前端定向测试：`PlatformTenantApplicationsPage.test.ts` 2/2 通过；TypeScript/Vite 生产构建通过，仅保留既有大 chunk warning。
+- UAT 实库只读 SQL 验证新完成条件对目标租户返回 `false`；发布后页面版本为 `2.8.59-beta.7`，卡片显示“待补齐”和“补齐初始化”。
+- 真实补齐请求到达发布流程并被正确失败关闭，错误为聊天场景无平台可用模型。只读配置回读：平台厂商 7 个、已选模型 0、所有厂商 API Key 均未设置；目标 PM Agent 仍未发布、未新增 `web` binding。
