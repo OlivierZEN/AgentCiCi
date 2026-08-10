@@ -35,7 +35,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - depends_on: `TASK-274, cc-semattice TASK-070`
 - integration_id: `INT-008`
 - scope_files: `platform tenant applications, AgentCiCi-to-DevAutopilot handoff, activation persistence, machine-principal create/edit modal, tests, docs`
-- next_action: `先在 UAT 平台配置带有效凭据的聊天模型、加入平台模型目录并设置 chat 路由；随后重试现有目标租户 initializations，回读 PM Agent 已发布/web 渠道/首页可见性，再完成第二租户隔离验收`
+- next_action: `UAT 模型目录、chat 路由和目标租户 initializations 已完成；等待正常租户用户刷新员工首页并验证天工产品经理会话，再完成第二租户正向与跨租户负向隔离验收`
 
 ### TASK-273 - Keycloak 生产人工运维交接
 

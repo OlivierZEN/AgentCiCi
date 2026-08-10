@@ -1169,3 +1169,11 @@ status: active
 - 仅重建 backend/frontend；四个状态服务容器 ID 哈希发布前后均为 `b5dca5759af2a9cfb0ed4285fdb3b01c9af02db33eb2bfbabfa347fe728de2bc`。两个应用容器 healthy，health `UP`，版本、镜像和 Git commit 一致，Nginx 配置有效。
 - 首次 ACR 推送在鉴权连接处被远端重置且未创建 tag，原版本安全重试后成功。UAT 主机仍以离线精确 linux/amd64 镜像加载方式部署，不保存 ACR 凭据。
 - 平台管理员真实补齐被“平台已选模型为 0”阻断。该环境配置必须通过平台模型治理页面补齐有效凭据、模型目录和 chat 路由；不得用数据库直写或无模型发布规避。
+
+## 2026-08-10 UAT `2.8.59-beta.8` - OneKeyToken 已验证模型入目录
+
+- Git tag/commit：`2.8.59-beta.8 / 8213646b4fa3`。
+- ACR index digest：backend `sha256:fbed0dae9f1195cc69f5617c683226d8bba7a65910d612bf337339d8ccd4257e`；frontend `sha256:6d78c8cecf334152fea904a97fb1902c715e37d2f6fc40c07748897596c86df1`。linux/amd64 manifest digest 分别为 `sha256:4a6d840fc9f82356ef62de97669192cca7ed6f7b20c11a4ad20922b31e482fd8` 与 `sha256:badfa5067bd97f5f6342d5cf2d5e3d0e6b624eb0a64bc4568c3d4fdcb546e034`。
+- 发布前备份：`/data/apps/agentcici/backups/20260810T084734Z-before-2.8.59-beta.8`；Compose、UAT secrets、PostgreSQL dump、KB 与 Qdrant 备份均非空。
+- UAT 主机继续使用精确 amd64 镜像离线加载，仅重建 backend/frontend；PostgreSQL、Qdrant、RabbitMQ 容器 ID 哈希发布前后均为 `8868a49fbf84497e4da99ba3ef6af95b6ad206d507d5304d958cc5aec974cd77`。
+- backend/frontend healthy，后端 health=`UP`，`/system/version` 回读 `2.8.59-beta.8 / 8213646b4fa3`，Nginx 配置有效。平台模型和租户初始化均通过受权 UI/API 完成，不保存或回读 API Key、Client Secret 或 OACT。

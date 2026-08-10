@@ -2337,3 +2337,12 @@ last_run_status: partial
 - 前端定向测试：`PlatformTenantApplicationsPage.test.ts` 2/2 通过；TypeScript/Vite 生产构建通过，仅保留既有大 chunk warning。
 - UAT 实库只读 SQL 验证新完成条件对目标租户返回 `false`；发布后页面版本为 `2.8.59-beta.7`，卡片显示“待补齐”和“补齐初始化”。
 - 真实补齐请求到达发布流程并被正确失败关闭，错误为聊天场景无平台可用模型。只读配置回读：平台厂商 7 个、已选模型 0、所有厂商 API Key 均未设置；目标 PM Agent 仍未发布、未新增 `web` binding。
+
+## 2026-08-10 TASK-275 OneKeyToken 已验证模型与 UAT beta.8 初始化闭环
+
+- 前端定向测试：`PlatformModelsPage.test.tsx` 3/3、`PlatformTenantApplicationsPage.test.ts` 2/2 通过；TypeScript/Vite 生产构建通过，仅有既有大 chunk warning。
+- 浏览器真实检测：已配置的 OneKeyToken Chat Completions 检测成功并返回 `validatedModel=qwen3.5-flash`；点击“加入模型目录”后平台已选模型为 1，chat 场景路由更新成功。远程目录能力仍为不可枚举，不把检测模型伪装成 `/models` 目录。
+- 平台管理员通过正式“补齐初始化”操作得到成功提示，目标租户卡片由“待补齐”变为“已完成”；没有数据库直写或未授权资源创建。
+- UAT 数据库只读回读：`天工产品经理 / devautopilot-pm-09653ab9` 为 enabled，`published_version_id=2`；工作流 v1 为 `PUBLISHED`；`web` binding enabled；主 SERVICE execution binding enabled、OFFICIAL_APP、PRIMARY owner ACTIVE。
+- 当前浏览器平台会话访问 `/app` 到达独立登录边界，不能作为 Demo Company 员工会话。服务端首页筛选所需的 published/web/enabled 条件已满足，但员工首页实际可见和创建会话仍待正常租户用户刷新验收。
+- `validate-state.py .claw` 已执行；TASK-275、FEAT-123、FEAT-164 与 current-status 未产生校验错误。全局校验仍因仓库既有的历史任务归档、旧规格状态/front matter 和旧时间格式债务返回 1，本任务未批量改写这些历史事实。

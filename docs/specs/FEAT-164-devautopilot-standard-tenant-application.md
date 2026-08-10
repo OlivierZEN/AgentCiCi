@@ -163,8 +163,8 @@ DevAutopilot 服务端调用 AgentCiCi 的 ticket exchange，并仅在自身短�
 - [x] 标准 PM Agent 初始化补齐 `web` 渠道、标准 Spec 编译与幂等发布；既有未发布 Agent 可由 `initializations` 补偿。
 - [x] activation resolve 使用专用 RS256 OACT 验签边界，不再把 OACT 误交给 AgentCiCi 会话 JWT 解析器。
 - [x] Semattice 浏览器控制台使用独立公网 base URL；UAT 同源 `/console/` 不再返回或校验内部 `192.168.*` 地址。
-- [ ] Principal 权威生命周期与 activation 资源读模型统一；停用开发者不得在 DevAutopilot 显示为可派单。
-- [ ] 开通/补齐初始化自动投影 HUMAN owner、PM SERVICE 和 developer SERVICE 到 Semattice，并可补偿既有 activation。
+- [x] Principal 权威生命周期与 activation 资源读模型统一；停用开发者不得在 DevAutopilot 显示为可派单。
+- [x] 开通/补齐初始化自动投影 HUMAN owner、PM SERVICE 和 developer SERVICE 到 Semattice，并可补偿既有 activation。
 - [ ] 用正常租户用户回读 Semattice 当前项目数据，并完成双租户隔离验收。
 - [ ] 双租户 UAT E2E（需正常租户 ORG_ADMIN 业务会话，不能由平台运营账号替代）。
 
@@ -181,3 +181,4 @@ DevAutopilot 服务端调用 AgentCiCi 的 ticket exchange，并仅在自身短�
 - `2026-08-09` 已发布 `2.8.59-beta.1 / 94ceb612bd71`。专用 RS256 activation filter、Semattice console public base URL 与下一生产版本 beta 规则上线；目标租户 team 回读 `天工产品经理` AGENT/SERVICE、`墨子开发者`、`鲁班` 四项 ACTIVE 资源。配合 DevAutopilot `1.0.3-beta.2`，真实 handoff/consume/workspace/team/console 全部 200。
 - `2026-08-10` 已发布 `2.8.59-beta.5 / 0edfc3567f85`。标准 PM Agent 初始化新增 `web` 渠道、标准 Spec 编译、生产就绪发布与 `published_version_id` 回读门禁；定向测试和后端 package 通过。发布后目标租户只读回读仍显示 `天工产品经理 / devautopilot-pm-09653ab9` 未发布且无 channel binding，因此该既有 activation 必须再由平台管理员执行一次正式 `initializations` 幂等补偿。版本部署本身不隐式修改租户业务资源，也不以数据库直写替代受治理初始化。
 - `2026-08-10` 已发布 `2.8.59-beta.7 / 7e309a39394d`。控制面 API 新增只读 `initializationReady`，其完成条件为主 PM Agent 已发布、`web` 渠道启用且主 SERVICE 主体有效；前端保留旧响应兼容，但优先使用服务端事实。UAT 页面已从错误“已完成”修正为“待补齐”。真实补齐请求因平台模型目录为空而失败关闭；标准模板不会绕过模型运行依赖发布一个无法对话的 Agent，平台需先配置有效聊天模型和路由。
+- `2026-08-10` 已发布 `2.8.59-beta.8 / 8213646b4fa3`。OneKeyToken 真实检测返回 `qwen3.5-flash`，平台管理员显式加入目录并绑定 chat 路由后，正式 `initializations` 返回成功，应用卡片回读“已完成”。只读回读为：`agent_definition.enabled=true,published_version_id=2`，工作流 v1=`PUBLISHED`，`web` channel enabled，主 SERVICE binding enabled 且 owner ACTIVE。平台管理员会话无法进入员工工作台，首页智能体可见和创建会话仍由正常租户用户完成最终视觉验收；不以平台身份替代。
