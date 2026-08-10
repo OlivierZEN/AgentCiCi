@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-10T09:24:12Z
+updated_at: 2026-08-10T10:02:00Z
 updated_by: codex
 phase: release
 active_task: TASK-275
-next_action: "由 Demo Company 正常租户用户刷新员工首页，确认天工产品经理出现在智能体列表并可创建会话；随后完成第二租户正向与跨租户负向隔离验收。"
+next_action: "由 Demo Company 正常租户用户在天工产品经理新会话中重试“能帮我创建一个项目吗”，确认返回 DevAutopilot/Semattice 创建草案而非 CRM 限制说明；随后完成第二租户正向与跨租户负向隔离验收。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-275 / INT-008：已发布 UAT `2.8.59-beta.11 / 4b0be4c4328e`，修复租户标准产品经理只绑定 Tool、未绑定 `semattice-project-delivery-management` Skill 而把“项目”误解为 CRM 项目的缺陷。完成态现在还要求 always-on Skill、当前发布工作流的不可变 Skill 引用及已发布 Skill 版本；真实页面先从“已完成”纠正为“待补齐”，平台管理员通过正式按钮补偿后恢复“已完成”。只读回读确认 `天工产品经理 / devautopilot-pm-09653ab9` 工作流 v2 已发布，5 个研发交付 Tool、标准 Skill binding 和 workflow Skill v1 引用完整，领域提示断言通过。平台会话不能替代租户员工会话，截图原句的最终对话回归仍需正常租户用户执行。
 
 - TASK-275 / FEAT-123：已发布 UAT `2.8.59-beta.9 / 534a3baff64e`，纠正 beta.8 将 OneKeyToken 下游实际路由误当成目录模型的语义错误。检测现在返回并保存直接验证的稳定路由别名 `onekeytoken/auto`，`qwen3.5-flash` 仅作为该次 `resolvedModel` 诊断信息。UAT 已移除错误的 `qwen3.5-flash` 目录项，五个场景路由全部回读为 `onekeytoken/auto`；实时 Chat Completions 检测成功，OneKeyToken 远程目录仍为 0。DevAutopilot 初始化状态保持“已完成”。
 

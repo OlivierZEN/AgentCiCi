@@ -2354,3 +2354,12 @@ last_run_status: partial
 - 后端 `PlatformModelProviderIntegrationTest` 已更新预期，但本机 PostgreSQL `localhost:5432` 不可达，Spring Context 在 Flyway 连接阶段失败，未进入测试方法；未误报后端集成测试通过。
 - UAT 浏览器真实检测回读：`validatedModel=onekeytoken/auto`、本次 `resolvedModel=qwen3.5-flash`、远程可用模型 0。错误的 `qwen3.5-flash` 已移除；数据库只读回读 OneKeyToken `selectedModels=[onekeytoken/auto]`，五个场景路由全部为 `onekeytoken/auto`。
 - DevAutopilot 租户卡片继续为“运行中 / 初始化已完成”，版本显示 `2.8.59-beta.9`。
+
+## 2026-08-10 TASK-275 产品经理领域 Skill 初始化与 UAT beta.11
+
+- 缺陷证据：目标 Agent 已发布工作流的 Tool 为 query/create/review，但 manifest `skills=[]`；`agent_skill_binding` 与 `agent_workflow_skill_ref` 均为 0 行。截图中的 CRM 限制说明与该领域上下文缺失一致，不是 `onekeytoken/auto` 路由错误。
+- 实现：平台标准 Skill 首次被模板引用前生成不可变 `PUBLISHED` 版本；模板 PM 建立 always-on binding，以显式 Skill ref 重新编译发布。标准 Spec 明确“项目”默认是 DevAutopilot/Semattice 研发交付项目，并要求未确认创建先生成草案。readiness 新增 Skill binding、当前工作流引用和 published Skill version 三项门禁。
+- 测试：`DevAutopilotProductManagerAgentPublisherTest`、`DevAutopilotTenantApplicationReadinessTest`、`DevAutopilotTenantApplicationServiceTest`、`AgentWorkflowSkillRefServiceTest` 通过；后端 `-DskipTests package`、前端生产构建及 `git diff --check` 通过。未声称完整 Maven 集成套件通过。
+- UAT：最终版本 `2.8.59-beta.11 / 4b0be4c4328e`，backend/frontend healthy、health `UP`、版本回读一致、Nginx 校验通过。真实平台页面先显示“待补齐”，点击正式补齐按钮后成功提示并回到“已完成”。
+- 数据库只读回读：`devautopilot-pm-09653ab9` 当前工作流 v2 / `PUBLISHED`；有效 Tool 为 query/create/review/update/delete；`semattice-project-delivery-management` 为 always-on，工作流固定 Skill v1 / `PUBLISHED`；Spec 与 Skill prompt 领域断言 `domain_prompt_ready=true`。
+- 当前可控会话是平台管理员，不是 Demo Company 员工；未伪造租户会话或创建真实项目。截图原句的最终对话回归由正常租户用户在新会话中完成。

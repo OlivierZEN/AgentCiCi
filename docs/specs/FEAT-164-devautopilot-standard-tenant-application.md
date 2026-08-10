@@ -161,6 +161,7 @@ DevAutopilot 服务端调用 AgentCiCi 的 ticket exchange，并仅在自身短�
 - [x] 修复同源租户 handoff 与卡片字段事实，并发布 UAT AgentCiCi `2.8.57-beta.3 / 1b07df5c6f40`。
 - [x] 将标准 PM Agent/SERVICE/Tool/execution binding 纳入新开通与既有租户显式补齐初始化。
 - [x] 标准 PM Agent 初始化补齐 `web` 渠道、标准 Spec 编译与幂等发布；既有未发布 Agent 可由 `initializations` 补偿。
+- [x] 标准 PM Agent 初始化强制建立并固定 `semattice-project-delivery-management` 已发布版本、always-on binding 与当前工作流引用；readiness 不再把只有 Tool 的半初始化 Agent 判定为完成。
 - [x] activation resolve 使用专用 RS256 OACT 验签边界，不再把 OACT 误交给 AgentCiCi 会话 JWT 解析器。
 - [x] Semattice 浏览器控制台使用独立公网 base URL；UAT 同源 `/console/` 不再返回或校验内部 `192.168.*` 地址。
 - [x] Principal 权威生命周期与 activation 资源读模型统一；停用开发者不得在 DevAutopilot 显示为可派单。
@@ -183,3 +184,4 @@ DevAutopilot 服务端调用 AgentCiCi 的 ticket exchange，并仅在自身短�
 - `2026-08-10` 已发布 `2.8.59-beta.7 / 7e309a39394d`。控制面 API 新增只读 `initializationReady`，其完成条件为主 PM Agent 已发布、`web` 渠道启用且主 SERVICE 主体有效；前端保留旧响应兼容，但优先使用服务端事实。UAT 页面已从错误“已完成”修正为“待补齐”。真实补齐请求因平台模型目录为空而失败关闭；标准模板不会绕过模型运行依赖发布一个无法对话的 Agent，平台需先配置有效聊天模型和路由。
 - `2026-08-10` 已发布 `2.8.59-beta.8 / 8213646b4fa3`。OneKeyToken 真实检测返回 `qwen3.5-flash`，平台管理员显式加入目录并绑定 chat 路由后，正式 `initializations` 返回成功，应用卡片回读“已完成”。只读回读为：`agent_definition.enabled=true,published_version_id=2`，工作流 v1=`PUBLISHED`，`web` channel enabled，主 SERVICE binding enabled 且 owner ACTIVE。平台管理员会话无法进入员工工作台，首页智能体可见和创建会话仍由正常租户用户完成最终视觉验收；不以平台身份替代。
 - `2026-08-10` 已发布 `2.8.59-beta.9 / 534a3baff64e`。beta.8 初始化事实保持有效，但模型解释已纠正：实际验证和保存的是 `onekeytoken/auto` 路由别名，`qwen3.5-flash` 只是单次下游解析结果。UAT 已移除错误固定模型并将五个场景路由统一回读为 `onekeytoken/auto`。
+- `2026-08-10` 已发布 `2.8.59-beta.11 / 4b0be4c4328e`。用户截图所示 CRM 误答的根因是租户 PM 工作流只有 Semattice Tool、没有领域 Skill；存量补偿现会生成平台标准 Skill 的不可变已发布快照、建立 always-on binding、以显式 Skill ref 编译发布，并把“项目”限定为 DevAutopilot/Semattice 研发交付项目。UAT 页面先正确显示“待补齐”，平台管理员从正式按钮补偿后回到“已完成”；只读回读确认 PM 工作流 v2、5 个交付 Tool、标准 Skill 及其 v1 published ref 完整。平台会话不替代正常租户员工会话，截图原句的最终对话验收仍待租户用户执行。

@@ -1,12 +1,19 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-10T08:27:30Z
+updated_at: 2026-08-10T10:02:00Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-10 TASK-275 UAT beta.11 产品经理领域 Skill 初始化
+
+- 最终发布 `2.8.59-beta.11 / 4b0be4c4328e`；backend/frontend ACR index digest 为 `sha256:b50b79c8c0c7ecd82a2c93a6eb49a666c0edc176896793a54217a828f3e17c7b` / `sha256:558dfb03cf1b052d2820e553456d42cf15383b682a50fde59bdd7ade5b0956a2`。beta.10 先交付 Skill 绑定补偿，beta.11 增加完整 readiness 后覆盖为最终候选。
+- beta.10 与 beta.11 发布前完整备份分别为 `/data/apps/agentcici/backups/20260810T094629Z-before-2.8.59-beta.10` 和 `/data/apps/agentcici/backups/20260810T095320Z-before-2.8.59-beta.11`；Compose、受保护环境、PostgreSQL、KB、Qdrant 均非空。传输归档已移入对应备份目录，未保存 ACR 凭据。
+- 仅重建 backend/frontend；database、Redis、RabbitMQ、Qdrant 均持续 healthy。最终 backend/frontend healthy，内部 `/system/version=2.8.59-beta.11 / 4b0be4c4328e`、`/actuator/health=UP`，Nginx 有效，启动与正式补齐窗口无应用 ERROR。
+- 已通过已登录平台会话执行正式 `initializations`，未直接写数据库。即时应用回滚目标为 beta.10；回滚不删除已经建立的 Skill binding、Skill version 或工作流版本，旧版本会按 readiness 正确显示需要补偿。
 
 ## 2026-08-10 TASK-276 UAT beta.6
 
