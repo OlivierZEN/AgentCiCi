@@ -53,7 +53,7 @@ updated_by: codex
 - `PlatformTenantLifecycleService.createTenant` 当前调用 `assignPasswordCredential`，但不调用 `KeycloakIdentityProvisioningService`。
 - `AdminUserService.inviteMember` 已具备 HUMAN provisioning 与 `PENDING_ACTIVATION` 状态语义，应复用相同服务，不复制 Keycloak 管理协议。
 - 浏览器、日志、Git 和状态文档不得包含管理员 token、Client Secret、邮件动作链接或用户密码。
-- UAT 运行版本必须为不可变 `2.8.59-beta.N`，只重建 backend/frontend。
+- 正式版本 `2.8.59` 已于 `2026-08-10` 建立 Git production tag；本项后续 UAT 必须使用下一生产目标的不可变 `2.8.60-beta.N`，只重建 backend/frontend。
 
 ## 方案设计
 

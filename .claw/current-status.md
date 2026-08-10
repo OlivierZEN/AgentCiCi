@@ -5,7 +5,7 @@ updated_at: 2026-08-10T11:29:15Z
 updated_by: codex
 phase: implementation
 active_task: TASK-277
-next_action: "提交并发布下一 AgentCiCi UAT beta；通过正式 Owner 恢复接口让第二租户复用已激活 Demo 账号，再完成 DevAutopilot 开通和双租户隔离验收。"
+next_action: "发布 AgentCiCi 2.8.60-beta.1；通过正式 Owner 恢复接口让第二租户复用已激活 Demo 账号，再完成 DevAutopilot 开通和双租户隔离验收。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-276 / TASK-277：Owner 常规身份协调与无有效 Owner 启动死锁恢复均已本地实现。后端 4 类 26 项定向测试、package、前端 4 项测试与生产构建通过；完整后端套件因本机 PostgreSQL 未启动在连接重试阶段停止。恢复只接受远端已激活 HUMAN，通过悲观锁串行所有权变更，保留原待激活 Owner；页面常规协调使用脱敏状态和独立确认 modal，不设置或展示密码。待提交并发布下一 UAT beta。
+- TASK-276 / TASK-277：Owner 常规身份协调与无有效 Owner 启动死锁恢复已由 `299f1f0` 提交并推送。后端 4 类 26 项定向测试、package、前端 4 项测试与生产构建通过；完整后端套件因本机 PostgreSQL 未启动在连接重试阶段停止。恢复只接受远端已激活 HUMAN，通过悲观锁串行所有权变更，保留原待激活 Owner；页面常规协调使用脱敏状态和独立确认 modal，不设置或展示密码。正式 tag 已推进至 `2.8.59`，发布预检确认下一 UAT 为 `2.8.60-beta.1`。
 
 - TASK-277 / FEAT-166：用户已确认在“租户应用”页增加当前 Owner 身份协调入口。范围为脱敏状态、公共编号二次确认、受管 HUMAN provisioning、成员激活状态回写、幂等与平台审计；不替换 Owner，不直接写生产数据库，不自动发布。
 
