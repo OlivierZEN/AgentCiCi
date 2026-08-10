@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-10T08:27:30Z
+updated_at: 2026-08-10T10:09:22Z
 updated_by: codex
 board_status: active
 ---
@@ -28,14 +28,15 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-275 - DevAutopilot 标准租户应用控制面
 
-- status: `in_progress`
+- status: `blocked`
 - priority: `critical`
 - owner_role: `integration-agent`
 - spec_path: `docs/specs/FEAT-164-devautopilot-standard-tenant-application.md`
 - depends_on: `TASK-274, cc-semattice TASK-070`
+- blocked_by: `ISSUE-2026-08-10-new-tenant-owner-missing-oidc; Demo Company normal tenant employee login`
 - integration_id: `INT-008`
 - scope_files: `platform tenant applications, AgentCiCi-to-DevAutopilot handoff, activation persistence, machine-principal create/edit modal, tests, docs`
-- next_action: `UAT 模型目录、chat 路由和目标租户 initializations 已完成；等待正常租户用户刷新员工首页并验证天工产品经理会话，再完成第二租户正向与跨租户负向隔离验收`
+- next_action: `等待 Demo Company 正常员工登录，以及第二测试租户 Owner 完成邮件激活和首次 OIDC 登录；用户确认后恢复并执行领域对话、第二租户开通及跨租户负向验收`
 
 ### TASK-273 - Keycloak 生产人工运维交接
 

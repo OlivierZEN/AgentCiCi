@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-08-10T08:27:30Z
+updated_at: 2026-08-10T10:09:22Z
 updated_by: codex
 status: active
 ---
@@ -14,7 +14,7 @@ status: active
   - Symptom: 平台开通的新租户 Owner 无法通过生产 OIDC 登录；目标邮箱和手机号在 AgentCiCi 与 Keycloak 均无有效身份记录，登录事件为 `user_not_found`。
   - Verified root cause: 生产 `2.8.58 / 63371f92d9ae` 的 `PlatformTenantLifecycleService.createTenant` 只创建本地账号、密码凭据和 Owner 成员，不调用 `KeycloakIdentityProvisioningService`；管理访问日志也未出现该目标的成功成员邀请请求。
   - Resolution progress: TASK-276 / FEAT-165 已发布 UAT `2.8.59-beta.6`；真实 Owner 的账户、EMAIL/MOBILE 标识、PENDING_ACTIVATION 成员、外部 subject、Keycloak enabled 与 Required Actions 均通过回读，本地密码为 0。不直接写生产数据库。
-  - Status: fixing (critical; UAT system verification passed, awaiting Owner email activation and first login before production release decision).
+  - Status: external-action-blocked (critical; implementation and UAT system verification passed, but Owner email activation and first login now block TASK-276 final verification and TASK-275 second-tenant E2E).
 
 - ISSUE-2026-08-10-keycloak-ownership-attributes-not-managed:
   - Symptom: UAT Keycloak 新 HUMAN User 已正确创建和绑定，但 Admin API 回读中 `agentcici_public_id`、`agentcici_account_id` 自定义属性为空。

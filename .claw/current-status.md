@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-10T10:06:51Z
+updated_at: 2026-08-10T10:09:22Z
 updated_by: codex
-phase: release
+phase: blocked
 active_task: TASK-275
-next_action: "由 Demo Company 正常租户用户在天工产品经理新会话中重试“能帮我创建一个项目吗”；同时由第二测试租户 Owner 完成邮件激活和首次 OIDC 登录，使成员从 PENDING_ACTIVATION 转为 ACTIVE，再继续该租户 DevAutopilot 开通与跨租户负向验收。"
+next_action: "等待真实用户完成两个不可代办的身份动作：Demo Company 正常租户成员登录员工工作台；第二测试租户 Owner 完成邮件激活和首次 OIDC 登录。用户确认后恢复 TASK-275，重试 DevAutopilot 开通、产品经理领域对话和跨租户负向验收。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-275 / INT-008 已进入外部身份阻塞：连续三次复核中，员工浏览器均停留在 Keycloak 登录页，第二测试租户唯一 Owner 均为 `PENDING_ACTIVATION`。最后一次权威回读仍显示两个租户 Semattice binding=`PROVISIONED`，仅 Demo Company 有 ACTIVE DevAutopilot activation；第二租户 activation 为 0。实现、部署、13 项自动化回归及失败关闭均已完成，但正常员工领域对话与双租户正向/负向 E2E 不能由平台管理员、机器身份、直接写库或伪造用户替代，TASK-275 因 `ISSUE-2026-08-10-new-tenant-owner-missing-oidc` 的待激活状态标记为 blocked。
 
 - TASK-275 / INT-008 双租户 UAT：平台管理员已对第二测试租户 `orgvdd8xckmvc8r5yi6q` 通过正式按钮开通 Semattice，页面和数据库回读均为 `PROVISIONED`，且两个测试租户的 Semattice tenant 标识均存在。随后正式 DevAutopilot 开通按预期失败关闭为 `DevAutopilot activation requires an active tenant ORG_ADMIN`；只读回读确认该租户唯一 `OWNER` 仍为 `PENDING_ACTIVATION`，没有 activation 或机器主体遗留。该门禁不能由平台账号、直接写库或虚构负责人绕过；需 Owner 完成邮件激活和首次 OIDC 登录后继续。Demo Company 的正常员工产品经理对话回归仍需业务登录。
 

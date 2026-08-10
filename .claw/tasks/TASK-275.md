@@ -1,8 +1,9 @@
 ---
 task_id: TASK-275
 integration_id: INT-008
-status: in_progress
+status: blocked
 primary_project: agentcici
+blocked_by: ISSUE-2026-08-10-new-tenant-owner-missing-oidc; Demo Company normal tenant employee login
 ---
 
 # TASK-275 - DevAutopilot 标准租户应用控制面
@@ -43,3 +44,4 @@ primary_project: agentcici
 - 已发布 UAT `2.8.59-beta.9 / 534a3baff64e`：修正 beta.8 的模型语义错误。`onekeytoken/auto` 是实际请求并验证成功的稳定路由别名，网关返回的 `qwen3.5-flash` 只作为下游诊断信息；UAT 已删除错误目录项，chat、技能创作、本体建模、AI 听记、客户洞察五个场景均回读 `onekeytoken/auto`，DevAutopilot 初始化保持完成。
 - 用户在员工首页向“天工产品经理”询问创建项目时得到 CRM 限制说明。UAT 只读回读证明 Agent 工作流虽有 query/create/review Tool，但 `skills=[]`、`agent_skill_binding=0`、`agent_workflow_skill_ref=0`，因此缺失 DevAutopilot 领域上下文。已发布 `2.8.59-beta.11 / 4b0be4c4328e`：初始化会为平台标准 Skill 建立已发布不可变快照、always-on 绑定并重新编译发布；readiness 同时验证 Skill binding、workflow ref 和已发布 Skill 版本。真实平台页面完成“待补齐 → 正式补齐 → 已完成”，数据库回读 PM 工作流 v2、5 个研发交付 Tool、标准 Skill 与 Skill v1 引用完整；待正常租户用户用截图原句完成最终对话回归。
 - 第二测试租户 `orgvdd8xckmvc8r5yi6q` 已通过运营端正式按钮开通 Semattice，页面提示企业身份绑定完成，数据库回读 `semattice_provisioning_binding=PROVISIONED`。紧接着的 DevAutopilot 正式开通被 `requires an active tenant ORG_ADMIN` 拒绝；该租户唯一 OWNER 仍为 `PENDING_ACTIVATION`，且 `tenant_application_activation` 无记录，证明失败关闭且无半初始化残留。下一步必须由该 Owner 完成邮件激活和首次 OIDC 登录，再继续第二租户正向及跨租户负向验收。
+- 连续三次 Goal 复核后外部状态仍未变化：Demo Company 员工会话停留在 Keycloak 登录页，第二测试租户 Owner 仍未激活。代码和平台权限无法代办邮箱验证或真实成员登录，且这些动作是正常租户端验收的身份事实，不得以 SERVICE、平台管理员或数据库更新替代；任务暂置 `blocked`，用户完成上述两项后恢复。

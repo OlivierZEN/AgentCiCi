@@ -6,8 +6,8 @@ status: in_implementation
 owner_role: integration-agent
 task_ids: TASK-275
 related_decisions: ADR-006, ADR-007, ADR-008
-related_issues: none
-updated_at: 2026-08-10T09:20:00Z
+related_issues: ISSUE-2026-08-10-new-tenant-owner-missing-oidc
+updated_at: 2026-08-10T10:09:22Z
 updated_by: codex
 ---
 
