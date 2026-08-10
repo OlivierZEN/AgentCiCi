@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-166
 title: 平台租户 Owner 统一身份协调
-status: in_implementation
+status: verified
 owner_role: fullstack-agent
 task_ids: TASK-277
 related_decisions: none
 related_issues: ISSUE-2026-08-10-new-tenant-owner-missing-oidc
-updated_at: 2026-08-10T11:18:25Z
+updated_at: 2026-08-10T11:46:11Z
 updated_by: codex
 ---
 
@@ -85,7 +85,7 @@ FEAT-165 已修复新租户创建链路，但历史租户仍可能存在“本�
 ## 实现进展
 
 - 用户已确认页面位置与交互原型。
-- 正式 API、页面、脱敏状态、确认 modal、幂等审计与定向测试已完成；常规协调不使用危险操作语汇，不把重发激活邮件包装成复杂安全流程。等待 UAT 发布和桌面验收。
+- 正式 API、页面、脱敏状态、确认 modal、幂等审计与定向测试已完成，并随 UAT `2.8.60-beta.1 / 93a487f4e393` 发布。受权页面回读 Owner 身份正常、统一身份可登录，浏览器 0 error / 0 warning；常规协调不使用危险操作语汇，不把重发激活邮件包装成复杂安全流程。
 
 ## 交接说明
 

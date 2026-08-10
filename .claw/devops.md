@@ -1,12 +1,20 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-10T10:06:51Z
+updated_at: 2026-08-10T11:46:11Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-10 TASK-276 / TASK-277 UAT `2.8.60-beta.1`
+
+- Git tag/commit：`2.8.60-beta.1 / 93a487f4e393`。ACR backend/frontend index digest 为 `sha256:a68027a8949a2ec315bc756caa7661e76fd347988158ece806d06ee3128ca06c` / `sha256:2da4ffdb68a4c1e83df589644282fb768644d3f865c61f8fb3cc646b616ce966`；UAT 容器镜像 ID 与两项 index digest 一致。
+- 发布前完整备份 `/data/apps/agentcici/backups/20260810T113637Z-before-2.8.60-beta.1` 包含 Compose、root-only 环境、PostgreSQL、KB、Qdrant 和两项传输镜像，均非空且为 `0600`。
+- 仅重建 backend/frontend；四个状态服务 ID 哈希保持 `b5dca5759af2a9cfb0ed4285fdb3b01c9af02db33eb2bfbabfa347fe728de2bc`。两个应用容器 healthy，health=`UP`，104 个 migration 校验通过且 schema 保持 V108，Nginx 有效，首页 200，匿名 `/auth/me`、Owner 状态和协调接口均为 401，启动 ERROR 计数 0。
+- 受权平台页面显示版本 `2.8.60-beta.1`；目标租户 Owner 为 `OWNER/ACTIVE`、统一身份“已绑定·可登录”，Semattice 与 DevAutopilot 均运行中，浏览器 0 error / 0 warning。生产未修改。
+- 残余风险：启动日志仍提示 `SecretCipherService` 使用开发回退密钥；已登记独立 issue，不能把该 UAT 配置称为生产安全基线。应用回滚目标为 `2.8.59-beta.12`，不删除合法 Owner/应用状态。
 
 ## 2026-08-10 TASK-275 第二测试租户应用开通前置状态
 

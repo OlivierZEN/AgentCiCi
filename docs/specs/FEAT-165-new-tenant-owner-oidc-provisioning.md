@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-165
 title: 新租户 Owner 统一身份开通
-status: in_implementation
+status: verified
 owner_role: backend-agent
 task_ids: TASK-276
 related_decisions: none
 related_issues: ISSUE-2026-08-10-new-tenant-owner-missing-oidc
-updated_at: 2026-08-10T11:18:25Z
+updated_at: 2026-08-10T11:46:11Z
 updated_by: codex
 ---
 
@@ -115,7 +115,7 @@ updated_by: codex
 - `2.8.59-beta.4` 真实调用暴露并验证了 `public_id` trigger 列未回填到当前 persistence context 的缺口；API 失败关闭且目标本地五类记录均为 0。已补 flush/refresh 与时序测试。
 - `2.8.59-beta.6` 真实开通和独立回读已证明账号、EMAIL/MOBILE 标识、Owner 待激活状态、外部 subject、Keycloak enabled/Required Actions 与无本地密码凭据；等待 Owner 邮件激活和首次登录后将规格转为 `verified`。
 - 双租户验收暴露了测试租户 Owner 激活邮件没有可交付接收方的问题。该问题不再由直接写库、共享 Keycloak 管理凭据或伪造激活状态处理；按本规格补充“无有效 Owner”的平台受控恢复闭环。
-- 受控恢复服务与定向测试已完成：只接受远端已激活 HUMAN，串行锁定当前 Owner，保留并降级原待激活 Owner，相同目标幂等；等待 UAT 发布后通过正式平台接口执行。
+- 受控恢复服务与定向测试已完成：只接受远端已激活 HUMAN，串行锁定当前 Owner，保留并降级原待激活 Owner，相同目标幂等。UAT `2.8.60-beta.1` 已通过正式平台接口完成恢复；受权页面回读新 Owner 为 `OWNER/ACTIVE`、统一身份可登录，Semattice 与 DevAutopilot 均运行中。
 - 本机数据库集成测试仍受 PostgreSQL 未启动限制，不扩写为全量通过；UAT 真实数据库/Keycloak 已作为正向运行证据。
 
 ## 交接说明

@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-10T11:29:15Z
+updated_at: 2026-08-10T11:46:11Z
 updated_by: codex
-phase: implementation
+phase: review
 active_task: TASK-277
-next_action: "发布 AgentCiCi 2.8.60-beta.1；通过正式 Owner 恢复接口让第二租户复用已激活 Demo 账号，再完成 DevAutopilot 开通和双租户隔离验收。"
+next_action: "保留 UAT 2.8.60-beta.1 稳定窗口；生产发布须另行授权，并在发布前处理或明确接受 UAT SecretCipherService 开发回退密钥风险。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-276 / TASK-277 已发布 UAT `2.8.60-beta.1 / 93a487f4e393`。ACR backend/frontend index digest 为 `sha256:a68027a8949a2ec315bc756caa7661e76fd347988158ece806d06ee3128ca06c` / `sha256:2da4ffdb68a4c1e83df589644282fb768644d3f865c61f8fb3cc646b616ce966`；完整备份 `/data/apps/agentcici/backups/20260810T113637Z-before-2.8.60-beta.1` 非空且为 `0600`。只重建 backend/frontend，四个状态服务 ID 哈希保持 `b5dca5759af2a9cfb0ed4285fdb3b01c9af02db33eb2bfbabfa347fe728de2bc`；health=`UP`、Nginx、首页 200、匿名鉴权 401 与启动 ERROR 计数 0。受权 UAT 页面回读目标租户 Owner 为 `OWNER/ACTIVE`、统一身份可登录，Semattice 与 DevAutopilot 均运行中，浏览器 0 error / 0 warning。生产未修改。
 
 - TASK-276 / TASK-277：Owner 常规身份协调与无有效 Owner 启动死锁恢复已由 `299f1f0` 提交并推送。后端 4 类 26 项定向测试、package、前端 4 项测试与生产构建通过；完整后端套件因本机 PostgreSQL 未启动在连接重试阶段停止。恢复只接受远端已激活 HUMAN，通过悲观锁串行所有权变更，保留原待激活 Owner；页面常规协调使用脱敏状态和独立确认 modal，不设置或展示密码。正式 tag 已推进至 `2.8.59`，发布预检确认下一 UAT 为 `2.8.60-beta.1`。
 

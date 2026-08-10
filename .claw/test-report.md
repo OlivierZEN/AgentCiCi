@@ -1,11 +1,11 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-10T11:29:15Z
+updated_at: 2026-08-10T11:46:11Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-10T11:29:15Z
-last_run_status: partial
+last_run_at: 2026-08-10T11:46:11Z
+last_run_status: passed
 ---
 
 # Test Report
@@ -16,9 +16,10 @@ last_run_status: partial
 - `mvn -q -DskipTests package` 通过。常规协调只作用于当前唯一 Owner；异常恢复只在没有有效 Owner 时接受已完成 OIDC 激活的账号，使用悲观锁串行所有权变更，相同目标幂等，不设置密码、不删除旧 Owner。
 - 前端 `PlatformTenantApplicationsPage.test.ts` 4/4 与 `npm run build` 通过；构建仅有既有 bundle-size 提示。页面显示脱敏 Owner 身份状态，创建/协调通过独立确认 modal 完成，未在应用卡片中长期堆放表单。
 - 完整 `mvn -q test` 在 `KnowledgeBaseLifecycleIntegrationTest` 初始化阶段因本机 PostgreSQL 未启动持续重试，人工停止并退出 130；不能记为全量套件通过，发布后以 UAT 真实 PostgreSQL、Keycloak、权限和浏览器链路补验。
-- `git diff --check` 通过；状态校验器仍报告迁移前历史 task/spec/front matter 债务，本次新增 FEAT-165/166 状态已修正为合法 `in_implementation`，未批量改写无关历史。
+- `git diff --check` 通过；状态校验器仍报告迁移前历史 task/spec/front matter 债务，本次 FEAT-165/166 已进入 `verified`，未批量改写无关历史。
 
-- 状态：`partial`（本地实现通过，等待不可变 UAT 发布与真实恢复验收）
+- UAT `2.8.60-beta.1 / 93a487f4e393` 已完成不可变发布与真实恢复验收。完整本地 Maven 套件未补跑成功的限制仍按上条保留，不扩写为全量测试通过。
+- 状态：`passed`
 
 ## 2026-08-10 TASK-275 第二租户 Semattice 开通与 DevAutopilot 前置门禁
 
@@ -2389,3 +2390,11 @@ last_run_status: partial
 - `OfficialAccessTokenServiceTest,DevAutopilotHandoffServiceTest` 通过。专用 handoff token 精确包含 `identity.principal.read`，并断言不含 `authorization.manage`；通用 Semattice token 保持不变。
 - UAT `2.8.59-beta.12 / b070676f411a`：backend/frontend healthy，容器网络 health=UP，Nginx 有效，近期 backend 错误匹配 0；匿名 `/auth/me=401`。发布前备份六项非空，仅重建应用容器，状态服务 ID 哈希保持 `b5dca5759af2a9cfb0ed4285fdb3b01c9af02db33eb2bfbabfa347fe728de2bc`。
 - 真实新 handoff：AgentCiCi 页面版本 beta.12，DevAutopilot 页面版本 `1.0.4-beta.1`；Semattice 0 项目、墨子不可派单、鲁班可派单，未出现身份目录不可用。
+
+## 2026-08-10 TASK-276 / TASK-277 Owner 恢复与身份协调 UAT 发布验收
+
+- 发布身份：Git tag、远端 tag、运行容器和 `/system/version` 均为 `2.8.60-beta.1 / 93a487f4e393`；backend/frontend ACR index digest 与 UAT 镜像 ID 一致。
+- 发布安全：完整备份 `/data/apps/agentcici/backups/20260810T113637Z-before-2.8.60-beta.1` 的 Compose、环境、PostgreSQL、KB、Qdrant 与两项镜像均非空且 `0600`。仅 backend/frontend 重建，四个状态服务 ID 哈希未变。
+- 运行验收：backend/frontend healthy，health=`UP`，Flyway 104 项校验成功且无需迁移，Nginx 配置有效，启动 ERROR/FATAL/Exception/Flyway failed 计数 0；公网首页 200，匿名 `/auth/me`、Owner 状态和协调接口均为 401。
+- 受权页面验收：页脚为 `2.8.60-beta.1`；目标租户 Owner 显示 `OWNER/ACTIVE`、身份正常及统一身份可登录，Semattice 与 DevAutopilot 均运行中；浏览器 0 error / 0 warning。
+- 非阻塞风险：启动日志存在 `SecretCipherService` 开发回退密钥 WARN，已登记独立 issue；不影响本次 Owner 功能，但不作为生产安全配置通过证据。
