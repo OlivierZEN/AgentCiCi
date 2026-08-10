@@ -17,4 +17,6 @@ public interface AgentSkillBindingRepository extends JpaRepository<AgentSkillBin
     List<AgentSkillBindingEntity> findByCompanyIdAndSkillIdInAndEnabledTrue(String companyId, List<Long> skillIds);
 
     void deleteByCompanyIdAndAgentId(String companyId, String agentId);
+
+    void deleteByCompanyIdAndAgentIdAndSkillId(String companyId, String agentId, Long skillId);
 }

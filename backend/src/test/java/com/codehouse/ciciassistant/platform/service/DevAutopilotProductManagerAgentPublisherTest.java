@@ -3,13 +3,14 @@ package com.codehouse.ciciassistant.platform.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionEntity;
 import com.codehouse.ciciassistant.agent.service.AgentCompileService;
 import com.codehouse.ciciassistant.agent.service.AgentDefinitionService;
+import com.codehouse.ciciassistant.agent.service.AgentSkillBindingService;
+import com.codehouse.ciciassistant.skill.service.SkillDefinitionService;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -22,8 +23,10 @@ class DevAutopilotProductManagerAgentPublisherTest {
 
     private final AgentDefinitionService definitions = Mockito.mock(AgentDefinitionService.class);
     private final AgentCompileService compiler = Mockito.mock(AgentCompileService.class);
+    private final AgentSkillBindingService skillBindings = Mockito.mock(AgentSkillBindingService.class);
+    private final SkillDefinitionService skills = Mockito.mock(SkillDefinitionService.class);
     private final DevAutopilotProductManagerAgentPublisher publisher =
-            new DevAutopilotProductManagerAgentPublisher(definitions, compiler);
+            new DevAutopilotProductManagerAgentPublisher(definitions, compiler, skillBindings, skills);
 
     @Test
     void compilesAndPublishesAnExistingUnpublishedTemplateAgent() {
@@ -36,6 +39,8 @@ class DevAutopilotProductManagerAgentPublisherTest {
                 List.of(),
                 Map.of());
         when(definitions.get(COMPANY_ID, AGENT_ID)).thenReturn(detail, publishedDetail(definition(), 42L));
+        when(skillBindings.ensureBinding(COMPANY_ID, AGENT_ID,
+                DevAutopilotProductManagerAgentPublisher.DELIVERY_SKILL_CODE, "always-on", 10)).thenReturn(true);
         when(compiler.compile(eq(COMPANY_ID), any())).thenReturn(new AgentCompileService.CompileResult(
                 "", Map.of(), null, List.of(), List.of(), List.of(), List.of(), 1, true,
                 "compiled", List.of()));
@@ -44,6 +49,8 @@ class DevAutopilotProductManagerAgentPublisherTest {
                 publisher.ensurePublished(COMPANY_ID, AGENT_ID);
 
         assertThat(result).isEqualTo(new DevAutopilotProductManagerAgentPublisher.Publication(42L, true));
+        verify(skills).ensurePublishedPlatformSkillVersion(
+                COMPANY_ID, DevAutopilotProductManagerAgentPublisher.DELIVERY_SKILL_CODE);
         verify(definitions).updateSpec(COMPANY_ID, AGENT_ID, DevAutopilotProductManagerAgentPublisher.STANDARD_SPEC);
         ArgumentCaptor<AgentDefinitionService.ReplaceBindingsCommand> bindings =
                 ArgumentCaptor.forClass(AgentDefinitionService.ReplaceBindingsCommand.class);
@@ -54,21 +61,28 @@ class DevAutopilotProductManagerAgentPublisherTest {
         verify(compiler).compile(eq(COMPANY_ID), compile.capture());
         assertThat(compile.getValue().specText()).isEqualTo(DevAutopilotProductManagerAgentPublisher.STANDARD_SPEC);
         assertThat(compile.getValue().channels()).containsExactly("web");
+        assertThat(compile.getValue().skillRefs())
+                .containsExactly(DevAutopilotProductManagerAgentPublisher.DELIVERY_SKILL_CODE);
         verify(definitions).publishVersion(COMPANY_ID, AGENT_ID, 1);
     }
 
     @Test
-    void leavesAnAlreadyPublishedTemplateAgentUnchanged() {
+    void upgradesAnAlreadyPublishedTemplateAgentWhenItsManagedSkillWasMissing() {
         AgentDefinitionEntity definition = definition();
         definition.setPublishedVersionId(9L);
-        when(definitions.get(COMPANY_ID, AGENT_ID)).thenReturn(publishedDetail(definition, 9L));
+        AgentDefinitionEntity upgraded = definition();
+        when(definitions.get(COMPANY_ID, AGENT_ID)).thenReturn(publishedDetail(definition, 9L), publishedDetail(upgraded, 10L));
+        when(skillBindings.ensureBinding(COMPANY_ID, AGENT_ID,
+                DevAutopilotProductManagerAgentPublisher.DELIVERY_SKILL_CODE, "always-on", 10)).thenReturn(true);
+        when(compiler.compile(eq(COMPANY_ID), any())).thenReturn(new AgentCompileService.CompileResult(
+                "", Map.of(), null, List.of(), List.of(), List.of(), List.of(), 2, true,
+                "compiled", List.of()));
 
         DevAutopilotProductManagerAgentPublisher.Publication result =
                 publisher.ensurePublished(COMPANY_ID, AGENT_ID);
 
-        assertThat(result).isEqualTo(new DevAutopilotProductManagerAgentPublisher.Publication(9L, false));
-        verify(compiler, never()).compile(any(), any());
-        verify(definitions, never()).publishVersion(any(), any(), any());
+        assertThat(result).isEqualTo(new DevAutopilotProductManagerAgentPublisher.Publication(10L, true));
+        verify(definitions).publishVersion(COMPANY_ID, AGENT_ID, 2);
     }
 
     private AgentDefinitionEntity definition() {

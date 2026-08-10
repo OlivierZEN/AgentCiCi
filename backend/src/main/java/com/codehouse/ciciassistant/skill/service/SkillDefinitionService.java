@@ -423,6 +423,46 @@ public class SkillDefinitionService {
                 .toList();
     }
 
+    /**
+     * Materializes an immutable published snapshot for a platform standard skill before an Agent
+     * workflow pins it. Legacy built-ins predate skill versioning and otherwise resolve to an
+     * empty fail-closed runtime reference.
+     */
+    @Transactional
+    public Long ensurePublishedPlatformSkillVersion(String companyId, String requestedSkillCode) {
+        ensurePhaseOneDefaults(companyId);
+        String skillCode = normalizeSkillCode(requestedSkillCode);
+        SkillDefinitionEntity skill = skillDefinitionRepository.findByCompanyIdAndSkillCode(companyId, skillCode)
+                .orElseThrow(() -> new IllegalArgumentException("Skill not found: " + skillCode));
+        if (skill.getSourceType() != SkillSourceType.PLATFORM_STANDARD) {
+            throw new IllegalArgumentException("Only platform standard skills can be materialized automatically");
+        }
+        Optional<SkillVersionEntity> published = skill.getCurrentPublishedVersionId() == null
+                ? Optional.empty()
+                : skillVersionRepository.findByIdAndCompanyId(skill.getCurrentPublishedVersionId(), companyId)
+                        .filter(version -> "PUBLISHED".equalsIgnoreCase(version.getPublishStatus()));
+        if (published.isEmpty()) {
+            published = skillVersionRepository.findTopByCompanyIdAndSkillIdAndPublishStatusOrderByVersionNoDesc(
+                    companyId, skill.getId(), "PUBLISHED");
+        }
+        if (published.isPresent()) {
+            if (!java.util.Objects.equals(skill.getCurrentPublishedVersionId(), published.get().getId())) {
+                skill.markPublished(published.get().getId(), "system");
+                skillDefinitionRepository.save(skill);
+            }
+            return published.get().getId();
+        }
+
+        UpsertCommand snapshot = UpsertCommand.fromEntity(skill, "初始化平台标准技能运行时快照", "system");
+        SkillVersionEntity created = createDraftVersion(companyId, skill, snapshot, "PUBLISH", null);
+        created.markPublished();
+        skillVersionRepository.save(created);
+        skillApiToolService.publishApisForVersion(companyId, skill, created, created.getRuntimeApiSnapshotJson());
+        skill.markPublished(created.getId(), "system");
+        skillDefinitionRepository.save(skill);
+        return created.getId();
+    }
+
     public SkillDefinitionEntity getSkill(String companyId, Long id) {
         ensurePhaseOneDefaults(companyId);
         return skillDefinitionRepository.findByIdAndCompanyId(id, companyId)

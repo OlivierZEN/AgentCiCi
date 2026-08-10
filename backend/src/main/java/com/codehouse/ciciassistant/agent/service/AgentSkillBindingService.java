@@ -62,6 +62,51 @@ public class AgentSkillBindingService {
         return result;
     }
 
+    /**
+     * Ensures a platform-managed Agent template has its required runtime skill without replacing
+     * any tenant-added bindings. A previously disabled row is recreated because the binding
+     * entity is intentionally immutable after creation.
+     */
+    @Transactional
+    public boolean ensureBinding(String companyId,
+                                 String agentId,
+                                 String skillCode,
+                                 String activationMode,
+                                 Integer priority) {
+        skillDefinitionService.ensurePhaseOneDefaults(companyId);
+        String normalizedAgentId = normalizeAgentId(agentId);
+        String normalizedSkillCode = skillCode == null ? "" : skillCode.trim().toLowerCase();
+        if (normalizedSkillCode.isBlank()) {
+            throw new IllegalArgumentException("skillCode is required");
+        }
+        SkillDefinitionEntity skill = skillDefinitionRepository
+                .findByCompanyIdAndSkillCode(companyId, normalizedSkillCode)
+                .orElseThrow(() -> new IllegalArgumentException("skill not found for code: " + normalizedSkillCode));
+        if (!skill.isEnabled()) {
+            throw new IllegalArgumentException("skill is disabled: " + normalizedSkillCode);
+        }
+        if (agentSkillBindingRepository.existsByCompanyIdAndAgentIdAndSkillIdAndEnabledTrue(
+                companyId, normalizedAgentId, skill.getId())) {
+            return false;
+        }
+        if (agentSkillBindingRepository.existsByCompanyIdAndAgentIdAndSkillId(
+                companyId, normalizedAgentId, skill.getId())) {
+            agentSkillBindingRepository.deleteByCompanyIdAndAgentIdAndSkillId(
+                    companyId, normalizedAgentId, skill.getId());
+            agentSkillBindingRepository.flush();
+        }
+        agentSkillBindingRepository.save(new AgentSkillBindingEntity(
+                companyId,
+                normalizedAgentId,
+                skill.getId(),
+                normalizeActivationMode(activationMode),
+                null,
+                priority == null ? 10 : priority,
+                true
+        ));
+        return true;
+    }
+
     @Transactional
     public List<AgentSkillBindingView> replaceBindings(String companyId, String agentId, List<ReplaceBindingInput> inputs) {
         skillDefinitionService.ensurePhaseOneDefaults(companyId);
