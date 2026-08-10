@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-10T12:28:56Z
+updated_at: 2026-08-10T12:36:00Z
 updated_by: codex
 board_status: active
 ---
@@ -36,18 +36,6 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - scope_files: `PlatformTenantLifecycleService, Keycloak HUMAN provisioning, focused tests, UAT release evidence`
 - next_action: `已发布 2.8.60 生产；等待受权 PLATFORM_ADMIN 通过正式页协调目标 Owner，禁止直接写库`
-
-### TASK-275 - DevAutopilot 标准租户应用控制面
-
-- status: `in_progress`
-- priority: `critical`
-- owner_role: `integration-agent`
-- spec_path: `docs/specs/FEAT-164-devautopilot-standard-tenant-application.md`
-- depends_on: `TASK-274, cc-semattice TASK-070`
-- blocked_by: `ISSUE-2026-08-10-new-tenant-owner-missing-oidc (second-tenant E2E only)`
-- integration_id: `INT-008`
-- scope_files: `platform tenant applications, AgentCiCi-to-DevAutopilot handoff, activation persistence, machine-principal create/edit modal, tests, docs`
-- next_action: `主租户三仓链路已通过；等待第二测试租户 Owner 激活后完成正向开通与跨租户负向验收`
 
 ### TASK-273 - Keycloak 生产人工运维交接
 
@@ -1449,6 +1437,18 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-275 - DevAutopilot 标准租户应用控制面
+
+- status: `done`
+- priority: `critical`
+- owner_role: `integration-agent`
+- spec_path: `docs/specs/FEAT-164-devautopilot-standard-tenant-application.md`
+- depends_on: `TASK-274, cc-semattice TASK-070`
+- blocked_by: `none`
+- integration_id: `INT-008`
+- scope_files: `platform tenant applications, AgentCiCi-to-DevAutopilot handoff, activation persistence, machine-principal create/edit modal, tests, docs`
+- completion_evidence: `AgentCiCi 2.8.60-beta.1；A/B 双租户、产品经理首页/领域对话、developer 新增/改名/暂停/恢复、Semattice 投影与跨租户参数负向均通过正常业务会话验收`
 
 ### TASK-274 - 为产品经理 SERVICE 补齐删除权限
 

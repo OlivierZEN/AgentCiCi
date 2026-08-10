@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-164
 title: DevAutopilot standard tenant application
-status: in_implementation
+status: verified
 owner_role: integration-agent
 task_ids: TASK-275
 related_decisions: ADR-006, ADR-007, ADR-008
 related_issues: ISSUE-2026-08-10-new-tenant-owner-missing-oidc
-updated_at: 2026-08-10T10:09:22Z
+updated_at: 2026-08-10T12:36:00Z
 updated_by: codex
 ---
 
@@ -168,10 +168,12 @@ DevAutopilot 服务端调用 AgentCiCi 的 ticket exchange，并仅在自身短�
 - [x] Semattice 浏览器控制台使用独立公网 base URL；UAT 同源 `/console/` 不再返回或校验内部 `192.168.*` 地址。
 - [x] Principal 权威生命周期与 activation 资源读模型统一；停用开发者不得在 DevAutopilot 显示为可派单。
 - [x] 开通/补齐初始化自动投影 HUMAN owner、PM SERVICE 和 developer SERVICE 到 Semattice，并可补偿既有 activation。
-- [ ] 用正常租户用户回读 Semattice 当前项目数据，并完成双租户隔离验收。
-- [ ] 双租户 UAT E2E（需正常租户 ORG_ADMIN 业务会话，不能由平台运营账号替代）。
+- [x] 用正常租户用户回读 Semattice 当前项目数据，并完成双租户隔离验收。
+- [x] 双租户 UAT E2E（使用同一受控 HUMAN 身份切换组织，以正常租户 ORG_ADMIN 业务会话完成）。
 
 目标租户的正常用户读取已于 `2026-08-09` 完成：handoff、consume、workspace、team 与 Semattice console 均为 200；Semattice 当前项目数真实为 0，DevAutopilot 以空工作台呈现，不注入演示项目。上述第一项仅剩双租户隔离部分。
+
+双租户最终验收于 `2026-08-10` 完成：第二租户 Owner 通过受治理恢复复用既有激活 HUMAN，同一测试身份切换 A/B 组织；第二租户开通自动创建已发布产品经理 Agent/PM SERVICE，但不创建固定 developer。租户管理员新增、改名、暂停和恢复自定义 developer 后，AgentCiCi、Semattice 与 DevAutopilot 状态一致。A/B workspace 资源互不出现，且 B 会话无法用 A 的 `company_id` 查询参数覆盖可信租户。产品经理首页可见并以 `onekeytoken/auto` 按 DevAutopilot 领域语义响应。
 
 ## UAT 发布事实
 

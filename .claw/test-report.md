@@ -10,6 +10,14 @@ last_run_status: passed
 
 # Test Report
 
+## 2026-08-10 TASK-275 双租户最终业务验收
+
+- `owner/application`：第二租户 Owner 经正式恢复接口复用现有激活 HUMAN；同一 DEMO 身份可切换 A/B 组织。第二租户 DevAutopilot 开通返回 ACTIVE/initializationReady，自动创建已发布 `研发产品经理` Agent、PM SERVICE 和 Semattice 投影，初始 developer=0。
+- `tenant-admin`：第二租户 ORG_ADMIN 通过独立 modal 新增并重命名 developer、选择同租户 HUMAN 负责人；一次性 Secret 未读取、未保存。暂停时 AgentCiCi=`已暂停`、Semattice=`suspended`、DevAutopilot=`休息 · 不可派单`，恢复后 active/waiting 且派单按钮可用。
+- `isolation`：A 的 workspace 保持 2 名开发者；B 只返回本租户 0 项目、1 名 developer 和 `研发产品经理`。B 的 Semattice 会话显式传入 A 的 `company_id` 仍只返回 B 的 company 与成员。
+- `agent`：第二租户员工首页显示 `研发产品经理`；`onekeytoken/auto` 对创建项目请求按 DevAutopilot 领域语义追问并准备草案，不再误答 CRM。正式 handoff 至 DevAutopilot `1.0.4-beta.2` 后动态名称、开发者与空项目事实一致。
+- 状态：`passed`
+
 ## 2026-08-10 TASK-276 / TASK-277 Owner 身份生产发布验收
 
 - 发布前门禁：Owner/身份 4 类定向后端测试通过，后端 package、前端 4 项测试与 `2.8.60` 生产构建、Compose config、版本规则测试及 `git diff --check` 均通过；仅保留既有 bundle-size warning。完整 Maven 套件未因本次发布重新扩写为全量通过。

@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-10T12:28:56Z
+updated_at: 2026-08-10T12:36:00Z
 updated_by: codex
 phase: review
 active_task: TASK-277
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-275 / FEAT-164 / INT-008 已完成双租户 UAT。第二租户 Owner 通过受治理恢复绑定到现有激活 HUMAN；同一 DEMO 身份可切换 A/B 组织。第二租户正式开通自动创建已发布 `研发产品经理` Agent/PM SERVICE，租户 ORG_ADMIN 独立新增、改名、暂停和恢复 1 名自定义开发者后三系统状态一致。A 保持 2 名开发者，B 只显示本租户 0 项目、1 名开发者与产品经理；B 的 Semattice 会话不能用 A 的 `company_id` 参数覆盖可信租户。产品经理首页可见并以 `onekeytoken/auto` 按 DevAutopilot 语义响应。AgentCiCi UAT 仍为 `2.8.60-beta.1 / 93a487f4e393`。
 
 - TASK-276 / TASK-277 已发布生产 `2.8.60 / 451f797e61df`。backend/frontend ACR index digest 为 `sha256:1b4e96962c08900ae0372601b9a7fc99134615bcc0cd00aff36b5f102d8dba4a` / `sha256:859d23f4a65944161b22cc5a6cbeac2bc2db762a8f21a799eb490776491047c9`；发布前完整备份 `/opt/cici/backups/20260810T122603Z-before-2.8.60-owner-identity` 四项非空且为 `0600`。仅重建 backend/frontend，四个状态服务 ID 哈希保持 `88b03a2170ddc7acc3047e9ae42926298479174e218f956e226cfd4f2b9fbea7`；六容器 healthy、health=`UP`、Flyway V108 无迁移、Nginx 有效、x HTTPS=200/HTTP=301、匿名鉴权 401、启动 ERROR 计数 0。目标 Owner 的生产身份协调尚未执行：当前可控浏览器无 PLATFORM_ADMIN 登录态，未绕过认证或直接写库。
 

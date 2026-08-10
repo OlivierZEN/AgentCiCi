@@ -1,9 +1,9 @@
 ---
 task_id: TASK-275
 integration_id: INT-008
-status: in_progress
+status: done
 primary_project: agentcici
-blocked_by: ISSUE-2026-08-10-new-tenant-owner-missing-oidc (second-tenant E2E only)
+blocked_by: none
 ---
 
 # TASK-275 - DevAutopilot 标准租户应用控制面
@@ -47,3 +47,6 @@ blocked_by: ISSUE-2026-08-10-new-tenant-owner-missing-oidc (second-tenant E2E on
 - 连续三次 Goal 复核后外部状态仍未变化：Demo Company 员工会话停留在 Keycloak 登录页，第二测试租户 Owner 仍未激活。代码和平台权限无法代办邮箱验证或真实成员登录，且这些动作是正常租户端验收的身份事实，不得以 SERVICE、平台管理员或数据库更新替代；任务暂置 `blocked`，用户完成上述两项后恢复。
 - 用户提供 Demo Company 测试账号后任务已恢复：员工首页新会话向“天工产品经理”发送截图原句，`onekeytoken/auto` 正确按 DevAutopilot 研发项目语义追问项目名称并准备创建草案，CRM 误答回归通过。真实 DevAutopilot 页面进一步发现旧 handoff OACT 无权读取身份目录；AgentCiCi 改为仅在该应用的服务端 handoff 追加 `identity.principal.read`，明确不追加 `authorization.manage`。第二测试租户 Owner 激活仍只阻塞双租户验收。
 - 已发布 UAT `2.8.59-beta.12 / b070676f411a`。配合 Semattice `1.0.3-beta.1` 与 DevAutopilot `1.0.4-beta.1`，真实员工新 handoff 后页面显示鲁班 active/waiting 可派单、墨子 suspended/resting 不可派单，目录错误提示消失。主租户三仓闭环通过；第二测试租户仍等待 Owner 激活。
+- UAT `2.8.60-beta.1 / 93a487f4e393` 上，第二测试租户 Owner 已通过受治理恢复绑定到现有激活 HUMAN；同一 DEMO 测试身份可切换 A/B 两个组织，不需要也未创建第二套密码。第二租户 DevAutopilot 正式开通自动生成已发布 `研发产品经理` Agent、PM SERVICE 与 Semattice 投影，初始 developer 为 0，符合模板 `0..N` 设计。
+- 第二租户 ORG_ADMIN 通过正式独立 modal 创建 `第二租户 UAT 开发者`、选择同租户 HUMAN 负责人并完成一次性 Secret 确认；随后重命名为 `第二租户 UAT 开发者（已编辑）`。暂停后 AgentCiCi=`已暂停`、Semattice=`suspended`、DevAutopilot=`休息 · 不可派单`；恢复后为 active/waiting 且派单按钮可用。
+- 同一身份分别从两个租户正式 handoff：A 保持 2 名独立开发者，B 只显示本租户 0 项目、1 名开发者和 `研发产品经理`；B 的 Semattice 会话即使显式传入 A 的 `company_id` 仍只返回 B 的 company 与成员。产品经理首页可见且 `onekeytoken/auto` 按 DevAutopilot 项目语义对话，未出现 CRM 误答。三仓双租户、生命周期和跨租户负向验收完成，TASK-275 关闭。

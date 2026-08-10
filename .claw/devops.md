@@ -1,12 +1,18 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-10T12:28:56Z
+updated_at: 2026-08-10T12:36:00Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-10 TASK-275 双租户 UAT 业务验收
+
+- AgentCiCi UAT 运行版本保持 `2.8.60-beta.1 / 93a487f4e393`；本轮不重建 AgentCiCi 容器。第二租户 Owner 恢复、DevAutopilot activation、机器主体新增/改名/暂停/恢复均通过正式平台或租户管理接口执行，未直接写数据库。
+- A/B 租户使用同一受控 HUMAN 身份切换组织验收；运行会话按当前组织签发，A/B 团队和 workspace 资源互不出现。第二租户 Semattice 参数覆盖负向仍锚定当前 tenant/company。
+- 一次性机器 Secret 未读取、未保存或写入日志；第二租户测试 developer 最终保留为 active，名称为 `第二租户 UAT 开发者（已编辑）`。如需清理必须走租户机器主体正式生命周期，不通过数据库删除。
 
 ## 2026-08-10 TASK-276 / TASK-277 生产 `2.8.60`
 
