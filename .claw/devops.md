@@ -1,12 +1,19 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-10T11:46:11Z
+updated_at: 2026-08-10T12:28:56Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-10 TASK-276 / TASK-277 生产 `2.8.60`
+
+- Git tag/commit：`2.8.60 / 451f797e61df`。ACR backend/frontend index digest 为 `sha256:1b4e96962c08900ae0372601b9a7fc99134615bcc0cd00aff36b5f102d8dba4a` / `sha256:859d23f4a65944161b22cc5a6cbeac2bc2db762a8f21a799eb490776491047c9`。
+- 发布前完整备份 `/opt/cici/backups/20260810T122603Z-before-2.8.60-owner-identity` 的环境、PostgreSQL、KB 与 Qdrant 均非空且为 `0600`。
+- 仅 pull/force-recreate backend/frontend；四个状态服务 ID 哈希发布前后保持 `88b03a2170ddc7acc3047e9ae42926298479174e218f956e226cfd4f2b9fbea7`。六容器 healthy，health=`UP`，Flyway 成功验证 104 项 migration 且 schema 保持 V108，Nginx 有效，`x.agentcici.com` HTTPS=200、HTTP=301，匿名 `/auth/me`、Owner 状态与协调接口均为 401，启动 ERROR 计数 0。
+- 回滚目标为 `2.8.59`：恢复上述备份中的 `acr.env.before-release`，再仅重建 backend/frontend。目标 Owner 的协调尚未执行，应用回滚不涉及用户数据回滚。
 
 ## 2026-08-10 TASK-276 / TASK-277 UAT `2.8.60-beta.1`
 

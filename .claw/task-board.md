@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-10T11:46:11Z
+updated_at: 2026-08-10T12:28:56Z
 updated_by: codex
 board_status: active
 ---
@@ -24,7 +24,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - spec_path: `docs/specs/FEAT-166-platform-tenant-owner-identity-reconciliation.md`
 - blocked_by: `none`
 - scope_files: `PlatformTenantOwnerIdentityService, PlatformTenantLifecycleController, PlatformTenantApplicationsPage, focused tests, styles, docs`
-- next_action: `已随 2.8.60-beta.1 发布并通过受权 UAT 页面验收；生产发布需单独授权`
+- next_action: `已随 2.8.60 发布生产；等待受权 PLATFORM_ADMIN 在正式页执行目标 Owner 身份协调并回读`
 
 ### TASK-276 - 新租户 Owner 统一身份开通修复与 UAT 发布
 
@@ -35,7 +35,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-276.md`
 - blocked_by: `none`
 - scope_files: `PlatformTenantLifecycleService, Keycloak HUMAN provisioning, focused tests, UAT release evidence`
-- next_action: `已发布 2.8.60-beta.1 并通过正式恢复闭环；保留稳定窗口，生产发布需单独授权`
+- next_action: `已发布 2.8.60 生产；等待受权 PLATFORM_ADMIN 通过正式页协调目标 Owner，禁止直接写库`
 
 ### TASK-275 - DevAutopilot 标准租户应用控制面
 

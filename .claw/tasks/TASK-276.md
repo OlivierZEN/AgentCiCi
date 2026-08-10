@@ -7,7 +7,7 @@ priority: critical
 owner_role: backend-agent
 claimed_by: codex
 spec_path: docs/specs/FEAT-165-new-tenant-owner-oidc-provisioning.md
-updated_at: 2026-08-10T11:46:11Z
+updated_at: 2026-08-10T12:28:56Z
 updated_by: codex
 ---
 
@@ -32,4 +32,4 @@ updated_by: codex
 
 ## 下一步
 
-UAT `2.8.60-beta.1` 已完成受控恢复、应用开通和页面回读。生产发布必须单独授权，不直接写库或复用 UAT 数据。
+生产 `2.8.60` 已完成不可变发布、备份与运行验收。目标 Owner 的生产协调仍需具备 PLATFORM_ADMIN 的人员在正式页核对并提交；当前可控浏览器无生产平台登录态，未绕过认证或直接写库。

@@ -7,7 +7,7 @@ owner_role: fullstack-agent
 task_ids: TASK-277
 related_decisions: none
 related_issues: ISSUE-2026-08-10-new-tenant-owner-missing-oidc
-updated_at: 2026-08-10T11:46:11Z
+updated_at: 2026-08-10T12:28:56Z
 updated_by: codex
 ---
 
@@ -86,6 +86,7 @@ FEAT-165 已修复新租户创建链路，但历史租户仍可能存在“本�
 
 - 用户已确认页面位置与交互原型。
 - 正式 API、页面、脱敏状态、确认 modal、幂等审计与定向测试已完成，并随 UAT `2.8.60-beta.1 / 93a487f4e393` 发布。受权页面回读 Owner 身份正常、统一身份可登录，浏览器 0 error / 0 warning；常规协调不使用危险操作语汇，不把重发激活邮件包装成复杂安全流程。
+- 生产 `2.8.60 / 451f797e61df` 已完成不可变发布与运行验收。目标生产 Owner 的协调不是发布时自动迁移；必须由 PLATFORM_ADMIN 在正式页核对公共编号后提交。
 
 ## 交接说明
 

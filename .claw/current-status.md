@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-10T11:46:11Z
+updated_at: 2026-08-10T12:28:56Z
 updated_by: codex
 phase: review
 active_task: TASK-277
-next_action: "保留 UAT 2.8.60-beta.1 稳定窗口；生产发布须另行授权，并在发布前处理或明确接受 UAT SecretCipherService 开发回退密钥风险。"
+next_action: "由具备 PLATFORM_ADMIN 的人员在生产“租户应用”页定位目标 Owner，核对脱敏邮箱/手机号与公共编号后执行身份协调；不得绕过平台登录或直接写库。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-276 / TASK-277 已发布生产 `2.8.60 / 451f797e61df`。backend/frontend ACR index digest 为 `sha256:1b4e96962c08900ae0372601b9a7fc99134615bcc0cd00aff36b5f102d8dba4a` / `sha256:859d23f4a65944161b22cc5a6cbeac2bc2db762a8f21a799eb490776491047c9`；发布前完整备份 `/opt/cici/backups/20260810T122603Z-before-2.8.60-owner-identity` 四项非空且为 `0600`。仅重建 backend/frontend，四个状态服务 ID 哈希保持 `88b03a2170ddc7acc3047e9ae42926298479174e218f956e226cfd4f2b9fbea7`；六容器 healthy、health=`UP`、Flyway V108 无迁移、Nginx 有效、x HTTPS=200/HTTP=301、匿名鉴权 401、启动 ERROR 计数 0。目标 Owner 的生产身份协调尚未执行：当前可控浏览器无 PLATFORM_ADMIN 登录态，未绕过认证或直接写库。
 
 - TASK-276 / TASK-277 已发布 UAT `2.8.60-beta.1 / 93a487f4e393`。ACR backend/frontend index digest 为 `sha256:a68027a8949a2ec315bc756caa7661e76fd347988158ece806d06ee3128ca06c` / `sha256:2da4ffdb68a4c1e83df589644282fb768644d3f865c61f8fb3cc646b616ce966`；完整备份 `/data/apps/agentcici/backups/20260810T113637Z-before-2.8.60-beta.1` 非空且为 `0600`。只重建 backend/frontend，四个状态服务 ID 哈希保持 `b5dca5759af2a9cfb0ed4285fdb3b01c9af02db33eb2bfbabfa347fe728de2bc`；health=`UP`、Nginx、首页 200、匿名鉴权 401 与启动 ERROR 计数 0。受权 UAT 页面回读目标租户 Owner 为 `OWNER/ACTIVE`、统一身份可登录，Semattice 与 DevAutopilot 均运行中，浏览器 0 error / 0 warning。生产未修改。
 

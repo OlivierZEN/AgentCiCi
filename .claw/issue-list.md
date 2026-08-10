@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-08-10T11:46:11Z
+updated_at: 2026-08-10T12:28:56Z
 updated_by: codex
 status: active
 ---
@@ -13,8 +13,8 @@ status: active
 - ISSUE-2026-08-10-new-tenant-owner-missing-oidc:
   - Symptom: 平台开通的新租户 Owner 无法通过生产 OIDC 登录；目标邮箱和手机号在 AgentCiCi 与 Keycloak 均无有效身份记录，登录事件为 `user_not_found`。
   - Verified root cause: 生产 `2.8.58 / 63371f92d9ae` 的 `PlatformTenantLifecycleService.createTenant` 只创建本地账号、密码凭据和 Owner 成员，不调用 `KeycloakIdentityProvisioningService`；管理访问日志也未出现该目标的成功成员邀请请求。
-  - Resolution progress: TASK-276 / FEAT-165 已发布 UAT `2.8.60-beta.1`；新建链路、同一 Owner 身份协调、无有效 Owner 时复用已激活 HUMAN 的受控恢复均已实现。正式页面回读目标租户为 `OWNER/ACTIVE`、统一身份可登录，Semattice 与 DevAutopilot 运行中；未直接写库或设置密码。
-  - Status: UAT resolved; production remains open until separately authorized release and target-user reconciliation.
+  - Resolution progress: TASK-276 / FEAT-165 已发布生产 `2.8.60 / 451f797e61df`；新建链路、同一 Owner 身份协调、无有效 Owner 时复用已激活 HUMAN 的受控恢复均已上线。UAT 正式页面已验证 `OWNER/ACTIVE` 与统一身份可登录；生产未直接写库或设置密码。
+  - Status: code released to production; target account reconciliation remains open because the available browser has no PLATFORM_ADMIN session.
 
 - ISSUE-2026-08-10-uat-secret-cipher-dev-fallback:
   - Symptom: UAT `2.8.60-beta.1` 后端启动日志提示 `SecretCipherService` 使用开发回退密钥；容器环境变量名称回读确认未注入 `APP_SECRET_KEY` 或 `APP_SECURITY_SECRET_KEY`。
