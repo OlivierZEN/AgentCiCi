@@ -351,6 +351,20 @@ public class DevAutopilotTenantApplicationService {
                     JOIN agent_channel_binding channel
                       ON channel.company_id=agent.company_id AND channel.agent_id=agent.agent_id
                      AND channel.channel_id='web' AND channel.enabled=TRUE
+                    JOIN agent_skill_binding skill_binding
+                      ON skill_binding.company_id=agent.company_id AND skill_binding.agent_id=agent.agent_id
+                     AND skill_binding.enabled=TRUE AND skill_binding.activation_mode='always-on'
+                    JOIN skill_definition skill
+                      ON skill.id=skill_binding.skill_id AND skill.company_id=skill_binding.company_id
+                     AND skill.skill_code='semattice-project-delivery-management' AND skill.enabled=TRUE
+                    JOIN agent_workflow_skill_ref workflow_skill
+                      ON workflow_skill.company_id=agent.company_id
+                     AND workflow_skill.workflow_version_id=agent.published_version_id
+                     AND workflow_skill.skill_id=skill.id
+                    JOIN skill_version skill_version
+                      ON skill_version.id=workflow_skill.skill_version_id
+                     AND skill_version.company_id=workflow_skill.company_id
+                     AND skill_version.publish_status='PUBLISHED'
                     WHERE resource.activation_id=? AND resource.logical_role='product_manager'
                       AND resource.resource_type='AGENT' AND resource.is_primary=TRUE
                       AND agent.enabled=TRUE AND agent.published_version_id IS NOT NULL

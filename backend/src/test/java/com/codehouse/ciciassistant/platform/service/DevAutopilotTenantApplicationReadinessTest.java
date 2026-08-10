@@ -12,6 +12,7 @@ import com.codehouse.ciciassistant.semattice.SematticeDevAutopilotTemplateClient
 import com.codehouse.ciciassistant.semattice.SematticeProvisioningService;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 class DevAutopilotTenantApplicationReadinessTest {
@@ -52,5 +53,15 @@ class DevAutopilotTenantApplicationReadinessTest {
                 .thenReturn(true);
 
         assertThat(service.initializationReady("company-a", "activation-a")).isTrue();
+
+        ArgumentCaptor<String> readinessSql = ArgumentCaptor.forClass(String.class);
+        org.mockito.Mockito.verify(jdbc).queryForObject(readinessSql.capture(),
+                org.mockito.ArgumentMatchers.eq(Boolean.class),
+                org.mockito.ArgumentMatchers.eq("company-a"),
+                org.mockito.ArgumentMatchers.eq("activation-a"),
+                org.mockito.ArgumentMatchers.eq("activation-a"));
+        assertThat(readinessSql.getValue())
+                .contains("agent_skill_binding", "semattice-project-delivery-management",
+                        "agent_workflow_skill_ref", "skill_version.publish_status='PUBLISHED'");
     }
 }
