@@ -2318,3 +2318,12 @@ last_run_status: partial
 - 根因：DevAutopilot 使用短期 RS256 OACT 查询 `/openapi/v1/official/devautopilot/activation`，但 AgentCiCi 通用 `TenantContextFilter` 按 HS application JWT 解析所有 Bearer，合法 OACT 被返回 401。新增仅作用于 activation resolve 的 OACT 验签过滤器，校验 signature、kid、issuer、audience、authorized party 及 company/tenant/principal 上下文，并在进入通用过滤器前移除 Authorization header。
 - Semattice 根因：`/auth/semattice/console=200`，但 controller 复用了内部 API base URL，前端又只接受生产 hostname。新增 `APP_SEMATTICE_CONSOLE_BASE_URL`，UAT 覆盖为 `https://uat.agentcici.com`，前端允许当前受信同源或生产 Semattice hostname。
 - 测试：`mvn -q -Dmaven.repo.local=.m2 -Dtest=OfficialAccessTokenServiceTest,OfficialDevAutopilotActivationFilterTest,TenantContextFilterTest,DevAutopilotHandoffServiceTest test` 通过；`npm test -- --run src/admin/adminAuthScope.test.ts` 3/3 通过；`npm run build` 通过；`bash scripts/test-release-versioning.sh` 通过并断言生产 `2.8.58` 的首个 UAT 候选为 `2.8.59-beta.1`；`git diff --check` 通过。
+
+## 2026-08-10 TASK-275 产品经理 Agent 首页可见性与 UAT beta.5
+
+- 根因证据：员工首页只展示内置 Agent 或 `publishedVersionId != null` 的 Agent；目标租户标准 PM 只创建 definition，未绑定 `web`，也未编译发布，因此被正确过滤。
+- 实现：`DevAutopilotProductManagerAgentPublisher` 幂等补齐标准 Spec、保留既有绑定并添加 `web`、编译和发布；新 activation 与既有 activation 的正式 `initializations` 均复用该路径并要求 `published_version_id` 成功回读。
+- 定向测试：`mvn -q -Dtest=DevAutopilotProductManagerAgentPublisherTest,OfficialAccessTokenServiceTest,ServicePrincipalServiceTest test` 通过；`mvn -q -DskipTests package` 通过；`git diff --check` 通过。未声称完整 Maven 套件通过。
+- UAT 发布：`2.8.59-beta.5 / 0edfc3567f85`，backend/frontend ACR index digest 分别为 `sha256:6690ad74814ee308c4a42ccb300031474c5eb9cf00c7952babd84b9e7d082216` 与 `sha256:5068c400597ea2ca83faeb3ca9938884f8bf6c75b6ade6267480b1361b9668e6`。发布前备份 `/data/apps/agentcici/backups/20260810T092900Z-before-2.8.59-beta.5` 六项均非空；仅重建 backend/frontend，状态服务容器 ID 未变；health `UP`、版本和 Nginx 校验通过。
+- 既有租户回读：`org00000000000000001` 的 `天工产品经理 / devautopilot-pm-09653ab9` 仍为 `enabled=true, published_version_id=NULL`，且 `agent_channel_binding` 为 0 行。结论是部署成功但受治理补偿尚未执行；当前可控浏览器无平台登录态，未绕过授权或直接写库。最终首页可见性验收待平台管理员执行一次正式 `initializations`。
+- 项目状态校验：`validate-state.py .claw` 已执行但未通过，失败项为仓库既有的历史 task-board 归档、旧规格状态枚举/front matter 和旧时间格式债务；本次 TASK-275 状态卡与 FEAT-164 未新增校验错误，未在本任务中批量改写历史治理事实。

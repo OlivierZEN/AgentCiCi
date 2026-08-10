@@ -1145,3 +1145,12 @@ status: active
   - Verified publicly: `https://x.agentcici.com/` returned `200`; unauthenticated `/auth/me` returned expected `401`.
 
 - Qdrant container + `scripts/verify-qdrant-stack.sh`; full app E2E with `app.kb.vector-store=qdrant` (default in `application-local.yml`).
+
+## 2026-08-10 UAT `2.8.59-beta.5` - DevAutopilot PM Agent 发布补偿
+
+- Git tag/commit：`2.8.59-beta.5 / 0edfc3567f854425305fdb0165ac3c600bddd5cd`。
+- ACR index digest：backend `sha256:6690ad74814ee308c4a42ccb300031474c5eb9cf00c7952babd84b9e7d082216`；frontend `sha256:5068c400597ea2ca83faeb3ca9938884f8bf6c75b6ade6267480b1361b9668e6`。
+- 发布前备份：`/data/apps/agentcici/backups/20260810T092900Z-before-2.8.59-beta.5`；Compose、UAT secrets、PostgreSQL dump、KB 与 Qdrant 备份均非空。
+- UAT 主机未持有 ACR 登录态，使用精确 linux/amd64 镜像离线传输并加载；仅 force-recreate backend/frontend，PostgreSQL、Redis、RabbitMQ、Qdrant 容器 ID 哈希保持不变。
+- 发布后：backend/frontend 与四个状态服务 healthy，`/actuator/health={"status":"UP"}`，`/system/version=2.8.59-beta.5 / 0edfc3567f85`，Nginx 配置有效。
+- 既有租户业务资源不会随容器升级隐式变更。目标租户 PM Agent 仍未发布且无 `web` 渠道，必须由平台管理员调用 `/api/platform/tenants/org00000000000000001/applications/devautopilot/initializations`；不得直接写数据库。完成后应只读回读 `published_version_id`、`web` binding，并刷新员工首页验证可见性。

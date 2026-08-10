@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-10T08:18:59Z
+updated_at: 2026-08-10T08:24:24Z
 updated_by: codex
 phase: release
-active_task: TASK-276
-next_action: "发布包含数据库 trigger 字段 refresh 修复的新 UAT beta，并重新执行真实 Owner 激活状态回读。"
+active_task: TASK-275
+next_action: "由已登录的平台管理员对 org00000000000000001 执行一次 DevAutopilot initializations 幂等补偿，再回读 PM Agent published_version_id/web 渠道并刷新员工首页。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-275 / INT-008：已发布 UAT `2.8.59-beta.5 / 0edfc3567f85`。标准产品经理 Agent 的新建与既有租户补齐初始化现在都必须绑定 `web`、使用标准 Spec 编译并通过生产就绪门禁发布；员工首页继续只展示内置或已发布 Agent。UAT 只读回读确认目标租户 `天工产品经理 / devautopilot-pm-09653ab9` 仍为 `published_version_id=NULL` 且无 channel binding，说明代码已上线但既有租户尚未执行一次正式 `initializations` 补偿。当前可控浏览器没有平台登录态，未绕过授权、未直接写数据库；待平台管理员执行补偿后完成首页可见性验收。
 
 - TASK-276 / FEAT-165：UAT 已发布 `2.8.59-beta.4 / 1d74f436ec7d`，6 容器 healthy、版本和匿名边界通过。真实开通首次暴露新账号同事务读取不到 PostgreSQL trigger 生成的 `public_id`，API 失败关闭；独立回读确认目标账户、标识、租户、成员和外部身份均为 0，未残留部分数据。现已让账号插入 `saveAndFlush` 后 `EntityManager.refresh` 再进入 OIDC provisioning，并新增时序测试；待发布下一 beta 重验，不修改生产。
 
