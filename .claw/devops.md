@@ -1,12 +1,18 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-11T06:26:32Z
+updated_at: 2026-08-11T08:46:23Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-11 UAT ACR 持久 pull 登录
+
+- UAT `121.199.37.225` 的 root Docker 配置已为 `op-registry.cloudcc.cn` 建立持久登录，仅用于 `cloudcc-ai-native/cici-backend` 与 `cici-frontend` 的镜像拉取。配置文件 owner/mode 为 `root:root 0600`；凭据值未读取、输出、写入仓库或部署文档。
+- 当前主机回读前后端均为 `2.8.61-beta.15`，两个不可变镜像 manifest 均可通过该登录态读取；backend health=`UP`、两容器 `running/restart=0`，UAT 公网首页、匿名 401、OIDC discovery、Semattice version 和 DevAutopilot integrated health 均通过。
+- Docker 提示该原生 config 无 credential helper，认证内容不应视为加密存储。凭据必须为该 registry/namespace 的专用 pull-only 机器人账户，按受管轮换策略更换；撤销时先 `docker logout op-registry.cloudcc.cn`，仅在确认没有其他需要保留的 registry 条目后删除对应 root Docker config。
 
 ## 2026-08-11 TASK-280 UAT `2.8.61-beta.9`
 

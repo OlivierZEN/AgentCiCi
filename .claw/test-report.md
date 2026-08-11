@@ -1,14 +1,21 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-11T06:26:32Z
+updated_at: 2026-08-11T08:46:23Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-11T06:26:32Z
+last_run_at: 2026-08-11T08:46:23Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## 2026-08-11 UAT ACR 持久登录配置验证
+
+- 变更：UAT root Docker 配置为 `op-registry.cloudcc.cn` 建立持久登录；配置文件已验证 `root:root 0600`，未读取或输出认证值。当前主机原本无 Docker auth config，因此未覆盖既有 registry 登录。
+- 验证：当前 `cici-backend`、`cici-frontend` 均为 `2.8.61-beta.15`，两个 manifest 可读取；backend health=`UP`，两容器均为 `running/restart=0`。
+- 公网：UAT 首页=200、匿名 `/auth/me`=401、Keycloak discovery=200、Semattice version=200、DevAutopilot health=200。
+- 安全边界：Docker 原生 config 未配置 credential helper，凭据视为 root-only 高敏感配置；仅允许专用 pull-only 机器人账户，禁止复制进 Compose、Git、日志或前端。撤销操作是 `docker logout op-registry.cloudcc.cn`，删除配置前需确认没有其他 registry 条目。
 
 ## 2026-08-11 TASK-280 UAT `2.8.61-beta.9` 信息归位验收
 

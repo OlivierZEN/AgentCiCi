@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-11T07:44:58Z
+updated_at: 2026-08-11T08:46:23Z
 updated_by: codex
 phase: verification
 active_task: TASK-280
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- UAT 主机已为 `op-registry.cloudcc.cn/cloudcc-ai-native` 配置 root-only 持久 pull 登录，当前实际前后端镜像回读为 `2.8.61-beta.15`。配置仅使用专用 pull-only 机器人凭据，Docker 原生 config 无 credential helper，必须纳入受管轮换；manifest、backend health、容器 restart=0 和全套匿名公网 smoke 均通过。未读取或记录认证值。
 
 - TASK-282 / FEAT-170 / INT-012 已完成：backend/frontend本地镜像已由统一`./stack up`重建并运行，Flyway、共享PostgreSQL/Redis/RabbitMQ/Qdrant、Keycloak OIDC、Semattice、health、OACT JWKS、匿名边界及frontend Nginx配置通过。未执行完整AgentCiCi测试套件，前端依赖审计仍有高/严重项，因此尚不能形成UAT候选；ACR/UAT/生产未修改。
 
