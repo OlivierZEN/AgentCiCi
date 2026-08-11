@@ -371,8 +371,8 @@
 
 ### 8.3 演示组织与登录方式
 
-- 组织 `demo-org` 由后端启动时种子数据创建（`AuthBootstrapData`）。
+- 本地示例组织 `org00000000000000001` 由后端启动时按 `app.auth.bootstrap-platform-account.governance-company-id` 幂等创建（`AuthBootstrapData`）。
 - 任意**未触发短信频控**的手机号均可完成短信登录；响应中的 **`devCode` 即为验证码**（本地/联调用；生产应对接真实短信且勿返回 `devCode`）。
-- **助手端**（`/`）默认示例：`demo-org` + `13800138111`。
-- **组织管理后台**：以助手端登录 `demo-org` + `13900009999` 后，在“切换组织”菜单选择“管理后台”进入（与 `application-local.yml` 中 `app.auth.bootstrap-admin-mobiles` 列表示例一致，便于首登即为 `ORG_ADMIN`）。
+- **助手端**（`/`）默认示例：`org00000000000000001` + `13800138111`。
+- **组织管理后台**：以助手端登录 `org00000000000000001` + `13900009999` 后，在“切换组织”菜单选择“管理后台”进入（与 `application-local.yml` 中 `app.auth.bootstrap-admin-mobiles` 列表示例一致，便于首登即为 `ORG_ADMIN`）。
 - 若某手机号已曾注册为 `ORG_USER`，仅改配置不会自动升为管理员，需由现有管理员在 **用户管理** 中改角色，或使用未注册过的 bootstrap 手机号新建用户。

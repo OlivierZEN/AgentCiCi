@@ -14,14 +14,16 @@ type KnowledgeBase = {
 
 type AdminTokenPayload = { companyId?: string };
 
+const DEFAULT_LOCAL_COMPANY_ID = "org00000000000000001";
+
 function readCompanyIdFromAdminToken(): string {
   const raw = localStorage.getItem(LS_ADMIN_TOKEN);
-  if (!raw) return "demo-org";
+  if (!raw) return DEFAULT_LOCAL_COMPANY_ID;
   try {
     const parsed = JSON.parse(raw) as AdminTokenPayload;
-    return parsed.companyId?.trim() || "demo-org";
+    return parsed.companyId?.trim() || DEFAULT_LOCAL_COMPANY_ID;
   } catch {
-    return "demo-org";
+    return DEFAULT_LOCAL_COMPANY_ID;
   }
 }
 

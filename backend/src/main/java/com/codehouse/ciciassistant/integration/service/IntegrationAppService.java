@@ -236,7 +236,9 @@ public class IntegrationAppService {
 
     private String platformScopeId() {
         String configured = platformAccountProperties.getGovernanceCompanyId();
-        return configured == null || configured.isBlank() ? "demo-org" : configured.trim();
+        return configured == null || configured.isBlank()
+                ? PlatformAccountProperties.LEGACY_DEFAULT_GOVERNANCE_COMPANY_ID
+                : configured.trim();
     }
 
     private Map<String, Object> toView(IntegrationAppEntity e) {

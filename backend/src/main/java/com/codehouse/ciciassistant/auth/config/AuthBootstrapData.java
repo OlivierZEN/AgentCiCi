@@ -14,9 +14,16 @@ import org.springframework.context.annotation.Configuration;
 public class AuthBootstrapData {
 
     @Bean
-    CommandLineRunner bootstrapOrg(CompanyRepository companyRepository) {
-        return args -> companyRepository.findById("demo-org")
-                .orElseGet(() -> companyRepository.save(new CompanyEntity("demo-org", "Demo Company", "ACTIVE")));
+    CommandLineRunner bootstrapOrg(PlatformAccountProperties properties, CompanyRepository companyRepository) {
+        return args -> {
+            String companyId = properties.getGovernanceCompanyId();
+            if (companyId == null || companyId.isBlank()) {
+                companyId = PlatformAccountProperties.LEGACY_DEFAULT_GOVERNANCE_COMPANY_ID;
+            }
+            final String bootstrapCompanyId = companyId.trim();
+            companyRepository.findById(bootstrapCompanyId)
+                    .orElseGet(() -> companyRepository.save(new CompanyEntity(bootstrapCompanyId, "Demo Company", "ACTIVE")));
+        };
     }
 
     @Bean

@@ -10,6 +10,14 @@ last_run_status: passed
 
 # Test Report
 
+## 2026-08-11 本地 Demo Company company_id 初始化修复
+
+- 根因：`AuthBootstrapData` 与 `OrchestratorBootstrapData` 启动初始化曾将 `demo-org` 写死；平台租户路由要求 `^org[a-z0-9]{17}$`，导致每次后端启动都可能重新创建无效租户。
+- 修复：初始化改为读取 `app.auth.bootstrap-platform-account.governance-company-id`；本地配置固定为 `org00000000000000001`，非本地 profile 保留显式 legacy 默认以避免影响既有 UAT/生产租户；平台模型、集成、计费和前端组织回退同步收敛，测试 profile 显式保留 `demo-org` 作为历史 fixture。
+- 本地验证：后端 `mvn -Dmaven.repo.local=.m2 -DskipTests package`、前端 Vitest 42 文件/231 项、前端生产构建、DevAutopilot Node 35 项和语法检查均通过。
+- 运行验证：本地全栈重建后 `./stack verify` 通过；backend health=`UP`；重启 backend 后 `company` 表仍只有 `org00000000000000001|Demo Company|ACTIVE`，旧 `demo-org` 在 `company`、`company_model_config`、`tool_definition` 中均为 0，规范初始化数据均归属新 ID。
+- 状态：`passed`
+
 ## 2026-08-11 UAT ACR 持久登录配置验证
 
 - 变更：UAT root Docker 配置为 `op-registry.cloudcc.cn` 建立持久登录；配置文件已验证 `root:root 0600`，未读取或输出认证值。当前主机原本无 Docker auth config，因此未覆盖既有 registry 登录。

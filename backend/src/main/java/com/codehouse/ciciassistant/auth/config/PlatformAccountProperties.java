@@ -9,12 +9,17 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "app.auth.bootstrap-platform-account")
 public class PlatformAccountProperties {
 
+    /** Canonical local bootstrap tenant. It satisfies the platform tenant-id contract. */
+    public static final String LOCAL_GOVERNANCE_COMPANY_ID = "org00000000000000001";
+    /** Compatibility default for non-local deployments that have not supplied a governance tenant. */
+    public static final String LEGACY_DEFAULT_GOVERNANCE_COMPANY_ID = "demo-org";
+
     private boolean enabled = true;
     private String email = "admin@cloudcc.com";
     private String mobile = "18611892001";
     private String displayName = "CloudCC Platform Admin";
     private List<String> roles = new ArrayList<>(List.of("PLATFORM_ADMIN"));
-    private String governanceCompanyId = "demo-org";
+    private String governanceCompanyId = LEGACY_DEFAULT_GOVERNANCE_COMPANY_ID;
 
     public boolean isEnabled() {
         return enabled;

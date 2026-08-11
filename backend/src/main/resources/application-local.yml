@@ -23,6 +23,8 @@ app:
     sms:
       store: redis
     bootstrap-admin-mobiles: "13800138111,13900009999"
+    bootstrap-platform-account:
+      governance-company-id: "org00000000000000001"
   agent-open-api:
     enabled: true
     conversation-api-enabled: true
