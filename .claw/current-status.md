@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-11T03:53:08Z
+updated_at: 2026-08-11T08:45:00Z
 updated_by: codex
 phase: implementation
-active_task: TASK-280
-next_action: "等待单独业务授权后，由真实 ORG_ADMIN 通过正式入口协调目标成员统一身份并完成登录回归。"
+active_task: TASK-281
+next_action: "等待 Semattice TASK-073 先发布 UAT，再发布 AgentCiCi 2.8.61-beta.4 并完成缺陷可信回执正负向验收。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-281 / FEAT-169 / INT-009 已完成本地实现：产品经理对缺陷采用完整草稿确认，确认后由租户 PM SERVICE 写入 `dev_defect`，再以 `runtime.record.get` 回读并核验字段、revision 与 correlation；只有 `SEMATTICE_LIVE + readback_verified` 才允许成功声明。SSE `tool_result` 和前端独立回执卡片显示对象、业务编号、记录 ID、revision 与 correlation，失败结果不得由模型改写为成功。后端定向测试、前端 42 文件/228 项测试和构建通过；完整 Maven 套件因本机 PostgreSQL/Hikari 连接重试被停止，UAT 仍等待 Semattice 提供方先发布。
 
 - TASK-280 / FEAT-168 已发布 UAT `2.8.61-beta.3 / 47affe4086e5`：组织用户页返回脱敏统一身份状态，并在“CloudCC账号绑定信息”中为 `ACTIVE + MISSING` 成员提供独立“修复统一身份”入口。操作要求手机号二次确认，复用 Keycloak HUMAN provisioning，保持角色和资料不变；需要首次激活时转为 `PENDING_ACTIVATION` 并发信，相同幂等键只执行一次且写入脱敏平台审计。后端定向测试、package、前端完整 225 项测试和生产构建通过；UAT 六容器 healthy、Flyway V109、Nginx、公网与匿名 401 边界、30 秒稳定窗口均通过。尚未调用真实修复接口或修改 `18611892001`。
 

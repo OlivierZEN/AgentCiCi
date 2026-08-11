@@ -39,7 +39,8 @@ class DeliveryWriteReceiptGuardTest {
         AgentRunTraceService.ToolCallTraceInput receipt = trace(
                 "semattice_dev_defect_create",
                 "{\"status\":\"SUCCESS\",\"source\":\"SEMATTICE_LIVE\","
-                        + "\"object_api_name\":\"dev_defect\",\"record_id\":\"record-1\"}",
+                        + "\"object_api_name\":\"dev_defect\",\"record_id\":\"record-1\","
+                        + "\"revision\":1,\"correlation_id\":\"corr-1\",\"readback_verified\":true}",
                 true);
 
         assertThat(DeliveryWriteReceiptGuard.enforce(

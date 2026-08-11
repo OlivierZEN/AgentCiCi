@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-169
 title: DevAutopilot defect tool and trusted write receipt
-status: implementation
+status: implemented
 owner_role: integration-agent
 task_ids: TASK-281
 related_decisions: none
 related_issues: none
-updated_at: 2026-08-11T08:00:00Z
+updated_at: 2026-08-11T08:45:00Z
 updated_by: codex
 ---
 
@@ -35,7 +35,7 @@ updated_by: codex
 
 ## 方案设计
 
-写入请求先由确定性路由识别。未确认时仅返回草稿；确认后调用 Tool。工具结果只有同时满足 `success=true`、`source=SEMATTICE_LIVE`、存在 `object_api_name`、`record_id`、`revision`，且回读到同租户同记录时，才生成成功回执。任一条件失败时统一返回未写入或结果待核验，不允许模型改写为成功。
+写入请求先由确定性路由识别。未确认时仅返回草稿；确认后调用 Tool。工具结果只有同时满足 `status=SUCCESS`、`source=SEMATTICE_LIVE`、存在 `object_api_name`、`record_id`、正 revision、correlation ID 和 `readback_verified=true`，且通过 `runtime.record.get` 回读到同租户同记录时，才生成成功回执。任一条件失败时统一返回未写入或结果待核验，不允许模型改写为成功。
 
 当请求涉及尚未发布的对象类型时，服务端明确说明能力未开通并列出支持对象；不得退回自由生成。流式和非流式路径使用同一门禁。
 

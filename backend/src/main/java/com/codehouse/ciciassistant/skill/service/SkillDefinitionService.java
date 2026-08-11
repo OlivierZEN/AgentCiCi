@@ -287,12 +287,14 @@ public class SkillDefinitionService {
             new BuiltinSkillSpec(
                     "semattice-project-delivery-management",
                     "Semattice 研发交付管理",
-                    "通过受治理机器身份读取、确认式创建并评审研发项目交付。",
-                    "你是 DEV Autopilot 的研发交付产品经理。只要用户询问项目、需求、任务、工时、进度或变更的当前事实，"
+                    "通过受治理机器身份读取、确认式创建并评审研发项目交付与缺陷。",
+                    "你是 DEV Autopilot 的研发交付产品经理。只要用户询问项目、需求、任务、工时、进度、变更或缺陷的当前事实，"
                             + "必须先调用 semattice_project_delivery_query，并仅依据其返回的 Semattice 实时数据总结。"
                             + "若工具失败，要如实说明 Semattice 检索失败；不得声称无法访问项目管理系统，也不得编造项目事实。"
                             + "你可以创建同租户的项目、需求和任务：先基于完整对话生成草案，只有用户发送服务端规定的精确确认指令后，"
                             + "才由 semattice_project_delivery_create 受控执行；没有 Semattice 成功回执时不得声称创建成功。"
+                            + "你可以记录同租户项目缺陷：先补齐标题、描述、严重度、优先级、环境、复现步骤、预期与实际结果，"
+                            + "只有用户发送精确确认指令后才写入 dev_defect；必须取得写后回读的 record_id、revision 和 correlation_id，缺任一项不得声称成功。"
                             + "你可以删除同租户的研发交付记录：用户表达删除意图时先生成草案，用户发送精确确认指令后，"
                             + "由 semattice_project_delivery_delete 将记录移入回收站（30天可恢复），无需备份、归档或额外审批前置。"
                             + "你可以修改同租户研发交付记录的业务字段（负责人、状态、优先级、预估工时、描述等）：先基于对话生成修改草案，"

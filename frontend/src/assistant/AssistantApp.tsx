@@ -28,6 +28,7 @@ import { CustomerWorkbenchApp } from "./customer-workbench/CustomerWorkbenchApp"
 import AiTableBusinessObjectList from "./AiTableBusinessObjectList";
 import { ZhiweiPortraitDemoApp } from "./zhiwei-portrait/ZhiweiPortraitDemoApp";
 import {
+  attachTrailingAssistantReceipt,
   appendAssistantDelta,
   assistantResponseNeedsUserFollowup,
   markTrailingAssistantModel,
@@ -35,6 +36,12 @@ import {
   replaceTrailingAssistant,
   shouldKeepLocalStreamingMessages,
 } from "./chatMessageState";
+import { DeliveryWriteReceiptView } from "./DeliveryWriteReceiptView";
+import {
+  extractDeliveryWriteReceipt,
+  parseDeliveryWriteReceiptEvent,
+  type DeliveryWriteReceipt,
+} from "./deliveryWriteReceipt";
 import {
   buildCompanyScopedCacheKey,
   buildWorkbenchSessionId,
@@ -52,7 +59,13 @@ const CHAT_LOADING_STALE_TIMEOUT_MS = 180000;
 type CompanyOption = { companyId: string; companyName: string; memberId: string; roleCode: string; current?: boolean };
 type AuthPayload = { token: string; companyId: string; companyName?: string; userId: string; memberId?: string; accountId?: string; roles: string[] };
 type LoginPayload = AuthPayload & { requiresCompanySelection?: boolean; companies?: CompanyOption[] };
-type ChatBubble = { role: "user" | "assistant"; content: string; time?: string; modelName?: string };
+type ChatBubble = {
+  role: "user" | "assistant";
+  content: string;
+  time?: string;
+  modelName?: string;
+  deliveryReceipt?: DeliveryWriteReceipt;
+};
 type KnowledgeBase = { id: number; name: string; description: string; status: string };
 type MeProfile = {
   companyId?: string;
@@ -3512,6 +3525,31 @@ export default function AssistantApp() {
           if (!isCurrentCompanyScope(requestScope)) {
             return;
           }
+          const deliveryReceipt = parseDeliveryWriteReceiptEvent(event);
+          if (deliveryReceipt) {
+            if (isWorkbench) {
+              setWorkbenchMessagesByAgent((prev) => ({
+                ...prev,
+                [workbenchAgentCacheKey]: attachTrailingAssistantReceipt(
+                  prev[workbenchAgentCacheKey] ?? [],
+                  deliveryReceipt,
+                  timestamp,
+                ),
+              }));
+              setConversationMessages((prev) => ({
+                ...prev,
+                [sessionCacheKey]: attachTrailingAssistantReceipt(
+                  prev[sessionCacheKey] ?? [],
+                  deliveryReceipt,
+                  timestamp,
+                ),
+              }));
+            } else {
+              updateConversationMessages(conversationId, (prev) =>
+                attachTrailingAssistantReceipt(prev, deliveryReceipt, timestamp),
+              );
+            }
+          }
           if (event.toolName.toLowerCase() !== "get_pending_approvals") {
             return;
           }
@@ -4400,6 +4438,11 @@ export default function AssistantApp() {
                                 <ChatMarkdown content={message.content} busy={chatLoading && index === workbenchConversation.length - 1} />
                               )}
                             </div>
+                            {!isUser && (message.deliveryReceipt || extractDeliveryWriteReceipt(message.content)) ? (
+                              <DeliveryWriteReceiptView
+                                receipt={message.deliveryReceipt || extractDeliveryWriteReceipt(message.content)!}
+                              />
+                            ) : null}
                           </div>
                           {isUser ? (
                             <AvatarView
@@ -5263,12 +5306,19 @@ export default function AssistantApp() {
                       alt={`${activeAgent.name} 头像`}
                     />
                   ) : null}
-                  <div className={`cici-msg__bubble${message.role === "user" ? " cici-msg__bubble--user" : ""}`}>
-                    {message.role === "assistant" ? (
-                      <ChatMarkdown content={message.content} busy={chatLoading && index === messages.length - 1} />
-                    ) : (
-                      message.content
-                    )}
+                  <div className="cici-msg__body">
+                    <div className={`cici-msg__bubble${message.role === "user" ? " cici-msg__bubble--user" : ""}`}>
+                      {message.role === "assistant" ? (
+                        <ChatMarkdown content={message.content} busy={chatLoading && index === messages.length - 1} />
+                      ) : (
+                        message.content
+                      )}
+                    </div>
+                    {message.role === "assistant" && (message.deliveryReceipt || extractDeliveryWriteReceipt(message.content)) ? (
+                      <DeliveryWriteReceiptView
+                        receipt={message.deliveryReceipt || extractDeliveryWriteReceipt(message.content)!}
+                      />
+                    ) : null}
                   </div>
                   {message.role === "user" ? (
                     <AvatarView

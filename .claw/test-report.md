@@ -1,14 +1,21 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-11T03:53:08Z
+updated_at: 2026-08-11T08:45:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-11T03:53:08Z
-last_run_status: passed
+last_run_at: 2026-08-11T08:45:00Z
+last_run_status: partial
 ---
 
 # Test Report
+
+## 2026-08-11 TASK-281 缺陷可信写入回执本地验证
+
+- 后端定向：`DeliveryWriteReceiptGuardTest,SematticeProjectDeliveryWriteToolServiceTest,SematticeProjectDeliveryToolServiceTest,SkillResolverServiceTest,DevAutopilotProductManagerAgentPublisherTest` 通过；覆盖无回执禁报成功、缺陷确认、`runtime.record.get` 写后回读、字段/revision/correlation 校验和确定性回复。
+- 前端：完整 Vitest 42 个文件、228 项通过；`npm run build` 通过，仅保留既有 bundle-size warning。回执只消费服务端 `semattice_project_delivery_create` 的结构化 `tool_result`，不从模型正文推断成功。
+- 完整 Maven：执行后停留在本机 PostgreSQL/Hikari 连接重试，人工停止退出 130；不记为完整后端套件通过。
+- 状态：`partial`（本地目标链路通过；等待 Semattice 提供方 UAT 后执行 AgentCiCi UAT 正负向与租户隔离）。
 
 ## 2026-08-11 TASK-279 DevAutopilot 委托授权与双主体 UAT 验收
 

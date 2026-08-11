@@ -1420,6 +1420,9 @@ public class ChatOrchestratorService {
                 "tool_call_id", callId,
                 "content", toolResult
         ));
+        if (emitter != null) {
+            safeSendToolResult(emitter, toolName, toolResult);
+        }
         return toolResult;
     }
 
@@ -1589,16 +1592,24 @@ public class ChatOrchestratorService {
                 case "dev_project" -> "项目";
                 case "dev_requirement" -> "需求";
                 case "dev_task" -> "任务";
+                case "dev_defect" -> "缺陷";
                 default -> "研发交付记录";
             };
             String subject = result.path("name").asText(result.path("title").asText(""));
             String code = result.path("code").asText("");
             String recordId = result.path("record_id").asText("");
+            long revision = result.path("revision").asLong();
+            String correlationId = result.path("correlation_id").asText("");
+            if (recordId.isBlank() || revision < 1 || correlationId.isBlank()
+                    || !result.path("readback_verified").asBoolean(false)) {
+                return "未创建研发交付记录：Semattice 成功回执不完整，不能确认创建成功。请稍后重试。";
+            }
             return "已在 Semattice 创建" + label + "：" + subject
                     + (code.isBlank() ? "" : "（" + code + "）")
-                    + "。记录 ID：" + recordId + "。";
+                    + "。记录 ID：" + recordId + "；revision：" + revision
+                    + "；关联号：" + correlationId + "。";
         } catch (Exception exception) {
-            return "Semattice 已执行创建请求，但回执解析失败；请在 DEV Autopilot 项目列表中核对结果。";
+            return "未创建研发交付记录：Semattice 回执解析失败，不能确认创建成功。请稍后重试。";
         }
     }
 
@@ -1615,6 +1626,7 @@ public class ChatOrchestratorService {
                 || normalized.contains("工时") || normalized.contains("进度") || normalized.contains("变更")
                 || normalized.contains("迭代") || normalized.contains("交付") || normalized.contains("执行中")
                 || normalized.contains("进行中") || normalized.contains("project") || normalized.contains("requirement")
+                || normalized.contains("缺陷") || normalized.contains("bug") || normalized.contains("defect")
                 || normalized.contains("task") || normalized.contains("worklog") || normalized.contains("change");
     }
 

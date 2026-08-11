@@ -33,13 +33,13 @@ class SematticeProjectDeliveryToolServiceTest {
                 java.util.List.of("runtime.record.read"), "semattice_project_delivery_query"))
                 .thenReturn(new AgentServicePrincipalExecutionService.ExecutionAuthorization(
                         "service-1", "DEV Autopilot 产品经理", "owner-1", "PRIMARY_OWNER", token));
-        for (String objectName : java.util.List.of("dev_project", "dev_requirement", "dev_task", "dev_worklog", "dev_change", "dev_delivery_event")) {
+        for (String objectName : java.util.List.of("dev_project", "dev_requirement", "dev_task", "dev_worklog", "dev_change", "dev_delivery_event", "dev_defect")) {
             String response = "dev_delivery_event".equals(objectName)
                     ? "{\"status\":\"succeeded\",\"result\":{\"records\":["
                     + "{\"record_id\":\"event-submission\",\"data\":{\"status\":\"pending\",\"event_type\":\"design_submitted\"}},"
                     + "{\"record_id\":\"event-decision\",\"data\":{\"status\":\"accepted\",\"event_type\":\"design_approved\",\"parent_event_id\":\"event-submission\"}}]}}"
                     : "{\"status\":\"succeeded\",\"result\":{\"records\":[{\"record_id\":\"r-" + objectName
-                    + "\",\"data\":{\"status\":\"执行中\",\"name\":\"演示项目\",\"hours\":2.5}}]}}";
+                    + "\",\"revision\":1,\"data\":{\"status\":\"执行中\",\"name\":\"演示项目\",\"hours\":2.5}}]}}";
             server.expect(requestTo("https://semattice.example.test/v1/capabilities/runtime.record.query/invoke"))
                     .andExpect(header("Authorization", "Bearer service-oact"))
                     .andRespond(withSuccess(response, MediaType.APPLICATION_JSON));
@@ -58,6 +58,8 @@ class SematticeProjectDeliveryToolServiceTest {
         assertThat(result.path("execution_principal").asText()).isEqualTo("DEV Autopilot 产品经理");
         assertThat(result.path("events").size()).isEqualTo(2);
         assertThat(result.path("pending_reviews").size()).isZero();
+        assertThat(result.path("defects").size()).isEqualTo(1);
+        assertThat(result.path("defects").get(0).path("revision").asLong()).isEqualTo(1);
         server.verify();
     }
 

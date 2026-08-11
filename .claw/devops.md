@@ -1,12 +1,18 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-11T03:53:08Z
+updated_at: 2026-08-11T08:45:00Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-11 TASK-281 UAT 候选门禁
+
+- 下一候选固定为 `2.8.61-beta.4`，不得覆盖当前 `2.8.61-beta.3`，且不得在 Semattice `dev_defect` 提供方 UAT 就绪前先发消费方。
+- 发布范围仅为 AgentCiCi backend/frontend；数据库、Redis、RabbitMQ、Qdrant 不应重建。发布前执行既有完整备份，发布后核验版本、health、匿名 401、错误日志和真实租户回执。
+- 回滚可移除缺陷 Tool/前端回执展示，但成功声明硬门禁必须保留；生产仍为 `2.8.60`，本任务未获生产发布授权。
 
 ## 2026-08-11 TASK-279 UAT `2.8.61-beta.2`
 

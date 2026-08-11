@@ -1,8 +1,11 @@
+import type { DeliveryWriteReceipt } from "./deliveryWriteReceipt";
+
 export type ChatMessageBubble = {
   role: "user" | "assistant";
   content: string;
   time?: string;
   modelName?: string;
+  deliveryReceipt?: DeliveryWriteReceipt;
 };
 
 export function shouldKeepLocalStreamingMessages(
@@ -18,6 +21,21 @@ export function shouldKeepLocalStreamingMessages(
     return false;
   }
   return local.length >= remote.length || Boolean(localLast.content.trim());
+}
+
+export function attachTrailingAssistantReceipt(
+  messages: ChatMessageBubble[],
+  deliveryReceipt: DeliveryWriteReceipt,
+  time: string,
+): ChatMessageBubble[] {
+  const next = [...messages];
+  const last = next[next.length - 1];
+  if (last?.role === "assistant") {
+    next[next.length - 1] = { ...last, deliveryReceipt };
+  } else {
+    next.push({ role: "assistant", content: "", time, deliveryReceipt });
+  }
+  return next;
 }
 
 export function appendAssistantDelta(

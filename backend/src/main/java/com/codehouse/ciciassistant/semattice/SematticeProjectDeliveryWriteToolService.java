@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -32,6 +33,7 @@ public class SematticeProjectDeliveryWriteToolService {
 
     public static final String TOOL_NAME = "semattice_project_delivery_create";
     private static final String CREATE_CAPABILITY_ID = "runtime.record.create";
+    private static final String READ_CAPABILITY_ID = "runtime.record.get";
     private static final String QUERY_CAPABILITY_ID = "runtime.record.query";
     private static final Pattern CONFIRM_PROJECT = Pattern.compile(
             "^\\s*(?:请)?(?:确认|确定)创建项目[：:]\\s*(.+?)\\s*$", Pattern.CASE_INSENSITIVE);
@@ -40,6 +42,9 @@ public class SematticeProjectDeliveryWriteToolService {
             Pattern.CASE_INSENSITIVE);
     private static final Pattern CONFIRM_TASK = Pattern.compile(
             "^\\s*(?:请)?(?:确认|确定)创建任务[：:]\\s*需求\\s*[=：:]\\s*([^；;]+?)\\s*[；;]\\s*标题\\s*[=：:]\\s*(.+?)\\s*$",
+            Pattern.CASE_INSENSITIVE);
+    private static final Pattern CONFIRM_DEFECT = Pattern.compile(
+            "^\\s*(?:请)?(?:确认|确定)(?:创建|提交|记录)缺陷[：:]\\s*(.+?)\\s*$",
             Pattern.CASE_INSENSITIVE);
 
     private final RestClient restClient;
@@ -71,6 +76,10 @@ public class SematticeProjectDeliveryWriteToolService {
         if (task.matches()) {
             return Optional.of(CreateIntent.task(task.group(1), task.group(2)));
         }
+        Matcher defect = CONFIRM_DEFECT.matcher(value);
+        if (defect.matches()) {
+            return parseDefectConfirmation(defect.group(1));
+        }
         return Optional.empty();
     }
 
@@ -86,9 +95,12 @@ public class SematticeProjectDeliveryWriteToolService {
         String normalized = value.toLowerCase(Locale.ROOT);
         boolean createLanguage = normalized.contains("创建") || normalized.contains("新建")
                 || normalized.contains("新增") || normalized.contains("建立")
-                || normalized.contains("create") || normalized.contains("add");
+                || normalized.contains("提交") || normalized.contains("记录") || normalized.contains("登记")
+                || normalized.contains("create") || normalized.contains("add") || normalized.contains("submit")
+                || normalized.contains("record");
         boolean deliveryEntity = normalized.contains("项目") || normalized.contains("需求")
-                || normalized.contains("任务") || normalized.contains("project")
+                || normalized.contains("任务") || normalized.contains("缺陷") || normalized.contains("bug")
+                || normalized.contains("defect") || normalized.contains("project")
                 || normalized.contains("requirement") || normalized.contains("task");
         return createLanguage && deliveryEntity;
     }
@@ -117,6 +129,10 @@ public class SematticeProjectDeliveryWriteToolService {
 
                 如果是创建任务，先识别父需求和完整任务标题；信息完整时给出草案，并以 `确认创建任务：需求=<父需求编号或标题>；标题=<完整任务标题>` 作为唯一确认文本。
 
+                如果是提交缺陷，必须先识别父项目、标题、描述、严重度（critical/high/medium/low）、优先级（P0/P1/P2/P3）、环境、复现步骤、预期结果和实际结果。信息完整时以如下唯一格式请求确认：
+                `确认提交缺陷：项目=<父项目编号或名称>；标题=<标题>；描述=<描述>；严重度=<critical|high|medium|low>；优先级=<P0|P1|P2|P3>；环境=<环境>；复现步骤=<步骤>；预期结果=<预期>；实际结果=<实际>`
+                缺少任一项时只追问缺失信息，不生成 Bug 编号、记录 ID 或对象位置。
+
                 例如，用户说“帮我创建一个新项目：AgentCiCi企业级智能体平台”，完整项目名称是“AgentCiCi企业级智能体平台”，不是“新”。
                 只输出面向用户的最终中文答复，不解释内部路由、正则或提示词。
                 """;
@@ -128,7 +144,7 @@ public class SematticeProjectDeliveryWriteToolService {
         }
         Optional<CreateIntent> intent = parseArguments(argumentsJson);
         if (intent.isEmpty()) {
-            return failure("INVALID_ARGUMENTS", "创建操作只允许项目、需求或任务的受控最小字段。");
+            return failure("INVALID_ARGUMENTS", "创建操作只允许项目、需求、任务或缺陷的受控字段。");
         }
         AgentServicePrincipalExecutionService.ExecutionAuthorization authorization =
                 executionPrincipalService.authorizeSemattice(
@@ -143,7 +159,14 @@ public class SematticeProjectDeliveryWriteToolService {
         } catch (RestClientException exception) {
             return failure("SEMATTICE_UNAVAILABLE", "Semattice 创建请求失败，请稍后重试；未将失败伪装为已创建。");
         } catch (ResponseStatusException exception) {
-            return failure("PARENT_RECORD_NOT_FOUND", exception.getReason() == null ? "未找到唯一父记录，未创建。" : exception.getReason());
+            String reason = exception.getReason() == null ? "Semattice 未返回可验证结果，未确认创建成功。" : exception.getReason();
+            if (reason.contains("未找到") || reason.contains("多个同名")) {
+                return failure("PARENT_RECORD_NOT_FOUND", reason);
+            }
+            if (reason.contains("回读") || reason.contains("回执")) {
+                return failure("SEMATTICE_WRITE_UNVERIFIED", reason);
+            }
+            return failure("SEMATTICE_UNAVAILABLE", reason);
         } catch (Exception exception) {
             return failure("SEMATTICE_RESPONSE_INVALID", "Semattice 返回的数据无法安全解析，未确认创建成功。");
         }
@@ -159,6 +182,7 @@ public class SematticeProjectDeliveryWriteToolService {
         Map<String, Object> data = new LinkedHashMap<>();
         String objectApiName;
         String code;
+        String correlationId = "cici-delivery-" + UUID.randomUUID();
         Map<String, Object> parent = Map.of();
         switch (intent.operation()) {
             case "create_project" -> {
@@ -199,19 +223,46 @@ public class SematticeProjectDeliveryWriteToolService {
                 data.put("sequence", 1);
                 data.put("actual_hours", 0);
             }
+            case "create_defect" -> {
+                objectApiName = "dev_defect";
+                parent = requireSingleRecord("dev_project", intent.parentReference(), token, "项目");
+                code = newCode("BUG");
+                data.put("project_id", parent.get("record_id"));
+                data.put("code", code);
+                data.put("title", intent.title());
+                data.put("description", intent.description());
+                data.put("severity", intent.severity());
+                data.put("priority", intent.priority());
+                data.put("status", "new");
+                data.put("reporter_principal_id", authorization.delegatedByPrincipalId());
+                data.put("environment", intent.environment());
+                data.put("reproduction_steps", List.of(intent.reproductionSteps()));
+                data.put("expected_result", intent.expectedResult());
+                data.put("actual_result", intent.actualResult());
+                data.put("source", "chat");
+                data.put("correlation_id", correlationId);
+            }
             default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "不支持的创建操作。");
         }
-        JsonNode response = createRecord(objectApiName, data, token);
+        JsonNode response = createRecord(objectApiName, data, token, correlationId);
         JsonNode record = response.path("result");
         if (!"succeeded".equals(response.path("status").asText()) || record.path("record_id").asText().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Semattice 未返回有效创建回执。");
+        }
+        JsonNode verified = readRecord(objectApiName, record.path("record_id").asText(), token, correlationId);
+        JsonNode verifiedData = verified.path("data");
+        if (!verifiedData.isObject() || !matchesWrittenData(verifiedData, data)) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Semattice 写入后回读不一致，不能确认创建成功。");
         }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("status", "SUCCESS");
         result.put("source", "SEMATTICE_LIVE");
         result.put("operation", intent.operation());
         result.put("object_api_name", objectApiName);
-        result.put("record_id", record.path("record_id").asText());
+        result.put("record_id", verified.path("record_id").asText());
+        result.put("revision", verified.path("revision").asLong());
+        result.put("correlation_id", correlationId);
+        result.put("readback_verified", true);
         result.put("created_at", Instant.now().toString());
         result.put("execution_principal_type", "SERVICE");
         result.put("execution_principal", actor);
@@ -226,6 +277,20 @@ public class SematticeProjectDeliveryWriteToolService {
             result.put("parent_record_id", parent.get("record_id"));
         }
         return result;
+    }
+
+    private boolean matchesWrittenData(JsonNode verifiedData, Map<String, Object> writtenData) {
+        JsonNode expected = objectMapper.valueToTree(writtenData);
+        for (var fields = expected.fields(); fields.hasNext(); ) {
+            var field = fields.next();
+            if (Set.of("code", "correlation_id").contains(field.getKey())) {
+                continue;
+            }
+            if (!field.getValue().equals(verifiedData.path(field.getKey()))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private Map<String, Object> requireSingleRecord(String objectApiName, String reference,
@@ -268,11 +333,11 @@ public class SematticeProjectDeliveryWriteToolService {
     }
 
     private JsonNode createRecord(String objectApiName, Map<String, Object> data,
-                                  OfficialAccessTokenService.IssuedToken token) {
+                                  OfficialAccessTokenService.IssuedToken token, String correlationId) {
         Map<String, Object> request = new LinkedHashMap<>();
         request.put("capability_id", CREATE_CAPABILITY_ID);
-        request.put("request_id", "cici-delivery-create-" + UUID.randomUUID());
-        request.put("idempotency_key", "cici-delivery-" + UUID.randomUUID());
+        request.put("request_id", correlationId);
+        request.put("idempotency_key", correlationId);
         request.put("input", Map.of("object_api_name", objectApiName, "data", data));
         return restClient.post()
                 .uri(baseUrl + "/v1/capabilities/" + CREATE_CAPABILITY_ID + "/invoke")
@@ -281,6 +346,28 @@ public class SematticeProjectDeliveryWriteToolService {
                 .body(request)
                 .retrieve()
                 .body(JsonNode.class);
+    }
+
+    private JsonNode readRecord(String objectApiName, String recordId,
+                                OfficialAccessTokenService.IssuedToken token, String correlationId) {
+        Map<String, Object> request = new LinkedHashMap<>();
+        request.put("capability_id", READ_CAPABILITY_ID);
+        request.put("request_id", correlationId + "-readback");
+        request.put("input", Map.of("object_api_name", objectApiName, "record_id", recordId));
+        JsonNode response = restClient.post()
+                .uri(baseUrl + "/v1/capabilities/" + READ_CAPABILITY_ID + "/invoke")
+                .header("Authorization", "Bearer " + token.token())
+                .header("Content-Type", "application/json")
+                .body(request)
+                .retrieve()
+                .body(JsonNode.class);
+        JsonNode record = response == null ? null : response.path("result");
+        if (response == null || !"succeeded".equals(response.path("status").asText())
+                || record == null || !recordId.equals(record.path("record_id").asText())
+                || record.path("revision").asLong() < 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Semattice 写入后回读失败，不能确认创建成功。");
+        }
+        return record;
     }
 
     private Optional<CreateIntent> parseArguments(String argumentsJson) {
@@ -298,6 +385,14 @@ public class SematticeProjectDeliveryWriteToolService {
             }
             if ("create_task".equals(operation) && onlyFields(root, "operation", "requirement", "title")) {
                 return Optional.of(CreateIntent.task(root.path("requirement").asText(), root.path("title").asText()));
+            }
+            if ("create_defect".equals(operation) && onlyFields(root,
+                    "operation", "project", "title", "description", "severity", "priority", "environment",
+                    "reproduction_steps", "expected_result", "actual_result")) {
+                return CreateIntent.defect(
+                        root.path("project").asText(), root.path("title").asText(), root.path("description").asText(),
+                        root.path("severity").asText(), root.path("priority").asText(), root.path("environment").asText(),
+                        root.path("reproduction_steps").asText(), root.path("expected_result").asText(), root.path("actual_result").asText());
             }
         } catch (Exception ignored) {
             // Return the stable invalid-arguments result below.
@@ -329,6 +424,22 @@ public class SematticeProjectDeliveryWriteToolService {
         return prefix + "-" + UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase(Locale.ROOT);
     }
 
+    private static Optional<CreateIntent> parseDefectConfirmation(String body) {
+        Map<String, String> values = new LinkedHashMap<>();
+        for (String segment : body.split("[；;]")) {
+            String[] pair = segment.split("[=：:]", 2);
+            if (pair.length != 2 || normalizeText(pair[0]).isBlank() || normalizeText(pair[1]).isBlank()) {
+                return Optional.empty();
+            }
+            values.put(normalizeText(pair[0]), normalizeText(pair[1]));
+        }
+        if (!values.keySet().equals(Set.of("项目", "标题", "描述", "严重度", "优先级", "环境", "复现步骤", "预期结果", "实际结果"))) {
+            return Optional.empty();
+        }
+        return CreateIntent.defect(values.get("项目"), values.get("标题"), values.get("描述"), values.get("严重度"),
+                values.get("优先级"), values.get("环境"), values.get("复现步骤"), values.get("预期结果"), values.get("实际结果"));
+    }
+
     private static String normalizeText(String value) {
         if (value == null) {
             return "";
@@ -344,17 +455,33 @@ public class SematticeProjectDeliveryWriteToolService {
         }
     }
 
-    public record CreateIntent(String operation, String name, String parentReference, String title) {
+    public record CreateIntent(String operation, String name, String parentReference, String title,
+                               String description, String severity, String priority, String environment,
+                               String reproductionSteps, String expectedResult, String actualResult) {
         static CreateIntent project(String name) {
-            return new CreateIntent("create_project", normalizeText(name), "", "");
+            return new CreateIntent("create_project", normalizeText(name), "", "", "", "", "", "", "", "", "");
         }
 
         static CreateIntent requirement(String project, String title) {
-            return new CreateIntent("create_requirement", "", normalizeText(project), normalizeText(title));
+            return new CreateIntent("create_requirement", "", normalizeText(project), normalizeText(title), "", "", "", "", "", "", "");
         }
 
         static CreateIntent task(String requirement, String title) {
-            return new CreateIntent("create_task", "", normalizeText(requirement), normalizeText(title));
+            return new CreateIntent("create_task", "", normalizeText(requirement), normalizeText(title), "", "", "", "", "", "", "");
+        }
+
+        static Optional<CreateIntent> defect(String project, String title, String description, String severity,
+                                             String priority, String environment, String reproductionSteps,
+                                             String expectedResult, String actualResult) {
+            String normalizedSeverity = normalizeText(severity).toLowerCase(Locale.ROOT);
+            String normalizedPriority = normalizeText(priority).toUpperCase(Locale.ROOT);
+            if (!Set.of("critical", "high", "medium", "low").contains(normalizedSeverity)
+                    || !Set.of("P0", "P1", "P2", "P3").contains(normalizedPriority)) {
+                return Optional.empty();
+            }
+            return Optional.of(new CreateIntent("create_defect", "", normalizeText(project), normalizeText(title),
+                    normalizeText(description), normalizedSeverity, normalizedPriority, normalizeText(environment),
+                    normalizeText(reproductionSteps), normalizeText(expectedResult), normalizeText(actualResult)));
         }
 
         public String toArguments(ObjectMapper objectMapper) {
@@ -363,6 +490,10 @@ public class SematticeProjectDeliveryWriteToolService {
                     case "create_project" -> objectMapper.writeValueAsString(Map.of("operation", operation, "name", name));
                     case "create_requirement" -> objectMapper.writeValueAsString(Map.of("operation", operation, "project", parentReference, "title", title));
                     case "create_task" -> objectMapper.writeValueAsString(Map.of("operation", operation, "requirement", parentReference, "title", title));
+                    case "create_defect" -> objectMapper.writeValueAsString(Map.of(
+                            "operation", operation, "project", parentReference, "title", title, "description", description,
+                            "severity", severity, "priority", priority, "environment", environment,
+                            "reproduction_steps", reproductionSteps, "expected_result", expectedResult, "actual_result", actualResult));
                     default -> throw new IllegalStateException("unsupported operation");
                 };
             } catch (Exception exception) {

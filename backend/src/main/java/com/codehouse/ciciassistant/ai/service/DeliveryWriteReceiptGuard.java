@@ -73,7 +73,10 @@ final class DeliveryWriteReceiptGuard {
                 if ("SUCCESS".equals(result.path("status").asText())
                         && "SEMATTICE_LIVE".equals(result.path("source").asText())
                         && !result.path("object_api_name").asText().isBlank()
-                        && !result.path("record_id").asText().isBlank()) {
+                        && !result.path("record_id").asText().isBlank()
+                        && result.path("revision").asLong() > 0
+                        && !result.path("correlation_id").asText().isBlank()
+                        && result.path("readback_verified").asBoolean(false)) {
                     return true;
                 }
             } catch (Exception ignored) {

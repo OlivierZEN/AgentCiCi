@@ -27,7 +27,7 @@ public class SematticeProjectDeliveryToolService {
 
     public static final String TOOL_NAME = "semattice_project_delivery_query";
     private static final List<String> DELIVERY_OBJECTS = List.of(
-            "dev_project", "dev_requirement", "dev_task", "dev_worklog", "dev_change", "dev_delivery_event");
+            "dev_project", "dev_requirement", "dev_task", "dev_worklog", "dev_change", "dev_delivery_event", "dev_defect");
     private static final String CAPABILITY_ID = "runtime.record.query";
 
     private final RestClient restClient;
@@ -46,7 +46,7 @@ public class SematticeProjectDeliveryToolService {
     }
 
     public static String toolDescription() {
-        return "使用当前 Agent 显式绑定的 SERVICE Principal 读取同公司的 Semattice 研发交付数据（项目、需求、任务、工时、变更和交付事件）。"
+        return "使用当前 Agent 显式绑定的 SERVICE Principal 读取同公司的 Semattice 研发交付数据（项目、需求、任务、工时、变更、交付事件和缺陷）。"
                 + "涉及项目状态、进度、工时、需求、任务或变更事实时必须先调用；"
                 + "只读，不接受租户、成员或令牌参数，不能创建或修改记录。";
     }
@@ -58,7 +58,7 @@ public class SematticeProjectDeliveryToolService {
                 "properties", Map.of(
                         "focus", Map.of(
                                 "type", "string",
-                                "enum", List.of("overview", "projects", "requirements", "tasks", "worklogs", "changes", "events", "pending_reviews"),
+                                "enum", List.of("overview", "projects", "requirements", "tasks", "worklogs", "changes", "events", "defects", "pending_reviews"),
                                 "description", "可选的回答关注点；省略时返回完整交付概览。")),
                 "required", List.of()));
     }
@@ -147,6 +147,18 @@ public class SematticeProjectDeliveryToolService {
             copyIfPresent(data, row, "decision");
             copyIfPresent(data, row, "occurred_at");
             copyIfPresent(data, row, "correlation_id");
+            copyIfPresent(data, row, "description");
+            copyIfPresent(data, row, "severity");
+            copyIfPresent(data, row, "reporter_principal_id");
+            copyIfPresent(data, row, "assignee_principal_id");
+            copyIfPresent(data, row, "environment");
+            copyIfPresent(data, row, "reproduction_steps");
+            copyIfPresent(data, row, "expected_result");
+            copyIfPresent(data, row, "actual_result");
+            copyIfPresent(data, row, "resolution");
+            copyIfPresent(data, row, "source");
+            copyIfPresent(data, row, "resolved_at");
+            row.put("revision", record.path("revision").asLong());
             result.add(row);
         }
         return result;
@@ -177,6 +189,7 @@ public class SematticeProjectDeliveryToolService {
         result.put("tasks", tasks);
         result.put("worklogs", worklogs);
         result.put("changes", recordsByObject.getOrDefault("dev_change", List.of()));
+        result.put("defects", recordsByObject.getOrDefault("dev_defect", List.of()));
         List<Map<String, Object>> events = recordsByObject.getOrDefault("dev_delivery_event", List.of());
         result.put("events", events);
         Set<Object> decidedSubmissionIds = events.stream()
