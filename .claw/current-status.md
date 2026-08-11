@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-11T05:49:57Z
+updated_at: 2026-08-11T06:08:00Z
 updated_by: codex
-phase: implementation
-active_task: TASK-281
-next_action: "发布 2.8.61-beta.7，验证待补充缺陷草案能生成唯一可执行的完整确认文本，再完成真实写入与隔离验收。"
+phase: verification
+active_task: TASK-280
+next_action: "TASK-281 已完成；继续 TASK-280 的管理员正式激活状态同步与独立浏览器登录回归。"
 read_next:
   goals: false
   decisions: false
@@ -24,10 +24,7 @@ read_next:
 
 - TASK-280 UAT 验收缺陷已修复并随 `2.8.61-beta.7 / 4f7ae57f0aec` 发布：`18611892001` 的 Keycloak 用户已激活且本地 binding subject 一致，但原重发入口只报“已激活”而不协调 `PENDING_ACTIVATION`。新入口在远端仍待激活时重发邮件，远端已激活时同步成员为 `ACTIVE` 并写脱敏审计。后端身份定向测试、package、前端 42 文件/229 项、构建及 UAT 技术门禁通过；当前无可控 ORG_ADMIN 浏览器会话，尚未点击正式入口，成员仍保持 pending，等待用户刷新页面后执行一次“检查激活状态”并用独立浏览器登录回归。
 
-- TASK-281 UAT 阶段修正：AgentCiCi `2.8.61-beta.5 / 6473494fff8f` 已通过正式“同步标准模板”将第二租户升级为 Semattice published `7 对象 / 83 字段`，`dev_defect` 23 字段且 HUMAN/SERVICE 投影完整。真实对话随即发现未确认草案中的“确认后成功提交”被回执守卫误判为完成态成功声明；无写入、无脏数据。已局部修正为只门禁完成态声明，下一候选为 beta.6。
-- beta.6 已验证草案可正常展示；用户补充父项目后却未继续注入草案协议，模型输出服务端不接受的“确认提交此缺陷”短指令。仍未执行写入。beta.7 将依据近期待补充草案识别字段续答，强制重新输出完整草案及唯一可执行确认文本。
-
-- TASK-281 / FEAT-169 / INT-009 已完成本地实现：产品经理对缺陷采用完整草稿确认，确认后由租户 PM SERVICE 写入 `dev_defect`，再以 `runtime.record.get` 回读并核验字段、revision 与 correlation；只有 `SEMATTICE_LIVE + readback_verified` 才允许成功声明。SSE `tool_result` 和前端独立回执卡片显示对象、业务编号、记录 ID、revision 与 correlation，失败结果不得由模型改写为成功。后端定向测试、前端 42 文件/228 项测试和构建通过；完整 Maven 套件因本机 PostgreSQL/Hikari 连接重试被停止，UAT 仍等待 Semattice 提供方先发布。
+- TASK-281 / FEAT-169 / INT-009 已完成 UAT 业务验收。`2.8.61-beta.7` 的真实产品经理对话先生成草案并跨轮补充父项目，完整精确确认后由 active PM SERVICE 创建 `BUG-11164588`，可信回执与 Semattice 记录 ID、revision=1、correlation 一致；短确认负向未新增记录。DevAutopilot `1.0.4-beta.3` 读取同一记录并完成负责人分配、`new → confirmed` 和 revision `1 → 2`。`2.8.61-beta.8 / 9a37f5d6036a` 又将 Owner 身份治理与应用管理解耦，Demo 缺 Owner 只告警不阻断模板同步；同步后 A/B 均为 7 对象且缺陷计数分别为 0/1，正式 handoff 页面未发生跨租户泄漏。生产保持 `2.8.60`。
 
 - TASK-280 / FEAT-168 已发布 UAT `2.8.61-beta.3 / 47affe4086e5`：组织用户页返回脱敏统一身份状态，并在“CloudCC账号绑定信息”中为 `ACTIVE + MISSING` 成员提供独立“修复统一身份”入口。操作要求手机号二次确认，复用 Keycloak HUMAN provisioning，保持角色和资料不变；需要首次激活时转为 `PENDING_ACTIVATION` 并发信，相同幂等键只执行一次且写入脱敏平台审计。后端定向测试、package、前端完整 225 项测试和生产构建通过；UAT 六容器 healthy、Flyway V109、Nginx、公网与匿名 401 边界、30 秒稳定窗口均通过。尚未调用真实修复接口或修改 `18611892001`。
 

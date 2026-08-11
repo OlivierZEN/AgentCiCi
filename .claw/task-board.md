@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-11T05:49:57Z
+updated_at: 2026-08-11T06:08:00Z
 updated_by: codex
 board_status: active
 ---
@@ -14,17 +14,6 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
-
-### TASK-281 - DevAutopilot 缺陷 Tool 与可信写入回执
-
-- status: `review`
-- priority: `critical`
-- owner_role: `integration-agent`
-- integration_id: `INT-009`
-- spec_path: `docs/specs/FEAT-169-devautopilot-defect-trusted-receipt.md`
-- task_status_path: `.claw/tasks/TASK-281.md`
-- depends_on: `TASK-275, cc-semattice TASK-073`
-- next_action: `发布 2.8.61-beta.7，验证字段续答生成完整确认文本，再执行可信回执、Semattice 回读与跨租户负向验收`
 
 ### TASK-280 - 组织成员统一身份修复入口
 
@@ -1460,6 +1449,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-281 - DevAutopilot 缺陷 Tool 与可信写入回执
+
+- status: `done`
+- priority: `critical`
+- owner_role: `integration-agent`
+- integration_id: `INT-009`
+- spec_path: `docs/specs/FEAT-169-devautopilot-defect-trusted-receipt.md`
+- task_status_path: `.claw/tasks/TASK-281.md`
+- depends_on: `TASK-275, cc-semattice TASK-073`
+- completion_evidence: `AgentCiCi 2.8.61-beta.8；真实 PM SERVICE 创建 BUG-11164588、写后回读、短确认负向、DevAutopilot revision 1→2 与 A/B 缺陷 0/1 隔离均通过`
 
 ### TASK-279 - DevAutopilot 产品经理委托授权模型调整
 

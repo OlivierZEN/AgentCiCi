@@ -1,14 +1,25 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-11T05:49:57Z
+updated_at: 2026-08-11T06:08:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-11T05:49:57Z
-last_run_status: passed_with_business_acceptance_pending
+last_run_at: 2026-08-11T06:08:00Z
+last_run_status: passed
 ---
 
 # Test Report
+
+## 2026-08-11 TASK-281 INT-009 UAT 业务验收
+
+- 真实对话正向：第二租户产品经理先生成缺陷草案，补充“父项目：智能体平台”后输出唯一全字段精确确认文本；确认前 `dev_defect=0`，确认后返回 `BUG-11164588`、独立 record ID、revision=1 和 correlation，前端显示“Semattice 写入成功回执”。
+- 执行身份：Semattice 回读 `created_by` 对应 `service/active/研发产品经理`，authority source=`agentcici`；项目 record ID 与缺陷 record ID 不同。
+- 负向：新会话仅发送“确认提交此缺陷”时要求补齐所有字段，缺陷总数仍为 1；草案、字段补充和短确认均未伪写入。
+- 消费方：DevAutopilot `1.0.4-beta.3` 显示同一缺陷全部字段；分配第二租户开发者并确认后状态 `confirmed`、revision=2，Semattice 回读一致。
+- 双租户：beta.8 将 Owner 404 降为独立治理告警，Demo 应用管理可继续；正式同步后两个租户均为 7 对象，Demo/第二租户缺陷计数为 0/1。两个正式 handoff 分别显示 0 条与 1 条缺陷，未读取浏览器存储或暴露 OACT。
+- 前端：目标页 5/5、完整 42 文件/230 项和生产构建通过；仅保留既有 bundle-size warning。完整 Maven 的本机 PostgreSQL/Hikari 未完成边界仍不改写为全绿。
+- 状态校验：`validate-state.py .claw` 仍被历史任务归档上限、旧规格状态/front matter 和旧时区格式债务阻断；输出没有 TASK-281/FEAT-169 字段或状态错误，本轮未跨范围批量改写历史记录。
+- 状态：`passed`
 
 ## 2026-08-11 TASK-280 邮件激活状态协调修复
 

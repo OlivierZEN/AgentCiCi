@@ -1,12 +1,19 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-11T05:49:57Z
+updated_at: 2026-08-11T06:08:00Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-11 TASK-281 UAT `2.8.61-beta.8`
+
+- Git tag/commit 为 `2.8.61-beta.8 / 9a37f5d6036a`；backend/frontend ACR index digest 分别为 `sha256:91c13d400dc7cae0a937395e874df62f61826f6d4646ed7599bca762df2407f6` 与 `sha256:86f1bd0d819666f1ee75e85dc556e1ce9fb26c2ea6351d7e2ef1504457a1970f`。
+- 完整备份 `/data/apps/agentcici/backups/20260811T060100Z-before-2.8.61-beta.8-task281` 含 Compose、受管环境、PostgreSQL、KB、Qdrant 与 beta.7 前后端镜像，10 项均非空且 `0600`。仅重建 backend/frontend；四个状态服务 ID 哈希保持 `b5dca5759af2a9cfb0ed4285fdb3b01c9af02db33eb2bfbabfa347fe728de2bc`。
+- UAT 无 ACR 凭据落盘，linux/amd64 镜像经 SSH 压缩流导入。backend/frontend healthy、restart=0，health=`UP`，Nginx 有效，HTTPS=200、匿名 auth=401，稳定窗口错误计数为 0。
+- 正式平台页面证明 Demo Company 缺 Owner 时只显示“待补齐”，应用中心仍可操作；“同步标准模板”成功将其从 6 对象升级为 7 对象。回滚只恢复 beta.7 应用与上述备份，不删除已发布 metadata 或业务记录。生产保持 `2.8.60`。
 
 ## 2026-08-11 TASK-280 / TASK-281 UAT `2.8.61-beta.7`
 
@@ -15,6 +22,7 @@ status: active
 - UAT 无 ACR 登录态，使用已核对 digest 的 linux/amd64 镜像经 SSH 压缩流导入。仅 force-recreate backend/frontend；database、Redis、RabbitMQ、Qdrant ID 哈希保持 `b5dca5759af2a9cfb0ed4285fdb3b01c9af02db33eb2bfbabfa347fe728de2bc`。
 - 六容器 healthy、restart=0，health=`UP`，版本/镜像/Git SHA 一致，Flyway V109、Nginx、HTTPS 200、匿名 `/auth/me` 与激活接口 401 通过；30 秒稳定窗口启动后 backend/frontend 错误数为 0。
 - 当前无可控 ORG_ADMIN 浏览器会话，未绕过认证调用激活状态同步接口；`18611892001` 仍为 pending，等待页面正式操作与独立浏览器登录回归。
+- TASK-281 业务验收已在 beta.7 完成：全字段确认创建真实缺陷、短确认不写入、写后回读和 DevAutopilot 状态流转通过。beta.8 仅增加历史缺 Owner 租户的应用管理解耦，不改变该写入契约。
 
 ## 2026-08-11 TASK-281 UAT beta.4 技术发布与 beta.5 修正
 
