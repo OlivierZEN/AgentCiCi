@@ -47,7 +47,11 @@ public class AdminUserController {
     @PostMapping("/{userId}/activation-email")
     public ApiResponse<Map<String, Object>> resendActivationEmail(@PathVariable String userId) {
         String companyId = TenantContext.requireCompanyId();
-        return ApiResponse.ok(adminUserService.resendActivationEmail(companyId, userId));
+        String actorUserId = TenantContext.getUserId()
+                .orElseThrow(() -> new IllegalArgumentException("Missing user context"));
+        String actorRole = TenantContext.getRoles().stream().findFirst().orElse("ORG_ADMIN");
+        return ApiResponse.ok(adminUserService.resendActivationEmail(
+                companyId, userId, actorUserId, actorRole));
     }
 
     @PostMapping("/{userId}/identity-reconciliation")

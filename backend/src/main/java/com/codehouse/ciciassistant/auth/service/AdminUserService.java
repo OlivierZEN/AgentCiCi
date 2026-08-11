@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AdminUserService {
 
     private static final String IDENTITY_RECONCILIATION_EVENT = "company_member.identity_reconciled";
+    private static final String IDENTITY_ACTIVATION_SYNC_EVENT = "company_member.identity_activation_synced";
 
     private final UserRepository userRepository;
     private final CompanyRepository companyRepository;
@@ -99,13 +100,30 @@ public class AdminUserService {
      * invitation edit may otherwise change the member's role or profile.
      */
     @Transactional
-    public Map<String, Object> resendActivationEmail(String companyId, String userId) {
+    public Map<String, Object> resendActivationEmail(
+            String companyId,
+            String userId,
+            String actorUserId,
+            String actorRole) {
         UserEntity target = userRepository.findByIdAndCompany_Id(userId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("成员不存在或不属于当前组织"));
         if (!UserEntity.STATUS_PENDING_ACTIVATION.equals(target.getMemberStatus())) {
             throw new IllegalStateException("仅可向待激活成员重发初始化邮件");
         }
-        keycloakIdentityProvisioningService.resendHumanActivation(target.getAccount());
+        KeycloakIdentityProvisioningService.ProvisionResult identity = keycloakIdentityProvisioningService
+                .resendHumanActivation(target.getAccount());
+        if (!identity.activationRequired()) {
+            target.setMemberStatus(UserEntity.STATUS_ACTIVE);
+            userRepository.saveAndFlush(target);
+            auditService.log(
+                    companyId,
+                    actorUserId,
+                    actorRole,
+                    IDENTITY_ACTIVATION_SYNC_EVENT,
+                    "company_member_identity",
+                    target.getId(),
+                    "source=keycloak_status_check");
+        }
         return toRow(target);
     }
 

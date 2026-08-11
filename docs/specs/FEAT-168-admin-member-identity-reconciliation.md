@@ -7,7 +7,7 @@ owner_role: fullstack-agent
 task_ids: TASK-280
 related_decisions: "FEAT-145 HUMAN 统一身份；FEAT-166 Owner 身份协调"
 related_issues: none
-updated_at: 2026-08-11T03:48:46Z
+updated_at: 2026-08-11T05:40:53Z
 updated_by: codex
 ---
 
@@ -26,7 +26,8 @@ updated_by: codex
 - 弹窗展示目标成员和脱敏邮箱，要求管理员输入该成员当前手机号作二次确认。
 - 成功创建或恢复 Keycloak 用户且需要激活时，将成员转为 `PENDING_ACTIVATION`，发送 24 小时有效的邮箱验证和首次密码设置邮件。
 - 若恢复到已经激活且归属证明一致的 Keycloak 用户，只补齐本地绑定并保持成员 `ACTIVE`。
-- `PENDING_ACTIVATION` 继续使用既有“重发激活邮件”入口；`SUSPENDED` 和已绑定成员不显示修复操作。
+- `PENDING_ACTIVATION` 使用“检查激活状态”入口：Keycloak 仍要求验证或设置密码时重发初始化邮件；Keycloak 已激活时，将本地成员安全同步为 `ACTIVE` 并明确提示从统一账号入口重新登录。
+- `SUSPENDED` 和已绑定成员不显示修复操作。
 
 ## API 与安全
 
@@ -36,6 +37,7 @@ updated_by: codex
 - Keycloak 恢复必须继续满足不可变 `public_id + account_id + email` 归属校验；不得按手机号、昵称或邮箱单独自动合并。
 - 不返回 Keycloak subject、激活链接、管理令牌或凭据，不生成和展示默认密码。
 - 成功操作记录 `company_member.identity_reconciled` 平台审计，只保存成员技术标识、幂等键和是否仍需激活，不记录手机号、邮箱或凭据。
+- `POST /api/admin/users/{userId}/activation-email` 仍只接受同租户 `PENDING_ACTIVATION` 成员。远端已激活时允许同步为 `ACTIVE`，记录 `company_member.identity_activation_synced` 审计；不读取、重置或返回密码，不接受未绑定或已停用身份。
 
 ## 验收标准
 
@@ -43,6 +45,7 @@ updated_by: codex
 - `ACTIVE + MISSING` 成员可见修复按钮，其他状态不可见。
 - 手机号确认错误、跨租户、已绑定、待激活或停用成员均不能执行修复。
 - 修复不改变目标成员角色、资料和 CloudCC 绑定；需要激活时只把成员状态转为 `PENDING_ACTIVATION`。
+- 邮件动作完成后再次检查，远端仍待激活则保持 `PENDING_ACTIVATION` 并重发；远端已激活则同步为 `ACTIVE`，角色、资料和绑定保持不变。
 - 后端定向测试、前端定向测试与生产构建通过，并完成桌面端真实页面检查。
 
 ## 回滚

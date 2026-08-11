@@ -43,12 +43,45 @@ class AdminUserServiceTest {
 
         AdminUserService service = new AdminUserService(users, companies, accounts, identifiers, externalIdentities, provisioning, audit);
 
-        assertThat(service.resendActivationEmail("company-1", pending.getId()))
+        assertThat(service.resendActivationEmail(
+                "company-1", pending.getId(), "actor-1", RoleCodes.ORG_ADMIN))
                 .containsEntry("id", pending.getId())
                 .containsEntry("memberStatus", UserEntity.STATUS_PENDING_ACTIVATION)
                 .containsEntry("roleCode", RoleCodes.ORG_ADMIN);
         verify(provisioning).resendHumanActivation(account);
         verify(users, never()).save(any());
+    }
+
+    @Test
+    void syncsAnActivatedRemoteIdentityWithoutChangingRoleOrProfile() {
+        UserRepository users = Mockito.mock(UserRepository.class);
+        CompanyRepository companies = Mockito.mock(CompanyRepository.class);
+        UserAccountRepository accounts = Mockito.mock(UserAccountRepository.class);
+        AccountLoginIdentifierRepository identifiers = Mockito.mock(AccountLoginIdentifierRepository.class);
+        AccountExternalIdentityRepository externalIdentities = Mockito.mock(AccountExternalIdentityRepository.class);
+        KeycloakIdentityProvisioningService provisioning = Mockito.mock(KeycloakIdentityProvisioningService.class);
+        PlatformAuditService audit = Mockito.mock(PlatformAuditService.class);
+        UserAccountEntity account = new UserAccountEntity("13900000012");
+        UserEntity pending = new UserEntity(Mockito.mock(CompanyEntity.class), account, RoleCodes.ORG_ADMIN);
+        pending.setMemberStatus(UserEntity.STATUS_PENDING_ACTIVATION);
+        pending.setNickname("原昵称");
+        when(users.findByIdAndCompany_Id(pending.getId(), "company-1")).thenReturn(Optional.of(pending));
+        when(provisioning.resendHumanActivation(account)).thenReturn(
+                new KeycloakIdentityProvisioningService.ProvisionResult(true, false, "subject-1"));
+
+        AdminUserService service = new AdminUserService(
+                users, companies, accounts, identifiers, externalIdentities, provisioning, audit);
+
+        assertThat(service.resendActivationEmail(
+                "company-1", pending.getId(), "actor-1", RoleCodes.ORG_ADMIN))
+                .containsEntry("memberStatus", UserEntity.STATUS_ACTIVE)
+                .containsEntry("roleCode", RoleCodes.ORG_ADMIN)
+                .containsEntry("nickname", "原昵称");
+        verify(users).saveAndFlush(pending);
+        verify(audit).log(
+                "company-1", "actor-1", RoleCodes.ORG_ADMIN,
+                "company_member.identity_activation_synced", "company_member_identity", pending.getId(),
+                "source=keycloak_status_check");
     }
 
     @Test
@@ -66,7 +99,8 @@ class AdminUserServiceTest {
         AdminUserService service = new AdminUserService(users, companies, accounts, identifiers, externalIdentities, provisioning, audit);
 
         org.assertj.core.api.Assertions.assertThatThrownBy(
-                () -> service.resendActivationEmail("company-1", active.getId()))
+                () -> service.resendActivationEmail(
+                        "company-1", active.getId(), "actor-1", RoleCodes.ORG_ADMIN))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("仅可向待激活成员重发初始化邮件");
         verifyNoInteractions(provisioning);

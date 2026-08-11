@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-11T09:15:00Z
+updated_at: 2026-08-11T05:40:53Z
 updated_by: codex
 board_status: active
 ---
@@ -28,7 +28,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-280 - 组织成员统一身份修复入口
 
-- status: `review`
+- status: `in_progress`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - claimed_by: `codex`
@@ -36,7 +36,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-280.md`
 - blocked_by: `none`
 - scope_files: `AdminUserService, AdminUserController, AdminUsersPage, focused tests, styles`
-- next_action: `通过真实 ORG_ADMIN 页面检查入口；另行授权后再修复目标成员并回读身份与登录状态`
+- next_action: `随 beta.7 发布；ORG_ADMIN 点击检查激活状态同步为 ACTIVE，再以无既有 Keycloak SSO 的独立浏览器会话登录回归`
 
 ### TASK-277 - 平台租户 Owner 统一身份协调入口
 

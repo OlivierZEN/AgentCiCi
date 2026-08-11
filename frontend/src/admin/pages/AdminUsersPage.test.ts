@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canReconcileMemberIdentity, memberIdentityLabel } from "./AdminUsersPage";
+import { activationStatusNotice, canReconcileMemberIdentity, memberIdentityLabel } from "./AdminUsersPage";
 
 describe("AdminUsersPage identity reconciliation", () => {
   it("labels the governed identity states", () => {
@@ -20,5 +20,10 @@ describe("AdminUsersPage identity reconciliation", () => {
     expect(canReconcileMemberIdentity({ ...base, memberStatus: "PENDING_ACTIVATION", identityState: "MISSING" })).toBe(false);
     expect(canReconcileMemberIdentity({ ...base, memberStatus: "ACTIVE", identityState: "ACTIVE" })).toBe(false);
     expect(canReconcileMemberIdentity({ ...base, memberStatus: "SUSPENDED", identityState: "MISSING" })).toBe(false);
+  });
+
+  it("distinguishes a resent invitation from an activated status sync", () => {
+    expect(activationStatusNotice("PENDING_ACTIVATION")).toContain("初始化邮件已重新发送");
+    expect(activationStatusNotice("ACTIVE")).toContain("成员状态已同步为有效");
   });
 });

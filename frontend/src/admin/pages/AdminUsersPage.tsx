@@ -37,6 +37,12 @@ export function canReconcileMemberIdentity(user: UserRow | null): boolean {
     && user.identityState === "MISSING");
 }
 
+export function activationStatusNotice(memberStatus?: string): string {
+  return memberStatus === STATUS_PENDING_ACTIVATION
+    ? "初始化邮件已重新发送，请提醒成员在 24 小时内验证邮箱并设置密码"
+    : "统一账号已激活，成员状态已同步为有效；请成员从统一账号入口重新登录";
+}
+
 function maskedEmail(email?: string): string {
   if (!email) return "未登记邮箱";
   const [local, domain] = email.split("@");
@@ -229,7 +235,7 @@ export default function AdminUsersPage() {
       }
       setResendActivationModalOpen(false);
       await load();
-      setNotice("初始化邮件已重新发送，请提醒成员在 24 小时内验证邮箱并设置密码");
+      setNotice(activationStatusNotice(json.data?.memberStatus));
     } catch {
       setNotice("初始化邮件发送失败");
     } finally {
@@ -442,10 +448,10 @@ export default function AdminUsersPage() {
                 <div className="user-activation-callout">
                   <div>
                     <strong>统一账号待激活</strong>
-                    <p>成员需通过邮件验证邮箱并设置首次登录密码；重发不会修改其角色、资料或成员状态。</p>
+                    <p>成员完成邮件验证和密码设置后，在此检查激活状态；尚未完成时会重发初始化邮件。</p>
                   </div>
                   <button type="button" className="user-btn-soft" onClick={() => setResendActivationModalOpen(true)}>
-                    重发激活邮件
+                    检查激活状态
                   </button>
                 </div>
               )}
@@ -705,11 +711,11 @@ export default function AdminUsersPage() {
         >
           <section className="user-invite-modal" role="dialog" aria-modal="true" aria-labelledby="resend-activation-modal-title">
             <div className="user-invite-modal__head">
-              <h2 id="resend-activation-modal-title">重发激活邮件</h2>
+              <h2 id="resend-activation-modal-title">检查激活状态</h2>
               <button
                 type="button"
                 className="user-invite-modal__close"
-                aria-label="关闭重发激活邮件"
+                aria-label="关闭激活状态检查"
                 onClick={() => setResendActivationModalOpen(false)}
                 disabled={resendActivationSubmitting}
               >
@@ -718,7 +724,7 @@ export default function AdminUsersPage() {
             </div>
             <div className="user-invite-modal__body">
               <p className="user-activation-confirmation">
-                将向 <strong>{selected.email || "该成员的已登记邮箱"}</strong> 发送新的邮箱验证和设置密码链接。链接有效期为 24 小时；不会修改成员的角色、资料或成员状态。
+                系统将检查 <strong>{selected.email || "该成员的已登记邮箱"}</strong> 对应的统一账号。已激活时同步成员状态；尚未激活时重发 24 小时有效的验证和密码设置邮件。不会修改角色或资料。
               </p>
             </div>
             <div className="user-invite-modal__foot">
@@ -736,7 +742,7 @@ export default function AdminUsersPage() {
                 onClick={() => void resendActivationEmail(selected.id)}
                 disabled={resendActivationSubmitting}
               >
-                {resendActivationSubmitting ? "发送中" : "确认重发"}
+                {resendActivationSubmitting ? "检查中" : "确认检查"}
               </button>
             </div>
           </section>

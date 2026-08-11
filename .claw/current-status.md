@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-11T13:28:00+08:00
+updated_at: 2026-08-11T05:40:53Z
 updated_by: codex
 phase: implementation
 active_task: TASK-281
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-280 UAT 验收缺陷已定位并完成本地修复：`18611892001` 的 Keycloak 用户 enabled、邮箱已验证、required actions 为空、已有 password credential，且本地 binding subject 一致；但成员仍为 `PENDING_ACTIVATION`，现有重发入口只报“已激活”而不协调状态。修复后同一受控入口会在远端仍待激活时重发邮件，远端已激活时同步成员为 `ACTIVE` 并写脱敏审计。后端身份定向测试、package、前端 42 文件/229 项与构建通过；待随 beta.7 发布并用独立浏览器会话登录回归。
 
 - TASK-281 UAT 阶段修正：AgentCiCi `2.8.61-beta.5 / 6473494fff8f` 已通过正式“同步标准模板”将第二租户升级为 Semattice published `7 对象 / 83 字段`，`dev_defect` 23 字段且 HUMAN/SERVICE 投影完整。真实对话随即发现未确认草案中的“确认后成功提交”被回执守卫误判为完成态成功声明；无写入、无脏数据。已局部修正为只门禁完成态声明，下一候选为 beta.6。
 - beta.6 已验证草案可正常展示；用户补充父项目后却未继续注入草案协议，模型输出服务端不接受的“确认提交此缺陷”短指令。仍未执行写入。beta.7 将依据近期待补充草案识别字段续答，强制重新输出完整草案及唯一可执行确认文本。

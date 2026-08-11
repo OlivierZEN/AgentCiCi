@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-280
-status: review
-updated_at: 2026-08-11T03:48:46Z
+status: in_progress
+updated_at: 2026-08-11T05:40:53Z
 updated_by: codex
 assignee: codex
 owner_role: fullstack-agent
@@ -15,7 +15,8 @@ spec_path: docs/specs/FEAT-168-admin-member-identity-reconciliation.md
 ## Current State
 
 - 已完成成员统一身份状态、受控协调 API、手机号二次确认、幂等审计和页面修复按钮。
-- 已随 `2.8.61-beta.3 / 47affe4086e5` 发布 UAT；尚未对 `18611892001` 执行真实修复。
+- 已随 `2.8.61-beta.3 / 47affe4086e5` 发布 UAT；真实验收发现邮件动作已完成但本地成员仍为 `PENDING_ACTIVATION`，现有重发接口只报“已激活”而不协调状态。
+- UAT 只读证据确认 Keycloak 用户 enabled、邮箱已验证、required actions 为空且已有 password credential；本地 binding subject 一致，但目标用户没有成功 OIDC 会话。正在修复远端已激活时的受控状态同步。
 
 ## Scope
 
@@ -26,10 +27,12 @@ spec_path: docs/specs/FEAT-168-admin-member-identity-reconciliation.md
 
 ## Next Action
 
-- 以真实 ORG_ADMIN 会话检查页面；只有获得单独业务操作授权后，才对目标成员执行正式修复与登录回归。
+- 完成远端激活状态同步、审计和提示文案，运行定向测试后发布 UAT，再以独立浏览器会话完成目标成员登录回归。
 
 ## Verification
 
+- UAT 只读回读确认 Keycloak 激活事实、本地 pending 漂移与无目标登录会话；未读取或修改密码、凭据和邮件链接。
+- 激活状态同步后端定向测试通过；后端 package、前端完整 42 文件/229 项和生产构建通过。
 - 后端 `AdminUserServiceTest,KeycloakIdentityProvisioningServiceTest` 通过。
 - 前端完整测试 41 个文件、225 项通过；身份修复定向测试 3 项通过。
 - 后端 package 与前端生产构建通过；仅保留既有 Vite bundle-size warning。

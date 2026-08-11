@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-11T09:15:00Z
+updated_at: 2026-08-11T05:40:53Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-11T09:15:00Z
-last_run_status: partial
+last_run_at: 2026-08-11T05:40:53Z
+last_run_status: passed_with_uat_pending
 ---
 
 # Test Report
+
+## 2026-08-11 TASK-280 邮件激活状态协调修复
+
+- UAT 只读诊断：目标账号只有 Demo Company 一条 `ORG_ADMIN/PENDING_ACTIVATION` 成员；external identity 存在且 subject 与 Keycloak 用户一致。Keycloak 用户唯一、enabled、emailVerified，required actions 为空且已有 password credential；目标用户当前 Keycloak session 数为 0。
+- 日志：同一浏览器先有平台管理员 OIDC 302 成功，随后一条目标认证流程以 `authentication_expired` 返回 500；没有目标成员成功回调，因此原首次登录激活事务未发生。
+- 修复：受控激活入口在远端仍待激活时重发邮件；远端已激活时同步成员为 `ACTIVE`，保持角色/资料/绑定不变并记录 `company_member.identity_activation_synced` 脱敏审计。
+- 后端：`AdminUserServiceTest,KeycloakIdentityProvisioningServiceTest,AuthServiceTest` 通过，`mvn -q -DskipTests package` 通过。
+- 前端：完整 Vitest 42 文件/229 项通过，生产构建通过；仅保留既有 bundle-size warning。
+- 状态：`passed_with_uat_pending`
 
 ## 2026-08-11 TASK-281 beta.4 UAT 初始化缺口
 
