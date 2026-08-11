@@ -1,11 +1,11 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-11T03:35:00Z
+updated_at: 2026-08-11T03:48:46Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-11T03:35:00Z
-last_run_status: passed_with_uat_pending
+last_run_at: 2026-08-11T03:48:46Z
+last_run_status: passed_with_business_acceptance_pending
 ---
 
 # Test Report
@@ -17,8 +17,11 @@ last_run_status: passed_with_uat_pending
 - 前端定向：`AdminUsersPage.test.ts` 与 `adminApi.test.ts` 共 3 项通过；完整 Vitest 41 个文件、225 项通过。
 - 前端构建：`npm run build` 通过，仅保留既有 bundle-size warning。
 - 静态检查：`git diff --check` 通过。
-- 验收边界：本地没有有效组织管理员登录态；尚未发布 UAT、未执行真实 Keycloak 发信、未修改 `18611892001`，受权桌面端页面与登录闭环留待 UAT。
-- 状态：`passed_with_uat_pending`
+- UAT 技术验收：`2.8.61-beta.3 / 47affe4086e5` 六容器 healthy；health=`UP`、Flyway V109、Nginx、HTTPS 200/HTTP 301 通过，匿名 `/auth/me`、用户目录和身份协调接口均为 401。
+- 稳定性：backend/frontend 30 秒内保持 healthy、restart=0；后端启动后 ERROR/Exception=0，前端启动后 error=0。启动期间曾有一次后端未就绪导致的短暂 upstream refused，后端就绪后未复现。
+- 状态校验：全仓 validator 仍因历史任务板归档、旧规格状态/front matter 和旧时间格式债务退出 1；输出不含 `TASK-280`、`FEAT-168` 或本轮更新时间 finding，未越界批量改写历史记录。
+- 验收边界：未执行真实 Keycloak 发信、未调用目标成员修复、未修改 `18611892001`；真实 ORG_ADMIN 页面与登录闭环仍待业务验收。
+- 状态：`passed_with_business_acceptance_pending`
 
 ## 2026-08-11 TASK-278 AI表格 UAT scope 回归修复预检
 

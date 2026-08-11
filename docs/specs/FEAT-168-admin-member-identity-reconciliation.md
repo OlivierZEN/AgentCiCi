@@ -7,7 +7,7 @@ owner_role: fullstack-agent
 task_ids: TASK-280
 related_decisions: "FEAT-145 HUMAN 统一身份；FEAT-166 Owner 身份协调"
 related_issues: none
-updated_at: 2026-08-11T03:35:00Z
+updated_at: 2026-08-11T03:48:46Z
 updated_by: codex
 ---
 
@@ -49,3 +49,8 @@ updated_by: codex
 
 - 回滚前后端应用版本即可移除入口和接口；本功能不新增数据库迁移。
 - 已由正式接口创建的 Keycloak 用户和本地身份绑定属于有效身份事实，不因 UI 回滚而删除。
+
+## UAT 发布
+
+- `2.8.61-beta.3 / 47affe4086e5` 已发布 UAT；运行、迁移、匿名鉴权与稳定性验证通过。
+- 发布不等于真实成员修复：`18611892001` 的正式协调、邮件激活与登录回归仍需受权 ORG_ADMIN 会话执行。

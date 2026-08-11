@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-11T03:05:00Z
+updated_at: 2026-08-11T03:48:46Z
 updated_by: codex
 board_status: active
 ---
@@ -25,7 +25,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-280.md`
 - blocked_by: `none`
 - scope_files: `AdminUserService, AdminUserController, AdminUsersPage, focused tests, styles`
-- next_action: `经授权发布 UAT，通过真实 ORG_ADMIN 页面修复目标成员并回读身份与登录状态`
+- next_action: `通过真实 ORG_ADMIN 页面检查入口；另行授权后再修复目标成员并回读身份与登录状态`
 
 ### TASK-279 - DevAutopilot 产品经理委托授权模型调整
 

@@ -1,12 +1,20 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-11T02:34:13Z
+updated_at: 2026-08-11T03:48:46Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-11 TASK-280 UAT `2.8.61-beta.3`
+
+- Git tag/commit 为 `2.8.61-beta.3 / 47affe4086e5`；backend/frontend ACR index digest 为 `sha256:90a91ac1509e9ada62f691ebb7c5eb6f99fdaa3f31e1d2d5bafdea970534cc62` / `sha256:a48cc331e49e7af4955e336af059739980d2d3da8c4b9b822c63a054a35f3714`。该版本沿主线包含已存在的 `2.8.61-beta.2` TASK-279 变更。
+- 发布前完整备份 `/data/apps/agentcici/backups/20260811T034122Z-before-2.8.61-beta.3-task280` 的 Compose、受保护环境、旧前后端镜像、PostgreSQL、KB 与 Qdrant 工件均非空且为 `0600`；应用回滚目标为 `2.8.61-beta.1`。
+- UAT 无 ACR 登录态，使用已核对 digest 的 linux/amd64 镜像经 SSH 压缩流导入，未复制或持久化 registry 凭据。仅 force-recreate backend/frontend；database、Redis、RabbitMQ、Qdrant ID 哈希保持 `b5dca5759af2a9cfb0ed4285fdb3b01c9af02db33eb2bfbabfa347fe728de2bc`。
+- 六容器 healthy、restart=0，health=`UP`，版本/镜像/Git SHA 一致，Flyway V109 成功，Nginx 有效，HTTPS 200、HTTP 301，匿名 `/auth/me`、用户目录与身份协调接口为 401。30 秒稳定窗口内启动后应用错误计数为 0；启动期间前端曾在后端就绪前出现一次短暂 upstream refused，未持续。
+- 本次发布未调用 `18611892001` 的真实身份协调接口、未发激活邮件或修改成员状态；真实 ORG_ADMIN 页面与登录回归仍待业务验收。
 
 ## 2026-08-11 TASK-278 UAT `2.8.61-beta.1`
 

@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-11T03:35:00Z
+updated_at: 2026-08-11T03:48:46Z
 updated_by: codex
 phase: implementation
 active_task: TASK-279
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-280 / FEAT-168 已完成待评审：组织用户页现在返回脱敏统一身份状态，并在“CloudCC账号绑定信息”中为 `ACTIVE + MISSING` 成员提供独立“修复统一身份”入口。操作要求手机号二次确认，复用 Keycloak HUMAN provisioning，保持角色和资料不变；需要首次激活时转为 `PENDING_ACTIVATION` 并发信，相同幂等键只执行一次且写入脱敏平台审计。后端定向测试、package、前端完整 225 项测试和生产构建通过；尚未发布 UAT，也未修改目标成员数据。
+- TASK-280 / FEAT-168 已发布 UAT `2.8.61-beta.3 / 47affe4086e5`：组织用户页返回脱敏统一身份状态，并在“CloudCC账号绑定信息”中为 `ACTIVE + MISSING` 成员提供独立“修复统一身份”入口。操作要求手机号二次确认，复用 Keycloak HUMAN provisioning，保持角色和资料不变；需要首次激活时转为 `PENDING_ACTIVATION` 并发信，相同幂等键只执行一次且写入脱敏平台审计。后端定向测试、package、前端完整 225 项测试和生产构建通过；UAT 六容器 healthy、Flyway V109、Nginx、公网与匿名 401 边界、30 秒稳定窗口均通过。尚未调用真实修复接口或修改 `18611892001`。
 
 - TASK-279 / FEAT-167 已获用户批准并启动：机器主体人类负责人继续承担治理与问责，不再是唯一业务调用者。目标权限模型为租户 OWNER/ORG_ADMIN 与负责人自动 APP_ADMIN，普通成员按 VIEWER/CONTRIBUTOR/REVIEWER/APP_ADMIN 显式授权；OACT 和审计分别记录负责人和实际发起人，前端在发送前展示权限，SSE 错误不再落入 JSON 全局异常处理。
 
