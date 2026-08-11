@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-11T02:34:13Z
+updated_at: 2026-08-11T03:05:00Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,30 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-280 - 组织成员统一身份修复入口
+
+- status: `review`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-168-admin-member-identity-reconciliation.md`
+- task_status_path: `.claw/tasks/TASK-280.md`
+- blocked_by: `none`
+- scope_files: `AdminUserService, AdminUserController, AdminUsersPage, focused tests, styles`
+- next_action: `经授权发布 UAT，通过真实 ORG_ADMIN 页面修复目标成员并回读身份与登录状态`
+
+### TASK-279 - DevAutopilot 产品经理委托授权模型调整
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-167-devautopilot-delegated-execution-access.md`
+- task_status_path: `.claw/tasks/TASK-279.md`
+- blocked_by: `none`
+- scope_files: `V109, AgentServicePrincipalExecutionService, DevAutopilot tenant admin API/UI, Agent list executionAccess, Chat SSE, focused tests`
+- next_action: `实现应用角色权限矩阵、双主体审计与前端预检`
 
 ### TASK-277 - 平台租户 Owner 统一身份协调入口
 

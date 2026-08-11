@@ -5,6 +5,7 @@ describe("admin browser API paths", () => {
   it("keeps every browser management API outside the SPA route namespace", () => {
     expect(adminApi.users()).toBe("/api/admin/users");
     expect(adminApi.users("/member-1/activation-email")).toBe("/api/admin/users/member-1/activation-email");
+    expect(adminApi.users("/member-1/identity-reconciliation")).toBe("/api/admin/users/member-1/identity-reconciliation");
     expect(adminApi.servicePrincipals()).toBe("/api/admin/service-principals");
     expect(adminApi.servicePrincipals("/principal-1/rotate-secret")).toBe("/api/admin/service-principals/principal-1/rotate-secret");
     expect(adminApi.devAutopilotTeam()).toBe("/api/admin/devautopilot/team");

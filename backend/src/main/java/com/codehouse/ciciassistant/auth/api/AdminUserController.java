@@ -50,6 +50,23 @@ public class AdminUserController {
         return ApiResponse.ok(adminUserService.resendActivationEmail(companyId, userId));
     }
 
+    @PostMapping("/{userId}/identity-reconciliation")
+    public ApiResponse<Map<String, Object>> reconcileIdentity(
+            @PathVariable String userId,
+            @Valid @RequestBody ReconcileIdentityRequest request) {
+        String companyId = TenantContext.requireCompanyId();
+        String actorUserId = TenantContext.getUserId()
+                .orElseThrow(() -> new IllegalArgumentException("Missing user context"));
+        String actorRole = TenantContext.getRoles().stream().findFirst().orElse("ORG_ADMIN");
+        return ApiResponse.ok(adminUserService.reconcileIdentity(
+                companyId,
+                userId,
+                request.confirmMobile(),
+                request.idempotencyKey(),
+                actorUserId,
+                actorRole));
+    }
+
     @PutMapping("/{userId}/role")
     public ApiResponse<Map<String, Object>> updateRole(
             @PathVariable String userId,
@@ -103,6 +120,12 @@ public class AdminUserController {
     }
 
     public record UpdateUserRoleRequest(@NotBlank String roleCode) {
+    }
+
+    public record ReconcileIdentityRequest(
+            @NotBlank String confirmMobile,
+            @NotBlank String idempotencyKey
+    ) {
     }
 
     public record UpdateUserProfileRequest(

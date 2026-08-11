@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-11T02:34:13Z
+updated_at: 2026-08-11T03:35:00Z
 updated_by: codex
-phase: review
-active_task: TASK-277
-next_action: "TASK-278 已完成；继续等待受权 PLATFORM_ADMIN 在生产租户应用页执行既有 TASK-277 Owner 身份协调。"
+phase: implementation
+active_task: TASK-279
+next_action: "按 FEAT-167 实现 DevAutopilot 应用角色委托、双主体审计、前端权限预检和 SSE 结构化错误。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,10 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-280 / FEAT-168 已完成待评审：组织用户页现在返回脱敏统一身份状态，并在“CloudCC账号绑定信息”中为 `ACTIVE + MISSING` 成员提供独立“修复统一身份”入口。操作要求手机号二次确认，复用 Keycloak HUMAN provisioning，保持角色和资料不变；需要首次激活时转为 `PENDING_ACTIVATION` 并发信，相同幂等键只执行一次且写入脱敏平台审计。后端定向测试、package、前端完整 225 项测试和生产构建通过；尚未发布 UAT，也未修改目标成员数据。
+
+- TASK-279 / FEAT-167 已获用户批准并启动：机器主体人类负责人继续承担治理与问责，不再是唯一业务调用者。目标权限模型为租户 OWNER/ORG_ADMIN 与负责人自动 APP_ADMIN，普通成员按 VIEWER/CONTRIBUTOR/REVIEWER/APP_ADMIN 显式授权；OACT 和审计分别记录负责人和实际发起人，前端在发送前展示权限，SSE 错误不再落入 JSON 全局异常处理。
 
 - TASK-278 / FEAT-158 已完成：UAT AI表格“业务数据服务暂时不可用”根因为 `2.8.60-beta.1` HUMAN OACT scopes 缺少 `metadata.read`。`2.8.61-beta.1 / d4b273af39c2` 已恢复最低元数据/记录读取范围并上线测试发布门禁；受权租户页面回读 6 个 DevAutopilot 业务对象、真实 0 记录空状态，console error/warning 为 0。只重建 backend/frontend，状态服务未变；生产保持 `2.8.60`。
 

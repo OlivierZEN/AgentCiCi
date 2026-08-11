@@ -14,12 +14,36 @@ type UserRow = {
   email?: string;
   roleCode: string;
   memberStatus?: string;
+  identityState?: "MISSING" | "PENDING_ACTIVATION" | "ACTIVE" | "BLOCKED";
   createdAt: string;
   nickname?: string;
   ccUsername?: string;
   ccSafetymark?: string;
   avatarBase64?: string;
 };
+
+export function memberIdentityLabel(identityState?: UserRow["identityState"]): string {
+  switch (identityState) {
+    case "MISSING": return "未绑定";
+    case "PENDING_ACTIVATION": return "等待用户激活";
+    case "ACTIVE": return "已绑定，可登录";
+    case "BLOCKED": return "已停用";
+    default: return "状态未知";
+  }
+}
+
+export function canReconcileMemberIdentity(user: UserRow | null): boolean {
+  return Boolean(user && user.memberStatus === "ACTIVE"
+    && user.identityState === "MISSING");
+}
+
+function maskedEmail(email?: string): string {
+  if (!email) return "未登记邮箱";
+  const [local, domain] = email.split("@");
+  if (!domain) return "邮箱格式异常";
+  const visible = local.slice(0, Math.min(2, local.length));
+  return `${visible}${"*".repeat(Math.max(2, Math.min(6, local.length - visible.length)))}@${domain}`;
+}
 
 type AdminAuthPayload = {
   userId?: string;
@@ -59,6 +83,10 @@ export default function AdminUsersPage() {
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
   const [resendActivationModalOpen, setResendActivationModalOpen] = useState(false);
   const [resendActivationSubmitting, setResendActivationSubmitting] = useState(false);
+  const [identityReconciliationModalOpen, setIdentityReconciliationModalOpen] = useState(false);
+  const [identityReconciliationSubmitting, setIdentityReconciliationSubmitting] = useState(false);
+  const [identityReconciliationConfirmation, setIdentityReconciliationConfirmation] = useState("");
+  const [identityReconciliationKey, setIdentityReconciliationKey] = useState("");
   const [avatarPreview, setAvatarPreview] = useState("");
 
   const load = async () => {
@@ -209,12 +237,41 @@ export default function AdminUsersPage() {
     }
   };
 
+  const reconcileIdentity = async (userId: string) => {
+    setIdentityReconciliationSubmitting(true);
+    try {
+      const res = await fetch(adminApi.users(`/${encodeURIComponent(userId)}/identity-reconciliation`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          confirmMobile: identityReconciliationConfirmation.trim(),
+          idempotencyKey: identityReconciliationKey,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        setNotice(json.message ?? "统一身份修复失败");
+        return;
+      }
+      setIdentityReconciliationModalOpen(false);
+      setIdentityReconciliationConfirmation("");
+      await load();
+      setNotice(json.data?.memberStatus === STATUS_PENDING_ACTIVATION
+        ? "统一身份已修复，激活邮件已发送，请提醒成员在 24 小时内完成验证"
+        : "统一身份已修复，该成员现在可以使用统一登录");
+    } catch {
+      setNotice("统一身份修复失败");
+    } finally {
+      setIdentityReconciliationSubmitting(false);
+    }
+  };
+
   useEffect(() => {
     void load();
   }, [token]);
 
   useEffect(() => {
-    if (!inviteModalOpen && !resendActivationModalOpen) return;
+    if (!inviteModalOpen && !resendActivationModalOpen && !identityReconciliationModalOpen) return;
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       if (inviteModalOpen && !inviteSubmitting) {
@@ -223,10 +280,15 @@ export default function AdminUsersPage() {
       if (resendActivationModalOpen && !resendActivationSubmitting) {
         setResendActivationModalOpen(false);
       }
+      if (identityReconciliationModalOpen && !identityReconciliationSubmitting) {
+        setIdentityReconciliationModalOpen(false);
+        setIdentityReconciliationConfirmation("");
+      }
     };
     document.addEventListener("keydown", closeOnEscape);
     return () => document.removeEventListener("keydown", closeOnEscape);
-  }, [inviteModalOpen, inviteSubmitting, resendActivationModalOpen, resendActivationSubmitting]);
+  }, [inviteModalOpen, inviteSubmitting, resendActivationModalOpen, resendActivationSubmitting,
+    identityReconciliationModalOpen, identityReconciliationSubmitting]);
 
   const filteredUsers = users.filter((u) => {
     const q = keyword.trim().toLowerCase();
@@ -239,6 +301,7 @@ export default function AdminUsersPage() {
   const selectedIsOwner = selected?.roleCode === ROLE_OWNER;
   const selectedIsSuspended = selected?.memberStatus === STATUS_SUSPENDED;
   const selectedIsPendingActivation = selected?.memberStatus === STATUS_PENDING_ACTIVATION;
+  const selectedCanReconcileIdentity = canReconcileMemberIdentity(selected);
 
   useEffect(() => {
     if (!selected) return;
@@ -484,6 +547,34 @@ export default function AdminUsersPage() {
 
               {activeTab === "cloudcc" && (
                 <>
+                  <div className="user-identity-summary">
+                    <div>
+                      <span className="subtle">统一登录身份</span>
+                      <strong>{memberIdentityLabel(selected.identityState)}</strong>
+                      <p>
+                        {selected.identityState === "MISSING"
+                          ? "当前成员记录有效，但尚未建立统一登录身份。修复不会改变成员角色或资料。"
+                          : selected.identityState === "PENDING_ACTIVATION"
+                            ? "成员需通过激活邮件验证邮箱并设置首次登录密码。"
+                            : selected.identityState === "ACTIVE"
+                              ? "该成员已具备统一登录身份。"
+                              : "该成员当前不能使用统一登录。"}
+                      </p>
+                    </div>
+                    {selectedCanReconcileIdentity && (
+                      <button
+                        type="button"
+                        className="user-text-action"
+                        onClick={() => {
+                          setIdentityReconciliationConfirmation("");
+                          setIdentityReconciliationKey(globalThis.crypto.randomUUID());
+                          setIdentityReconciliationModalOpen(true);
+                        }}
+                      >
+                        修复统一身份
+                      </button>
+                    )}
+                  </div>
                   <div className="user-detail-grid">
                     <div className="subtle">CloudCC用户名</div>
                     <div>
@@ -649,6 +740,84 @@ export default function AdminUsersPage() {
               </button>
             </div>
           </section>
+        </div>
+      )}
+
+      {identityReconciliationModalOpen && selected && (
+        <div
+          className="user-invite-modal-backdrop"
+          role="presentation"
+          onClick={(event) => {
+            if (event.target === event.currentTarget && !identityReconciliationSubmitting) {
+              setIdentityReconciliationModalOpen(false);
+              setIdentityReconciliationConfirmation("");
+            }
+          }}
+        >
+          <form
+            className="user-invite-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="identity-reconciliation-modal-title"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void reconcileIdentity(selected.id);
+            }}
+          >
+            <div className="user-invite-modal__head">
+              <h2 id="identity-reconciliation-modal-title">修复统一身份</h2>
+              <button
+                type="button"
+                className="user-invite-modal__close"
+                aria-label="关闭统一身份修复"
+                onClick={() => {
+                  setIdentityReconciliationModalOpen(false);
+                  setIdentityReconciliationConfirmation("");
+                }}
+                disabled={identityReconciliationSubmitting}
+              >
+                ×
+              </button>
+            </div>
+            <div className="user-invite-modal__body">
+              <p className="user-activation-confirmation">
+                将为 <strong>{selected.nickname || selected.mobile}</strong> 补建或恢复统一身份，并在需要时向
+                <strong> {maskedEmail(selected.email)}</strong> 发送激活邮件。不会修改角色、资料或 CloudCC 绑定。
+              </p>
+              <label className="user-invite-field">
+                <span>输入成员手机号 {selected.mobile} 以确认</span>
+                <input
+                  value={identityReconciliationConfirmation}
+                  onChange={(event) => setIdentityReconciliationConfirmation(event.target.value)}
+                  placeholder="请输入完整手机号"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  autoFocus
+                  required
+                />
+              </label>
+            </div>
+            <div className="user-invite-modal__foot">
+              <button
+                type="button"
+                className="user-invite-modal__secondary"
+                onClick={() => {
+                  setIdentityReconciliationModalOpen(false);
+                  setIdentityReconciliationConfirmation("");
+                }}
+                disabled={identityReconciliationSubmitting}
+              >
+                取消
+              </button>
+              <button
+                type="submit"
+                className="user-invite-modal__primary"
+                disabled={identityReconciliationSubmitting || identityReconciliationConfirmation.trim() !== selected.mobile}
+              >
+                {identityReconciliationSubmitting ? "修复中" : "确认修复"}
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>

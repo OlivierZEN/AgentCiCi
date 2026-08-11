@@ -1,6 +1,7 @@
 package com.codehouse.ciciassistant.auth.service;
 
 import com.codehouse.ciciassistant.auth.RoleCodes;
+import com.codehouse.ciciassistant.auth.domain.AccountExternalIdentityRepository;
 import com.codehouse.ciciassistant.auth.domain.AccountLoginIdentifierEntity;
 import com.codehouse.ciciassistant.auth.domain.AccountLoginIdentifierRepository;
 import com.codehouse.ciciassistant.auth.domain.CompanyRepository;
@@ -10,6 +11,7 @@ import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.auth.domain.UserRepository;
 import com.codehouse.ciciassistant.common.util.AvatarDataUrlValidator;
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
+import com.codehouse.ciciassistant.platform.service.PlatformAuditService;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,22 +22,30 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AdminUserService {
 
+    private static final String IDENTITY_RECONCILIATION_EVENT = "company_member.identity_reconciled";
+
     private final UserRepository userRepository;
     private final CompanyRepository companyRepository;
     private final UserAccountRepository userAccountRepository;
     private final AccountLoginIdentifierRepository accountLoginIdentifierRepository;
+    private final AccountExternalIdentityRepository accountExternalIdentityRepository;
     private final KeycloakIdentityProvisioningService keycloakIdentityProvisioningService;
+    private final PlatformAuditService auditService;
 
     public AdminUserService(UserRepository userRepository,
                             CompanyRepository companyRepository,
                             UserAccountRepository userAccountRepository,
                             AccountLoginIdentifierRepository accountLoginIdentifierRepository,
-                            KeycloakIdentityProvisioningService keycloakIdentityProvisioningService) {
+                            AccountExternalIdentityRepository accountExternalIdentityRepository,
+                            KeycloakIdentityProvisioningService keycloakIdentityProvisioningService,
+                            PlatformAuditService auditService) {
         this.userRepository = userRepository;
         this.companyRepository = companyRepository;
         this.userAccountRepository = userAccountRepository;
         this.accountLoginIdentifierRepository = accountLoginIdentifierRepository;
+        this.accountExternalIdentityRepository = accountExternalIdentityRepository;
         this.keycloakIdentityProvisioningService = keycloakIdentityProvisioningService;
+        this.auditService = auditService;
     }
 
     public List<Map<String, Object>> listUsers(String companyId) {
@@ -96,6 +106,57 @@ public class AdminUserService {
             throw new IllegalStateException("仅可向待激活成员重发初始化邮件");
         }
         keycloakIdentityProvisioningService.resendHumanActivation(target.getAccount());
+        return toRow(target);
+    }
+
+    /**
+     * Repairs an ACTIVE company member whose local unified-identity binding is
+     * missing. The operation deliberately preserves role and profile data and
+     * moves the membership to PENDING_ACTIVATION only when Keycloak still
+     * requires the member to verify email or establish a password.
+     */
+    @Transactional
+    public Map<String, Object> reconcileIdentity(
+            String companyId,
+            String userId,
+            String confirmMobile,
+            String idempotencyKey,
+            String actorUserId,
+            String actorRole) {
+        UserEntity target = userRepository.findByIdAndCompany_Id(userId, companyId)
+                .orElseThrow(() -> new IllegalArgumentException("成员不存在或不属于当前组织"));
+        if (!normalizeMobile(confirmMobile).equals(normalizeMobile(target.getMobile()))) {
+            throw new IllegalArgumentException("手机号确认不匹配");
+        }
+        String normalizedIdempotencyKey = trimOrNull(idempotencyKey);
+        if (normalizedIdempotencyKey == null) {
+            throw new IllegalArgumentException("幂等键不能为空");
+        }
+        String idempotencyFragment = "idempotencyKey=" + normalizedIdempotencyKey + ";";
+        if (auditService.hasEventDetail(companyId, IDENTITY_RECONCILIATION_EVENT, target.getId(), idempotencyFragment)) {
+            return toRow(target);
+        }
+        if (!UserEntity.STATUS_ACTIVE.equals(target.getMemberStatus())) {
+            throw new IllegalStateException("仅可修复状态为有效且统一身份缺失的成员");
+        }
+        if (accountExternalIdentityRepository.findByAccount_Id(target.getAccountId()).isPresent()) {
+            throw new IllegalStateException("该成员已绑定统一身份，无需修复");
+        }
+
+        KeycloakIdentityProvisioningService.ProvisionResult identity = keycloakIdentityProvisioningService
+                .ensureHumanIdentity(target.getAccount());
+        if (identity.activationRequired()) {
+            target.setMemberStatus(UserEntity.STATUS_PENDING_ACTIVATION);
+        }
+        userRepository.saveAndFlush(target);
+        auditService.log(
+                companyId,
+                actorUserId,
+                actorRole,
+                IDENTITY_RECONCILIATION_EVENT,
+                "company_member_identity",
+                target.getId(),
+                idempotencyFragment + "activationRequired=" + identity.activationRequired());
         return toRow(target);
     }
 
@@ -240,12 +301,26 @@ public class AdminUserService {
         row.put("email", u.getAccount() == null || u.getAccount().getEmail() == null ? "" : u.getAccount().getEmail());
         row.put("roleCode", u.getRoleCode());
         row.put("memberStatus", u.getMemberStatus());
+        row.put("identityState", identityState(u));
         row.put("nickname", u.getNickname() == null ? "" : u.getNickname());
         row.put("ccUsername", u.getCcUsername() == null ? "" : u.getCcUsername());
         row.put("ccSafetymark", u.getCcSafetymark() == null ? "" : u.getCcSafetymark());
         row.put("avatarBase64", u.getAvatarBase64() == null ? "" : u.getAvatarBase64());
         row.put("createdAt", u.getCreatedAt().toString());
         return row;
+    }
+
+    private String identityState(UserEntity user) {
+        if (UserEntity.STATUS_SUSPENDED.equals(user.getMemberStatus())) {
+            return "BLOCKED";
+        }
+        if (accountExternalIdentityRepository.findByAccount_Id(user.getAccountId()).isEmpty()) {
+            return "MISSING";
+        }
+        if (UserEntity.STATUS_PENDING_ACTIVATION.equals(user.getMemberStatus())) {
+            return "PENDING_ACTIVATION";
+        }
+        return "ACTIVE";
     }
 
     private UserAccountEntity findOrCreateMobileAccount(String mobileValue, String email, String nickname) {

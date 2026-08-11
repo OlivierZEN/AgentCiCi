@@ -1,14 +1,24 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-11T02:34:13Z
+updated_at: 2026-08-11T03:35:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-11T02:34:13Z
-last_run_status: passed
+last_run_at: 2026-08-11T03:35:00Z
+last_run_status: passed_with_uat_pending
 ---
 
 # Test Report
+
+## 2026-08-11 TASK-280 组织成员统一身份修复入口
+
+- 后端定向：`mvn -q -Dtest=AdminUserServiceTest,KeycloakIdentityProvisioningServiceTest test` 通过，覆盖身份缺失协调、资料/角色保持、手机号确认、已绑定拒绝、幂等回放及既有 Keycloak provisioning。
+- 后端构建：`mvn -q -DskipTests package` 通过。
+- 前端定向：`AdminUsersPage.test.ts` 与 `adminApi.test.ts` 共 3 项通过；完整 Vitest 41 个文件、225 项通过。
+- 前端构建：`npm run build` 通过，仅保留既有 bundle-size warning。
+- 静态检查：`git diff --check` 通过。
+- 验收边界：本地没有有效组织管理员登录态；尚未发布 UAT、未执行真实 Keycloak 发信、未修改 `18611892001`，受权桌面端页面与登录闭环留待 UAT。
+- 状态：`passed_with_uat_pending`
 
 ## 2026-08-11 TASK-278 AI表格 UAT scope 回归修复预检
 
