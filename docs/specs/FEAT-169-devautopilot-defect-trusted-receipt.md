@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-169
 title: DevAutopilot defect tool and trusted write receipt
-status: implemented
+status: in_implementation
 owner_role: integration-agent
 task_ids: TASK-281
 related_decisions: none
 related_issues: none
-updated_at: 2026-08-11T08:45:00Z
+updated_at: 2026-08-11T09:15:00Z
 updated_by: codex
 ---
 
@@ -44,6 +44,7 @@ updated_by: codex
 - 消费 Semattice `dev_defect` runtime record 契约；`company_id` 和 tenant 只来自可信 OACT。
 - 新 Tool 结果保持 JSON；旧项目/需求/任务 Tool 继续兼容，但同样受回执门禁。
 - Agent 发布补偿必须幂等，不重建租户 Agent 或 SERVICE。
+- 既有租户执行标准初始化补偿时，必须以独立 shape revision 幂等键重新应用 Semattice 模板，并只在回读 7 对象/83 字段后更新 activation 的 metadata version/digest；初始化完成后仍保留“同步标准模板”入口，用于幂等补齐后续模板演进。
 
 ## 验收标准
 

@@ -1,6 +1,7 @@
 package com.codehouse.ciciassistant.platform.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
@@ -9,6 +10,7 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.codehouse.ciciassistant.agent.service.AgentDefinitionService;
@@ -102,5 +104,51 @@ class DevAutopilotTenantApplicationReadinessTest {
         order.verify(jdbc, times(2)).update(contains("INSERT INTO tenant_application_resource"), any(Object[].class));
         order.verify(execution).configure("company-a", "agent-a", "service-principal-a", true, "owner-member");
         verify(execution).configure("company-a", "agent-a", "service-principal-a", true, "owner-member");
+    }
+
+    @Test
+    void reappliesAndPersistsTheCurrentSevenObjectMetadataBaselineDuringReconciliation() {
+        SematticeDevAutopilotTemplateClient template = mock(SematticeDevAutopilotTemplateClient.class);
+        JdbcTemplate metadataJdbc = mock(JdbcTemplate.class);
+        DevAutopilotTenantApplicationService metadataService = service(metadataJdbc, template);
+        String key = DevAutopilotTenantApplicationService.metadataReconciliationKey("activation-a");
+        when(template.apply("company-a", key)).thenReturn(new SematticeDevAutopilotTemplateClient.TemplateView(
+                "company-a", "tenant-a", "metadata-v2", "digest-v2", 7, 83, "applied"));
+
+        var result = metadataService.reconcileMetadataBaseline("company-a", "activation-a");
+
+        assertThat(result.metadataVersionId()).isEqualTo("metadata-v2");
+        verify(metadataJdbc).update(contains("metadata_version_id=?"),
+                eq("metadata-v2"), eq("digest-v2"), eq("activation-a"));
+    }
+
+    @Test
+    void refusesToMarkInitializationCompleteWhenSematticeReturnsTheOldSixObjectShape() {
+        SematticeDevAutopilotTemplateClient template = mock(SematticeDevAutopilotTemplateClient.class);
+        JdbcTemplate metadataJdbc = mock(JdbcTemplate.class);
+        DevAutopilotTenantApplicationService metadataService = service(metadataJdbc, template);
+        when(template.apply(eq("company-a"), anyString())).thenReturn(new SematticeDevAutopilotTemplateClient.TemplateView(
+                "company-a", "tenant-a", "metadata-v1", "digest-v1", 6, 60, "already_applied"));
+
+        assertThatThrownBy(() -> metadataService.reconcileMetadataBaseline("company-a", "activation-a"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("metadata baseline is incomplete");
+        verifyNoInteractions(metadataJdbc);
+    }
+
+    private DevAutopilotTenantApplicationService service(JdbcTemplate targetJdbc,
+                                                          SematticeDevAutopilotTemplateClient template) {
+        return new DevAutopilotTenantApplicationService(
+                targetJdbc,
+                mock(CompanyRepository.class),
+                mock(SematticeProvisioningService.class),
+                template,
+                mock(ServicePrincipalService.class),
+                mock(AgentDefinitionService.class),
+                mock(DevAutopilotProductManagerAgentPublisher.class),
+                mock(AgentServicePrincipalExecutionService.class),
+                mock(PlatformAuditService.class),
+                List.of("runtime.record.read"),
+                List.of("runtime.record.read"));
     }
 }

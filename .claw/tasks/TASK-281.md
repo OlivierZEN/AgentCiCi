@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-281
-status: review
-updated_at: 2026-08-11T08:45:00Z
+status: in_progress
+updated_at: 2026-08-11T09:15:00Z
 updated_by: codex
 assignee: codex
 owner_role: integration-agent
@@ -18,7 +18,8 @@ integration_id: INT-009
 - 已确认根因为缺少 `dev_defect` 对象/Tool，且模型成功声明没有服务端回执门禁。
 - 本地实现已完成：确定性缺陷草稿/确认、租户 PM SERVICE 写入、`runtime.record.get` 写后回读、字段/revision/correlation 校验、流式结构化回执和前端独立回执卡片均已落地。
 - 定向后端、完整前端测试和前端构建已通过；完整 Maven 套件因本机 PostgreSQL/Hikari 连接重试被人工停止，不能记为全绿。
-- 等待 Semattice `TASK-073` 先发布 UAT 后，再发布 AgentCiCi `2.8.61-beta.4` 并执行正负向业务验收。
+- Semattice `1.0.3-beta.3` 与 AgentCiCi `2.8.61-beta.4` 已技术发布；正式补偿发现旧 `initializations` 只重发 Agent/Skill、没有重新应用 Semattice 模板，老租户仍可能停在 6 对象。
+- 正在补齐模板 shape revision 幂等应用、7 对象/83 字段回读门禁、activation metadata version/digest 回写和可重复执行的“同步标准模板”入口；修复候选推进为 `2.8.61-beta.5`。
 
 ## Done When
 

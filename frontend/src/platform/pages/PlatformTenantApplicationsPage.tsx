@@ -224,7 +224,7 @@ export default function PlatformTenantApplicationsPage() {
       const { body } = await safeFetchJson(response);
       if (!response.ok || !body?.success) throw new Error(body?.message ?? `HTTP ${response.status}`);
       setDevAutopilot(body.data as DevAutopilotApplication);
-      setMessage("DevAutopilot 标准初始化已完成：产品经理智能体及其受控机器主体已就绪。");
+      setMessage("DevAutopilot 标准模板已同步：Semattice 业务对象、产品经理智能体及其受控机器主体已就绪。");
     } catch (err) { setError(err instanceof Error ? err.message : "DevAutopilot 初始化补齐失败"); } finally { setBusy(false); }
   }
 
@@ -390,7 +390,13 @@ export default function PlatformTenantApplicationsPage() {
                         <div><dt>模板版本</dt><dd>{devAutopilot.templateVersion}</dd></div><div><dt>租户标识</dt><dd>{detail.tenant.companyId}</dd></div>
                         <div><dt>数据底座</dt><dd>Semattice（已绑定）</dd></div><div><dt>初始化状态</dt><dd>{devAutopilotInitializationReady(devAutopilot) ? "已完成" : "待补齐"}</dd></div>
                       </dl>
-                      <div className="tenant-application-card__foot tenant-application-card__foot--action"><span><ShieldCheck size={14} aria-hidden="true" />{devAutopilotInitializationReady(devAutopilot) ? "关闭仅暂停本租户运行入口，不删除数据" : "历史开通记录缺少标准资源，需要补齐初始化"}</span><button type="button" className="platform-button platform-button--primary tenant-application-card__primary-action" disabled={busy} onClick={() => void (devAutopilotInitializationReady(devAutopilot) ? changeDevAutopilotState(devAutopilot.actualState === "SUSPENDED" ? "resumptions" : "suspensions") : reconcileDevAutopilotInitialization())}>{devAutopilotInitializationReady(devAutopilot) ? (devAutopilot.actualState === "SUSPENDED" ? "恢复运行" : "暂停应用") : "补齐初始化"}</button></div>
+                      <div className="tenant-application-card__foot tenant-application-card__foot--action">
+                        <span><ShieldCheck size={14} aria-hidden="true" />{devAutopilotInitializationReady(devAutopilot) ? "关闭仅暂停本租户运行入口，不删除数据" : "历史开通记录缺少标准资源，需要补齐初始化"}</span>
+                        <div className="tenant-application-card__actions">
+                          {devAutopilotInitializationReady(devAutopilot) ? <button type="button" className="platform-button platform-button--secondary" disabled={busy} onClick={() => void reconcileDevAutopilotInitialization()}>同步标准模板</button> : null}
+                          <button type="button" className="platform-button platform-button--primary tenant-application-card__primary-action" disabled={busy} onClick={() => void (devAutopilotInitializationReady(devAutopilot) ? changeDevAutopilotState(devAutopilot.actualState === "SUSPENDED" ? "resumptions" : "suspensions") : reconcileDevAutopilotInitialization())}>{devAutopilotInitializationReady(devAutopilot) ? (devAutopilot.actualState === "SUSPENDED" ? "恢复运行" : "暂停应用") : "补齐初始化"}</button>
+                        </div>
+                      </div>
                       <p className="skills-data-table__summary">研发产品经理智能体与其机器主体由模板创建，名称和负责人可由该租户的 ORG_ADMIN 在 AgentCiCi 管理端调整；开发者由租户按需新增。</p>
                     </> : <div className="tenant-application-card__foot tenant-application-card__foot--action">
                       <span>需先开通 Semattice；开通后自动创建标准产品经理智能体与机器主体。</span>

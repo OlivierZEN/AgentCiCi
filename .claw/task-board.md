@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-11T08:45:00Z
+updated_at: 2026-08-11T09:15:00Z
 updated_by: codex
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-281 - DevAutopilot 缺陷 Tool 与可信写入回执
 
-- status: `review`
+- status: `in_progress`
 - priority: `critical`
 - owner_role: `integration-agent`
 - integration_id: `INT-009`
 - spec_path: `docs/specs/FEAT-169-devautopilot-defect-trusted-receipt.md`
 - task_status_path: `.claw/tasks/TASK-281.md`
 - depends_on: `TASK-275, cc-semattice TASK-073`
-- next_action: `等待 Semattice TASK-073 提供方 UAT 可用，再发布 2.8.61-beta.4 并验证真实创建、回读与失败关闭`
+- next_action: `发布 2.8.61-beta.5，正式补偿两个租户的 7 对象/83 字段模板与产品经理 Skill，再执行真实缺陷回执验收`
 
 ### TASK-280 - 组织成员统一身份修复入口
 

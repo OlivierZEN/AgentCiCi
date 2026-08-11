@@ -1,12 +1,18 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-11T08:45:00Z
+updated_at: 2026-08-11T09:15:00Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-11 TASK-281 UAT beta.4 技术发布与 beta.5 修正
+
+- `2.8.61-beta.4 / 50ad506d39b8` 镜像 digest：backend `sha256:6005e7093f14e2ccb47fdb88e38e15208efc731962afbf2bb087712bfdd41ac1`，frontend `sha256:8d8b07cdf3e8498163c6f10af7003972a004a131d60270d2bc23d96bc5df5fcf`。
+- 发布前完整备份 `/data/apps/agentcici/backups/20260811T045726Z-before-2.8.61-beta.4-task281` 含 Compose、受保护环境、PostgreSQL、KB、Qdrant 与 beta.3 前后端镜像，全部非空且 `0600`。仅重建 backend/frontend，四个状态服务 ID 哈希保持 `b5dca5759af2a9cfb0ed4285fdb3b01c9af02db33eb2bfbabfa347fe728de2bc`。
+- beta.4 技术门禁通过，但业务补偿暴露未重放 metadata template；下一候选为 `2.8.61-beta.5`，仍复用上述备份作为 beta.3 回滚点并在新发布前增加 beta.4 镜像备份。
 
 ## 2026-08-11 TASK-281 UAT 候选门禁
 

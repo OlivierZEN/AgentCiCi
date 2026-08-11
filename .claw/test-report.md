@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-11T08:45:00Z
+updated_at: 2026-08-11T09:15:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-11T08:45:00Z
+last_run_at: 2026-08-11T09:15:00Z
 last_run_status: partial
 ---
 
 # Test Report
+
+## 2026-08-11 TASK-281 beta.4 UAT 初始化缺口
+
+- 技术发布：`2.8.61-beta.4 / 50ad506d39b8` 前后端 healthy、restart=0，health/version/Nginx/匿名 401 通过；四个状态服务 ID 哈希保持不变。
+- 正式操作：第二租户 `initializations` 返回 ACTIVE、initializationReady=true、3 个资源，产品经理 Agent/Skill 补偿成功。
+- 失败边界：代码复核确认补偿入口没有调用 Semattice template apply，`initializationReady` 也不校验 activation 的 metadata shape；因此不能证明老租户已有 `dev_defect`，beta.4 不记为业务通过。
+- 修复验证目标：beta.5 必须证明正式补偿返回 7 对象/83 字段对应的新 metadata version，并在 Semattice 控制台/运行时回读 `dev_defect`。
+- beta.5 本地修复：`DevAutopilotTenantApplicationReadinessTest` 与可信回执相关 5 个后端测试类通过，覆盖 7/83 成功回写和 6/60 失败关闭；平台应用页定向 4 项测试与 `npm run build` 通过，新增幂等“同步标准模板”入口。首次前端定向命令误带 `frontend/` 前缀导致 Vitest 未找到文件，修正为 `src/...` 后通过；该命令错误不计产品失败。
 
 ## 2026-08-11 TASK-281 缺陷可信写入回执本地验证
 

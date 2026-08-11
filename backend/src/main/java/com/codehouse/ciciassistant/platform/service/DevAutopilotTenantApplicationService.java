@@ -206,11 +206,33 @@ public class DevAutopilotTenantApplicationService {
         if (!"ACTIVE".equals(activation.actualState())) {
             throw new ForbiddenException("Only an active DevAutopilot application can be initialized");
         }
+        var metadata = reconcileMetadataBaseline(companyId, activation.id());
         initializeProductManager(companyId, activation.id(), initialOwnerMemberId(companyId));
         reconcilePrincipalProjections(companyId, activation.id(), platformActor);
         audit.log(companyId, platformActor, "PLATFORM", "tenant_application.initialization_reconciled", "tenant_application", activation.id(),
-                "DevAutopilot standard tenant resources reconciled");
+                "DevAutopilot standard tenant resources reconciled; metadata=" + metadata.metadataVersionId());
         return requireView(companyId);
+    }
+
+    SematticeDevAutopilotTemplateClient.TemplateView reconcileMetadataBaseline(String companyId, String activationId) {
+        var metadata = template.apply(companyId, metadataReconciliationKey(activationId));
+        if (!companyId.equals(metadata.companyId())
+                || metadata.objectCount() != 7
+                || metadata.fieldCount() != 83
+                || !("applied".equals(metadata.state()) || "already_applied".equals(metadata.state()))) {
+            throw new IllegalStateException("Semattice DevAutopilot metadata baseline is incomplete");
+        }
+        jdbc.update("""
+                UPDATE tenant_application_activation
+                SET metadata_version_id=?,metadata_digest=?,last_error_code=NULL,updated_at=CURRENT_TIMESTAMP
+                WHERE id=?
+                """, metadata.metadataVersionId(), metadata.snapshotDigest(), activationId);
+        return metadata;
+    }
+
+    static String metadataReconciliationKey(String activationId) {
+        require(activationId, "activationId");
+        return "devautopilot.standard.v1:shape-7x83:" + activationId;
     }
 
     @Transactional

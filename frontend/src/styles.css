@@ -16959,6 +16959,13 @@ td.skills-data-table__actions > * {
   line-height: 1.4;
 }
 
+.tenant-application-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .tenant-application-card__text-action {
   display: inline-flex;
   align-items: center;
