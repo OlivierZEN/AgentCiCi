@@ -105,9 +105,6 @@ public class SematticeProjectDeliveryWriteToolService {
         if (!CONFIRM_PENDING_INTAKE.matcher(question == null ? "" : question.trim()).matches()) {
             return Optional.empty();
         }
-        if (!hasPendingIntake(messages)) {
-            return Optional.empty();
-        }
         return pendingIntake(messages, objectMapper)
                 .flatMap(intake -> intake.toCreateIntent(conversationId));
     }
@@ -162,7 +159,7 @@ public class SematticeProjectDeliveryWriteToolService {
         if (messages == null || messages.isEmpty()) {
             return false;
         }
-        ObjectMapper objectMapper = new ObjectMapper();
+        ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
         for (int index = messages.size() - 1; index >= 0; index--) {
             Map<String, Object> message = messages.get(index);
             String content = String.valueOf(message.getOrDefault("content", ""));
@@ -186,7 +183,7 @@ public class SematticeProjectDeliveryWriteToolService {
                 return !latest.path("cancelled").asBoolean(false);
             }
         }
-        return false;
+        return visiblePendingIntake(messages, objectMapper).isPresent();
     }
 
     private static boolean isTerminalIntakeAnswer(String content) {
@@ -686,15 +683,153 @@ public class SematticeProjectDeliveryWriteToolService {
     }
 
     private static Optional<IntakeDraft> pendingIntake(List<Map<String, Object>> messages, ObjectMapper objectMapper) {
-        Optional<JsonNode> latest = latestIntakeNode(messages, objectMapper);
-        if (latest.isEmpty()) {
-            return Optional.empty();
+        if (messages != null) {
+            for (int index = messages.size() - 1; index >= 0; index--) {
+                Map<String, Object> message = messages.get(index);
+                if ("assistant".equals(String.valueOf(message.get("role")))
+                        && isTerminalIntakeAnswer(String.valueOf(message.getOrDefault("content", "")))) {
+                    return Optional.empty();
+                }
+            }
         }
+        Optional<JsonNode> latest = latestIntakeNode(messages, objectMapper);
         List<String> userMessages = messages == null ? List.of() : messages.stream()
                 .filter(message -> "user".equals(String.valueOf(message.get("role"))))
                 .map(message -> String.valueOf(message.getOrDefault("content", "")))
                 .toList();
-        return IntakeDraft.parse(latest.get(), userMessages, objectMapper);
+        if (latest.isPresent()) {
+            return IntakeDraft.parse(latest.get(), userMessages, objectMapper);
+        }
+        return visiblePendingIntake(messages, objectMapper);
+    }
+
+    /**
+     * Recovers a governed intake when a model produced the user-visible confirmation draft but
+     * omitted the invisible JSON marker. The fallback never executes from a bare user message:
+     * it requires a classified assistant draft that explicitly asks for confirmation, preserves
+     * the verbatim user report, and fills uncertain engineering details as developer verification.
+     */
+    private static Optional<IntakeDraft> visiblePendingIntake(
+            List<Map<String, Object>> messages, ObjectMapper objectMapper) {
+        if (messages == null || messages.isEmpty()) {
+            return Optional.empty();
+        }
+        String draft = "";
+        for (int index = messages.size() - 1; index >= 0; index--) {
+            Map<String, Object> message = messages.get(index);
+            if (!"assistant".equals(String.valueOf(message.get("role")))) {
+                continue;
+            }
+            String content = String.valueOf(message.getOrDefault("content", ""));
+            if (isTerminalIntakeAnswer(content)) {
+                return Optional.empty();
+            }
+            String compact = content.replaceAll("\\s+", "");
+            boolean classifiedDraft = compact.contains("缺陷创建草案")
+                    || compact.contains("缺陷内容摘要")
+                    || compact.contains("需求创建草案")
+                    || compact.contains("需求内容摘要")
+                    || compact.contains("变更创建草案")
+                    || compact.contains("变更内容摘要");
+            boolean asksConfirmation = compact.contains("确认创建") || compact.contains("确认提交");
+            if (classifiedDraft && asksConfirmation) {
+                draft = content;
+                break;
+            }
+        }
+        if (draft.isBlank()) {
+            return Optional.empty();
+        }
+
+        List<String> userMessages = messages.stream()
+                .filter(message -> "user".equals(String.valueOf(message.get("role"))))
+                .map(message -> String.valueOf(message.getOrDefault("content", "")))
+                .toList();
+        String original = userMessages.stream()
+                .filter(message -> !CONFIRM_PENDING_INTAKE.matcher(message.trim()).matches())
+                .filter(message -> !isDraftContinuation(message))
+                .filter(SematticeProjectDeliveryWriteToolService::isDraftRequest)
+                .findFirst()
+                .orElse("");
+        if (original.isBlank()) {
+            return Optional.empty();
+        }
+        List<String> supplements = userMessages.stream()
+                .dropWhile(message -> !message.equals(original))
+                .skip(1)
+                .filter(message -> !CONFIRM_PENDING_INTAKE.matcher(message.trim()).matches())
+                .toList();
+
+        String compact = draft.replace("**", "").replace("`", "");
+        String classification = compact.contains("缺陷") ? "defect"
+                : compact.contains("变更") ? "change" : compact.contains("需求") ? "requirement" : "";
+        String title = firstMatch(compact,
+                "(?m)(?:缺陷标题|需求标题|变更标题|标题)\\s*[：:]\\s*([^\\n|]+)");
+        String project = firstMatch(compact,
+                "(?m)(?:关联项目|父项目|项目)\\s*[：:]\\s*([^\\n|（(]+)");
+        String requirement = firstMatch(compact,
+                "(?m)(?:关联需求|父需求|需求)\\s*[：:]\\s*([^\\n|（(]+)");
+        String priority = firstMatch(compact, "(?i)\\b(P[0-3])\\b").toUpperCase(Locale.ROOT);
+        String severity = firstMatch(compact, "(?i)\\b(critical|high|medium|low)\\b").toLowerCase(Locale.ROOT);
+        String environment = firstMatch(compact,
+                "(?m)(?:环境|预计环境)\\s*[：:]\\s*([^\\n|]+)");
+        if (title.isBlank() || classification.isBlank()) {
+            return Optional.empty();
+        }
+        if (priority.isBlank()) {
+            priority = "P2";
+        }
+        if ("defect".equals(classification) && severity.isBlank()) {
+            severity = "medium";
+        }
+        if ("defect".equals(classification) && environment.isBlank()) {
+            environment = "待开发者验证";
+        }
+
+        String assessment = switch (classification) {
+            case "defect" -> "产品经理根据用户原始描述识别为已有能力偏离正常预期，分类为缺陷";
+            case "change" -> "产品经理根据用户原始描述识别为对已确认范围或规则的调整，分类为变更";
+            default -> "产品经理根据用户原始描述识别为新增能力或业务结果，分类为需求";
+        };
+        List<String> reproduction = "defect".equals(classification)
+                ? List.of("由全栈开发者基于用户原始描述复现并验证") : List.of();
+        String expected = "defect".equals(classification)
+                ? "功能应符合用户正常使用预期，具体结果由全栈开发者验证" : "";
+        String actual = "defect".equals(classification) ? original : "";
+        List<String> acceptance = "requirement".equals(classification)
+                ? List.of("由产品经理与全栈开发者基于用户原始描述细化并验证验收标准") : List.of();
+        List<String> impact = "change".equals(classification)
+                ? List.of("由产品经理与全栈开发者评估受影响范围并完成验证") : List.of();
+        List<String> assumptions = List.of("工程细节由全栈开发者在源代码、开发环境和测试环境中验证");
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("version", "DEV_AUTOPILOT_INTAKE_V1");
+        payload.put("classification", classification);
+        payload.put("project", project);
+        payload.put("requirement", requirement);
+        payload.put("title", title);
+        payload.put("original_report", original);
+        payload.put("pm_assessment", assessment);
+        payload.put("priority", priority);
+        payload.put("severity", severity);
+        payload.put("environment", environment);
+        payload.put("reproduction_steps", reproduction);
+        payload.put("expected_result", expected);
+        payload.put("actual_result", actual);
+        payload.put("acceptance_criteria", acceptance);
+        payload.put("impact_analysis", impact);
+        payload.put("user_supplements", supplements);
+        payload.put("assumptions", assumptions);
+        payload.put("developer_verification_pending", true);
+
+        return Optional.of(new IntakeDraft(classification, project, requirement, title, original,
+                assessment, priority, severity, environment, reproduction, expected, actual,
+                acceptance, impact, supplements, assumptions, payload));
+    }
+
+    private static String firstMatch(String value, String regex) {
+        Matcher matcher = Pattern.compile(regex).matcher(value == null ? "" : value);
+        return matcher.find() ? normalizeText(matcher.group(1)) : "";
     }
 
     private record IntakeDraft(String classification,

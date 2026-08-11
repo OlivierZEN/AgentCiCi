@@ -157,6 +157,42 @@ class SematticeProjectDeliveryWriteToolServiceTest {
     }
 
     @Test
+    void restoresAClassifiedDefectFromVisibleDraftWhenModelOmitsMarker() {
+        String original = "UAT验收：我在研发交付页面点击项目筛选后，筛选面板偶尔不会展开，需要刷新页面才能恢复。";
+        List<Map<String, Object>> messages = List.of(
+                Map.of("role", "user", "content", original),
+                Map.of("role", "assistant", "content", "## UAT缺陷受理处理中\n缺陷标题：研发交付页面项目筛选面板偶发性无法展开\n请回复：确认提交缺陷"),
+                Map.of("role", "user", "content", "确认提交缺陷"),
+                Map.of("role", "assistant", "content", "本轮没有获得 Semattice 的真实写入成功回执。"),
+                Map.of("role", "user", "content", "项目：智能体平台"),
+                Map.of("role", "assistant", "content", """
+                        ## UAT 缺陷创建草案
+                        **标题**：研发交付页面项目筛选面板偶发性无法展开
+                        **优先级**：P2
+                        **严重程度**：medium
+                        **环境**：UAT
+                        **关联项目**：智能体平台 (DAS-751707A5)
+                        如你确认无误，回复 `确认创建`。
+                        """));
+
+        var confirmed = SematticeProjectDeliveryWriteToolService.confirmedIntent(
+                "确认创建", messages, "conversation-uat", objectMapper);
+
+        assertThat(confirmed).hasValueSatisfying(intent -> {
+            assertThat(intent.operation()).isEqualTo("create_defect");
+            assertThat(intent.parentReference()).isEqualTo("智能体平台");
+            assertThat(intent.title()).isEqualTo("研发交付页面项目筛选面板偶发性无法展开");
+            assertThat(intent.description()).isEqualTo(original);
+            assertThat(intent.priority()).isEqualTo("P2");
+            assertThat(intent.severity()).isEqualTo("medium");
+            assertThat(intent.intake()).containsEntry("classification", "defect")
+                    .containsEntry("original_report", original)
+                    .containsEntry("user_supplements", List.of("项目：智能体平台"));
+        });
+        assertThat(SematticeProjectDeliveryWriteToolService.hasPendingIntake(messages)).isTrue();
+    }
+
+    @Test
     void exactDefectConfirmationCreatesAndReadsBackGovernedRecord() throws Exception {
         String confirmation = "确认提交缺陷：项目=DAS-001；标题=确认按钮无响应；描述=点击后页面没有变化；"
                 + "严重度=high；优先级=P1；环境=UAT Chrome；复现步骤=打开详情后点击确认；"
