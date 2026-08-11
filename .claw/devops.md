@@ -1,12 +1,20 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-11T03:48:46Z
+updated_at: 2026-08-11T03:53:08Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-11 TASK-279 UAT `2.8.61-beta.2`
+
+- Git tag/commit 为 `2.8.61-beta.2 / c66d9448c95b`；backend/frontend ACR index digest 为 `sha256:bf502768b299fb0cfa2f2b558c0fe866f788c63a9ab2dd96aed1c272d2e1b385` / `sha256:1f5cc632ad7b14d702bdf051d7d482130fe92df9d7743ee58a7e7ac5a9994ed4`。
+- 发布前完整备份 `/data/apps/agentcici/backups/20260811T033858Z-before-2.8.61-beta.2` 共 8 项，包含 Compose、受保护环境、旧前后端镜像、PostgreSQL、KB 与 Qdrant，均非空且为 `0600`。
+- 仅重建 backend/frontend；database、Qdrant、RabbitMQ、Redis 容器 ID 分别保持 `d14ef...`、`26aec...`、`4166...`、`db094...`。V109、health、Nginx、HTTPS 与匿名鉴权边界通过。
+- 后续 `2.8.61-beta.3 / 47affe4086e5` 是 `c66d9448c95b` 的后继版本，当前 UAT 已由该版本覆盖并包含 TASK-279。未为本任务回退 beta.3；最终业务验收在 beta.3 上完成。
+- 回滚应用时恢复上述备份并仅重建 backend/frontend；V109 为向后兼容新增可保留。若回滚到只理解 `PRIMARY_OWNER` 的旧代码，必须先通过受管初始化恢复兼容绑定，禁止直接写库。
 
 ## 2026-08-11 TASK-280 UAT `2.8.61-beta.3`
 

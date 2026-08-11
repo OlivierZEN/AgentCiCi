@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-279
-status: in_progress
-updated_at: 2026-08-11T03:05:00Z
+status: done
+updated_at: 2026-08-11T03:53:08Z
 updated_by: codex
 assignee: codex
 owner_role: fullstack-agent
@@ -14,9 +14,9 @@ spec_path: docs/specs/FEAT-167-devautopilot-delegated-execution-access.md
 
 ## Current State
 
-- UAT 日志与只读数据确认产品经理 Agent、SERVICE Principal、Keycloak identity、Semattice provisioning 和 scopes 健康。
-- 当前登录租户 ORG_ADMIN 与机器主体 PRIMARY 负责人不是同一成员；`authorizeSemattice` 的 owner-only SQL 因此拒绝执行。
-- 流式链路发送 `error` 后调用 `completeWithError`，导致全局 JSON 异常处理器尝试写入已提交的 SSE 响应。
+- 已按应用角色拆分机器主体治理负责人和业务调用者，负责人继续承担所有权、生命周期与问责，不再是唯一委托人。
+- `2.8.61-beta.2 / c66d9448c95b` 已发布 UAT；当前 UAT 后续版本 `2.8.61-beta.3 / 47affe4086e5` 沿主线包含本任务全部变更。
+- Demo Company 的非负责人 `ORG_ADMIN` 已通过产品经理 Agent 查询 Semattice；审计同时记录实际调用者和不同的治理负责人。
 
 ## Scope
 
@@ -26,8 +26,14 @@ spec_path: docs/specs/FEAT-167-devautopilot-delegated-execution-access.md
 
 ## Next Action
 
-- 新增 V109 和后端授权/管理服务，先用定向测试固定权限矩阵和双主体审计。
+- 无；生产发布时将当前下一生产版本候选整体晋升，并保留 V109 与应用角色数据。
 
 ## Verification
 
-- 尚未执行。
+- V109 从空 PostgreSQL 16 的 V1 到 V109 共 105 项 migration 全部成功；两条 DevAutopilot 绑定均为 `TENANT_APP_ROLE`，应用角色表存在。
+- 后端产品经理授权、SSE、初始化 readiness、Semattice 查询/创建/评审定向测试通过；前端应用角色管理和聊天预检定向测试通过，生产构建通过。
+- 完整 Maven 套件已尝试，但 15 份集成报告因本机 `localhost:5432` 拒绝连接未完成，未记为全量通过；UAT 真实 PostgreSQL/Flyway 和业务链路另行通过。
+- UAT `2.8.61-beta.2` 只重建 backend/frontend，完整备份非空且 `0600`，四个状态服务 ID 不变；六容器、health、Nginx、匿名 401 和启动日志通过。
+- 第二租户 OWNER 查询项目成功；Demo Company 的 `ORG_ADMIN`（非机器负责人）查询成功，返回本租户 0 项目，并在审计中出现 `delegationPolicy=TENANT_APP_ROLE`、`appRole=APP_ADMIN`、不同的 actor/owner principal。
+- 租户管理端“管理应用调用权限”弹窗显示负责人和 ORG_ADMIN 自动 APP_ADMIN、普通 ORG_USER 默认不允许调用；未修改任何角色，浏览器 error/warning 为 0。
+- 当前 UAT `2.8.61-beta.3` 是 `c66d9448c95b` 的后继版本，V109 和本任务业务验收均保持通过。

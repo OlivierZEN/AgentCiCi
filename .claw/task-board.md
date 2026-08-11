@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-11T03:48:46Z
+updated_at: 2026-08-11T03:53:08Z
 updated_by: codex
 board_status: active
 ---
@@ -26,18 +26,6 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - scope_files: `AdminUserService, AdminUserController, AdminUsersPage, focused tests, styles`
 - next_action: `通过真实 ORG_ADMIN 页面检查入口；另行授权后再修复目标成员并回读身份与登录状态`
-
-### TASK-279 - DevAutopilot 产品经理委托授权模型调整
-
-- status: `in_progress`
-- priority: `critical`
-- owner_role: `fullstack-agent`
-- claimed_by: `codex`
-- spec_path: `docs/specs/FEAT-167-devautopilot-delegated-execution-access.md`
-- task_status_path: `.claw/tasks/TASK-279.md`
-- blocked_by: `none`
-- scope_files: `V109, AgentServicePrincipalExecutionService, DevAutopilot tenant admin API/UI, Agent list executionAccess, Chat SSE, focused tests`
-- next_action: `实现应用角色权限矩阵、双主体审计与前端预检`
 
 ### TASK-277 - 平台租户 Owner 统一身份协调入口
 
@@ -1461,6 +1449,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-279 - DevAutopilot 产品经理委托授权模型调整
+
+- status: `done`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-167-devautopilot-delegated-execution-access.md`
+- task_status_path: `.claw/tasks/TASK-279.md`
+- blocked_by: `none`
+- next_action: `已由 2.8.61-beta.2 实现并在当前 2.8.61-beta.3 完成非负责人 ORG_ADMIN 双主体审计业务验收`
 
 ### TASK-275 - DevAutopilot 标准租户应用控制面
 

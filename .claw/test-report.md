@@ -1,14 +1,26 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-11T03:48:46Z
+updated_at: 2026-08-11T03:53:08Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-11T03:48:46Z
-last_run_status: passed_with_business_acceptance_pending
+last_run_at: 2026-08-11T03:53:08Z
+last_run_status: passed
 ---
 
 # Test Report
+
+## 2026-08-11 TASK-279 DevAutopilot 委托授权与双主体 UAT 验收
+
+- 数据与迁移：空 PostgreSQL 16 从 V1 到 V109 共 105 项 migration 全部成功；UAT V109=`success`，`tenant_application_member_role` 存在，两条 DevAutopilot 执行绑定均为 `TENANT_APP_ROLE`。
+- 后端定向：`AgentServicePrincipalExecutionServiceTest`、`ChatOrchestratorSseErrorTest`、`DevAutopilotTenantApplicationReadinessTest` 以及 Semattice 查询/创建/评审工具测试通过，覆盖应用角色矩阵、负责人/调用者分离、初始化补偿和 SSE 结构化结束。
+- 前端定向：应用角色管理与聊天预检 2 个文件、3 项通过；此前关联 4 个文件、8 项回归通过，`npm run build` 通过。
+- 完整套件边界：完整 Maven 套件已尝试，15 份集成报告因本机 PostgreSQL `localhost:5432` 拒绝连接未完成，不能记为全量通过；真实 UAT PostgreSQL、Flyway 与业务链路已另行验收。
+- UAT 技术验收：首发 `2.8.61-beta.2 / c66d9448c95b`，仅重建 backend/frontend；备份 8 项非空且为 `0600`，四个状态服务 ID 不变，容器、health、Nginx、HTTPS、匿名 401 和启动日志通过。当前 `2.8.61-beta.3 / 47affe4086e5` 是该提交后继版本并保持 V109 成功。
+- UAT 业务验收：第二租户 OWNER 查询 Semattice 项目成功；Demo Company 的非机器负责人 `ORG_ADMIN` 查询成功并返回本租户 0 项目。审计记录 `delegationPolicy=TENANT_APP_ROLE`、`appRole=APP_ADMIN`，实际 actor 与 `ownerPrincipalId` 不同。
+- 管理端验收：“管理应用调用权限”独立弹窗显示机器负责人和 ORG_ADMIN 自动 APP_ADMIN、普通 ORG_USER 默认不允许调用；本轮只读未改角色，浏览器 error/warning 为 0。
+- 状态校验：全仓 validator 仍因既有任务板归档上限、历史终态卡片、旧规格状态/front matter 和旧时区格式债务退出 1；输出不含 `TASK-279` 或 `FEAT-167` finding，未越界批量改写历史记录。
+- 状态：`passed`
 
 ## 2026-08-11 TASK-280 组织成员统一身份修复入口
 

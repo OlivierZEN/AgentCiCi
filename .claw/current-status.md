@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-11T03:48:46Z
+updated_at: 2026-08-11T03:53:08Z
 updated_by: codex
 phase: implementation
-active_task: TASK-279
-next_action: "按 FEAT-167 实现 DevAutopilot 应用角色委托、双主体审计、前端权限预检和 SSE 结构化错误。"
+active_task: TASK-280
+next_action: "等待单独业务授权后，由真实 ORG_ADMIN 通过正式入口协调目标成员统一身份并完成登录回归。"
 read_next:
   goals: false
   decisions: false
@@ -24,7 +24,7 @@ read_next:
 
 - TASK-280 / FEAT-168 已发布 UAT `2.8.61-beta.3 / 47affe4086e5`：组织用户页返回脱敏统一身份状态，并在“CloudCC账号绑定信息”中为 `ACTIVE + MISSING` 成员提供独立“修复统一身份”入口。操作要求手机号二次确认，复用 Keycloak HUMAN provisioning，保持角色和资料不变；需要首次激活时转为 `PENDING_ACTIVATION` 并发信，相同幂等键只执行一次且写入脱敏平台审计。后端定向测试、package、前端完整 225 项测试和生产构建通过；UAT 六容器 healthy、Flyway V109、Nginx、公网与匿名 401 边界、30 秒稳定窗口均通过。尚未调用真实修复接口或修改 `18611892001`。
 
-- TASK-279 / FEAT-167 已获用户批准并启动：机器主体人类负责人继续承担治理与问责，不再是唯一业务调用者。目标权限模型为租户 OWNER/ORG_ADMIN 与负责人自动 APP_ADMIN，普通成员按 VIEWER/CONTRIBUTOR/REVIEWER/APP_ADMIN 显式授权；OACT 和审计分别记录负责人和实际发起人，前端在发送前展示权限，SSE 错误不再落入 JSON 全局异常处理。
+- TASK-279 / FEAT-167 已完成并通过 UAT 业务验收：`2.8.61-beta.2 / c66d9448c95b` 将机器主体治理负责人和业务调用者分离，租户 OWNER/ORG_ADMIN 与负责人自动 APP_ADMIN，普通成员按 VIEWER/CONTRIBUTOR/REVIEWER/APP_ADMIN 显式授权；OACT/审计分别记录负责人和实际发起人，前端在发送前预检权限，SSE 错误结构化结束。Demo Company 的非负责人 ORG_ADMIN 已成功调用产品经理查询 Semattice，审计中的 actor 与 owner 不同；管理弹窗角色回读正确，浏览器无 error/warning。当前 UAT `2.8.61-beta.3` 沿主线包含该提交与 V109。
 
 - TASK-278 / FEAT-158 已完成：UAT AI表格“业务数据服务暂时不可用”根因为 `2.8.60-beta.1` HUMAN OACT scopes 缺少 `metadata.read`。`2.8.61-beta.1 / d4b273af39c2` 已恢复最低元数据/记录读取范围并上线测试发布门禁；受权租户页面回读 6 个 DevAutopilot 业务对象、真实 0 记录空状态，console error/warning 为 0。只重建 backend/frontend，状态服务未变；生产保持 `2.8.60`。
 
