@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-11T07:19:00Z
+updated_at: 2026-08-11T07:44:58Z
 updated_by: codex
 phase: verification
 active_task: TASK-280
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-282 / FEAT-170 / INT-012 已完成：backend/frontend本地镜像已由统一`./stack up`重建并运行，Flyway、共享PostgreSQL/Redis/RabbitMQ/Qdrant、Keycloak OIDC、Semattice、health、OACT JWKS、匿名边界及frontend Nginx配置通过。未执行完整AgentCiCi测试套件，前端依赖审计仍有高/严重项，因此尚不能形成UAT候选；ACR/UAT/生产未修改。
 
 - TASK-283 / FEAT-171 / INT-009 本地实现已完成并进入 review：产品经理可从普通用户自然描述主动识别需求、缺陷或变更，逐字校验原始描述与补充，生成专业整理和单问题澄清，通过短确认写入 Semattice `intake`；缺陷只从当前租户 active 全栈开发者池分派。相关定向测试通过；完整后端套件因本地 PostgreSQL 不可连接停在既有 Hikari 重试，未声明全量通过。未发布 UAT/生产。
 
