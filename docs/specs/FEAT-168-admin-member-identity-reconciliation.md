@@ -7,7 +7,7 @@ owner_role: fullstack-agent
 task_ids: TASK-280
 related_decisions: "FEAT-145 HUMAN 统一身份；FEAT-166 Owner 身份协调"
 related_issues: none
-updated_at: 2026-08-11T05:49:57Z
+updated_at: 2026-08-11T06:10:50Z
 updated_by: codex
 ---
 
@@ -17,10 +17,12 @@ updated_by: codex
 
 历史数据可能出现公司成员为 `ACTIVE`，但全局账号没有 `account_external_identity`，且 Keycloak 中没有对应 HUMAN 用户。用户管理页目前只展示成员状态，导致组织管理员看到“有效”却无法判断或修复统一登录身份。
 
-本功能在“组织控制台 → 用户 → CloudCC账号绑定信息”中显示脱敏的统一身份状态，并为同租户 `ACTIVE + MISSING` 成员提供独立修复操作。修复复用受管 Keycloak HUMAN provisioning，不复用“添加成员”，不改变角色、昵称、手机号、邮箱或 CloudCC 绑定信息。
+本功能在“组织控制台 → 用户”的成员整体信息栏中显示脱敏的统一身份状态，并为同租户 `ACTIVE + MISSING` 成员提供独立修复操作。统一身份属于成员本身，不属于 CloudCC 账号绑定；CloudCC 页签只维护 CloudCC 连接器字段。修复复用受管 Keycloak HUMAN provisioning，不复用“添加成员”，不改变角色、昵称、手机号、邮箱或 CloudCC 绑定信息。
 
 ## 交互设计
 
+- 统一身份状态、状态说明以及“修复统一身份”或“检查激活状态”操作固定显示在成员详情顶部整体信息栏，不随“基本信息 / CloudCC账号绑定信息”页签切换。
+- CloudCC 页签只显示 CloudCC 用户名、安全标记与保存操作，不展示统一身份状态、激活说明或身份修复动作。
 - 统一身份状态分为：`未绑定`、`等待用户激活`、`已绑定，可登录`、`已停用`。
 - `ACTIVE + MISSING` 时显示“修复统一身份”文本操作；点击后打开确认弹窗。
 - 弹窗展示目标成员和脱敏邮箱，要求管理员输入该成员当前手机号作二次确认。
@@ -42,6 +44,7 @@ updated_by: codex
 ## 验收标准
 
 - 用户列表返回每个成员的脱敏 `identityState`，不返回 issuer/subject。
+- 任一详情页签下都能在成员顶部整体信息栏看到统一身份状态；CloudCC 页签中不存在统一身份或激活操作。
 - `ACTIVE + MISSING` 成员可见修复按钮，其他状态不可见。
 - 手机号确认错误、跨租户、已绑定、待激活或停用成员均不能执行修复。
 - 修复不改变目标成员角色、资料和 CloudCC 绑定；需要激活时只把成员状态转为 `PENDING_ACTIVATION`。

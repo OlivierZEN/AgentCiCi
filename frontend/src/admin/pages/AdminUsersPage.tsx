@@ -32,6 +32,16 @@ export function memberIdentityLabel(identityState?: UserRow["identityState"]): s
   }
 }
 
+export function memberIdentityDescription(identityState?: UserRow["identityState"]): string {
+  switch (identityState) {
+    case "MISSING": return "当前成员记录有效，但尚未建立统一登录身份。修复不会改变成员角色或资料。";
+    case "PENDING_ACTIVATION": return "成员需通过激活邮件验证邮箱并设置首次登录密码。";
+    case "ACTIVE": return "该成员已具备统一登录身份。";
+    case "BLOCKED": return "该成员当前不能使用统一登录。";
+    default: return "暂时无法确认该成员的统一登录身份。";
+  }
+}
+
 export function canReconcileMemberIdentity(user: UserRow | null): boolean {
   return Boolean(user && user.memberStatus === "ACTIVE"
     && user.identityState === "MISSING");
@@ -444,17 +454,30 @@ export default function AdminUsersPage() {
                 </div>
               </div>
 
-              {selectedIsPendingActivation && (
-                <div className="user-activation-callout">
-                  <div>
-                    <strong>统一账号待激活</strong>
-                    <p>成员完成邮件验证和密码设置后，在此检查激活状态；尚未完成时会重发初始化邮件。</p>
-                  </div>
-                  <button type="button" className="user-btn-soft" onClick={() => setResendActivationModalOpen(true)}>
+              <div className="user-identity-summary" data-member-overview="unified-identity">
+                <div>
+                  <span className="subtle">统一登录身份</span>
+                  <strong>{memberIdentityLabel(selected.identityState)}</strong>
+                  <p>{memberIdentityDescription(selected.identityState)}</p>
+                </div>
+                {selectedIsPendingActivation ? (
+                  <button type="button" className="user-text-action" onClick={() => setResendActivationModalOpen(true)}>
                     检查激活状态
                   </button>
-                </div>
-              )}
+                ) : selectedCanReconcileIdentity ? (
+                  <button
+                    type="button"
+                    className="user-text-action"
+                    onClick={() => {
+                      setIdentityReconciliationConfirmation("");
+                      setIdentityReconciliationKey(globalThis.crypto.randomUUID());
+                      setIdentityReconciliationModalOpen(true);
+                    }}
+                  >
+                    修复统一身份
+                  </button>
+                ) : null}
+              </div>
 
               <div className="user-detail-tabs">
                 <button
@@ -553,34 +576,6 @@ export default function AdminUsersPage() {
 
               {activeTab === "cloudcc" && (
                 <>
-                  <div className="user-identity-summary">
-                    <div>
-                      <span className="subtle">统一登录身份</span>
-                      <strong>{memberIdentityLabel(selected.identityState)}</strong>
-                      <p>
-                        {selected.identityState === "MISSING"
-                          ? "当前成员记录有效，但尚未建立统一登录身份。修复不会改变成员角色或资料。"
-                          : selected.identityState === "PENDING_ACTIVATION"
-                            ? "成员需通过激活邮件验证邮箱并设置首次登录密码。"
-                            : selected.identityState === "ACTIVE"
-                              ? "该成员已具备统一登录身份。"
-                              : "该成员当前不能使用统一登录。"}
-                      </p>
-                    </div>
-                    {selectedCanReconcileIdentity && (
-                      <button
-                        type="button"
-                        className="user-text-action"
-                        onClick={() => {
-                          setIdentityReconciliationConfirmation("");
-                          setIdentityReconciliationKey(globalThis.crypto.randomUUID());
-                          setIdentityReconciliationModalOpen(true);
-                        }}
-                      >
-                        修复统一身份
-                      </button>
-                    )}
-                  </div>
                   <div className="user-detail-grid">
                     <div className="subtle">CloudCC用户名</div>
                     <div>

@@ -5871,34 +5871,11 @@ select {
   color: #9a6700;
 }
 
-.user-activation-callout {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  margin: -2px 0 18px;
-  padding: 12px 14px;
-  border: 1px solid #ded2bb;
-  border-left: 3px solid #b99652;
-  background: #fffaf0;
-}
-
-.user-activation-callout strong {
-  color: #5f3f14;
-  font-size: 13px;
-  font-weight: 750;
-}
-
-.user-activation-callout p,
 .user-activation-confirmation {
-  margin: 4px 0 0;
+  margin: 0;
   color: #5f523f;
   font-size: 13px;
   line-height: 1.65;
-}
-
-.user-activation-confirmation {
-  margin: 0;
 }
 
 .user-activation-confirmation strong {
@@ -6524,10 +6501,6 @@ select {
     margin-left: 0;
   }
 
-  .user-activation-callout {
-    align-items: flex-start;
-    flex-direction: column;
-  }
 }
 
 @media (max-width: 560px) {

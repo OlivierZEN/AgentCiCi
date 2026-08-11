@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { activationStatusNotice, canReconcileMemberIdentity, memberIdentityLabel } from "./AdminUsersPage";
+import {
+  activationStatusNotice,
+  canReconcileMemberIdentity,
+  memberIdentityDescription,
+  memberIdentityLabel,
+} from "./AdminUsersPage";
 
 describe("AdminUsersPage identity reconciliation", () => {
   it("labels the governed identity states", () => {
@@ -25,5 +30,12 @@ describe("AdminUsersPage identity reconciliation", () => {
   it("distinguishes a resent invitation from an activated status sync", () => {
     expect(activationStatusNotice("PENDING_ACTIVATION")).toContain("初始化邮件已重新发送");
     expect(activationStatusNotice("ACTIVE")).toContain("成员状态已同步为有效");
+  });
+
+  it("describes identity as a member-level login fact", () => {
+    expect(memberIdentityDescription("MISSING")).toContain("尚未建立统一登录身份");
+    expect(memberIdentityDescription("PENDING_ACTIVATION")).toContain("激活邮件");
+    expect(memberIdentityDescription("ACTIVE")).toBe("该成员已具备统一登录身份。");
+    expect(memberIdentityDescription("BLOCKED")).toContain("不能使用统一登录");
   });
 });
