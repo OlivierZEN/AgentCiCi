@@ -1,12 +1,20 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-11T09:15:00Z
+updated_at: 2026-08-11T05:49:57Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-11 TASK-280 / TASK-281 UAT `2.8.61-beta.7`
+
+- Git tag/commit 为 `2.8.61-beta.7 / 4f7ae57f0aec`；backend/frontend ACR index digest 为 `sha256:5041319afd6316e2b2f777100860a906fccd4bd7487f29cc6d1f1b3736be4980` / `sha256:7bb6f8ca4557a836134836e6f67886b0b0abf4917fa9ef269df5e5bb7bf71db5`。该候选同时包含主线已提交的 TASK-281 字段续答修复和 TASK-280 激活状态协调修复。
+- 发布前完整备份 `/data/apps/agentcici/backups/20260811T054429Z-before-2.8.61-beta.7-task280` 共 10 项，均非空且 `0600`；应用回滚目标为 `2.8.61-beta.6 / aeb40c4d25b7`。
+- UAT 无 ACR 登录态，使用已核对 digest 的 linux/amd64 镜像经 SSH 压缩流导入。仅 force-recreate backend/frontend；database、Redis、RabbitMQ、Qdrant ID 哈希保持 `b5dca5759af2a9cfb0ed4285fdb3b01c9af02db33eb2bfbabfa347fe728de2bc`。
+- 六容器 healthy、restart=0，health=`UP`，版本/镜像/Git SHA 一致，Flyway V109、Nginx、HTTPS 200、匿名 `/auth/me` 与激活接口 401 通过；30 秒稳定窗口启动后 backend/frontend 错误数为 0。
+- 当前无可控 ORG_ADMIN 浏览器会话，未绕过认证调用激活状态同步接口；`18611892001` 仍为 pending，等待页面正式操作与独立浏览器登录回归。
 
 ## 2026-08-11 TASK-281 UAT beta.4 技术发布与 beta.5 修正
 

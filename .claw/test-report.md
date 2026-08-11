@@ -1,11 +1,11 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-11T05:40:53Z
+updated_at: 2026-08-11T05:49:57Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-11T05:40:53Z
-last_run_status: passed_with_uat_pending
+last_run_at: 2026-08-11T05:49:57Z
+last_run_status: passed_with_business_acceptance_pending
 ---
 
 # Test Report
@@ -17,7 +17,9 @@ last_run_status: passed_with_uat_pending
 - 修复：受控激活入口在远端仍待激活时重发邮件；远端已激活时同步成员为 `ACTIVE`，保持角色/资料/绑定不变并记录 `company_member.identity_activation_synced` 脱敏审计。
 - 后端：`AdminUserServiceTest,KeycloakIdentityProvisioningServiceTest,AuthServiceTest` 通过，`mvn -q -DskipTests package` 通过。
 - 前端：完整 Vitest 42 文件/229 项通过，生产构建通过；仅保留既有 bundle-size warning。
-- 状态：`passed_with_uat_pending`
+- UAT 技术发布：`2.8.61-beta.7 / 4f7ae57f0aec` 六容器 healthy、restart=0，health=`UP`，Flyway V109、Nginx、HTTPS 200、匿名 auth 与新接口 401 通过；30 秒稳定窗口启动后错误数为 0，四个状态服务 ID 哈希未变。
+- 业务边界：当前没有可控 ORG_ADMIN 浏览器会话，未绕过认证调用正式同步接口；目标成员仍为 pending，等待管理员点击“检查激活状态”及独立浏览器登录回归。
+- 状态：`passed_with_business_acceptance_pending`
 
 ## 2026-08-11 TASK-281 beta.4 UAT 初始化缺口
 

@@ -7,7 +7,7 @@ owner_role: fullstack-agent
 task_ids: TASK-280
 related_decisions: "FEAT-145 HUMAN 统一身份；FEAT-166 Owner 身份协调"
 related_issues: none
-updated_at: 2026-08-11T05:40:53Z
+updated_at: 2026-08-11T05:49:57Z
 updated_by: codex
 ---
 
@@ -57,3 +57,4 @@ updated_by: codex
 
 - `2.8.61-beta.3 / 47affe4086e5` 已发布 UAT；运行、迁移、匿名鉴权与稳定性验证通过。
 - 发布不等于真实成员修复：`18611892001` 的正式协调、邮件激活与登录回归仍需受权 ORG_ADMIN 会话执行。
+- 激活状态协调修复已随 `2.8.61-beta.7 / 4f7ae57f0aec` 发布；技术门禁通过，正式状态同步和独立浏览器登录仍待业务验收。

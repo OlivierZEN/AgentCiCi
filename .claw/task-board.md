@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-11T05:40:53Z
+updated_at: 2026-08-11T05:49:57Z
 updated_by: codex
 board_status: active
 ---
@@ -17,7 +17,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-281 - DevAutopilot 缺陷 Tool 与可信写入回执
 
-- status: `in_progress`
+- status: `review`
 - priority: `critical`
 - owner_role: `integration-agent`
 - integration_id: `INT-009`
@@ -36,7 +36,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-280.md`
 - blocked_by: `none`
 - scope_files: `AdminUserService, AdminUserController, AdminUsersPage, focused tests, styles`
-- next_action: `随 beta.7 发布；ORG_ADMIN 点击检查激活状态同步为 ACTIVE，再以无既有 Keycloak SSO 的独立浏览器会话登录回归`
+- next_action: `ORG_ADMIN 刷新用户页后点击检查激活状态同步为 ACTIVE，再以无既有 Keycloak SSO 的独立浏览器会话登录回归`
 
 ### TASK-277 - 平台租户 Owner 统一身份协调入口
 
