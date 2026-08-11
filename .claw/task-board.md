@@ -15,6 +15,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-281 - DevAutopilot 缺陷 Tool 与可信写入回执
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `integration-agent`
+- integration_id: `INT-009`
+- spec_path: `docs/specs/FEAT-169-devautopilot-defect-trusted-receipt.md`
+- task_status_path: `.claw/tasks/TASK-281.md`
+- depends_on: `TASK-275, cc-semattice TASK-073`
+- next_action: `先实现流式/非流式成功声明硬门禁和失败回归，再接入缺陷 Tool`
+
 ### TASK-280 - 组织成员统一身份修复入口
 
 - status: `review`

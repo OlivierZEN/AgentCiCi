@@ -517,6 +517,7 @@ public class ChatOrchestratorService {
         String answer = forcedProjectDeliveryWriteAnswer.orElseGet(() -> forcedCrmProductSalesAnswer.orElseGet(() -> scheduleCadenceClarification.orElseGet(() -> runToolLoop(
                 modelName, messages, forcedProjectDeliveryQuery || projectDeliveryCreateDraftRequested ? List.of() : tools, companyId, userId, sessionId,
                 showThinking, skillContext, maxToolRounds, modelCredentials, modelCallTraces, toolCallTraces, runId))));
+        answer = DeliveryWriteReceiptGuard.enforce(safeQuestion, answer, toolCallTraces);
         try {
             agentPlanExecCanaryService.completeSynthesis(planExec, clipForTrace(answer, 1024));
         } catch (RuntimeException ex) {
@@ -902,6 +903,7 @@ public class ChatOrchestratorService {
                         }
                     }
                 }
+                finalText = DeliveryWriteReceiptGuard.enforce(safeQuestion, finalText, toolCallTraces);
                 finalText = applyOutputGateway(companyId, userId, "MODEL_STREAM_OUTPUT", finalText);
                 try {
                     agentPlanExecCanaryService.completeSynthesis(planExec, clipForTrace(finalText, 1024));
