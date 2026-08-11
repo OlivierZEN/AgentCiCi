@@ -127,6 +127,8 @@ public class SematticeProjectDeliveryWriteToolService {
                 || normalized.contains("提交") || normalized.contains("记录") || normalized.contains("登记")
                 || normalized.contains("希望") || normalized.contains("想要") || normalized.contains("建议")
                 || normalized.contains("报错") || normalized.contains("无法") || normalized.contains("不能")
+                || normalized.contains("不会") || normalized.contains("不生效") || normalized.contains("卡住")
+                || normalized.contains("崩溃") || normalized.contains("闪退")
                 || normalized.contains("不应该") || normalized.contains("应该") || normalized.contains("没有")
                 || normalized.contains("异常") || normalized.contains("失败") || normalized.contains("错误")
                 || normalized.contains("调整") || normalized.contains("修改") || normalized.contains("改成")

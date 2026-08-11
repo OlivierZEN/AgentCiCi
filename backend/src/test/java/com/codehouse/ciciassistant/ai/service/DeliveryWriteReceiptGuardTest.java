@@ -69,6 +69,11 @@ class DeliveryWriteReceiptGuardTest {
                 "请先确认草案。缺陷已成功提交，编号 BUG-FALSE。",
                 List.of()))
                 .startsWith("本轮没有获得 Semattice");
+        assertThat(DeliveryWriteReceiptGuard.enforce(
+                "确认提交缺陷",
+                "缺陷已整理并提交。正在等待工具调用回执以返回正式记录编号。",
+                List.of()))
+                .startsWith("本轮没有获得 Semattice");
     }
 
     @Test

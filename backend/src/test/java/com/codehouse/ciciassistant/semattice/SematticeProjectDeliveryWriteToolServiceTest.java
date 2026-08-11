@@ -89,6 +89,8 @@ class SematticeProjectDeliveryWriteToolServiceTest {
         assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest(
                 "退出后又自动进入系统，没有真正注销")).isTrue();
         assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest(
+                "我在研发交付页面点击项目筛选后，筛选面板偶尔不会展开，需要刷新页面才能恢复")).isTrue();
+        assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest(
                 "希望项目列表支持按负责人筛选")).isTrue();
         assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest(
                 "把已确认需求的审批规则改成产品总监确认")).isTrue();
