@@ -19,7 +19,7 @@ integration_id: INT-009
 - 本地实现已完成：确定性缺陷草稿/确认、租户 PM SERVICE 写入、`runtime.record.get` 写后回读、字段/revision/correlation 校验、流式结构化回执和前端独立回执卡片均已落地。
 - 定向后端、完整前端测试和前端构建已通过；完整 Maven 套件因本机 PostgreSQL/Hikari 连接重试被人工停止，不能记为全绿。
 - Semattice `1.0.3-beta.3` 与 AgentCiCi `2.8.61-beta.4` 已技术发布；正式补偿发现旧 `initializations` 只重发 Agent/Skill、没有重新应用 Semattice 模板，老租户仍可能停在 6 对象。
-- beta.5 已完成模板 shape revision 幂等应用并在 UAT 回读 7 对象/83 字段；真实对话发现回执守卫把“确认后成功提交”的将来时草案误判为已完成，安全失败关闭但阻断业务。已增加条件/将来时排除与完成态反例，修复候选推进为 `2.8.61-beta.6`。
+- beta.5 已完成模板 shape revision 幂等应用并在 UAT 回读 7 对象/83 字段；beta.6 解决将来时草案误拦，但真实续答又发现模型给出服务端不可执行的短确认。已增加待补充草案识别与字段续答路由，强制完整确认格式，修复候选推进为 `2.8.61-beta.7`。
 
 ## Done When
 

@@ -1568,9 +1568,12 @@ public class ChatOrchestratorService {
             List<Map<String, Object>> messages,
             ResolvedSkillContext skillContext,
             String question) {
+        boolean draftRequest = SematticeProjectDeliveryWriteToolService.isDraftRequest(question);
+        boolean draftContinuation = SematticeProjectDeliveryWriteToolService.isDraftContinuation(question)
+                && hasPendingDeliveryDraft(messages);
         if (skillContext == null
                 || !skillContext.allowedToolNames().contains(SematticeProjectDeliveryWriteToolService.TOOL_NAME)
-                || !SematticeProjectDeliveryWriteToolService.isDraftRequest(question)) {
+                || (!draftRequest && !draftContinuation)) {
             return false;
         }
         messages.add(Map.of(
@@ -1578,6 +1581,27 @@ public class ChatOrchestratorService {
                 "content", SematticeProjectDeliveryWriteToolService.modelDraftPrompt()
         ));
         return true;
+    }
+
+    static boolean hasPendingDeliveryDraft(List<Map<String, Object>> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return false;
+        }
+        int start = Math.max(0, messages.size() - 12);
+        for (int index = start; index < messages.size(); index++) {
+            Object content = messages.get(index).get("content");
+            if (!(content instanceof String text)) {
+                continue;
+            }
+            String normalized = text.replaceAll("\\s+", "");
+            if (normalized.contains("缺陷提交草案")
+                    || normalized.contains("待补充：父项目")
+                    || normalized.contains("请补充父项目信息")
+                    || normalized.contains("确认提交缺陷：项目=")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static String formatProjectDeliveryWriteResult(String toolResult) {

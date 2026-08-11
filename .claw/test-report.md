@@ -19,6 +19,7 @@ last_run_status: partial
 - beta.5 本地修复：`DevAutopilotTenantApplicationReadinessTest` 与可信回执相关 5 个后端测试类通过，覆盖 7/83 成功回写和 6/60 失败关闭；平台应用页定向 4 项测试与 `npm run build` 通过，新增幂等“同步标准模板”入口。首次前端定向命令误带 `frontend/` 前缀导致 Vitest 未找到文件，修正为 `src/...` 后通过；该命令错误不计产品失败。
 - beta.5 UAT：正式同步第二租户后，Semattice 权威库回读 metadata sequence=5、published、7 对象/83 字段，`dev_defect`=23 字段；产品经理/开发者 SERVICE 与 Owner HUMAN 投影均 active。真实未确认 Bug 请求未写入，但草案因“确认后成功提交”被守卫误拦，记为业务失败而非通过。
 - beta.6 本地：`DeliveryWriteReceiptGuardTest` 新增将来时草案正例和混合草案/虚假完成态反例；与写入、初始化、Skill 相关 6 个测试类全部通过。完成态成功声明仍须真实回执。
+- beta.6 UAT：未确认 Bug 请求已正常生成草案；补充“父项目：智能体平台”后，模型输出“确认提交此缺陷/允许提交缺陷”，与服务端完整确认契约不一致，故未调用 Tool、未写入记录，业务验收失败。beta.7 增加近期待补充草案和字段续答路由测试。
 
 ## 2026-08-11 TASK-281 缺陷可信写入回执本地验证
 

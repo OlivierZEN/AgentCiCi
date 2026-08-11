@@ -105,6 +105,18 @@ public class SematticeProjectDeliveryWriteToolService {
         return createLanguage && deliveryEntity;
     }
 
+    /** Recognizes a field-only reply that completes a pending delivery draft in chat history. */
+    public static boolean isDraftContinuation(String question) {
+        String normalized = question == null ? "" : question.trim().toLowerCase(Locale.ROOT);
+        if (normalized.isBlank() || confirmedIntent(normalized).isPresent()) {
+            return false;
+        }
+        return normalized.matches("^(?:父项目|项目编号|项目名称|项目|标题|描述|严重度|优先级|环境|复现步骤|预期结果|实际结果)\\s*[：:=].+")
+                || normalized.matches("^(?:父项目|项目)(?:是|为|叫).+")
+                || normalized.startsWith("补充：")
+                || normalized.startsWith("补充:");
+    }
+
     /** Model-only contract for understanding an unconfirmed delivery create request. */
     public static String modelDraftPrompt() {
         return """
@@ -131,7 +143,7 @@ public class SematticeProjectDeliveryWriteToolService {
 
                 如果是提交缺陷，必须先识别父项目、标题、描述、严重度（critical/high/medium/low）、优先级（P0/P1/P2/P3）、环境、复现步骤、预期结果和实际结果。信息完整时以如下唯一格式请求确认：
                 `确认提交缺陷：项目=<父项目编号或名称>；标题=<标题>；描述=<描述>；严重度=<critical|high|medium|low>；优先级=<P0|P1|P2|P3>；环境=<环境>；复现步骤=<步骤>；预期结果=<预期>；实际结果=<实际>`
-                缺少任一项时只追问缺失信息，不生成 Bug 编号、记录 ID 或对象位置。
+                缺少任一项时只追问缺失信息，不生成 Bug 编号、记录 ID 或对象位置。用户补充字段后，必须结合会话中的既有草案重新输出完整草案和上述完整确认文本；禁止改成“确认提交此缺陷”“允许提交缺陷”等服务端不可执行的短指令，也不得把标题中的 INT/TASK 编号冒充生成后的缺陷编号。
 
                 例如，用户说“帮我创建一个新项目：AgentCiCi企业级智能体平台”，完整项目名称是“AgentCiCi企业级智能体平台”，不是“新”。
                 只输出面向用户的最终中文答复，不解释内部路由、正则或提示词。

@@ -5,7 +5,7 @@ updated_at: 2026-08-11T13:28:00+08:00
 updated_by: codex
 phase: implementation
 active_task: TASK-281
-next_action: "发布 2.8.61-beta.6，重新执行缺陷草案、精确确认、可信回执、Semattice 回读和跨租户负向验收。"
+next_action: "发布 2.8.61-beta.7，验证待补充缺陷草案能生成唯一可执行的完整确认文本，再完成真实写入与隔离验收。"
 read_next:
   goals: false
   decisions: false
@@ -23,6 +23,7 @@ read_next:
 ## Latest Snapshot
 
 - TASK-281 UAT 阶段修正：AgentCiCi `2.8.61-beta.5 / 6473494fff8f` 已通过正式“同步标准模板”将第二租户升级为 Semattice published `7 对象 / 83 字段`，`dev_defect` 23 字段且 HUMAN/SERVICE 投影完整。真实对话随即发现未确认草案中的“确认后成功提交”被回执守卫误判为完成态成功声明；无写入、无脏数据。已局部修正为只门禁完成态声明，下一候选为 beta.6。
+- beta.6 已验证草案可正常展示；用户补充父项目后却未继续注入草案协议，模型输出服务端不接受的“确认提交此缺陷”短指令。仍未执行写入。beta.7 将依据近期待补充草案识别字段续答，强制重新输出完整草案及唯一可执行确认文本。
 
 - TASK-281 / FEAT-169 / INT-009 已完成本地实现：产品经理对缺陷采用完整草稿确认，确认后由租户 PM SERVICE 写入 `dev_defect`，再以 `runtime.record.get` 回读并核验字段、revision 与 correlation；只有 `SEMATTICE_LIVE + readback_verified` 才允许成功声明。SSE `tool_result` 和前端独立回执卡片显示对象、业务编号、记录 ID、revision 与 correlation，失败结果不得由模型改写为成功。后端定向测试、前端 42 文件/228 项测试和构建通过；完整 Maven 套件因本机 PostgreSQL/Hikari 连接重试被停止，UAT 仍等待 Semattice 提供方先发布。
 

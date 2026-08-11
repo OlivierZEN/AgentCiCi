@@ -24,7 +24,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - spec_path: `docs/specs/FEAT-169-devautopilot-defect-trusted-receipt.md`
 - task_status_path: `.claw/tasks/TASK-281.md`
 - depends_on: `TASK-275, cc-semattice TASK-073`
-- next_action: `发布 2.8.61-beta.6，重新执行真实缺陷草案、精确确认、可信回执、Semattice 回读与跨租户负向验收`
+- next_action: `发布 2.8.61-beta.7，验证字段续答生成完整确认文本，再执行可信回执、Semattice 回读与跨租户负向验收`
 
 ### TASK-280 - 组织成员统一身份修复入口
 

@@ -20,6 +20,14 @@ import org.springframework.web.client.RestClient;
 
 class SematticeProjectDeliveryWriteToolServiceTest {
 
+    @Test
+    void recognizesFieldOnlyRepliesAsPendingDraftContinuations() {
+        assertThat(SematticeProjectDeliveryWriteToolService.isDraftContinuation("父项目：智能体平台")).isTrue();
+        assertThat(SematticeProjectDeliveryWriteToolService.isDraftContinuation("环境=UAT")).isTrue();
+        assertThat(SematticeProjectDeliveryWriteToolService.isDraftContinuation("查询当前所有项目")).isFalse();
+        assertThat(SematticeProjectDeliveryWriteToolService.isDraftContinuation("确认提交此缺陷")).isFalse();
+    }
+
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
     @Test

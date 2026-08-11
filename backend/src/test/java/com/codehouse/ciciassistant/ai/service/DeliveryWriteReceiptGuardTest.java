@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class DeliveryWriteReceiptGuardTest {
@@ -68,6 +69,17 @@ class DeliveryWriteReceiptGuardTest {
                 "请先确认草案。缺陷已成功提交，编号 BUG-FALSE。",
                 List.of()))
                 .startsWith("本轮没有获得 Semattice");
+    }
+
+    @Test
+    void recognizesARecentPendingDefectDraftForFieldContinuationRouting() {
+        assertThat(ChatOrchestratorService.hasPendingDeliveryDraft(List.of(
+                Map.of("role", "assistant", "content", "## 缺陷提交草案\n请补充父项目信息"),
+                Map.of("role", "user", "content", "父项目：智能体平台"))))
+                .isTrue();
+        assertThat(ChatOrchestratorService.hasPendingDeliveryDraft(List.of(
+                Map.of("role", "assistant", "content", "当前研发项目列表"))))
+                .isFalse();
     }
 
     private static AgentRunTraceService.ToolCallTraceInput trace(String name, String result, boolean success) {

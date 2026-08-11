@@ -14,6 +14,7 @@ status: active
 - 发布前完整备份 `/data/apps/agentcici/backups/20260811T045726Z-before-2.8.61-beta.4-task281` 含 Compose、受保护环境、PostgreSQL、KB、Qdrant 与 beta.3 前后端镜像，全部非空且 `0600`。仅重建 backend/frontend，四个状态服务 ID 哈希保持 `b5dca5759af2a9cfb0ed4285fdb3b01c9af02db33eb2bfbabfa347fe728de2bc`。
 - beta.4 技术门禁通过，但业务补偿暴露未重放 metadata template；下一候选为 `2.8.61-beta.5`，仍复用上述备份作为 beta.3 回滚点并在新发布前增加 beta.4 镜像备份。
 - beta.5 发布为 `2.8.61-beta.5 / 6473494fff8f`，备份 `/data/apps/agentcici/backups/20260811T051553Z-before-2.8.61-beta.5-task281` 含 8 项非空 0600 工件及 beta.4 回滚镜像；仅重建前后端，状态服务 ID 哈希不变。容器 healthy/restart=0、health/version/Nginx/匿名 401 通过。真实草案验收发现条件将来时误拦，beta.5 不作为最终业务验收版本；beta.6 只修正回执守卫语义。
+- beta.6 发布为 `2.8.61-beta.6 / aeb40c4d25b7`，备份 `/data/apps/agentcici/backups/20260811T053156Z-before-2.8.61-beta.6-task281` 含 8 项非空 0600 工件和 beta.5 回滚镜像；仅重建前后端，状态服务哈希不变，health/version/Nginx 通过。续答确认格式业务验收失败，beta.6 保留为回滚点但不作为最终候选。
 
 ## 2026-08-11 TASK-281 UAT 候选门禁
 
