@@ -54,8 +54,20 @@ class DeliveryWriteReceiptGuardTest {
                 "帮我创建项目", "确认后我会创建项目。", List.of()))
                 .isEqualTo("确认后我会创建项目。");
         assertThat(DeliveryWriteReceiptGuard.enforce(
+                "帮我提交一个 Bug", "这是缺陷草案；确认无误后我会成功提交缺陷并返回实际记录 ID。", List.of()))
+                .isEqualTo("这是缺陷草案；确认无误后我会成功提交缺陷并返回实际记录 ID。");
+        assertThat(DeliveryWriteReceiptGuard.enforce(
                 "总结今天的会议", "总结已完成。", List.of()))
                 .isEqualTo("总结已完成。");
+    }
+
+    @Test
+    void stillBlocksCompletedClaimEvenWhenTheAnswerAlsoContainsDraftLanguage() {
+        assertThat(DeliveryWriteReceiptGuard.enforce(
+                "帮我提交一个 Bug",
+                "请先确认草案。缺陷已成功提交，编号 BUG-FALSE。",
+                List.of()))
+                .startsWith("本轮没有获得 Semattice");
     }
 
     private static AgentRunTraceService.ToolCallTraceInput trace(String name, String result, boolean success) {

@@ -36,7 +36,7 @@ final class DeliveryWriteReceiptGuard {
     static String enforce(String question,
                           String answer,
                           List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces) {
-        if (!isDeliveryWriteIntent(question) || answer == null || !SUCCESS_CLAIM.matcher(answer).find()) {
+        if (!isDeliveryWriteIntent(question) || answer == null || !containsCompletedSuccessClaim(answer)) {
             return answer;
         }
         if (hasLiveRecordReceipt(toolCallTraces)) {
@@ -82,6 +82,25 @@ final class DeliveryWriteReceiptGuard {
             } catch (Exception ignored) {
                 // Malformed or non-JSON results are not trusted as a write receipt.
             }
+        }
+        return false;
+    }
+
+    /**
+     * A draft is allowed to explain what will happen after confirmation. Only a completed-action
+     * claim is receipt-gated; conditional/future wording must not make the confirmation flow unusable.
+     */
+    private static boolean containsCompletedSuccessClaim(String answer) {
+        var matcher = SUCCESS_CLAIM.matcher(answer);
+        while (matcher.find()) {
+            String prefix = answer.substring(Math.max(0, matcher.start() - 32), matcher.start())
+                    .replaceAll("\\s+", "");
+            if (containsAny(prefix,
+                    "确认后", "确认无误后", "待确认后", "如果确认", "若确认", "经确认后",
+                    "将", "会", "才会", "才能", "需要", "必须", "以便")) {
+                continue;
+            }
+            return true;
         }
         return false;
     }
