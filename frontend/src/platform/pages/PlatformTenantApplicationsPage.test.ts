@@ -1,10 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   devAutopilotInitializationReady,
+  fetchOwnerIdentity,
   ownerIdentityStatus,
   type DevAutopilotApplication,
   type TenantOwnerIdentity,
 } from "./PlatformTenantApplicationsPage";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 function application(overrides: Partial<DevAutopilotApplication>): DevAutopilotApplication {
   return {
@@ -61,5 +66,14 @@ describe("tenant Owner identity status", () => {
   it("distinguishes pending activation from an active identity", () => {
     expect(ownerIdentityStatus({ ...identity, identityState: "PENDING_ACTIVATION", memberStatus: "PENDING_ACTIVATION" }).label).toBe("等待用户激活");
     expect(ownerIdentityStatus({ ...identity, identityState: "ACTIVE", recoverable: false }).label).toBe("身份正常");
+  });
+
+  it("does not block tenant application management when a legacy tenant has no Owner", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      success: false,
+      message: "租户 Owner 不存在",
+    }), { status: 404, headers: { "Content-Type": "application/json" } })));
+
+    await expect(fetchOwnerIdentity("platform-token", "org00000000000000001")).resolves.toBeNull();
   });
 });

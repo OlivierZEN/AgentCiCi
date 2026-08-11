@@ -297,7 +297,20 @@ export default function PlatformTenantApplicationsPage() {
                     ) : null}
                   </div>
                 </section>
-              ) : null}
+              ) : (
+                <section className="platform-console__section tenant-owner-identity tenant-owner-identity--warning" aria-labelledby="tenant-owner-identity-title">
+                  <div className="tenant-owner-identity__head">
+                    <span className="tenant-owner-identity__icon" aria-hidden="true"><UserRound size={20} strokeWidth={1.8} /></span>
+                    <div>
+                      <div className="tenant-owner-identity__title-line">
+                        <h3 id="tenant-owner-identity-title" className="platform-console__subheading">Owner 身份</h3>
+                        <span className="tenant-owner-identity__state">待补齐</span>
+                      </div>
+                      <p className="skills-data-table__summary">当前租户缺少 Owner；身份治理需单独处理，但不阻断已授权的平台管理员维护租户应用。</p>
+                    </div>
+                  </div>
+                </section>
+              )}
 
               <section className="platform-console__section tenant-applications" aria-labelledby="tenant-applications-title">
                 <div className="tenant-applications__heading">
@@ -473,9 +486,10 @@ async function fetchDevAutopilot(token: string, companyId: string): Promise<DevA
   return body.data as DevAutopilotApplication;
 }
 
-async function fetchOwnerIdentity(token: string, companyId: string): Promise<TenantOwnerIdentity> {
+export async function fetchOwnerIdentity(token: string, companyId: string): Promise<TenantOwnerIdentity | null> {
   const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(companyId)}/owner-identity`, { headers: { Authorization: `Bearer ${token}` } });
   const { body } = await safeFetchJson(response);
+  if (response.status === 404) return null;
   if (!response.ok || !body?.success) throw new Error(body?.message ?? `HTTP ${response.status}`);
   return body.data as TenantOwnerIdentity;
 }
