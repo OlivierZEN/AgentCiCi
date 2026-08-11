@@ -1,12 +1,20 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-10T12:36:00Z
+updated_at: 2026-08-11T02:34:13Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-11 TASK-278 UAT `2.8.61-beta.1`
+
+- Git tag/commit 为 `2.8.61-beta.1 / d4b273af39c2`；backend/frontend ACR index digest 为 `sha256:be29c222ba8b6212a6d916d89c94e2301145f3196abeb866afe0d96048e59c57` / `sha256:d28768f068aba1644de93fec3ecf4ecdfcb356a0456f06da2057bc3768acdb4d`。
+- 发布前备份 `/data/apps/agentcici/backups/20260811T021914Z-before-2.8.61-beta.1` 的 Compose、受保护环境、旧前后端镜像、PostgreSQL、KB 与 Qdrant 九项均非空且为 `0600`。回滚目标为 `2.8.60-beta.1`。
+- 最终 Compose 渲染和容器环境回读 HUMAN scopes 均为 `metadata.read,runtime.record.read,runtime.record.create,runtime.record.update`，SERVICE scopes 保持 `identity.principal.sync,runtime.record.read,runtime.record.create,runtime.record.update`。
+- 仅 force-recreate backend/frontend；database、Redis、RabbitMQ、Qdrant ID 哈希前后保持 `b5dca5759af2a9cfb0ed4285fdb3b01c9af02db33eb2bfbabfa347fe728de2bc`。六容器 healthy，health=`UP`，版本/镜像/Git SHA 一致，Nginx 有效，首页 200、匿名 AI表格 401，启动 ERROR 计数 0。
+- 受权租户浏览器回读 6 个 DevAutopilot 业务对象及真实空记录状态，原“业务数据服务暂时不可用”消失；浏览器 console error/warning 为 0。生产未修改。
 
 ## 2026-08-10 TASK-275 双租户 UAT 业务验收
 

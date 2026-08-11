@@ -1,8 +1,8 @@
 ---
 kind: task-archive
 version: 4
-updated_at: 2026-08-05T05:22:30Z
-updated_by: MANAGER-001
+updated_at: 2026-08-11T02:34:13Z
+updated_by: codex
 archive_status: active
 ---
 
@@ -11,6 +11,8 @@ archive_status: active
 Historical task cards have been removed from the hot board. Keep details in task status files and specs when they exist.
 
 ## Archived Tasks
+
+- TASK-278 — done — AI表格 UAT HUMAN OACT 恢复 `metadata.read`，测试发布和最终 Compose 增加最低只读 scope 门禁；`2.8.61-beta.1 / d4b273af39c2` 已回读 6 个真实租户业务对象与正确空记录状态。
 
 - TASK-267 — done — AgentCiCi 机器主体管理页面，已发布 `2.8.50 / 82e1c249e622`；入口为“组织架构 → 机器主体”，支持受确认保护的生命周期与一次性密钥轮换。
 

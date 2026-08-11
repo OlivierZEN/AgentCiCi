@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-11T02:11:54Z
+updated_at: 2026-08-11T02:34:13Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-11T02:11:54Z
+last_run_at: 2026-08-11T02:34:13Z
 last_run_status: passed
 ---
 
@@ -15,7 +15,9 @@ last_run_status: passed
 - 根因回读：UAT `2.8.60-beta.1` 实际 HUMAN scopes 与旧 Compose 默认一致，缺少 Semattice `metadata.version.get-current` 必需的 `metadata.read`；服务器没有受管 env 覆盖该项。
 - 配置回归：新 Compose 渲染 HUMAN scopes 为 `metadata.read,runtime.record.read,runtime.record.create,runtime.record.update`，SERVICE scopes 保持独立。
 - 自动化：Shell 语法、发布版本测试（含缺 scope 的失败关闭用例）、`AiTableDataServiceTest`、`OfficialAccessTokenServiceTest`、`2.8.61-beta.1` UAT dry-run 与 `git diff --check` 均通过。
-- 状态：本地修复预检通过；UAT 发布与受权租户对象/记录回读待执行。
+- UAT 发布：`2.8.61-beta.1 / d4b273af39c2` 前后端 healthy，health=`UP`，版本/镜像一致，Nginx 有效，首页 200、匿名 AI表格 401、启动 ERROR 计数 0；四个状态服务 ID 哈希未变。
+- 业务回读：受权租户页面实时读取 6 个 DevAutopilot 已发布对象，选择“变更”对象返回真实 0 记录空状态；原“无法读取业务对象”错误消失，console error/warning 为 0。
+- 状态：`passed`
 
 ## 2026-08-10 TASK-275 双租户最终业务验收
 

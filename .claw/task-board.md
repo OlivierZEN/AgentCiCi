@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-11T02:11:54Z
+updated_at: 2026-08-11T02:34:13Z
 updated_by: codex
 board_status: active
 ---
@@ -14,18 +14,6 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
-
-### TASK-278 - AI表格 UAT Semattice 元数据授权回归修复
-
-- status: `in_progress`
-- priority: `critical`
-- owner_role: `fullstack-agent`
-- claimed_by: `codex`
-- spec_path: `docs/specs/FEAT-158-semattice-business-object-list-preview.md`
-- task_status_path: `.claw/tasks/TASK-278.md`
-- blocked_by: `none`
-- scope_files: `UAT Compose OACT scopes, release gate, focused tests, UAT evidence`
-- next_action: `发布 2.8.61-beta.1 并以受权租户会话回读 AI表格对象与记录`
 
 ### TASK-277 - 平台租户 Owner 统一身份协调入口
 

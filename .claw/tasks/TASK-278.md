@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-278
-status: in_progress
-updated_at: 2026-08-11T02:11:54Z
+status: done
+updated_at: 2026-08-11T02:34:13Z
 updated_by: codex
 assignee: codex
 owner_role: fullstack-agent
@@ -18,7 +18,7 @@ spec_path: docs/specs/FEAT-158-semattice-business-object-list-preview.md
 - UAT `cici-backend:2.8.60-beta.1` 实际环境只签发 `identity.principal.sync,runtime.record.read,runtime.record.create,runtime.record.update`，缺少 `metadata.read`。
 - AI表格目录固定调用 Semattice `metadata.version.get-current`；提供方契约明确要求 `metadata.read`，因此失败发生在目录授权阶段，不代表租户没有对象或记录。
 - 根因位于 AgentCiCi UAT 版本化 Compose 覆盖层；Semattice 契约和 AgentCiCi AI表格请求路径不需要修改。
-- Blocked: none
+- 已发布并完成真实租户回读，Blocked: none
 
 ## Scope
 
@@ -30,7 +30,7 @@ spec_path: docs/specs/FEAT-158-semattice-business-object-list-preview.md
 
 ## Next Action
 
-- 完成脚本回归、Compose 渲染和发布 dry-run；提交主线后发布 UAT `2.8.61-beta.1`，再执行真实 AI表格回读。
+- 已完成。后续 UAT 发布由测试发布门禁和最终 Compose scope 回读持续保护；生产保持 `2.8.60`，待本候选按正常验收推进。
 
 ## Verification
 
@@ -40,4 +40,7 @@ spec_path: docs/specs/FEAT-158-semattice-business-object-list-preview.md
 - `bash scripts/test-release-versioning.sh` 通过，包含缺少 `metadata.read` 时测试发布失败关闭的负向用例。
 - Compose 渲染确认 HUMAN 为 `metadata.read,runtime.record.read,runtime.record.create,runtime.record.update`，SERVICE 保持独立 allowlist。
 - `AiTableDataServiceTest` 与 `OfficialAccessTokenServiceTest` 通过；`2.8.61-beta.1` dry-run、`git diff --check` 通过。
-- Pending: UAT 不可变发布与受权租户对象/记录回读。
+- UAT `2.8.61-beta.1 / d4b273af39c2` 已发布；backend/frontend ACR index digest 为 `sha256:be29c222ba8b6212a6d916d89c94e2301145f3196abeb866afe0d96048e59c57` / `sha256:d28768f068aba1644de93fec3ecf4ecdfcb356a0456f06da2057bc3768acdb4d`。
+- 备份 `backups/20260811T021914Z-before-2.8.61-beta.1` 九项均非空且为 `0600`；只重建 backend/frontend，四个状态服务 ID 哈希前后保持 `b5dca5759af2a9cfb0ed4285fdb3b01c9af02db33eb2bfbabfa347fe728de2bc`。
+- 运行态 health=`UP`、版本/镜像/Git SHA 一致、Nginx 有效、首页 200、匿名 AI表格 401、启动 ERROR 计数 0。
+- 受权租户 `TASK-276 UAT Owner OIDC 20260810` 的 AI表格回读 6 个已发布 DevAutopilot 对象；当前对象记录为 0 时显示真实空状态，不再出现服务不可用，浏览器 console error/warning 为 0。

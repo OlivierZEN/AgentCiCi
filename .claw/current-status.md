@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-11T02:11:54Z
+updated_at: 2026-08-11T02:34:13Z
 updated_by: codex
-phase: implementation
-active_task: TASK-278
-next_action: "修复 UAT HUMAN OACT 的 metadata.read 配置回归，完成发布门禁测试后以 2.8.61-beta.1 发布并回读 AI表格真实租户对象与记录。"
+phase: review
+active_task: TASK-277
+next_action: "TASK-278 已完成；继续等待受权 PLATFORM_ADMIN 在生产租户应用页执行既有 TASK-277 Owner 身份协调。"
 read_next:
   goals: false
   decisions: false
@@ -22,9 +22,9 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-278 / FEAT-158：用户在 UAT AI表格看到“业务数据服务暂时不可用”。已从运行容器只读回读确认 `2.8.60-beta.1` 的 HUMAN OACT scopes 缺少 `metadata.read`，而对象目录调用的 Semattice `metadata.version.get-current` 明确要求该 scope；根因是 AgentCiCi UAT 版本化 Compose 覆盖层的配置回归，不是租户数据为空或 Semattice 契约缺失。正在恢复最低读取范围并为测试发布增加门禁，目标版本遵循下一生产版本规则为 `2.8.61-beta.1`；生产不修改。
+- TASK-278 / FEAT-158 已完成：UAT AI表格“业务数据服务暂时不可用”根因为 `2.8.60-beta.1` HUMAN OACT scopes 缺少 `metadata.read`。`2.8.61-beta.1 / d4b273af39c2` 已恢复最低元数据/记录读取范围并上线测试发布门禁；受权租户页面回读 6 个 DevAutopilot 业务对象、真实 0 记录空状态，console error/warning 为 0。只重建 backend/frontend，状态服务未变；生产保持 `2.8.60`。
 
-- TASK-275 / FEAT-164 / INT-008 已完成双租户 UAT。第二租户 Owner 通过受治理恢复绑定到现有激活 HUMAN；同一 DEMO 身份可切换 A/B 组织。第二租户正式开通自动创建已发布 `研发产品经理` Agent/PM SERVICE，租户 ORG_ADMIN 独立新增、改名、暂停和恢复 1 名自定义开发者后三系统状态一致。A 保持 2 名开发者，B 只显示本租户 0 项目、1 名开发者与产品经理；B 的 Semattice 会话不能用 A 的 `company_id` 参数覆盖可信租户。产品经理首页可见并以 `onekeytoken/auto` 按 DevAutopilot 语义响应。AgentCiCi UAT 仍为 `2.8.60-beta.1 / 93a487f4e393`。
+- TASK-275 / FEAT-164 / INT-008 已完成双租户 UAT。第二租户 Owner 通过受治理恢复绑定到现有激活 HUMAN；同一 DEMO 身份可切换 A/B 组织。第二租户正式开通自动创建已发布 `研发产品经理` Agent/PM SERVICE，租户 ORG_ADMIN 独立新增、改名、暂停和恢复 1 名自定义开发者后三系统状态一致。A 保持 2 名开发者，B 只显示本租户 0 项目、1 名开发者与产品经理；B 的 Semattice 会话不能用 A 的 `company_id` 参数覆盖可信租户。产品经理首页可见并以 `onekeytoken/auto` 按 DevAutopilot 语义响应。AgentCiCi UAT 已由 TASK-278 推进至 `2.8.61-beta.1 / d4b273af39c2`。
 
 - TASK-276 / TASK-277 已发布生产 `2.8.60 / 451f797e61df`。backend/frontend ACR index digest 为 `sha256:1b4e96962c08900ae0372601b9a7fc99134615bcc0cd00aff36b5f102d8dba4a` / `sha256:859d23f4a65944161b22cc5a6cbeac2bc2db762a8f21a799eb490776491047c9`；发布前完整备份 `/opt/cici/backups/20260810T122603Z-before-2.8.60-owner-identity` 四项非空且为 `0600`。仅重建 backend/frontend，四个状态服务 ID 哈希保持 `88b03a2170ddc7acc3047e9ae42926298479174e218f956e226cfd4f2b9fbea7`；六容器 healthy、health=`UP`、Flyway V108 无迁移、Nginx 有效、x HTTPS=200/HTTP=301、匿名鉴权 401、启动 ERROR 计数 0。目标 Owner 的生产身份协调尚未执行：当前可控浏览器无 PLATFORM_ADMIN 登录态，未绕过认证或直接写库。
 
