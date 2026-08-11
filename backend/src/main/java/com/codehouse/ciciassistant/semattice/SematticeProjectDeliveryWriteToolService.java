@@ -725,7 +725,7 @@ public class SematticeProjectDeliveryWriteToolService {
             String project = normalizeText(root.path("project").asText());
             String requirement = normalizeText(root.path("requirement").asText());
             String title = normalizeText(root.path("title").asText());
-            String originalReport = root.path("original_report").asText();
+            String reportedOriginal = root.path("original_report").asText();
             String assessment = normalizeText(root.path("pm_assessment").asText());
             String priority = normalizeText(root.path("priority").asText()).toUpperCase(Locale.ROOT);
             String severity = normalizeText(root.path("severity").asText()).toLowerCase(Locale.ROOT);
@@ -735,13 +735,21 @@ public class SematticeProjectDeliveryWriteToolService {
             String actual = normalizeText(root.path("actual_result").asText());
             List<String> acceptance = textArray(root.path("acceptance_criteria"));
             List<String> impact = textArray(root.path("impact_analysis"));
-            List<String> supplements = rawTextArray(root.path("user_supplements"));
+            List<String> reportedSupplements = rawTextArray(root.path("user_supplements"));
             List<String> assumptions = textArray(root.path("assumptions"));
+            String originalReport = resolveVerbatimMessage(reportedOriginal, userMessages).orElse("");
+            List<String> supplements = new ArrayList<>();
+            for (String reportedSupplement : reportedSupplements) {
+                Optional<String> verbatim = resolveVerbatimMessage(reportedSupplement, userMessages);
+                if (verbatim.isEmpty()) {
+                    return Optional.empty();
+                }
+                supplements.add(verbatim.get());
+            }
             if (!Set.of("requirement", "defect", "change").contains(classification)
                     || title.isBlank() || assessment.isBlank()
                     || !Set.of("P0", "P1", "P2", "P3").contains(priority)
-                    || originalReport.isBlank() || !userMessages.contains(originalReport)
-                    || supplements.stream().anyMatch(item -> !userMessages.contains(item))) {
+                    || originalReport.isBlank()) {
                 return Optional.empty();
             }
             if ("requirement".equals(classification) && (project.isBlank() || acceptance.isEmpty())) {
@@ -756,6 +764,8 @@ public class SematticeProjectDeliveryWriteToolService {
                 return Optional.empty();
             }
             Map<String, Object> payload = objectMapper.convertValue(root, Map.class);
+            payload.put("original_report", originalReport);
+            payload.put("user_supplements", List.copyOf(supplements));
             payload.put("version", "DEV_AUTOPILOT_INTAKE_V1");
             payload.put("developer_verification_pending", true);
             return Optional.of(new IntakeDraft(classification, project, requirement, title, originalReport,
@@ -805,6 +815,19 @@ public class SematticeProjectDeliveryWriteToolService {
             }
         });
         return List.copyOf(result);
+    }
+
+    private static Optional<String> resolveVerbatimMessage(String reported, List<String> userMessages) {
+        if (reported == null || reported.isBlank()) {
+            return Optional.empty();
+        }
+        if (userMessages.contains(reported)) {
+            return Optional.of(reported);
+        }
+        String comparable = reported.replaceAll("\\s+", "");
+        return userMessages.stream()
+                .filter(message -> message.replaceAll("\\s+", "").equals(comparable))
+                .findFirst();
     }
 
     private static Optional<CreateIntent> parseDefectConfirmation(String body) {

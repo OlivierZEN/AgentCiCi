@@ -118,7 +118,7 @@ class SematticeProjectDeliveryWriteToolServiceTest {
         String marker = "<!-- DEV_AUTOPILOT_INTAKE_V1 " + objectMapper.writeValueAsString(Map.ofEntries(
                 Map.entry("classification", "defect"), Map.entry("project", "DAS-001"),
                 Map.entry("requirement", ""), Map.entry("title", "退出登录后会话仍然有效"),
-                Map.entry("original_report", original), Map.entry("pm_assessment", "已有退出能力偏离预期，判定为缺陷"),
+                Map.entry("original_report", "退出后又自动进入系统， 没有真正注销"), Map.entry("pm_assessment", "已有退出能力偏离预期，判定为缺陷"),
                 Map.entry("priority", "P1"), Map.entry("severity", "high"),
                 Map.entry("environment", "待开发者验证"), Map.entry("reproduction_steps", List.of("待开发者验证")),
                 Map.entry("expected_result", "退出后保持未登录"), Map.entry("actual_result", "退出后自动重新进入系统"),
