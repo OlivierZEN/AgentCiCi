@@ -683,24 +683,31 @@ public class SematticeProjectDeliveryWriteToolService {
     }
 
     private static Optional<IntakeDraft> pendingIntake(List<Map<String, Object>> messages, ObjectMapper objectMapper) {
-        if (messages != null) {
-            for (int index = messages.size() - 1; index >= 0; index--) {
-                Map<String, Object> message = messages.get(index);
-                if ("assistant".equals(String.valueOf(message.get("role")))
-                        && isTerminalIntakeAnswer(String.valueOf(message.getOrDefault("content", "")))) {
-                    return Optional.empty();
-                }
-            }
-        }
-        Optional<JsonNode> latest = latestIntakeNode(messages, objectMapper);
-        List<String> userMessages = messages == null ? List.of() : messages.stream()
+        List<Map<String, Object>> activeMessages = activeIntakeWindow(messages);
+        Optional<JsonNode> latest = latestIntakeNode(activeMessages, objectMapper);
+        List<String> userMessages = activeMessages.stream()
                 .filter(message -> "user".equals(String.valueOf(message.get("role"))))
                 .map(message -> String.valueOf(message.getOrDefault("content", "")))
                 .toList();
         if (latest.isPresent()) {
             return IntakeDraft.parse(latest.get(), userMessages, objectMapper);
         }
-        return visiblePendingIntake(messages, objectMapper);
+        return visiblePendingIntake(activeMessages, objectMapper);
+    }
+
+    /** Limits draft recovery to the current intake after the latest completed or cancelled item. */
+    private static List<Map<String, Object>> activeIntakeWindow(List<Map<String, Object>> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return List.of();
+        }
+        for (int index = messages.size() - 1; index >= 0; index--) {
+            Map<String, Object> message = messages.get(index);
+            if ("assistant".equals(String.valueOf(message.get("role")))
+                    && isTerminalIntakeAnswer(String.valueOf(message.getOrDefault("content", "")))) {
+                return List.copyOf(messages.subList(index + 1, messages.size()));
+            }
+        }
+        return List.copyOf(messages);
     }
 
     /**
