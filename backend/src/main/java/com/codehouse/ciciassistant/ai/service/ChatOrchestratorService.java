@@ -970,12 +970,20 @@ public class ChatOrchestratorService {
                 emitter.send(SseEmitter.event().name("done").data(Map.of("ok", true, "runId", runId)));
                 emitter.complete();
             } catch (Exception e) {
-                try {
-                    emitter.send(SseEmitter.event().name("error")
-                            .data(Map.of("message", e.getMessage() == null ? "stream failed" : e.getMessage(), "runId", runId)));
-                } catch (IOException ignored) {}
-                emitter.completeWithError(e);
+                completeStreamWithErrorEvent(emitter, e, runId);
             }
+    }
+
+    static void completeStreamWithErrorEvent(SseEmitter emitter, Exception error, String runId) {
+        try {
+            emitter.send(SseEmitter.event().name("error")
+                    .data(Map.of("message", error.getMessage() == null ? "stream failed" : error.getMessage(), "runId", runId)));
+        } catch (IOException ignored) {
+            // The connection is already gone; completion still releases the server-side emitter.
+        }
+        // The SSE response is already committed. Completing with the original exception would
+        // re-enter the JSON @RestControllerAdvice with text/event-stream content type.
+        emitter.complete();
     }
 
     // ── Function calling loop ──

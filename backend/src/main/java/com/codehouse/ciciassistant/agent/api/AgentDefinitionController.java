@@ -424,6 +424,8 @@ public class AgentDefinitionController {
         payload.put("skillBindings", agentSkillBindingService.listBindings(companyId, detail.definition().getAgentId()));
         payload.put("executionPrincipal", executionPrincipalService
                 .findBinding(companyId, detail.definition().getAgentId()).orElse(null));
+        payload.put("executionAccess", executionPrincipalService
+                .executionAccess(companyId, userId, detail.definition().getAgentId()));
         return payload;
     }
 
@@ -467,6 +469,8 @@ public class AgentDefinitionController {
                                               AgentDefinitionService.AgentListItem item) {
         Map<String, Object> payload = toDefinitionPayload(companyId, userId, roles, item.definition());
         payload.put("channels", item.channels());
+        payload.put("executionAccess", executionPrincipalService.executionAccess(
+                companyId, userId, item.definition().getAgentId()));
         return payload;
     }
 

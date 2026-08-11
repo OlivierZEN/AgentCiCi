@@ -7,8 +7,10 @@ import com.codehouse.ciciassistant.tenant.TenantContext;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -42,6 +44,17 @@ public class AdminDevAutopilotTeamController {
         return ApiResponse.ok(applications.addDeveloper(companyId(), request.displayName(), actorMemberId(), request.ownerMemberId()));
     }
 
+    @GetMapping("/access-members")
+    public ApiResponse<List<DevAutopilotTenantApplicationService.ApplicationMemberAccessView>> accessMembers() {
+        return ApiResponse.ok(applications.listAccessMembers(companyId()));
+    }
+
+    @PutMapping("/access-members")
+    public ApiResponse<List<DevAutopilotTenantApplicationService.ApplicationMemberAccessView>> replaceAccessMembers(
+            @Valid @RequestBody ReplaceAccessMembersRequest request) {
+        return ApiResponse.ok(applications.replaceAccessMembers(companyId(), actorMemberId(), request.members()));
+    }
+
     private String companyId() {
         return TenantContext.requireCompanyId();
     }
@@ -53,5 +66,9 @@ public class AdminDevAutopilotTeamController {
     public record CreateTeamMemberRequest(
             @NotBlank @Size(max = 128) String displayName,
             @NotBlank String ownerMemberId) {
+    }
+
+    public record ReplaceAccessMembersRequest(
+            List<DevAutopilotTenantApplicationService.ApplicationMemberRoleInput> members) {
     }
 }

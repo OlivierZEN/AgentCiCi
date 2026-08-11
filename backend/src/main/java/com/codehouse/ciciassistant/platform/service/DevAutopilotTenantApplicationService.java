@@ -13,7 +13,10 @@ import com.codehouse.ciciassistant.common.error.ResourceNotFoundException;
 import com.codehouse.ciciassistant.semattice.SematticeDevAutopilotTemplateClient;
 import com.codehouse.ciciassistant.semattice.SematticeProvisioningService;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Value;
@@ -96,6 +99,106 @@ public class DevAutopilotTenantApplicationService {
     @Transactional(readOnly = true)
     public View get(String companyId) { requireCompany(companyId); var row = find(companyId); return row == null ? View.notEnabled(companyId) : view(row); }
 
+    @Transactional(readOnly = true)
+    public List<ApplicationMemberAccessView> listAccessMembers(String companyId) {
+        Row activation = requireExisting(companyId);
+        return jdbc.query("""
+                SELECT member.id,
+                       account.public_id,
+                       COALESCE(account.display_name, account.primary_mobile, account.email, account.public_id),
+                       member.role_code,
+                       explicit.role_code,
+                       EXISTS (
+                           SELECT 1 FROM tenant_application_resource resource
+                           JOIN service_principal_owner owner ON owner.service_principal_id=resource.external_id
+                             AND owner.owner_role='PRIMARY' AND owner.owner_status='ACTIVE'
+                           WHERE resource.activation_id=? AND resource.logical_role='product_manager'
+                             AND resource.resource_type='SERVICE_PRINCIPAL' AND resource.is_primary=TRUE
+                             AND owner.company_member_id=member.id
+                       ) AS governance_owner
+                FROM company_member member
+                JOIN user_account account ON account.id=member.account_id
+                LEFT JOIN tenant_application_member_role explicit
+                  ON explicit.activation_id=? AND explicit.company_member_id=member.id AND explicit.status='ACTIVE'
+                WHERE member.company_id=? AND member.member_status='ACTIVE'
+                ORDER BY CASE member.role_code WHEN 'OWNER' THEN 0 WHEN 'ORG_ADMIN' THEN 1 ELSE 2 END,
+                         account.display_name NULLS LAST, account.public_id
+                """, (rs, rowNum) -> {
+            String memberRole = rs.getString(4);
+            String explicitRole = rs.getString(5);
+            boolean governanceOwner = rs.getBoolean(6);
+            String effectiveRole = RoleCodes.isOrgAdminRole(memberRole) || governanceOwner
+                    ? AgentServicePrincipalExecutionService.APP_ROLE_ADMIN
+                    : (explicitRole == null ? "NONE" : explicitRole);
+            String source = RoleCodes.isOrgAdminRole(memberRole) ? "TENANT_ADMIN"
+                    : governanceOwner ? "GOVERNANCE_OWNER"
+                    : explicitRole == null ? "NONE" : "EXPLICIT";
+            return new ApplicationMemberAccessView(
+                    rs.getString(1), rs.getString(2), rs.getString(3), memberRole,
+                    explicitRole, effectiveRole, source, governanceOwner);
+        }, activation.id(), activation.id(), companyId);
+    }
+
+    @Transactional
+    public List<ApplicationMemberAccessView> replaceAccessMembers(String companyId,
+                                                                  String actorMemberId,
+                                                                  List<ApplicationMemberRoleInput> requested) {
+        Row activation = requireExisting(companyId);
+        if (!"ACTIVE".equals(activation.actualState())) {
+            throw new ForbiddenException("DevAutopilot 应用未运行，不能调整成员权限");
+        }
+        List<ApplicationMemberAccessView> before = listAccessMembers(companyId);
+        List<ApplicationMemberRoleInput> inputs = requested == null ? List.of() : requested;
+        Map<String, String> normalized = new LinkedHashMap<>();
+        Set<String> validRoles = Set.of(
+                AgentServicePrincipalExecutionService.APP_ROLE_VIEWER,
+                AgentServicePrincipalExecutionService.APP_ROLE_CONTRIBUTOR,
+                AgentServicePrincipalExecutionService.APP_ROLE_REVIEWER,
+                AgentServicePrincipalExecutionService.APP_ROLE_ADMIN);
+        for (ApplicationMemberRoleInput input : inputs) {
+            String memberId = input == null ? "" : value(input.memberId());
+            String role = input == null ? "" : value(input.roleCode()).toUpperCase(Locale.ROOT);
+            if (memberId.isBlank() || !validRoles.contains(role)) {
+                throw new IllegalArgumentException("DevAutopilot 应用成员和角色无效");
+            }
+            if (normalized.putIfAbsent(memberId, role) != null) {
+                throw new IllegalArgumentException("DevAutopilot 应用成员不能重复授权");
+            }
+        }
+        for (String memberId : normalized.keySet()) {
+            Integer activeCount = jdbc.queryForObject("""
+                    SELECT count(*) FROM company_member
+                    WHERE company_id=? AND member_status='ACTIVE' AND id=?
+                    """, Integer.class, companyId, memberId);
+            if (activeCount == null || activeCount != 1) {
+                throw new ForbiddenException("只能授权当前租户的激活成员");
+            }
+        }
+        jdbc.update("""
+                UPDATE tenant_application_member_role
+                SET status='REVOKED',updated_at=CURRENT_TIMESTAMP
+                WHERE activation_id=? AND status='ACTIVE'
+                """, activation.id());
+        for (Map.Entry<String, String> entry : normalized.entrySet()) {
+            jdbc.update("""
+                    INSERT INTO tenant_application_member_role(
+                        id,activation_id,company_member_id,role_code,status,granted_by_member_id,created_at,updated_at)
+                    VALUES (?,?,?,?, 'ACTIVE',?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+                    ON CONFLICT (activation_id,company_member_id) DO UPDATE
+                    SET role_code=EXCLUDED.role_code,status='ACTIVE',granted_by_member_id=EXCLUDED.granted_by_member_id,
+                        updated_at=CURRENT_TIMESTAMP
+                    """, UUID.randomUUID().toString(), activation.id(), entry.getKey(), entry.getValue(), actorMemberId);
+        }
+        List<ApplicationMemberAccessView> after = listAccessMembers(companyId);
+        String actorPrincipalId = jdbc.queryForObject("""
+                SELECT account_id FROM company_member WHERE id=? AND company_id=? AND member_status='ACTIVE'
+                """, String.class, actorMemberId, companyId);
+        audit.log(companyId, actorPrincipalId, "ORG_ADMIN", "tenant_application.access_roles.replaced",
+                "tenant_application", activation.id(),
+                "before=" + roleAuditSummary(before) + "; after=" + roleAuditSummary(after));
+        return after;
+    }
+
     /** Repairs an earlier activation that only provisioned Semattice metadata. GET remains read-only. */
     @Transactional
     public View reconcileInitialization(String companyId, String platformActor) {
@@ -160,6 +263,9 @@ public class DevAutopilotTenantApplicationService {
                     .orElseThrow(() -> new IllegalStateException("DevAutopilot primary product-manager Agent is missing"))
                     .externalId();
             productManagerAgentPublisher.ensurePublished(companyId, agentId);
+            // Reconciliation must also repair a missing, disabled or legacy execution binding;
+            // merely republishing the Agent leaves the tenant unable to call Semattice.
+            setProductManagerBinding(companyId, activationId, true);
             return;
         }
         if (hasPrimaryAgent || hasPrimaryPrincipal) throw new IllegalStateException("DevAutopilot product-manager resources are incomplete");
@@ -183,9 +289,12 @@ public class DevAutopilotTenantApplicationService {
         Map<String, Object> principal = principals.create(companyId, actorMemberId, ownerMemberId, displayName, "OFFICIAL_APP",
                 OfficialAccessTokenService.SEMATTICE_AUDIENCE, null, pmScopes);
         String principalId = (String) principal.get("principalId");
-        execution.configure(companyId, agentId, principalId, true, ownerMemberId);
+        // Register the application-owned resources before configuring execution.  The binding
+        // service derives TENANT_APP_ROLE from this ownership record; reversing this order would
+        // silently leave newly activated tenants on the legacy PRIMARY_OWNER-only policy.
         resource(activationId, "product_manager", "SERVICE_PRINCIPAL", generatedAlias("product-manager"), displayName, principalId, true);
         resource(activationId, "product_manager", "AGENT", generatedAlias("product-manager-agent"), displayName, agentId, true);
+        execution.configure(companyId, agentId, principalId, true, ownerMemberId);
         return principal;
     }
 
@@ -300,6 +409,14 @@ public class DevAutopilotTenantApplicationService {
     private static String generatedAlias(String role) {
         return role + "-" + UUID.randomUUID().toString().substring(0, 8);
     }
+    private static String value(String input) { return input == null ? "" : input.trim(); }
+    private static String roleAuditSummary(List<ApplicationMemberAccessView> members) {
+        return members.stream()
+                .filter(item -> item.explicitRole() != null && !item.explicitRole().isBlank())
+                .map(item -> item.memberId() + ":" + item.explicitRole())
+                .sorted()
+                .toList().toString();
+    }
     private String initialOwnerMemberId(String companyId) {
         List<String> candidates = jdbc.queryForList("""
                 SELECT id FROM company_member
@@ -351,6 +468,9 @@ public class DevAutopilotTenantApplicationService {
                     JOIN agent_channel_binding channel
                       ON channel.company_id=agent.company_id AND channel.agent_id=agent.agent_id
                      AND channel.channel_id='web' AND channel.enabled=TRUE
+                    JOIN agent_service_principal_binding execution
+                      ON execution.company_id=agent.company_id AND execution.agent_id=agent.agent_id
+                     AND execution.enabled=TRUE AND execution.delegation_policy='TENANT_APP_ROLE'
                     JOIN agent_skill_binding skill_binding
                       ON skill_binding.company_id=agent.company_id AND skill_binding.agent_id=agent.agent_id
                      AND skill_binding.enabled=TRUE AND skill_binding.activation_mode='always-on'
@@ -387,6 +507,15 @@ public class DevAutopilotTenantApplicationService {
     public record ActivationCommand(String idempotencyKey) { }
     public record ResourceView(String logicalRole,String resourceType,String resourceAlias,String displayName,String externalId,String lifecycleState,boolean primary) { }
     public record TeamResourceView(ResourceView resource, String principalId, String clientId, String clientSecret, String credentialNotice) { }
+    public record ApplicationMemberRoleInput(String memberId, String roleCode) { }
+    public record ApplicationMemberAccessView(String memberId,
+                                              String publicId,
+                                              String displayName,
+                                              String memberRole,
+                                              String explicitRole,
+                                              String effectiveRole,
+                                              String source,
+                                              boolean governanceOwner) { }
     public record View(String companyId,boolean enabled,String templateVersion,String desiredState,String actualState,String sematticeTenantId,String metadataVersionId,String metadataDigest,boolean initializationReady,String lastErrorCode,List<ResourceView> resources) {
         static View notEnabled(String companyId) { return new View(companyId,false,null,"NOT_ENABLED","NOT_ENABLED",null,null,null,false,null,List.of()); }
     }

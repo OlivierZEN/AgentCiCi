@@ -7260,6 +7260,24 @@
   overflow: visible;
 }
 
+.cici-workbench__execution-access {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 8px;
+  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--theme-warning, #b7791f) 45%, var(--theme-line, #ded2bb));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--theme-warning, #b7791f) 8%, var(--theme-surface, #fffdf8));
+  color: var(--theme-text-secondary);
+  font-size: 13px;
+}
+
+.cici-workbench__execution-access strong {
+  color: var(--theme-text);
+  white-space: nowrap;
+}
+
 .cici-workbench__composer-shell {
   position: relative;
   display: flex;

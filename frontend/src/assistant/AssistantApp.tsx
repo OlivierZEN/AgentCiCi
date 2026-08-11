@@ -189,6 +189,7 @@ type WorkbenchDockAgent = {
   color: string;
   stateMachine: WorkbenchStateMachine;
   messages: ChatBubble[];
+  executionAccess?: ExecutionAccessPayload;
 };
 
 type WorkbenchStateMachine = {
@@ -207,7 +208,20 @@ type PublishedAgentPayload = {
   greeting?: string | null;
   builtin?: boolean;
   publishedVersionId?: number | null;
+  executionAccess?: ExecutionAccessPayload;
 };
+
+type ExecutionAccessPayload = {
+  bound: boolean;
+  canInvoke: boolean;
+  reasonCode: string;
+  maxRole: string;
+  message: string;
+};
+
+export function isAgentInvocationBlocked(access?: ExecutionAccessPayload): boolean {
+  return Boolean(access?.bound && !access.canInvoke);
+}
 
 type WorkbenchMetric = { label: string; value: string };
 
@@ -342,6 +356,7 @@ function toWorkbenchDockAgent(agent: PublishedAgentPayload, colorIndex: number):
     return {
       ...preset,
       avatarBase64: (agent.avatarBase64 ?? preset.avatarBase64 ?? "").trim(),
+      executionAccess: agent.executionAccess,
       stateMachine: { ...preset.stateMachine, thoughts: [...preset.stateMachine.thoughts] },
       messages: preset.messages.map((item) => ({ ...item })),
     };
@@ -363,6 +378,7 @@ function toWorkbenchDockAgent(agent: PublishedAgentPayload, colorIndex: number):
       thoughts: ["已就绪，等待你的指令"],
     },
     messages: [],
+    executionAccess: agent.executionAccess,
   };
 }
 
@@ -2410,6 +2426,8 @@ export default function AssistantApp() {
     workbenchDockAgents[0] ??
     WORKBENCH_DOCK_AGENTS[0];
   const activeWorkbenchAgentId = activeWorkbenchAgent.runtimeAgentId;
+  const activeExecutionAccess = activeWorkbenchAgent.executionAccess;
+  const activeWorkbenchInvocationBlocked = isAgentInvocationBlocked(activeExecutionAccess);
   const activeWorkbenchSkillBindingsLoaded = Object.prototype.hasOwnProperty.call(
     agentSkillBindingsByAgent,
     activeWorkbenchAgentId,
@@ -3387,6 +3405,10 @@ export default function AssistantApp() {
 
   const submitQuestion = async (question: string) => {
     if (!auth || !question.trim() || chatLoading) {
+      return;
+    }
+    if (workspaceTab === "workbench" && activeWorkbenchInvocationBlocked) {
+      setSpeechNotice(activeExecutionAccess?.message || "当前账号不能委托此智能体执行，请联系租户管理员授权。");
       return;
     }
     if (workspaceTab !== "workbench" && !activeConversation) {
@@ -4393,14 +4415,20 @@ export default function AssistantApp() {
                   </div>
 
                   <form className="cici-workbench__composer" onSubmit={ask}>
+                    {activeWorkbenchInvocationBlocked ? (
+                      <div className="cici-workbench__execution-access" role="status">
+                        <strong>当前账号暂不能调用该智能体</strong>
+                        <span>{activeExecutionAccess?.message}</span>
+                      </div>
+                    ) : null}
                     <div className="cici-workbench__composer-shell">
                       <textarea
                         ref={attachComposerTextareaRef}
                         value={input}
                         onChange={(event) => handleComposerInputChange(event.target.value)}
                         onKeyDown={handleComposerTextareaKeyDown}
-                        placeholder="发消息或输入“/”选择技能"
-                        disabled={chatLoading}
+                        placeholder={activeWorkbenchInvocationBlocked ? "请联系租户管理员授予 DevAutopilot 应用角色" : "发消息或输入“/”选择技能"}
+                        disabled={chatLoading || activeWorkbenchInvocationBlocked}
                       />
                       <div className="cici-workbench__composer-footer">
                         <div className="cici-workbench__composer-tools">
@@ -4570,7 +4598,7 @@ export default function AssistantApp() {
                               <path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6" />
                             </svg>
                           </button>
-                          <button type="submit" disabled={chatLoading} className="cici-workbench__send-btn">
+                          <button type="submit" disabled={chatLoading || activeWorkbenchInvocationBlocked} className="cici-workbench__send-btn">
                             <svg viewBox="0 0 24 24">
                               <line x1="12" y1="19" x2="12" y2="5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
                               <polyline points="5 12 12 5 19 12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />

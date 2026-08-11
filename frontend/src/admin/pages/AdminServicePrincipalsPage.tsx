@@ -48,6 +48,27 @@ type TeamResourceResult = RotateSecretResult & {
   resource: { logicalRole: string; resourceType: string; displayName: string; externalId: string };
 };
 
+type DevAutopilotAccessMember = {
+  memberId: string;
+  publicId: string;
+  displayName: string;
+  memberRole: string;
+  explicitRole?: string | null;
+  effectiveRole: string;
+  source: "TENANT_ADMIN" | "GOVERNANCE_OWNER" | "EXPLICIT" | "NONE";
+  governanceOwner: boolean;
+};
+
+export function buildDevAutopilotAccessRoleRequest(
+  members: DevAutopilotAccessMember[],
+  draft: Record<string, string>,
+) {
+  return members
+    .filter((member) => !["TENANT_ADMIN", "GOVERNANCE_OWNER"].includes(member.source))
+    .map((member) => ({ memberId: member.memberId, roleCode: draft[member.memberId] ?? "" }))
+    .filter((member) => member.roleCode);
+}
+
 const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
   timeZone: "Asia/Shanghai",
   year: "numeric",
@@ -140,6 +161,9 @@ export default function AdminServicePrincipalsPage() {
   });
   const [editingPrincipal, setEditingPrincipal] = useState<ServicePrincipal | null>(null);
   const [profileForm, setProfileForm] = useState({ displayName: "", ownerMemberId: "" });
+  const [accessMembers, setAccessMembers] = useState<DevAutopilotAccessMember[]>([]);
+  const [accessDialogOpen, setAccessDialogOpen] = useState(false);
+  const [accessDraft, setAccessDraft] = useState<Record<string, string>>({});
 
   const selected = useMemo(
     () => items.find((item) => item.principalId === selectedId) ?? items[0] ?? null,
@@ -152,12 +176,13 @@ export default function AdminServicePrincipalsPage() {
     if (!options?.quiet) setLoading(true);
     setNotice("");
     try {
-      const [res, teamRes, membersRes] = await Promise.all([
+      const [res, teamRes, membersRes, accessRes] = await Promise.all([
         fetch(adminApi.servicePrincipals(), { headers: { Authorization: `Bearer ${token}` } }),
         fetch(adminApi.devAutopilotTeam(), { headers: { Authorization: `Bearer ${token}` } }),
         fetch(adminApi.users(), { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(adminApi.devAutopilotTeam("/access-members"), { headers: { Authorization: `Bearer ${token}` } }),
       ]);
-      const [json, teamJson, membersJson] = await Promise.all([res.json(), teamRes.json(), membersRes.json()]);
+      const [json, teamJson, membersJson, accessJson] = await Promise.all([res.json(), teamRes.json(), membersRes.json(), accessRes.json()]);
       if (!res.ok || !json.success) {
         setNotice(json.message ?? "机器主体加载失败");
         return;
@@ -167,10 +192,41 @@ export default function AdminServicePrincipalsPage() {
       setSelectedId((current) => next.some((item) => item.principalId === current) ? current : (next[0]?.principalId ?? ""));
       setDevAutopilotTeam(teamRes.ok && teamJson.success ? teamJson.data as DevAutopilotTeam : null);
       setMembers(membersRes.ok && membersJson.success ? membersJson.data as HumanMember[] : []);
+      setAccessMembers(accessRes.ok && accessJson.success && Array.isArray(accessJson.data) ? accessJson.data as DevAutopilotAccessMember[] : []);
     } catch {
       setNotice("机器主体加载失败，请检查网络后重试");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openAccessDialog = () => {
+    setAccessDraft(Object.fromEntries(accessMembers.map((member) => [member.memberId, member.explicitRole ?? ""])));
+    setAccessDialogOpen(true);
+  };
+
+  const saveAccessRoles = async () => {
+    setSubmitting(true);
+    try {
+      const response = await fetch(adminApi.devAutopilotTeam("/access-members"), {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          members: buildDevAutopilotAccessRoleRequest(accessMembers, accessDraft),
+        }),
+      });
+      const json = await response.json();
+      if (!response.ok || !json.success || !Array.isArray(json.data)) {
+        setNotice(json.message ?? "DevAutopilot 调用权限保存失败");
+        return;
+      }
+      setAccessMembers(json.data as DevAutopilotAccessMember[]);
+      setAccessDialogOpen(false);
+      setNotice("DevAutopilot 调用权限已更新；机器主体负责人和授权调用者分别记录。");
+    } catch {
+      setNotice("DevAutopilot 调用权限保存失败，请稍后重试");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -406,7 +462,12 @@ export default function AdminServicePrincipalsPage() {
             <p className="subtle">名称与人类负责人由本租户定义；系统生成技术标识并固化模板最小权限。</p>
           )}
         </div>
-        <p className="service-principals-team__hint">使用“新增机器主体”选择角色、名称和负责人；创建后的密钥仅显示一次。</p>
+        <div className="service-principals-team__access-action">
+          <p className="service-principals-team__hint">负责人承担治理问责；业务调用者按 DevAutopilot 应用角色独立授权。</p>
+          <button type="button" className="secondary" onClick={openAccessDialog} disabled={submitting || devAutopilotTeam?.actualState !== "ACTIVE"}>
+            管理调用权限
+          </button>
+        </div>
       </section>
 
       <div className="service-principals-layout">
@@ -630,6 +691,49 @@ export default function AdminServicePrincipalsPage() {
               <button type="button" className="secondary" onClick={() => setTeamMemberDialogOpen(false)} disabled={submitting}>取消</button>
               <button type="button" className="service-principal-button--primary" onClick={() => void createDevAutopilotTeamMember()} disabled={submitting || !teamMemberForm.displayName.trim() || !teamMemberForm.ownerMemberId || (teamMemberForm.role === "product-managers" && hasProductManager)}>
                 {submitting ? "创建中…" : "创建主体"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {accessDialogOpen && (
+        <div className="service-principal-dialog-backdrop" role="presentation">
+          <section className="service-principal-dialog service-principal-access-dialog" role="dialog" aria-modal="true" aria-labelledby="devautopilot-access-title">
+            <button type="button" className="service-principal-dialog__close" aria-label="关闭调用权限管理" onClick={() => setAccessDialogOpen(false)} disabled={submitting}>×</button>
+            <p className="service-principals-page__eyebrow">DEVAUTOPILOT ACCESS</p>
+            <h2 id="devautopilot-access-title">管理应用调用权限</h2>
+            <p>人类负责人继续治理机器主体；租户管理员和负责人自动拥有完整调用权，其他成员按业务职责授权。</p>
+            <div className="service-principal-access-list">
+              {accessMembers.map((member) => {
+                const automatic = ["TENANT_ADMIN", "GOVERNANCE_OWNER"].includes(member.source);
+                return (
+                  <label key={member.memberId} className="service-principal-access-row">
+                    <span>
+                      <strong>{member.displayName}</strong>
+                      <small>{member.publicId} · {member.memberRole}{member.governanceOwner ? " · 机器主体负责人" : ""}</small>
+                    </span>
+                    <select
+                      value={automatic ? "APP_ADMIN" : (accessDraft[member.memberId] ?? "")}
+                      onChange={(event) => setAccessDraft((current) => ({ ...current, [member.memberId]: event.target.value }))}
+                      disabled={automatic || submitting}
+                      aria-label={`${member.displayName} 的 DevAutopilot 应用角色`}
+                    >
+                      <option value="">不允许调用</option>
+                      <option value="VIEWER">查看者 · 仅查询</option>
+                      <option value="CONTRIBUTOR">协作者 · 查询和创建修改</option>
+                      <option value="REVIEWER">评审者 · 协作和研发评审</option>
+                      <option value="APP_ADMIN">应用管理员 · 完整权限</option>
+                    </select>
+                  </label>
+                );
+              })}
+            </div>
+            <p className="service-principal-access-note">所有写入仍需明确确认，并受机器主体现有 Semattice scopes 约束；应用角色不会扩大机器主体权限。</p>
+            <div className="service-principal-dialog__actions">
+              <button type="button" className="secondary" onClick={() => setAccessDialogOpen(false)} disabled={submitting}>取消</button>
+              <button type="button" className="service-principal-button--primary" onClick={() => void saveAccessRoles()} disabled={submitting}>
+                {submitting ? "保存中…" : "保存权限"}
               </button>
             </div>
           </section>

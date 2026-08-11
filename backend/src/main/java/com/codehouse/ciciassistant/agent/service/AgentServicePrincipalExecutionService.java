@@ -1,5 +1,7 @@
 package com.codehouse.ciciassistant.agent.service;
 
+import com.codehouse.ciciassistant.agent.domain.AgentPermission;
+import com.codehouse.ciciassistant.auth.RoleCodes;
 import com.codehouse.ciciassistant.auth.service.OfficialAccessTokenService;
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.platform.service.PlatformAuditService;
@@ -23,17 +25,25 @@ import org.springframework.transaction.annotation.Transactional;
 public class AgentServicePrincipalExecutionService {
 
     public static final String DELEGATION_PRIMARY_OWNER = "PRIMARY_OWNER";
+    public static final String DELEGATION_TENANT_APP_ROLE = "TENANT_APP_ROLE";
+    public static final String APP_ROLE_VIEWER = "VIEWER";
+    public static final String APP_ROLE_CONTRIBUTOR = "CONTRIBUTOR";
+    public static final String APP_ROLE_REVIEWER = "REVIEWER";
+    public static final String APP_ROLE_ADMIN = "APP_ADMIN";
 
     private final JdbcTemplate jdbcTemplate;
     private final OfficialAccessTokenService officialAccessTokens;
     private final PlatformAuditService audit;
+    private final AgentAccessControlService accessControl;
 
     public AgentServicePrincipalExecutionService(JdbcTemplate jdbcTemplate,
                                                   OfficialAccessTokenService officialAccessTokens,
-                                                  PlatformAuditService audit) {
+                                                  PlatformAuditService audit,
+                                                  AgentAccessControlService accessControl) {
         this.jdbcTemplate = jdbcTemplate;
         this.officialAccessTokens = officialAccessTokens;
         this.audit = audit;
+        this.accessControl = accessControl;
     }
 
     public Optional<BindingView> findBinding(String companyId, String agentId) {
@@ -81,6 +91,7 @@ public class AgentServicePrincipalExecutionService {
         String normalizedPrincipalId = required(servicePrincipalId, "servicePrincipalId");
         String actorPrincipalId = resolveConfigurableOwner(
                 normalizedCompanyId, normalizedAgentId, normalizedPrincipalId, required(actorMemberId, "actorMemberId"));
+        String delegationPolicy = resolveDelegationPolicy(normalizedCompanyId, normalizedAgentId);
         jdbcTemplate.update("""
                 INSERT INTO agent_service_principal_binding (
                     company_id, agent_id, service_principal_id, delegation_policy, enabled,
@@ -93,10 +104,10 @@ public class AgentServicePrincipalExecutionService {
                     configured_by_principal_id = EXCLUDED.configured_by_principal_id,
                     updated_at = EXCLUDED.updated_at
                 """, normalizedCompanyId, normalizedAgentId, normalizedPrincipalId,
-                DELEGATION_PRIMARY_OWNER, enabled, actorPrincipalId);
+                delegationPolicy, enabled, actorPrincipalId);
         audit.log(normalizedCompanyId, actorPrincipalId, "ORG_ADMIN",
                 "agent.execution_principal.configured", "agent", normalizedAgentId,
-                "SERVICE execution principal configured; enabled=" + enabled);
+                "SERVICE execution principal configured; enabled=" + enabled + "; delegationPolicy=" + delegationPolicy);
         return findBinding(normalizedCompanyId, normalizedAgentId)
                 .orElseThrow(() -> new IllegalStateException("Agent execution principal binding was not persisted"));
     }
@@ -112,7 +123,73 @@ public class AgentServicePrincipalExecutionService {
         String normalizedCompanyId = required(companyId, "companyId");
         String normalizedAgentId = normalizeAgentId(agentId);
         String normalizedMemberId = required(actorMemberId, "actorMemberId");
-        List<ServiceContext> contexts = jdbcTemplate.query("""
+        List<ServiceContext> contexts = healthyServiceContexts(normalizedCompanyId, normalizedAgentId);
+        if (contexts.size() != 1) {
+            throw new ForbiddenException("智能体机器执行身份不可用，请联系租户管理员检查主体状态与 Semattice 连接");
+        }
+        ServiceContext context = contexts.getFirst();
+        ActorContext actor = requireActor(normalizedCompanyId, normalizedMemberId);
+        AppAccess access = resolveAppAccess(normalizedCompanyId, normalizedAgentId, context, actor);
+        if (!access.allowed()) {
+            throw new ForbiddenException(access.message());
+        }
+        String requiredRole = requiredAppRole(requiredScopes, purpose);
+        if (!roleAllows(access.effectiveRole(), requiredRole)) {
+            throw new ForbiddenException("本次操作需要 DevAutopilot " + requiredRole + " 权限，当前角色为 " + access.effectiveRole());
+        }
+        List<String> normalizedScopes = normalizeScopes(requiredScopes);
+        List<String> grantedScopes = jdbcTemplate.queryForList("""
+                SELECT scope_code
+                FROM service_principal_scope
+                WHERE service_principal_id = ?
+                ORDER BY scope_code
+                """, String.class, context.servicePrincipalId());
+        if (normalizedScopes.isEmpty() || !grantedScopes.containsAll(normalizedScopes)) {
+            throw new ForbiddenException("机器执行身份缺少本次操作所需的 Semattice scope");
+        }
+        OfficialAccessTokenService.IssuedToken token = officialAccessTokens.issueForSematticeService(
+                context.servicePrincipalId(), context.ownerPrincipalId(), context.clientId(),
+                context.tenantId(), normalizedCompanyId, normalizedScopes,
+                actor.accountPrincipalId(), context.delegationPolicy());
+        audit.log(normalizedCompanyId, actor.accountPrincipalId(), actor.roleCode(),
+                "agent.service_principal.delegated", "service_principal", context.servicePrincipalId(),
+                "agent=" + normalizedAgentId + "; purpose=" + safePurpose(purpose)
+                        + "; delegationPolicy=" + context.delegationPolicy()
+                        + "; appRole=" + access.effectiveRole()
+                        + "; ownerPrincipalId=" + context.ownerPrincipalId());
+        return new ExecutionAuthorization(
+                context.servicePrincipalId(),
+                context.displayName(),
+                context.ownerPrincipalId(),
+                actor.accountPrincipalId(),
+                context.delegationPolicy(),
+                access.effectiveRole(),
+                token);
+    }
+
+    /** Lightweight projection used by the Agent list before the user starts a conversation. */
+    public ExecutionAccessView executionAccess(String companyId, String actorMemberId, String agentId) {
+        String normalizedCompanyId = required(companyId, "companyId");
+        String normalizedAgentId = normalizeAgentId(agentId);
+        Optional<BindingView> binding = findBinding(normalizedCompanyId, normalizedAgentId);
+        if (binding.isEmpty()) {
+            return new ExecutionAccessView(false, true, "NOT_REQUIRED", "NONE", "此智能体不需要机器执行身份");
+        }
+        List<ServiceContext> contexts = healthyServiceContexts(normalizedCompanyId, normalizedAgentId);
+        if (contexts.size() != 1) {
+            return new ExecutionAccessView(true, false, "EXECUTION_IDENTITY_UNAVAILABLE", "NONE",
+                    "机器执行身份不可用，请联系租户管理员检查主体状态与 Semattice 连接");
+        }
+        List<ActorContext> actors = actorContexts(normalizedCompanyId, actorMemberId);
+        if (actors.size() != 1) {
+            return new ExecutionAccessView(true, false, "MEMBER_INACTIVE", "NONE", "当前成员已停用或不属于此租户");
+        }
+        AppAccess access = resolveAppAccess(normalizedCompanyId, normalizedAgentId, contexts.getFirst(), actors.getFirst());
+        return new ExecutionAccessView(true, access.allowed(), access.reasonCode(), access.effectiveRole(), access.message());
+    }
+
+    private List<ServiceContext> healthyServiceContexts(String companyId, String agentId) {
+        return jdbcTemplate.query("""
                 SELECT binding.service_principal_id,
                        binding.delegation_policy,
                        service.client_id,
@@ -141,12 +218,11 @@ public class AgentServicePrincipalExecutionService {
                   ON owner.service_principal_id = service.principal_id
                  AND owner.owner_role = 'PRIMARY'
                  AND owner.owner_status = 'ACTIVE'
-                JOIN company_member member
-                  ON member.id = ?
-                 AND member.id = owner.company_member_id
-                 AND member.account_id = owner.owner_principal_id
-                 AND member.company_id = binding.company_id
-                 AND member.member_status = 'ACTIVE'
+                JOIN company_member owner_member
+                  ON owner_member.id = owner.company_member_id
+                 AND owner_member.account_id = owner.owner_principal_id
+                 AND owner_member.company_id = binding.company_id
+                 AND owner_member.member_status = 'ACTIVE'
                 JOIN company company
                   ON company.id = binding.company_id
                  AND company.status = 'ACTIVE'
@@ -157,7 +233,7 @@ public class AgentServicePrincipalExecutionService {
                 WHERE binding.company_id = ?
                   AND binding.agent_id = ?
                   AND binding.enabled = TRUE
-                  AND binding.delegation_policy = 'PRIMARY_OWNER'
+                  AND binding.delegation_policy IN ('PRIMARY_OWNER', 'TENANT_APP_ROLE')
                 """, (rs, rowNum) -> new ServiceContext(
                         rs.getString("service_principal_id"),
                         rs.getString("delegation_policy"),
@@ -166,37 +242,88 @@ public class AgentServicePrincipalExecutionService {
                         rs.getString("owner_principal_id"),
                         rs.getString("display_name")),
                 OfficialAccessTokenService.SEMATTICE_AUDIENCE,
-                normalizedMemberId,
-                normalizedCompanyId,
-                normalizedAgentId);
-        if (contexts.size() != 1) {
-            throw new ForbiddenException("智能体未绑定可用的机器执行身份，或当前用户无委托权限");
+                companyId,
+                agentId);
+    }
+
+    private ActorContext requireActor(String companyId, String memberId) {
+        List<ActorContext> actors = actorContexts(companyId, memberId);
+        if (actors.size() != 1) {
+            throw new ForbiddenException("当前成员已停用或不属于此租户，不能委托机器主体执行");
         }
-        ServiceContext context = contexts.getFirst();
-        List<String> normalizedScopes = normalizeScopes(requiredScopes);
-        List<String> grantedScopes = jdbcTemplate.queryForList("""
-                SELECT scope_code
-                FROM service_principal_scope
-                WHERE service_principal_id = ?
-                ORDER BY scope_code
-                """, String.class, context.servicePrincipalId());
-        if (normalizedScopes.isEmpty() || !grantedScopes.containsAll(normalizedScopes)) {
-            throw new ForbiddenException("机器执行身份缺少本次操作所需的 Semattice scope");
+        return actors.getFirst();
+    }
+
+    private List<ActorContext> actorContexts(String companyId, String memberId) {
+        return jdbcTemplate.query("""
+                SELECT member.id, member.account_id, member.role_code
+                FROM company_member member
+                JOIN principal principal ON principal.id=member.account_id
+                  AND principal.principal_type='HUMAN' AND principal.lifecycle_status='ACTIVE'
+                WHERE member.id=? AND member.company_id=? AND member.member_status='ACTIVE'
+                """, (rs, rowNum) -> new ActorContext(
+                rs.getString("id"), rs.getString("account_id"), rs.getString("role_code")), memberId, companyId);
+    }
+
+    private AppAccess resolveAppAccess(String companyId, String agentId, ServiceContext service, ActorContext actor) {
+        if (!accessControl.can(companyId, actor.memberId(), List.of(actor.roleCode()), agentId, AgentPermission.RUN)) {
+            return AppAccess.denied("AGENT_RUN_DENIED", "当前成员没有运行此智能体的权限");
         }
-        OfficialAccessTokenService.IssuedToken token = officialAccessTokens.issueForSematticeService(
-                context.servicePrincipalId(), context.ownerPrincipalId(), context.clientId(),
-                context.tenantId(), normalizedCompanyId, normalizedScopes,
-                context.ownerPrincipalId(), context.delegationPolicy());
-        audit.log(normalizedCompanyId, context.ownerPrincipalId(), "SERVICE_DELEGATOR",
-                "agent.service_principal.delegated", "service_principal", context.servicePrincipalId(),
-                "agent=" + normalizedAgentId + "; purpose=" + safePurpose(purpose)
-                        + "; delegationPolicy=" + context.delegationPolicy());
-        return new ExecutionAuthorization(
-                context.servicePrincipalId(),
-                context.displayName(),
-                context.ownerPrincipalId(),
-                context.delegationPolicy(),
-                token);
+        if (actor.accountPrincipalId().equals(service.ownerPrincipalId())) {
+            return AppAccess.allowed(APP_ROLE_ADMIN, "PRIMARY_OWNER", "你是机器主体治理负责人，可执行 DevAutopilot 操作");
+        }
+        if (DELEGATION_PRIMARY_OWNER.equals(service.delegationPolicy())) {
+            return AppAccess.denied("OWNER_ONLY_POLICY", "此智能体仍使用负责人专属委托策略，请联系租户管理员完成初始化升级");
+        }
+        if (RoleCodes.isOrgAdminRole(actor.roleCode())) {
+            return AppAccess.allowed(APP_ROLE_ADMIN, "ORG_ADMIN", "你具有租户管理权限，可委托产品经理执行");
+        }
+        List<String> roles = jdbcTemplate.queryForList("""
+                SELECT access.role_code
+                FROM tenant_application_member_role access
+                JOIN tenant_application_activation activation ON activation.id=access.activation_id
+                WHERE activation.company_id=? AND activation.app_code='devautopilot'
+                  AND activation.actual_state='ACTIVE'
+                  AND access.company_member_id=? AND access.status='ACTIVE'
+                """, String.class, companyId, actor.memberId());
+        if (roles.size() != 1) {
+            return AppAccess.denied("APP_ROLE_REQUIRED", "当前账号没有 DevAutopilot 应用角色，请联系租户管理员授权");
+        }
+        return AppAccess.allowed(roles.getFirst(), "EXPLICIT_APP_ROLE", "DevAutopilot 应用角色已授权");
+    }
+
+    private String resolveDelegationPolicy(String companyId, String agentId) {
+        Integer count = jdbcTemplate.queryForObject("""
+                SELECT count(*)
+                FROM tenant_application_resource resource
+                JOIN tenant_application_activation activation ON activation.id=resource.activation_id
+                WHERE activation.company_id=? AND activation.app_code='devautopilot'
+                  AND resource.resource_type='AGENT' AND resource.external_id=?
+                """, Integer.class, companyId, agentId);
+        return count != null && count == 1 ? DELEGATION_TENANT_APP_ROLE : DELEGATION_PRIMARY_OWNER;
+    }
+
+    private static String requiredAppRole(List<String> scopes, String purpose) {
+        List<String> normalized = normalizeScopes(scopes);
+        String safe = safePurpose(purpose);
+        if (normalized.contains("runtime.record.delete")) return APP_ROLE_ADMIN;
+        if (safe.endsWith("_review")) return APP_ROLE_REVIEWER;
+        if (normalized.contains("runtime.record.create") || normalized.contains("runtime.record.update")) return APP_ROLE_CONTRIBUTOR;
+        return APP_ROLE_VIEWER;
+    }
+
+    private static boolean roleAllows(String actual, String requiredRole) {
+        return roleRank(actual) >= roleRank(requiredRole);
+    }
+
+    private static int roleRank(String role) {
+        return switch (role == null ? "" : role) {
+            case APP_ROLE_VIEWER -> 1;
+            case APP_ROLE_CONTRIBUTOR -> 2;
+            case APP_ROLE_REVIEWER -> 3;
+            case APP_ROLE_ADMIN -> 4;
+            default -> 0;
+        };
     }
 
     private String resolveConfigurableOwner(String companyId,
@@ -292,6 +419,18 @@ public class AgentServicePrincipalExecutionService {
                                   String displayName) {
     }
 
+    private record ActorContext(String memberId, String accountPrincipalId, String roleCode) { }
+
+    private record AppAccess(boolean allowed, String effectiveRole, String reasonCode, String message) {
+        private static AppAccess allowed(String role, String reason, String message) {
+            return new AppAccess(true, role, reason, message);
+        }
+
+        private static AppAccess denied(String reason, String message) {
+            return new AppAccess(false, "NONE", reason, message);
+        }
+    }
+
     public record BindingView(String companyId,
                               String agentId,
                               String servicePrincipalId,
@@ -311,7 +450,23 @@ public class AgentServicePrincipalExecutionService {
     public record ExecutionAuthorization(String servicePrincipalId,
                                          String servicePrincipalDisplayName,
                                          String ownerPrincipalId,
+                                         String delegatedByPrincipalId,
                                          String delegationPolicy,
+                                         String effectiveAppRole,
                                          OfficialAccessTokenService.IssuedToken token) {
+        public ExecutionAuthorization(String servicePrincipalId,
+                                      String servicePrincipalDisplayName,
+                                      String ownerPrincipalId,
+                                      String delegationPolicy,
+                                      OfficialAccessTokenService.IssuedToken token) {
+            this(servicePrincipalId, servicePrincipalDisplayName, ownerPrincipalId, ownerPrincipalId,
+                    delegationPolicy, APP_ROLE_ADMIN, token);
+        }
     }
+
+    public record ExecutionAccessView(boolean bound,
+                                      boolean canInvoke,
+                                      String reasonCode,
+                                      String maxRole,
+                                      String message) { }
 }

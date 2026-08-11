@@ -1,7 +1,14 @@
 package com.codehouse.ciciassistant.platform.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.codehouse.ciciassistant.agent.service.AgentDefinitionService;
@@ -11,9 +18,12 @@ import com.codehouse.ciciassistant.auth.service.ServicePrincipalService;
 import com.codehouse.ciciassistant.semattice.SematticeDevAutopilotTemplateClient;
 import com.codehouse.ciciassistant.semattice.SematticeProvisioningService;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class DevAutopilotTenantApplicationReadinessTest {
 
@@ -63,5 +73,34 @@ class DevAutopilotTenantApplicationReadinessTest {
         assertThat(readinessSql.getValue())
                 .contains("agent_skill_binding", "semattice-project-delivery-management",
                         "agent_workflow_skill_ref", "skill_version.publish_status='PUBLISHED'");
+    }
+
+    @Test
+    void registersApplicationResourcesBeforeDerivingTheExecutionDelegationPolicy() {
+        ServicePrincipalService principals = mock(ServicePrincipalService.class);
+        AgentServicePrincipalExecutionService execution = mock(AgentServicePrincipalExecutionService.class);
+        DevAutopilotTenantApplicationService orderedService = new DevAutopilotTenantApplicationService(
+                jdbc,
+                mock(CompanyRepository.class),
+                mock(SematticeProvisioningService.class),
+                mock(SematticeDevAutopilotTemplateClient.class),
+                principals,
+                mock(AgentDefinitionService.class),
+                mock(DevAutopilotProductManagerAgentPublisher.class),
+                execution,
+                mock(PlatformAuditService.class),
+                List.of("runtime.record.read"),
+                List.of("runtime.record.read"));
+        when(principals.create(eq("company-a"), eq("owner-member"), eq("owner-member"),
+                eq("研发产品经理"), eq("OFFICIAL_APP"), anyString(), any(), any()))
+                .thenReturn(Map.of("principalId", "service-principal-a"));
+
+        ReflectionTestUtils.invokeMethod(orderedService, "createProductManagerResources",
+                "company-a", "activation-a", "研发产品经理", "owner-member", "owner-member", "agent-a");
+
+        InOrder order = inOrder(jdbc, execution);
+        order.verify(jdbc, times(2)).update(contains("INSERT INTO tenant_application_resource"), any(Object[].class));
+        order.verify(execution).configure("company-a", "agent-a", "service-principal-a", true, "owner-member");
+        verify(execution).configure("company-a", "agent-a", "service-principal-a", true, "owner-member");
     }
 }
