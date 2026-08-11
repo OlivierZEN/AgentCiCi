@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-11T06:26:32Z
+updated_at: 2026-08-11T07:19:00Z
 updated_by: codex
 phase: verification
 active_task: TASK-280
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-283 / FEAT-171 / INT-009 本地实现已完成并进入 review：产品经理可从普通用户自然描述主动识别需求、缺陷或变更，逐字校验原始描述与补充，生成专业整理和单问题澄清，通过短确认写入 Semattice `intake`；缺陷只从当前租户 active 全栈开发者池分派。相关定向测试通过；完整后端套件因本地 PostgreSQL 不可连接停在既有 Hikari 重试，未声明全量通过。未发布 UAT/生产。
 
 - TASK-280 统一身份信息归位已发布 UAT `2.8.61-beta.9 / 500ea8981b7d`：状态、说明及修复/激活检查固定在成员整体信息区，CloudCC 页签只保留连接器字段。完整前端 42 文件/232 项、生产构建、本地桌面截图和 UAT 受权浏览器检查通过；待激活成员在 CloudCC 页签仍显示顶部身份状态与“检查激活状态”，浏览器 0 error/warning。六容器 healthy、restart=0，版本/health/Flyway V109/Nginx/公网/匿名 401 与 30 秒稳定窗口通过，四个状态服务 ID 哈希未变。用户先前页面证据显示 `18611892001` 已为有效且统一身份可登录；尚需 Demo Company 刷新确认 beta.9 布局并用独立浏览器完成登录回归。
 

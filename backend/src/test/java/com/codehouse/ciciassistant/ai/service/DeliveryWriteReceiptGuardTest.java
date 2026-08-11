@@ -80,6 +80,16 @@ class DeliveryWriteReceiptGuardTest {
         assertThat(ChatOrchestratorService.hasPendingDeliveryDraft(List.of(
                 Map.of("role", "assistant", "content", "当前研发项目列表"))))
                 .isFalse();
+        assertThat(ChatOrchestratorService.hasPendingDeliveryDraft(List.of(
+                Map.of("role", "assistant", "content",
+                        "请确认提交。<!-- DEV_AUTOPILOT_INTAKE_V1 {\"classification\":\"defect\"} -->"))))
+                .isTrue();
+        assertThat(ChatOrchestratorService.hasPendingDeliveryDraft(List.of(
+                Map.of("role", "assistant", "content",
+                        "请确认提交。<!-- DEV_AUTOPILOT_INTAKE_V1 {\"classification\":\"defect\"} -->"),
+                Map.of("role", "user", "content", "确认提交"),
+                Map.of("role", "assistant", "content", "已在 Semattice 创建缺陷：退出登录异常。"))))
+                .isFalse();
     }
 
     private static AgentRunTraceService.ToolCallTraceInput trace(String name, String result, boolean success) {

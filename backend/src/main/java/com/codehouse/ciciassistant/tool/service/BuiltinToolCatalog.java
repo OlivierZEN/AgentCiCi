@@ -32,7 +32,7 @@ public final class BuiltinToolCatalog {
             new ToolCatalogItem(SematticeProjectDeliveryToolService.TOOL_NAME, "研发交付数据查询",
                     SematticeProjectDeliveryToolService.toolDescription(), "低风险", "project_delivery"),
             new ToolCatalogItem(SematticeProjectDeliveryWriteToolService.TOOL_NAME, "研发交付记录创建",
-                    "仅由研发交付产品经理在用户明确确认后调用，创建同租户项目、需求或任务。", "中风险", "project_delivery"),
+                    "由研发交付产品经理主动识别并专业整理用户描述，经用户确认后创建同租户项目、需求、缺陷或变更，并保留完整受理记录。", "中风险", "project_delivery"),
             new ToolCatalogItem(SematticeProjectDeliveryDeleteToolService.TOOL_NAME, "研发交付记录删除",
                     "仅由研发交付产品经理在用户明确确认后调用，将记录移入回收站（30天可恢复）。", "中风险", "project_delivery"),
             new ToolCatalogItem(SematticeProjectDeliveryUpdateToolService.TOOL_NAME, "研发交付记录修改",

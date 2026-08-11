@@ -12,9 +12,11 @@ import com.codehouse.ciciassistant.auth.service.OfficialAccessTokenService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
+import java.util.Map;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
@@ -56,7 +58,8 @@ class SematticeProjectDeliveryWriteToolServiceTest {
                 .andExpect(header("Authorization", "Bearer service-oact"))
                 .andRespond(withSuccess("{\"status\":\"succeeded\",\"result\":{\"record_id\":\"019fb381-622b-73b9-b8c8-b97181509008\",\"revision\":1,\"data\":{\"code\":\"DAS-PLACEHOLDER\",\"name\":\"棕榈地\",\"owner\":\"DEV Autopilot 产品经理\",\"status\":\"规划中\",\"health\":\"待评估\",\"progress\":0,\"release\":\"v0.1.0\",\"description\":\"由研发交付产品经理创建\"}}}", MediaType.APPLICATION_JSON));
         SematticeProjectDeliveryWriteToolService service = new SematticeProjectDeliveryWriteToolService(
-                builder, objectMapper, execution, "https://semattice.example.test");
+                builder, objectMapper, execution, mock(DevAutopilotDeveloperAssignmentService.class),
+                "https://semattice.example.test");
 
         JsonNode result = objectMapper.readTree(service.dispatch("org-1", "member-1", "dev-autopilot-pm",
                 "{\"operation\":\"create_project\",\"name\":\"棕榈地\"}"));
@@ -83,6 +86,12 @@ class SematticeProjectDeliveryWriteToolServiceTest {
                 "新增需求：为 AgentCiCi 企业级智能体平台提供组织级智能体治理")).isTrue();
         assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest(
                 "帮我记录一个 Bug：确认按钮点击没有反应")).isTrue();
+        assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest(
+                "退出后又自动进入系统，没有真正注销")).isTrue();
+        assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest(
+                "希望项目列表支持按负责人筛选")).isTrue();
+        assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest(
+                "把已确认需求的审批规则改成产品总监确认")).isTrue();
         assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest("现在有哪些项目在执行"))
                 .isFalse();
     }
@@ -91,12 +100,58 @@ class SematticeProjectDeliveryWriteToolServiceTest {
     void modelDraftPromptRequiresFullSemanticUnderstandingAndNoWrite() {
         String prompt = SematticeProjectDeliveryWriteToolService.modelDraftPrompt();
 
-        assertThat(prompt).contains("基于完整用户消息和会话上下文进行语义理解");
-        assertThat(prompt).contains("服务端没有、也不会用正则替你抽取项目名");
+        assertThat(prompt).contains("主动分类");
+        assertThat(prompt).contains("original_report");
+        assertThat(prompt).contains("不得要求用户提供严重度、优先级、技术环境");
+        assertThat(prompt).contains("待开发者验证");
         assertThat(prompt).contains("完整项目名称是“AgentCiCi企业级智能体平台”，不是“新”");
         assertThat(prompt).contains("不调用任何工具，不写入 Semattice");
         assertThat(prompt).contains("确认创建项目：<完整项目名称>");
-        assertThat(prompt).contains("确认提交缺陷：项目=<父项目编号或名称>");
+        assertThat(prompt).contains("DEV_AUTOPILOT_INTAKE_V1");
+    }
+
+    @Test
+    void restoresAClassifiedDefectFromTheInvisibleDraftOnShortConfirmation() throws Exception {
+        String original = "退出后又自动进入系统，没有真正注销";
+        String marker = "<!-- DEV_AUTOPILOT_INTAKE_V1 " + objectMapper.writeValueAsString(Map.ofEntries(
+                Map.entry("classification", "defect"), Map.entry("project", "DAS-001"),
+                Map.entry("requirement", ""), Map.entry("title", "退出登录后会话仍然有效"),
+                Map.entry("original_report", original), Map.entry("pm_assessment", "已有退出能力偏离预期，判定为缺陷"),
+                Map.entry("priority", "P1"), Map.entry("severity", "high"),
+                Map.entry("environment", "待开发者验证"), Map.entry("reproduction_steps", List.of("待开发者验证")),
+                Map.entry("expected_result", "退出后保持未登录"), Map.entry("actual_result", "退出后自动重新进入系统"),
+                Map.entry("acceptance_criteria", List.of()), Map.entry("impact_analysis", List.of()),
+                Map.entry("user_supplements", List.of()), Map.entry("assumptions", List.of("待开发者验证会话清理链路")),
+                Map.entry("clarification_question", ""), Map.entry("ready_for_confirmation", true),
+                Map.entry("cancelled", false))) + " -->";
+        List<Map<String, Object>> messages = List.of(
+                Map.of("role", "user", "content", original),
+                Map.of("role", "assistant", "content", "我已完成专业整理，请确认提交。\n" + marker));
+
+        var confirmed = SematticeProjectDeliveryWriteToolService.confirmedIntent(
+                "确认提交", messages, "conversation-1", objectMapper);
+
+        assertThat(confirmed).hasValueSatisfying(intent -> {
+            assertThat(intent.operation()).isEqualTo("create_defect");
+            assertThat(intent.description()).isEqualTo(original);
+            assertThat(intent.reproductionSteps()).containsExactly("待开发者验证");
+            assertThat(intent.intake()).containsEntry("classification", "defect")
+                    .containsEntry("conversation_id", "conversation-1")
+                    .containsEntry("developer_verification_pending", true);
+        });
+        SematticeProjectDeliveryWriteToolService writer = new SematticeProjectDeliveryWriteToolService(
+                RestClient.builder(), objectMapper, mock(AgentServicePrincipalExecutionService.class),
+                mock(DevAutopilotDeveloperAssignmentService.class), "https://semattice.example.test");
+        String firstKey = ReflectionTestUtils.invokeMethod(writer, "correlationId", confirmed.orElseThrow());
+        String replayKey = ReflectionTestUtils.invokeMethod(writer, "correlationId", confirmed.orElseThrow());
+        assertThat(firstKey).startsWith("cici-delivery-intake-").isEqualTo(replayKey);
+        assertThat(SematticeProjectDeliveryWriteToolService.hasPendingIntake(messages)).isTrue();
+        List<Map<String, Object>> completedMessages = List.of(
+                messages.get(0), messages.get(1), Map.of("role", "user", "content", "确认提交"),
+                Map.of("role", "assistant", "content", "已在 Semattice 创建缺陷：退出登录后会话仍然有效。"));
+        assertThat(SematticeProjectDeliveryWriteToolService.hasPendingIntake(completedMessages)).isFalse();
+        assertThat(SematticeProjectDeliveryWriteToolService.confirmedIntent(
+                "确认提交", completedMessages, "conversation-1", objectMapper)).isEmpty();
     }
 
     @Test
@@ -128,7 +183,8 @@ class SematticeProjectDeliveryWriteToolServiceTest {
         server.expect(requestTo("https://semattice.example.test/v1/capabilities/runtime.record.get/invoke"))
                 .andRespond(withSuccess("{\"status\":\"succeeded\",\"result\":{\"record_id\":\"019fb381-622b-73b9-b8c8-b97181509009\",\"revision\":1,\"data\":{\"project_id\":\"019fb381-622b-73b9-b8c8-b97181509001\",\"title\":\"确认按钮无响应\",\"description\":\"点击后页面没有变化\",\"severity\":\"high\",\"priority\":\"P1\",\"status\":\"new\",\"reporter_principal_id\":\"human-actor-1\",\"environment\":\"UAT Chrome\",\"reproduction_steps\":[\"打开详情后点击确认\"],\"expected_result\":\"保存成功\",\"actual_result\":\"没有请求发出\",\"source\":\"chat\"}}}", MediaType.APPLICATION_JSON));
         SematticeProjectDeliveryWriteToolService service = new SematticeProjectDeliveryWriteToolService(
-                builder, objectMapper, execution, "https://semattice.example.test");
+                builder, objectMapper, execution, mock(DevAutopilotDeveloperAssignmentService.class),
+                "https://semattice.example.test");
 
         JsonNode result = objectMapper.readTree(service.dispatch("org-1", "member-1", "dev-autopilot-pm",
                 SematticeProjectDeliveryWriteToolService.confirmedIntent(confirmation).orElseThrow().toArguments(objectMapper)));
@@ -159,7 +215,8 @@ class SematticeProjectDeliveryWriteToolServiceTest {
         server.expect(requestTo("https://semattice.example.test/v1/capabilities/runtime.record.get/invoke"))
                 .andRespond(withSuccess("{\"status\":\"succeeded\",\"result\":{\"record_id\":\"019fb381-622b-73b9-b8c8-b97181509010\",\"revision\":1,\"data\":{\"name\":\"其他项目\"}}}", MediaType.APPLICATION_JSON));
         SematticeProjectDeliveryWriteToolService service = new SematticeProjectDeliveryWriteToolService(
-                builder, objectMapper, execution, "https://semattice.example.test");
+                builder, objectMapper, execution, mock(DevAutopilotDeveloperAssignmentService.class),
+                "https://semattice.example.test");
 
         JsonNode result = objectMapper.readTree(service.dispatch("org-1", "member-1", "dev-autopilot-pm",
                 "{\"operation\":\"create_project\",\"name\":\"棕榈地\"}"));
@@ -174,6 +231,7 @@ class SematticeProjectDeliveryWriteToolServiceTest {
     void rejectsCallerSuppliedTenantBeforeAnyRemoteCall() throws Exception {
         SematticeProjectDeliveryWriteToolService service = new SematticeProjectDeliveryWriteToolService(
                 RestClient.builder(), objectMapper, mock(AgentServicePrincipalExecutionService.class),
+                mock(DevAutopilotDeveloperAssignmentService.class),
                 "https://semattice.example.test");
 
         JsonNode result = objectMapper.readTree(service.dispatch("org-1", "member-1", "dev-autopilot-pm",

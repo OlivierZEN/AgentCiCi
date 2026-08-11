@@ -1541,7 +1541,8 @@ public class ChatOrchestratorService {
             return Optional.empty();
         }
         Optional<SematticeProjectDeliveryWriteToolService.CreateIntent> confirmed =
-                SematticeProjectDeliveryWriteToolService.confirmedIntent(question);
+                SematticeProjectDeliveryWriteToolService.confirmedIntent(
+                        question, messages, sessionId, TOOL_RESULT_OBJECT_MAPPER);
         if (confirmed.isEmpty()) {
             return Optional.empty();
         }
@@ -1569,7 +1570,8 @@ public class ChatOrchestratorService {
             ResolvedSkillContext skillContext,
             String question) {
         boolean draftRequest = SematticeProjectDeliveryWriteToolService.isDraftRequest(question);
-        boolean draftContinuation = SematticeProjectDeliveryWriteToolService.isDraftContinuation(question)
+        boolean draftContinuation = (SematticeProjectDeliveryWriteToolService.isDraftContinuation(question)
+                || SematticeProjectDeliveryWriteToolService.hasPendingIntake(messages))
                 && hasPendingDeliveryDraft(messages);
         if (skillContext == null
                 || !skillContext.allowedToolNames().contains(SematticeProjectDeliveryWriteToolService.TOOL_NAME)
@@ -1588,13 +1590,20 @@ public class ChatOrchestratorService {
             return false;
         }
         int start = Math.max(0, messages.size() - 12);
-        for (int index = start; index < messages.size(); index++) {
+        for (int index = messages.size() - 1; index >= start; index--) {
             Object content = messages.get(index).get("content");
             if (!(content instanceof String text)) {
                 continue;
             }
             String normalized = text.replaceAll("\\s+", "");
-            if (normalized.contains("缺陷提交草案")
+            if (normalized.contains("已在Semattice创建")
+                    || normalized.contains("本次受理已取消")
+                    || normalized.contains("研发事项已取消")) {
+                return false;
+            }
+            if (normalized.contains("DEV_AUTOPILOT_INTAKE_V1")
+                    || normalized.contains("研发事项受理")
+                    || normalized.contains("缺陷提交草案")
                     || normalized.contains("待补充：父项目")
                     || normalized.contains("请补充父项目信息")
                     || normalized.contains("确认提交缺陷：项目=")) {
@@ -1616,6 +1625,7 @@ public class ChatOrchestratorService {
                 case "dev_project" -> "项目";
                 case "dev_requirement" -> "需求";
                 case "dev_task" -> "任务";
+                case "dev_change" -> "变更";
                 case "dev_defect" -> "缺陷";
                 default -> "研发交付记录";
             };
@@ -1628,10 +1638,12 @@ public class ChatOrchestratorService {
                     || !result.path("readback_verified").asBoolean(false)) {
                 return "未创建研发交付记录：Semattice 成功回执不完整，不能确认创建成功。请稍后重试。";
             }
+            String assignment = result.path("assignee_display_name").asText("");
             return "已在 Semattice 创建" + label + "：" + subject
                     + (code.isBlank() ? "" : "（" + code + "）")
                     + "。记录 ID：" + recordId + "；revision：" + revision
-                    + "；关联号：" + correlationId + "。";
+                    + "；关联号：" + correlationId
+                    + (assignment.isBlank() ? "。" : "；已交由全栈开发者“" + assignment + "”验证与处理。");
         } catch (Exception exception) {
             return "未创建研发交付记录：Semattice 回执解析失败，不能确认创建成功。请稍后重试。";
         }

@@ -4,7 +4,9 @@ import com.codehouse.ciciassistant.agent.service.AgentServicePrincipalExecutionS
 import com.codehouse.ciciassistant.auth.service.OfficialAccessTokenService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -46,19 +48,27 @@ public class SematticeProjectDeliveryWriteToolService {
     private static final Pattern CONFIRM_DEFECT = Pattern.compile(
             "^\\s*(?:请)?(?:确认|确定)(?:创建|提交|记录)缺陷[：:]\\s*(.+?)\\s*$",
             Pattern.CASE_INSENSITIVE);
+    private static final Pattern CONFIRM_PENDING_INTAKE = Pattern.compile(
+            "^\\s*(?:请)?(?:确认|确定)(?:提交|登记|创建|记录)?(?:研发事项|需求|缺陷|变更)?[。！!]?\\s*$",
+            Pattern.CASE_INSENSITIVE);
+    private static final Pattern INTAKE_MARKER = Pattern.compile(
+            "<!--\\s*DEV_AUTOPILOT_INTAKE_V1\\s*(\\{.*?})\\s*-->", Pattern.DOTALL);
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
     private final AgentServicePrincipalExecutionService executionPrincipalService;
+    private final DevAutopilotDeveloperAssignmentService developerAssignmentService;
     private final String baseUrl;
 
     public SematticeProjectDeliveryWriteToolService(RestClient.Builder restClientBuilder,
                                                     ObjectMapper objectMapper,
                                                     AgentServicePrincipalExecutionService executionPrincipalService,
+                                                    DevAutopilotDeveloperAssignmentService developerAssignmentService,
                                                     @Value("${app.semattice.base-url:}") String baseUrl) {
         this.restClient = restClientBuilder.build();
         this.objectMapper = objectMapper;
         this.executionPrincipalService = executionPrincipalService;
+        this.developerAssignmentService = developerAssignmentService;
         this.baseUrl = baseUrl == null ? "" : baseUrl.replaceAll("/+$", "");
     }
 
@@ -83,6 +93,25 @@ public class SematticeProjectDeliveryWriteToolService {
         return Optional.empty();
     }
 
+    /** Restores a user-friendly short confirmation from the latest validated intake draft. */
+    public static Optional<CreateIntent> confirmedIntent(String question,
+                                                          List<Map<String, Object>> messages,
+                                                          String conversationId,
+                                                          ObjectMapper objectMapper) {
+        Optional<CreateIntent> exact = confirmedIntent(question);
+        if (exact.isPresent()) {
+            return exact;
+        }
+        if (!CONFIRM_PENDING_INTAKE.matcher(question == null ? "" : question.trim()).matches()) {
+            return Optional.empty();
+        }
+        if (!hasPendingIntake(messages)) {
+            return Optional.empty();
+        }
+        return pendingIntake(messages, objectMapper)
+                .flatMap(intake -> intake.toCreateIntent(conversationId));
+    }
+
     /**
      * Broadly routes a possible create request to the model. This method deliberately does not
      * extract names, titles, or parent references; business semantics belong to the model turn.
@@ -96,12 +125,22 @@ public class SematticeProjectDeliveryWriteToolService {
         boolean createLanguage = normalized.contains("创建") || normalized.contains("新建")
                 || normalized.contains("新增") || normalized.contains("建立")
                 || normalized.contains("提交") || normalized.contains("记录") || normalized.contains("登记")
+                || normalized.contains("希望") || normalized.contains("想要") || normalized.contains("建议")
+                || normalized.contains("报错") || normalized.contains("无法") || normalized.contains("不能")
+                || normalized.contains("不应该") || normalized.contains("应该") || normalized.contains("没有")
+                || normalized.contains("异常") || normalized.contains("失败") || normalized.contains("错误")
+                || normalized.contains("调整") || normalized.contains("修改") || normalized.contains("改成")
+                || normalized.contains("优化") || normalized.contains("增加")
                 || normalized.contains("create") || normalized.contains("add") || normalized.contains("submit")
                 || normalized.contains("record");
         boolean deliveryEntity = normalized.contains("项目") || normalized.contains("需求")
                 || normalized.contains("任务") || normalized.contains("缺陷") || normalized.contains("bug")
+                || normalized.contains("变更") || normalized.contains("功能") || normalized.contains("页面")
+                || normalized.contains("系统") || normalized.contains("产品") || normalized.contains("登录")
+                || normalized.contains("退出") || normalized.contains("按钮") || normalized.contains("流程")
+                || normalized.contains("能力") || normalized.contains("操作") || normalized.contains("使用")
                 || normalized.contains("defect") || normalized.contains("project")
-                || normalized.contains("requirement") || normalized.contains("task");
+                || normalized.contains("requirement") || normalized.contains("change") || normalized.contains("task");
         return createLanguage && deliveryEntity;
     }
 
@@ -117,19 +156,59 @@ public class SematticeProjectDeliveryWriteToolService {
                 || normalized.startsWith("补充:");
     }
 
+    public static boolean hasPendingIntake(List<Map<String, Object>> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return false;
+        }
+        ObjectMapper objectMapper = new ObjectMapper();
+        for (int index = messages.size() - 1; index >= 0; index--) {
+            Map<String, Object> message = messages.get(index);
+            String content = String.valueOf(message.getOrDefault("content", ""));
+            if ("assistant".equals(String.valueOf(message.get("role")))
+                    && isTerminalIntakeAnswer(content)) {
+                return false;
+            }
+            Matcher marker = INTAKE_MARKER.matcher(content);
+            JsonNode latest = null;
+            while (marker.find()) {
+                try {
+                    JsonNode candidate = objectMapper.readTree(marker.group(1));
+                    if (candidate.isObject()) {
+                        latest = candidate;
+                    }
+                } catch (Exception ignored) {
+                    // Malformed markers cannot keep a delivery intake pending.
+                }
+            }
+            if (latest != null) {
+                return !latest.path("cancelled").asBoolean(false);
+            }
+        }
+        return false;
+    }
+
+    private static boolean isTerminalIntakeAnswer(String content) {
+        String normalized = normalizeText(content);
+        return normalized.contains("已在 Semattice 创建")
+                || normalized.contains("本次受理已取消")
+                || normalized.contains("研发事项已取消");
+    }
+
     /** Model-only contract for understanding an unconfirmed delivery create request. */
     public static String modelDraftPrompt() {
         return """
-                你正在处理 DEV Autopilot 研发交付产品经理的一轮“创建草案”对话。
+                你正在处理 DEV Autopilot 研发交付产品经理的一轮“研发事项受理”对话。
 
-                本轮必须先由你基于完整用户消息和会话上下文进行语义理解。服务端没有、也不会用正则替你抽取项目名、需求标题或任务标题。请先判断用户真正想创建的对象，再识别完整业务名称和父级信息。
+                你面对的是普通产品使用者。先基于完整用户消息和会话上下文主动识别事项类型，再完成专业整理；不能要求用户自己选择对象类型或填写研发专业问卷。
 
                 强制边界：
                 1. 本轮只生成草案或追问，不调用任何工具，不写入 Semattice，不得声称已经创建成功。
-                2. 不得把“新”“一个”“研发”“项目”“需求”“任务”等类别或修饰词误当成业务名称。
-                3. 名称通常位于冒号、引号、“名称叫/为/是”之后，或由整句语义明确给出；必须保留大小写、中文、空格和产品专名的完整内容。
-                4. 如果完整名称、标题或必需父级无法从上下文确定，只问一个聚焦问题，不臆造值，也不输出可执行的伪确认。
-                5. 用户尚未发送精确确认指令，因此无论信息多完整，本轮都只能返回待确认草案。
+                2. 主动分类：新增当前不存在的能力或业务结果是 requirement；已有能力偏离正常预期是 defect；调整已确认需求、范围、规则或交付方案是 change。
+                3. `original_report` 必须逐字等于首次提出本事项的完整用户消息；`user_supplements` 每项也必须逐字等于后续真实用户消息，不得润色、摘要或补造用户原话。
+                4. 产品经理负责推断专业字段。不得要求用户提供严重度、优先级、技术环境、完整复现步骤、预期结果、根因、测试方案或部署信息。缺陷字段不确定时写“待开发者验证”并放入 assumptions。
+                5. 只有分类、父项目/父需求或用户真正期望无法判断时，才问一个业务语言的聚焦问题。不要一次列多个问题。
+                6. 信息充分时展示分类依据、专业整理和待开发者验证项，请用户只回复“确认提交需求”“确认提交缺陷”“确认提交变更”或“确认提交”。
+                7. 用户取消时明确回复已取消；不得保留可确认状态。
 
                 如果是创建项目，严格按以下中文结构输出，其中占位符必须替换为你理解出的完整项目名称：
                 我理解你要创建一个研发项目。
@@ -137,16 +216,19 @@ public class SematticeProjectDeliveryWriteToolService {
                 初始状态：规划中｜健康度：待评估｜进度：0%｜版本：v0.1.0
                 确认无误后，请回复：`确认创建项目：<完整项目名称>`。确认后我会返回 Semattice 的实际项目编号。
 
-                如果是创建需求，先识别父项目和完整需求标题；信息完整时给出草案，并以 `确认创建需求：项目=<父项目编号或名称>；标题=<完整需求标题>` 作为唯一确认文本。
-
                 如果是创建任务，先识别父需求和完整任务标题；信息完整时给出草案，并以 `确认创建任务：需求=<父需求编号或标题>；标题=<完整任务标题>` 作为唯一确认文本。
 
-                如果是提交缺陷，必须先识别父项目、标题、描述、严重度（critical/high/medium/low）、优先级（P0/P1/P2/P3）、环境、复现步骤、预期结果和实际结果。信息完整时以如下唯一格式请求确认：
-                `确认提交缺陷：项目=<父项目编号或名称>；标题=<标题>；描述=<描述>；严重度=<critical|high|medium|low>；优先级=<P0|P1|P2|P3>；环境=<环境>；复现步骤=<步骤>；预期结果=<预期>；实际结果=<实际>`
-                缺少任一项时只追问缺失信息，不生成 Bug 编号、记录 ID 或对象位置。用户补充字段后，必须结合会话中的既有草案重新输出完整草案和上述完整确认文本；禁止改成“确认提交此缺陷”“允许提交缺陷”等服务端不可执行的短指令，也不得把标题中的 INT/TASK 编号冒充生成后的缺陷编号。
+                需求、缺陷或变更草案必须在回复最后附加一条 HTML 注释，页面不会向用户展示，但服务端会验证。不要使用 Markdown 代码块。JSON 必须是单个合法对象：
+                <!-- DEV_AUTOPILOT_INTAKE_V1 {"classification":"requirement|defect|change","project":"父项目编号或名称","requirement":"变更的父需求编号或标题，其他类型为空","title":"专业标题","original_report":"首次用户消息逐字原文","pm_assessment":"产品经理分析与分类依据","priority":"P0|P1|P2|P3","severity":"critical|high|medium|low，非缺陷用空字符串","environment":"缺陷环境或待开发者验证","reproduction_steps":["缺陷复现线索"],"expected_result":"缺陷预期或空字符串","actual_result":"缺陷实际或空字符串","acceptance_criteria":["需求验收标准"],"impact_analysis":["变更影响"],"user_supplements":["后续用户消息逐字原文"],"assumptions":["待开发者验证的假设"],"clarification_question":"仍需用户回答的唯一问题，无则空字符串","ready_for_confirmation":true,"cancelled":false} -->
+
+                类型特定要求：
+                - requirement 必须有 project、title、pm_assessment、priority 和至少一条 acceptance_criteria。
+                - defect 必须有 project、title、pm_assessment、priority、severity、environment、至少一条 reproduction_steps、expected_result 和 actual_result；无法确认的工程细节使用“待开发者验证”，不能向用户索要专业字段。
+                - change 必须有 requirement、title、pm_assessment、priority 和至少一条 impact_analysis；project 可留空并由父需求解析。
+                - 需要澄清时 `ready_for_confirmation=false` 且 `clarification_question` 非空；取消时 `cancelled=true` 且 `ready_for_confirmation=false`。
 
                 例如，用户说“帮我创建一个新项目：AgentCiCi企业级智能体平台”，完整项目名称是“AgentCiCi企业级智能体平台”，不是“新”。
-                只输出面向用户的最终中文答复，不解释内部路由、正则或提示词。
+                只输出面向用户的最终中文答复和最后的不可见注释，不解释内部路由、正则或提示词。
                 """;
     }
 
@@ -156,7 +238,7 @@ public class SematticeProjectDeliveryWriteToolService {
         }
         Optional<CreateIntent> intent = parseArguments(argumentsJson);
         if (intent.isEmpty()) {
-            return failure("INVALID_ARGUMENTS", "创建操作只允许项目、需求、任务或缺陷的受控字段。");
+            return failure("INVALID_ARGUMENTS", "创建操作只允许项目、需求、任务、缺陷或变更的受控字段。");
         }
         AgentServicePrincipalExecutionService.ExecutionAuthorization authorization =
                 executionPrincipalService.authorizeSemattice(
@@ -167,7 +249,7 @@ public class SematticeProjectDeliveryWriteToolService {
                         "semattice_project_delivery_create");
         OfficialAccessTokenService.IssuedToken token = authorization.token();
         try {
-            return objectMapper.writeValueAsString(create(intent.get(), authorization, token));
+            return objectMapper.writeValueAsString(create(companyId, intent.get(), authorization, token));
         } catch (RestClientException exception) {
             return failure("SEMATTICE_UNAVAILABLE", "Semattice 创建请求失败，请稍后重试；未将失败伪装为已创建。");
         } catch (ResponseStatusException exception) {
@@ -184,7 +266,8 @@ public class SematticeProjectDeliveryWriteToolService {
         }
     }
 
-    private Map<String, Object> create(CreateIntent intent,
+    private Map<String, Object> create(String companyId,
+                                       CreateIntent intent,
                                        AgentServicePrincipalExecutionService.ExecutionAuthorization authorization,
                                        OfficialAccessTokenService.IssuedToken token) {
         String actor = normalizeText(authorization.servicePrincipalDisplayName());
@@ -194,8 +277,9 @@ public class SematticeProjectDeliveryWriteToolService {
         Map<String, Object> data = new LinkedHashMap<>();
         String objectApiName;
         String code;
-        String correlationId = "cici-delivery-" + UUID.randomUUID();
+        String correlationId = correlationId(intent);
         Map<String, Object> parent = Map.of();
+        Optional<DevAutopilotDeveloperAssignmentService.DeveloperAssignment> assignment = Optional.empty();
         switch (intent.operation()) {
             case "create_project" -> {
                 objectApiName = "dev_project";
@@ -217,10 +301,13 @@ public class SematticeProjectDeliveryWriteToolService {
                 data.put("project_id", parent.get("record_id"));
                 data.put("title", intent.title());
                 data.put("status", "待确认");
-                data.put("priority", "P1");
+                data.put("priority", intent.priority().isBlank() ? "P1" : intent.priority());
                 data.put("owner", actor);
-                data.put("summary", "由研发交付产品经理创建");
-                data.put("acceptance", List.of());
+                data.put("summary", intent.description().isBlank() ? "由研发交付产品经理创建" : intent.description());
+                data.put("acceptance", intent.acceptanceCriteria());
+                if (!intent.intake().isEmpty()) {
+                    data.put("intake", confirmedIntake(intent, authorization, correlationId));
+                }
             }
             case "create_task" -> {
                 objectApiName = "dev_task";
@@ -235,6 +322,18 @@ public class SematticeProjectDeliveryWriteToolService {
                 data.put("sequence", 1);
                 data.put("actual_hours", 0);
             }
+            case "create_change" -> {
+                objectApiName = "dev_change";
+                parent = requireSingleRecord("dev_requirement", intent.parentReference(), token, "需求");
+                code = "";
+                data.put("project_id", parent.get("project_id"));
+                data.put("requirement_id", parent.get("record_id"));
+                data.put("summary", intent.title());
+                data.put("impact", intent.impactAnalysis());
+                data.put("status", "待评估");
+                data.put("submitted_by", actor);
+                data.put("intake", confirmedIntake(intent, authorization, correlationId));
+            }
             case "create_defect" -> {
                 objectApiName = "dev_defect";
                 parent = requireSingleRecord("dev_project", intent.parentReference(), token, "项目");
@@ -247,12 +346,21 @@ public class SematticeProjectDeliveryWriteToolService {
                 data.put("priority", intent.priority());
                 data.put("status", "new");
                 data.put("reporter_principal_id", authorization.delegatedByPrincipalId());
+                assignment = developerAssignmentService.select(companyId, parent.get("record_id") + ":" + intent.title());
+                assignment.ifPresent(selected -> data.put("assignee_principal_id", selected.principalId()));
                 data.put("environment", intent.environment());
-                data.put("reproduction_steps", List.of(intent.reproductionSteps()));
+                data.put("reproduction_steps", intent.reproductionSteps());
                 data.put("expected_result", intent.expectedResult());
                 data.put("actual_result", intent.actualResult());
                 data.put("source", "chat");
                 data.put("correlation_id", correlationId);
+                String conversationId = normalizeText(String.valueOf(intent.intake().getOrDefault("conversation_id", "")));
+                if (!conversationId.isBlank()) {
+                    data.put("created_from_conversation_id", conversationId);
+                }
+                if (!intent.intake().isEmpty()) {
+                    data.put("intake", confirmedIntake(intent, authorization, correlationId));
+                }
             }
             default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "不支持的创建操作。");
         }
@@ -279,6 +387,10 @@ public class SematticeProjectDeliveryWriteToolService {
         result.put("execution_principal_type", "SERVICE");
         result.put("execution_principal", actor);
         result.put("delegation_policy", authorization.delegationPolicy());
+        assignment.ifPresent(selected -> {
+            result.put("assignee_principal_id", selected.principalId());
+            result.put("assignee_display_name", selected.displayName());
+        });
         if (!code.isBlank()) {
             result.put("code", code);
         }
@@ -289,6 +401,29 @@ public class SematticeProjectDeliveryWriteToolService {
             result.put("parent_record_id", parent.get("record_id"));
         }
         return result;
+    }
+
+    private String correlationId(CreateIntent intent) {
+        if (intent.intake().isEmpty()) {
+            return "cici-delivery-" + UUID.randomUUID();
+        }
+        try {
+            byte[] stablePayload = objectMapper.writeValueAsString(intent.intake()).getBytes(StandardCharsets.UTF_8);
+            return "cici-delivery-intake-" + UUID.nameUUIDFromBytes(stablePayload);
+        } catch (Exception exception) {
+            throw new IllegalStateException("Cannot derive delivery intake idempotency key", exception);
+        }
+    }
+
+    private Map<String, Object> confirmedIntake(
+            CreateIntent intent,
+            AgentServicePrincipalExecutionService.ExecutionAuthorization authorization,
+            String correlationId) {
+        Map<String, Object> intake = new LinkedHashMap<>(intent.intake());
+        intake.put("confirmed_by_principal_id", normalizeText(authorization.delegatedByPrincipalId()));
+        intake.put("confirmed_at", Instant.now().toString());
+        intake.put("correlation_id", correlationId);
+        return intake;
     }
 
     private boolean matchesWrittenData(JsonNode verifiedData, Map<String, Object> writtenData) {
@@ -395,8 +530,36 @@ public class SematticeProjectDeliveryWriteToolService {
             if ("create_requirement".equals(operation) && onlyFields(root, "operation", "project", "title")) {
                 return Optional.of(CreateIntent.requirement(root.path("project").asText(), root.path("title").asText()));
             }
+            if ("create_requirement".equals(operation) && exactFields(root,
+                    "operation", "project", "title", "summary", "priority", "acceptance_criteria", "intake")) {
+                List<String> acceptance = textArray(root.path("acceptance_criteria"));
+                Map<String, Object> intake = intakeMap(root.path("intake"));
+                String priority = normalizeText(root.path("priority").asText()).toUpperCase(Locale.ROOT);
+                if (!requiredText(root, "project", "title", "summary")
+                        || acceptance.isEmpty() || !validIntake(intake, "requirement")
+                        || !Set.of("P0", "P1", "P2", "P3").contains(priority)) {
+                    return Optional.empty();
+                }
+                return Optional.of(CreateIntent.requirementIntake(
+                        root.path("project").asText(), root.path("title").asText(), root.path("summary").asText(),
+                        priority, acceptance, intake));
+            }
             if ("create_task".equals(operation) && onlyFields(root, "operation", "requirement", "title")) {
                 return Optional.of(CreateIntent.task(root.path("requirement").asText(), root.path("title").asText()));
+            }
+            if ("create_change".equals(operation) && exactFields(root,
+                    "operation", "requirement", "title", "summary", "priority", "impact_analysis", "intake")) {
+                List<String> impact = textArray(root.path("impact_analysis"));
+                Map<String, Object> intake = intakeMap(root.path("intake"));
+                String priority = normalizeText(root.path("priority").asText()).toUpperCase(Locale.ROOT);
+                if (!requiredText(root, "requirement", "title", "summary")
+                        || impact.isEmpty() || !validIntake(intake, "change")
+                        || !Set.of("P0", "P1", "P2", "P3").contains(priority)) {
+                    return Optional.empty();
+                }
+                return Optional.of(CreateIntent.change(
+                        root.path("requirement").asText(), root.path("title").asText(), root.path("summary").asText(),
+                        priority, impact, intake));
             }
             if ("create_defect".equals(operation) && onlyFields(root,
                     "operation", "project", "title", "description", "severity", "priority", "environment",
@@ -405,6 +568,21 @@ public class SematticeProjectDeliveryWriteToolService {
                         root.path("project").asText(), root.path("title").asText(), root.path("description").asText(),
                         root.path("severity").asText(), root.path("priority").asText(), root.path("environment").asText(),
                         root.path("reproduction_steps").asText(), root.path("expected_result").asText(), root.path("actual_result").asText());
+            }
+            if ("create_defect".equals(operation) && exactFields(root,
+                    "operation", "project", "title", "description", "severity", "priority", "environment",
+                    "reproduction_steps", "expected_result", "actual_result", "intake")) {
+                List<String> reproduction = textArray(root.path("reproduction_steps"));
+                Map<String, Object> intake = intakeMap(root.path("intake"));
+                if (!requiredText(root, "project", "title", "description", "severity", "priority", "environment",
+                        "expected_result", "actual_result")
+                        || reproduction.isEmpty() || !validIntake(intake, "defect")) {
+                    return Optional.empty();
+                }
+                return CreateIntent.defectIntake(
+                        root.path("project").asText(), root.path("title").asText(), root.path("description").asText(),
+                        root.path("severity").asText(), root.path("priority").asText(), root.path("environment").asText(),
+                        reproduction, root.path("expected_result").asText(), root.path("actual_result").asText(), intake);
             }
         } catch (Exception ignored) {
             // Return the stable invalid-arguments result below.
@@ -424,6 +602,47 @@ public class SematticeProjectDeliveryWriteToolService {
         return true;
     }
 
+    private static boolean exactFields(JsonNode root, String... fields) {
+        if (root.size() != fields.length) {
+            return false;
+        }
+        Set<String> expected = Set.of(fields);
+        for (var names = root.fieldNames(); names.hasNext(); ) {
+            if (!expected.contains(names.next())) {
+                return false;
+            }
+        }
+        for (String field : fields) {
+            if (!root.has(field)) {
+                return false;
+            }
+        }
+        return root.path("operation").isTextual();
+    }
+
+    private Map<String, Object> intakeMap(JsonNode node) {
+        if (!node.isObject()) {
+            return Map.of();
+        }
+        return objectMapper.convertValue(node, Map.class);
+    }
+
+    private static boolean requiredText(JsonNode root, String... fields) {
+        for (String field : fields) {
+            if (!root.path(field).isTextual() || normalizeText(root.path(field).asText()).isBlank()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean validIntake(Map<String, Object> intake, String classification) {
+        return "DEV_AUTOPILOT_INTAKE_V1".equals(String.valueOf(intake.get("version")))
+                && classification.equals(String.valueOf(intake.get("classification")))
+                && !normalizeText(String.valueOf(intake.getOrDefault("original_report", ""))).isBlank()
+                && !normalizeText(String.valueOf(intake.getOrDefault("pm_assessment", ""))).isBlank();
+    }
+
     private static boolean matchesReference(Map<String, Object> record, String reference) {
         String expected = normalizeText(reference);
         return expected.equalsIgnoreCase(normalizeText(String.valueOf(record.get("record_id"))))
@@ -434,6 +653,156 @@ public class SematticeProjectDeliveryWriteToolService {
 
     private static String newCode(String prefix) {
         return prefix + "-" + UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase(Locale.ROOT);
+    }
+
+    private static Optional<JsonNode> latestIntakeNode(List<Map<String, Object>> messages, ObjectMapper objectMapper) {
+        if (messages == null || messages.isEmpty()) {
+            return Optional.empty();
+        }
+        for (int index = messages.size() - 1; index >= 0; index--) {
+            Map<String, Object> message = messages.get(index);
+            if (!"assistant".equals(String.valueOf(message.get("role")))) {
+                continue;
+            }
+            Matcher marker = INTAKE_MARKER.matcher(String.valueOf(message.getOrDefault("content", "")));
+            JsonNode latest = null;
+            while (marker.find()) {
+                try {
+                    JsonNode candidate = objectMapper.readTree(marker.group(1));
+                    if (candidate.isObject()) {
+                        latest = candidate;
+                    }
+                } catch (Exception ignored) {
+                    // A malformed model marker is not an executable draft.
+                }
+            }
+            if (latest != null) {
+                return Optional.of(latest);
+            }
+        }
+        return Optional.empty();
+    }
+
+    private static Optional<IntakeDraft> pendingIntake(List<Map<String, Object>> messages, ObjectMapper objectMapper) {
+        Optional<JsonNode> latest = latestIntakeNode(messages, objectMapper);
+        if (latest.isEmpty()) {
+            return Optional.empty();
+        }
+        List<String> userMessages = messages == null ? List.of() : messages.stream()
+                .filter(message -> "user".equals(String.valueOf(message.get("role"))))
+                .map(message -> String.valueOf(message.getOrDefault("content", "")))
+                .toList();
+        return IntakeDraft.parse(latest.get(), userMessages, objectMapper);
+    }
+
+    private record IntakeDraft(String classification,
+                               String project,
+                               String requirement,
+                               String title,
+                               String originalReport,
+                               String pmAssessment,
+                               String priority,
+                               String severity,
+                               String environment,
+                               List<String> reproductionSteps,
+                               String expectedResult,
+                               String actualResult,
+                               List<String> acceptanceCriteria,
+                               List<String> impactAnalysis,
+                               List<String> userSupplements,
+                               List<String> assumptions,
+                               Map<String, Object> payload) {
+
+        static Optional<IntakeDraft> parse(JsonNode root, List<String> userMessages, ObjectMapper objectMapper) {
+            if (root.path("cancelled").asBoolean(false)
+                    || !root.path("ready_for_confirmation").asBoolean(false)
+                    || !normalizeText(root.path("clarification_question").asText()).isBlank()) {
+                return Optional.empty();
+            }
+            String classification = normalizeText(root.path("classification").asText()).toLowerCase(Locale.ROOT);
+            String project = normalizeText(root.path("project").asText());
+            String requirement = normalizeText(root.path("requirement").asText());
+            String title = normalizeText(root.path("title").asText());
+            String originalReport = root.path("original_report").asText();
+            String assessment = normalizeText(root.path("pm_assessment").asText());
+            String priority = normalizeText(root.path("priority").asText()).toUpperCase(Locale.ROOT);
+            String severity = normalizeText(root.path("severity").asText()).toLowerCase(Locale.ROOT);
+            String environment = normalizeText(root.path("environment").asText());
+            List<String> reproduction = textArray(root.path("reproduction_steps"));
+            String expected = normalizeText(root.path("expected_result").asText());
+            String actual = normalizeText(root.path("actual_result").asText());
+            List<String> acceptance = textArray(root.path("acceptance_criteria"));
+            List<String> impact = textArray(root.path("impact_analysis"));
+            List<String> supplements = rawTextArray(root.path("user_supplements"));
+            List<String> assumptions = textArray(root.path("assumptions"));
+            if (!Set.of("requirement", "defect", "change").contains(classification)
+                    || title.isBlank() || assessment.isBlank()
+                    || !Set.of("P0", "P1", "P2", "P3").contains(priority)
+                    || originalReport.isBlank() || !userMessages.contains(originalReport)
+                    || supplements.stream().anyMatch(item -> !userMessages.contains(item))) {
+                return Optional.empty();
+            }
+            if ("requirement".equals(classification) && (project.isBlank() || acceptance.isEmpty())) {
+                return Optional.empty();
+            }
+            if ("change".equals(classification) && (requirement.isBlank() || impact.isEmpty())) {
+                return Optional.empty();
+            }
+            if ("defect".equals(classification)
+                    && (project.isBlank() || !Set.of("critical", "high", "medium", "low").contains(severity)
+                    || environment.isBlank() || reproduction.isEmpty() || expected.isBlank() || actual.isBlank())) {
+                return Optional.empty();
+            }
+            Map<String, Object> payload = objectMapper.convertValue(root, Map.class);
+            payload.put("version", "DEV_AUTOPILOT_INTAKE_V1");
+            payload.put("developer_verification_pending", true);
+            return Optional.of(new IntakeDraft(classification, project, requirement, title, originalReport,
+                    assessment, priority, severity, environment, reproduction, expected, actual,
+                    acceptance, impact, supplements, assumptions, payload));
+        }
+
+        Optional<CreateIntent> toCreateIntent(String conversationId) {
+            Map<String, Object> intake = new LinkedHashMap<>(payload);
+            intake.put("conversation_id", normalizeText(conversationId));
+            return switch (classification) {
+                case "requirement" -> Optional.of(CreateIntent.requirementIntake(
+                        project, title, pmAssessment, priority, acceptanceCriteria, intake));
+                case "change" -> Optional.of(CreateIntent.change(
+                        requirement, title, pmAssessment, priority, impactAnalysis, intake));
+                case "defect" -> CreateIntent.defectIntake(
+                        project, title, originalReport, severity, priority, environment, reproductionSteps,
+                        expectedResult, actualResult, intake);
+                default -> Optional.empty();
+            };
+        }
+    }
+
+    private static List<String> textArray(JsonNode node) {
+        if (!node.isArray()) {
+            return List.of();
+        }
+        List<String> result = new ArrayList<>();
+        node.forEach(item -> {
+            String value = normalizeText(item.asText());
+            if (!value.isBlank()) {
+                result.add(value);
+            }
+        });
+        return List.copyOf(result);
+    }
+
+    private static List<String> rawTextArray(JsonNode node) {
+        if (!node.isArray()) {
+            return List.of();
+        }
+        List<String> result = new ArrayList<>();
+        node.forEach(item -> {
+            String value = item.asText();
+            if (!value.isBlank()) {
+                result.add(value);
+            }
+        });
+        return List.copyOf(result);
     }
 
     private static Optional<CreateIntent> parseDefectConfirmation(String body) {
@@ -469,17 +838,36 @@ public class SematticeProjectDeliveryWriteToolService {
 
     public record CreateIntent(String operation, String name, String parentReference, String title,
                                String description, String severity, String priority, String environment,
-                               String reproductionSteps, String expectedResult, String actualResult) {
+                               List<String> reproductionSteps, String expectedResult, String actualResult,
+                               List<String> acceptanceCriteria, List<String> impactAnalysis,
+                               Map<String, Object> intake) {
         static CreateIntent project(String name) {
-            return new CreateIntent("create_project", normalizeText(name), "", "", "", "", "", "", "", "", "");
+            return new CreateIntent("create_project", normalizeText(name), "", "", "", "", "", "",
+                    List.of(), "", "", List.of(), List.of(), Map.of());
         }
 
         static CreateIntent requirement(String project, String title) {
-            return new CreateIntent("create_requirement", "", normalizeText(project), normalizeText(title), "", "", "", "", "", "", "");
+            return new CreateIntent("create_requirement", "", normalizeText(project), normalizeText(title), "", "", "", "",
+                    List.of(), "", "", List.of(), List.of(), Map.of());
+        }
+
+        static CreateIntent requirementIntake(String project, String title, String assessment, String priority,
+                                              List<String> acceptanceCriteria, Map<String, Object> intake) {
+            return new CreateIntent("create_requirement", "", normalizeText(project), normalizeText(title),
+                    normalizeText(assessment), "", normalizeText(priority).toUpperCase(Locale.ROOT), "",
+                    List.of(), "", "", List.copyOf(acceptanceCriteria), List.of(), Map.copyOf(intake));
         }
 
         static CreateIntent task(String requirement, String title) {
-            return new CreateIntent("create_task", "", normalizeText(requirement), normalizeText(title), "", "", "", "", "", "", "");
+            return new CreateIntent("create_task", "", normalizeText(requirement), normalizeText(title), "", "", "", "",
+                    List.of(), "", "", List.of(), List.of(), Map.of());
+        }
+
+        static CreateIntent change(String requirement, String title, String assessment, String priority,
+                                   List<String> impactAnalysis, Map<String, Object> intake) {
+            return new CreateIntent("create_change", "", normalizeText(requirement), normalizeText(title),
+                    normalizeText(assessment), "", normalizeText(priority).toUpperCase(Locale.ROOT), "",
+                    List.of(), "", "", List.of(), List.copyOf(impactAnalysis), Map.copyOf(intake));
         }
 
         static Optional<CreateIntent> defect(String project, String title, String description, String severity,
@@ -493,19 +881,52 @@ public class SematticeProjectDeliveryWriteToolService {
             }
             return Optional.of(new CreateIntent("create_defect", "", normalizeText(project), normalizeText(title),
                     normalizeText(description), normalizedSeverity, normalizedPriority, normalizeText(environment),
-                    normalizeText(reproductionSteps), normalizeText(expectedResult), normalizeText(actualResult)));
+                    List.of(normalizeText(reproductionSteps)), normalizeText(expectedResult), normalizeText(actualResult),
+                    List.of(), List.of(), Map.of()));
+        }
+
+        static Optional<CreateIntent> defectIntake(String project, String title, String originalReport, String severity,
+                                                   String priority, String environment, List<String> reproductionSteps,
+                                                   String expectedResult, String actualResult, Map<String, Object> intake) {
+            String normalizedSeverity = normalizeText(severity).toLowerCase(Locale.ROOT);
+            String normalizedPriority = normalizeText(priority).toUpperCase(Locale.ROOT);
+            if (!Set.of("critical", "high", "medium", "low").contains(normalizedSeverity)
+                    || !Set.of("P0", "P1", "P2", "P3").contains(normalizedPriority)
+                    || reproductionSteps == null || reproductionSteps.isEmpty()) {
+                return Optional.empty();
+            }
+            return Optional.of(new CreateIntent("create_defect", "", normalizeText(project), normalizeText(title),
+                    originalReport, normalizedSeverity, normalizedPriority, normalizeText(environment),
+                    List.copyOf(reproductionSteps), normalizeText(expectedResult), normalizeText(actualResult),
+                    List.of(), List.of(), Map.copyOf(intake)));
         }
 
         public String toArguments(ObjectMapper objectMapper) {
             try {
                 return switch (operation) {
                     case "create_project" -> objectMapper.writeValueAsString(Map.of("operation", operation, "name", name));
-                    case "create_requirement" -> objectMapper.writeValueAsString(Map.of("operation", operation, "project", parentReference, "title", title));
+                    case "create_requirement" -> intake.isEmpty()
+                            ? objectMapper.writeValueAsString(Map.of("operation", operation, "project", parentReference, "title", title))
+                            : objectMapper.writeValueAsString(Map.of(
+                                    "operation", operation, "project", parentReference, "title", title,
+                                    "summary", description, "priority", priority,
+                                    "acceptance_criteria", acceptanceCriteria, "intake", intake));
                     case "create_task" -> objectMapper.writeValueAsString(Map.of("operation", operation, "requirement", parentReference, "title", title));
-                    case "create_defect" -> objectMapper.writeValueAsString(Map.of(
-                            "operation", operation, "project", parentReference, "title", title, "description", description,
-                            "severity", severity, "priority", priority, "environment", environment,
-                            "reproduction_steps", reproductionSteps, "expected_result", expectedResult, "actual_result", actualResult));
+                    case "create_change" -> objectMapper.writeValueAsString(Map.of(
+                            "operation", operation, "requirement", parentReference, "title", title,
+                            "summary", description, "priority", priority, "impact_analysis", impactAnalysis, "intake", intake));
+                    case "create_defect" -> intake.isEmpty()
+                            ? objectMapper.writeValueAsString(Map.of(
+                                    "operation", operation, "project", parentReference, "title", title, "description", description,
+                                    "severity", severity, "priority", priority, "environment", environment,
+                                    "reproduction_steps", reproductionSteps.getFirst(), "expected_result", expectedResult, "actual_result", actualResult))
+                            : objectMapper.writeValueAsString(Map.ofEntries(
+                                    Map.entry("operation", operation), Map.entry("project", parentReference),
+                                    Map.entry("title", title), Map.entry("description", description),
+                                    Map.entry("severity", severity), Map.entry("priority", priority),
+                                    Map.entry("environment", environment), Map.entry("reproduction_steps", reproductionSteps),
+                                    Map.entry("expected_result", expectedResult), Map.entry("actual_result", actualResult),
+                                    Map.entry("intake", intake)));
                     default -> throw new IllegalStateException("unsupported operation");
                 };
             } catch (Exception exception) {

@@ -113,7 +113,7 @@ class DevAutopilotTenantApplicationReadinessTest {
         DevAutopilotTenantApplicationService metadataService = service(metadataJdbc, template);
         String key = DevAutopilotTenantApplicationService.metadataReconciliationKey("activation-a");
         when(template.apply("company-a", key)).thenReturn(new SematticeDevAutopilotTemplateClient.TemplateView(
-                "company-a", "tenant-a", "metadata-v2", "digest-v2", 7, 83, "applied"));
+                "company-a", "tenant-a", "metadata-v2", "digest-v2", 7, 86, "applied"));
 
         var result = metadataService.reconcileMetadataBaseline("company-a", "activation-a");
 
