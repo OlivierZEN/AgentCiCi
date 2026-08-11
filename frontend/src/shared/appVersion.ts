@@ -5,3 +5,11 @@ export const appVersion = rawAppVersion.trim() || "dev";
 export function appVersionLabel() {
   return `版本 ${appVersion}`;
 }
+
+export function compactAppVersionLines(version = appVersion) {
+  const [baseVersion, ...qualifier] = version.split("-");
+  return {
+    baseVersion,
+    qualifier: qualifier.join("-"),
+  };
+}
