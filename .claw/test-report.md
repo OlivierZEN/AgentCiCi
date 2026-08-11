@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-11T06:08:00Z
+updated_at: 2026-08-11T06:26:32Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-11T06:08:00Z
+last_run_at: 2026-08-11T06:26:32Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## 2026-08-11 TASK-280 UAT `2.8.61-beta.9` 信息归位验收
+
+- 本地：身份页面定向 4 项、完整 Vitest 42 文件/232 项和生产构建通过；仅保留既有 bundle-size warning。
+- 发布：dry-run 锁定 `2.8.61-beta.9 / 500ea8981b7d`；ACR backend/frontend index digest 为 `sha256:6f55267840a0332eb5e027ca4dde3c304cefa947d90994724002e80a35395a37` / `sha256:6bebe2ae7f1a8dac4abe825e6ae6458646ba86cd7bcba0c6981b1c8c8a56b5df`。
+- 运行：六容器 healthy、restart=0，health=`UP`、Flyway V109、Nginx、HTTPS 200、HTTP 301、匿名 auth/用户目录/激活接口 401 通过；30 秒稳定窗口 backend/frontend 错误计数为 0，四个状态服务 ID 哈希未变。
+- 页面：受权 UAT 浏览器页脚为 beta.9；待激活成员的统一身份状态、说明与“检查激活状态”位于成员整体信息区，切到 CloudCC 页签后仍在页签上方，CloudCC 只显示用户名、安全标记与保存操作；console error/warning 为 0。
+- 操作边界：页面验收只读，未点击检查、修复或保存；`18611892001` 的独立浏览器登录回归仍待 Demo Company 完成。
+- 状态：`passed_with_business_acceptance_pending`
 
 ## 2026-08-11 TASK-281 INT-009 UAT 业务验收
 

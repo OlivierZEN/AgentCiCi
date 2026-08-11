@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-280
 status: review
-updated_at: 2026-08-11T06:10:50Z
+updated_at: 2026-08-11T06:26:32Z
 updated_by: codex
 assignee: codex
 owner_role: fullstack-agent
@@ -19,6 +19,7 @@ spec_path: docs/specs/FEAT-168-admin-member-identity-reconciliation.md
 - UAT 只读证据确认 Keycloak 用户 enabled、邮箱已验证、required actions 为空且已有 password credential；本地 binding subject 一致，但目标用户没有成功 OIDC 会话。正在修复远端已激活时的受控状态同步。
 - 修复已随 `2.8.61-beta.7 / 4f7ae57f0aec` 发布；当前没有可控 ORG_ADMIN 浏览器会话，未绕过认证执行正式同步，目标成员仍保持 `PENDING_ACTIVATION`。
 - 用户提供的 UAT 页面证据显示目标成员已同步为“有效”且统一身份为“已绑定，可登录”；验收同时发现统一身份信息被错误放入 CloudCC 页签，现已调整到成员顶部整体信息栏。
+- 信息归位已随 `2.8.61-beta.9 / 500ea8981b7d` 发布 UAT；受权页面已证明待激活成员在基本信息与 CloudCC 页签都从顶部整体信息区读取统一身份，CloudCC 页签只保留连接器字段。
 
 ## Scope
 
@@ -29,7 +30,7 @@ spec_path: docs/specs/FEAT-168-admin-member-identity-reconciliation.md
 
 ## Next Action
 
-- 发布 UAT 后确认任一页签均在成员顶部显示身份状态，CloudCC 页签不再混入统一身份信息。独立浏览器登录回归仍需完成。
+- Demo Company 管理员刷新 beta.9 页面确认 `18611892001` 的信息归位；再以无既有 Keycloak SSO 的独立浏览器完成登录回归。
 
 ## Verification
 
@@ -38,6 +39,8 @@ spec_path: docs/specs/FEAT-168-admin-member-identity-reconciliation.md
 - UAT 只读回读确认 Keycloak 激活事实、本地 pending 漂移与无目标登录会话；未读取或修改密码、凭据和邮件链接。
 - 激活状态同步后端定向测试通过；后端 package、前端完整 42 文件/229 项和生产构建通过。
 - beta.7 六容器 healthy、restart=0，health/version/Flyway V109/Nginx/公网/匿名 401 与 30 秒稳定窗口通过；状态服务 ID 哈希未变。
+- beta.9 六容器 healthy、restart=0，版本 `2.8.61-beta.9 / 500ea8981b7d`、health、Flyway V109、Nginx、HTTPS/HTTP、匿名 401 与 30 秒稳定窗口通过；状态服务 ID 哈希仍为 `b5dca5759af2a9cfb0ed4285fdb3b01c9af02db33eb2bfbabfa347fe728de2bc`。
+- UAT 受权浏览器选择待激活成员并切换 CloudCC 页签，确认身份状态与检查动作位于页签上方、CloudCC 只含绑定字段，console error/warning 为 0；未执行检查、修复或保存。
 - 后端 `AdminUserServiceTest,KeycloakIdentityProvisioningServiceTest` 通过。
 - 前端完整测试 41 个文件、225 项通过；身份修复定向测试 3 项通过。
 - 后端 package 与前端生产构建通过；仅保留既有 Vite bundle-size warning。

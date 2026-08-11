@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-11T06:08:00Z
+updated_at: 2026-08-11T06:26:32Z
 updated_by: codex
 phase: verification
 active_task: TASK-280
-next_action: "TASK-281 已完成；继续 TASK-280 的管理员正式激活状态同步与独立浏览器登录回归。"
+next_action: "Demo Company 管理员刷新 beta.9 用户页确认 18611892001 的信息归位；再以无既有 Keycloak SSO 的独立浏览器完成登录回归。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-280 UAT 验收缺陷已修复并随 `2.8.61-beta.7 / 4f7ae57f0aec` 发布：`18611892001` 的 Keycloak 用户已激活且本地 binding subject 一致，但原重发入口只报“已激活”而不协调 `PENDING_ACTIVATION`。新入口在远端仍待激活时重发邮件，远端已激活时同步成员为 `ACTIVE` 并写脱敏审计。后端身份定向测试、package、前端 42 文件/229 项、构建及 UAT 技术门禁通过；当前无可控 ORG_ADMIN 浏览器会话，尚未点击正式入口，成员仍保持 pending，等待用户刷新页面后执行一次“检查激活状态”并用独立浏览器登录回归。
+- TASK-280 统一身份信息归位已发布 UAT `2.8.61-beta.9 / 500ea8981b7d`：状态、说明及修复/激活检查固定在成员整体信息区，CloudCC 页签只保留连接器字段。完整前端 42 文件/232 项、生产构建、本地桌面截图和 UAT 受权浏览器检查通过；待激活成员在 CloudCC 页签仍显示顶部身份状态与“检查激活状态”，浏览器 0 error/warning。六容器 healthy、restart=0，版本/health/Flyway V109/Nginx/公网/匿名 401 与 30 秒稳定窗口通过，四个状态服务 ID 哈希未变。用户先前页面证据显示 `18611892001` 已为有效且统一身份可登录；尚需 Demo Company 刷新确认 beta.9 布局并用独立浏览器完成登录回归。
 
 - TASK-281 / FEAT-169 / INT-009 已完成 UAT 业务验收。`2.8.61-beta.7` 的真实产品经理对话先生成草案并跨轮补充父项目，完整精确确认后由 active PM SERVICE 创建 `BUG-11164588`，可信回执与 Semattice 记录 ID、revision=1、correlation 一致；短确认负向未新增记录。DevAutopilot `1.0.4-beta.3` 读取同一记录并完成负责人分配、`new → confirmed` 和 revision `1 → 2`。`2.8.61-beta.8 / 9a37f5d6036a` 又将 Owner 身份治理与应用管理解耦，Demo 缺 Owner 只告警不阻断模板同步；同步后 A/B 均为 7 对象且缺陷计数分别为 0/1，正式 handoff 页面未发生跨租户泄漏。生产保持 `2.8.60`。
 

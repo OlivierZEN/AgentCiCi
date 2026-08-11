@@ -1,12 +1,20 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-11T06:08:00Z
+updated_at: 2026-08-11T06:26:32Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-11 TASK-280 UAT `2.8.61-beta.9`
+
+- Git tag/commit 为 `2.8.61-beta.9 / 500ea8981b7d`；backend/frontend ACR index digest 为 `sha256:6f55267840a0332eb5e027ca4dde3c304cefa947d90994724002e80a35395a37` / `sha256:6bebe2ae7f1a8dac4abe825e6ae6458646ba86cd7bcba0c6981b1c8c8a56b5df`。
+- 完整备份 `/data/apps/agentcici/backups/20260811T061948Z-before-2.8.61-beta.9-task280` 共 10 项，均非空且 `0600`，包含 beta.8 前后端镜像、Compose、受管环境、PostgreSQL、KB 与 Qdrant；回滚目标为 beta.8。
+- UAT 无 ACR 凭据落盘，linux/amd64 镜像经 SSH 压缩流导入。仅 force-recreate backend/frontend；四个状态服务 ID 哈希保持 `b5dca5759af2a9cfb0ed4285fdb3b01c9af02db33eb2bfbabfa347fe728de2bc`。
+- 六容器 healthy、restart=0，版本/镜像/Git SHA、health=`UP`、Flyway V109、Nginx、HTTPS 200、HTTP 301、匿名 401 与 30 秒稳定窗口通过，应用启动后错误计数为 0。
+- 受权页面只读确认统一身份信息已从 CloudCC 内容区归位到成员整体信息区，待激活检查动作在任一页签可见，浏览器 0 error/warning；未执行身份或资料写操作。生产仍为 `2.8.60`。
 
 ## 2026-08-11 TASK-281 UAT `2.8.61-beta.8`
 
