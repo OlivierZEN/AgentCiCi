@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-10T12:36:00Z
+updated_at: 2026-08-11T02:11:54Z
 updated_by: codex
-phase: review
-active_task: TASK-277
-next_action: "由具备 PLATFORM_ADMIN 的人员在生产“租户应用”页定位目标 Owner，核对脱敏邮箱/手机号与公共编号后执行身份协调；不得绕过平台登录或直接写库。"
+phase: implementation
+active_task: TASK-278
+next_action: "修复 UAT HUMAN OACT 的 metadata.read 配置回归，完成发布门禁测试后以 2.8.61-beta.1 发布并回读 AI表格真实租户对象与记录。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-278 / FEAT-158：用户在 UAT AI表格看到“业务数据服务暂时不可用”。已从运行容器只读回读确认 `2.8.60-beta.1` 的 HUMAN OACT scopes 缺少 `metadata.read`，而对象目录调用的 Semattice `metadata.version.get-current` 明确要求该 scope；根因是 AgentCiCi UAT 版本化 Compose 覆盖层的配置回归，不是租户数据为空或 Semattice 契约缺失。正在恢复最低读取范围并为测试发布增加门禁，目标版本遵循下一生产版本规则为 `2.8.61-beta.1`；生产不修改。
 
 - TASK-275 / FEAT-164 / INT-008 已完成双租户 UAT。第二租户 Owner 通过受治理恢复绑定到现有激活 HUMAN；同一 DEMO 身份可切换 A/B 组织。第二租户正式开通自动创建已发布 `研发产品经理` Agent/PM SERVICE，租户 ORG_ADMIN 独立新增、改名、暂停和恢复 1 名自定义开发者后三系统状态一致。A 保持 2 名开发者，B 只显示本租户 0 项目、1 名开发者与产品经理；B 的 Semattice 会话不能用 A 的 `company_id` 参数覆盖可信租户。产品经理首页可见并以 `onekeytoken/auto` 按 DevAutopilot 语义响应。AgentCiCi UAT 仍为 `2.8.60-beta.1 / 93a487f4e393`。
 

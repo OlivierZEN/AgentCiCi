@@ -125,6 +125,27 @@ normalize_release_channel() {
   esac
 }
 
+scope_list_contains() {
+  local scope_list=",$1,"
+  [[ "$scope_list" == *",$2,"* ]]
+}
+
+validate_uat_release_config() {
+  local override_file="$ROOT_DIR/deploy/docker-compose.uat-acr.override.yml"
+  local scope_line default_scopes
+  if [[ ! -f "$override_file" ]]; then
+    echo "UAT release override is missing: $override_file" >&2
+    exit 1
+  fi
+  scope_line="$(grep -E '^[[:space:]]+APP_AUTH_OFFICIAL_ACCESS_SEMATTICE_SCOPES:' "$override_file" | head -1 || true)"
+  default_scopes="${scope_line#*:-}"
+  default_scopes="${default_scopes%%\}*}"
+  if [[ -z "$scope_line" ]] || ! scope_list_contains "$default_scopes" "metadata.read" || ! scope_list_contains "$default_scopes" "runtime.record.read"; then
+    echo "UAT Semattice HUMAN scopes must include metadata.read and runtime.record.read for AI table access." >&2
+    exit 1
+  fi
+}
+
 run() {
   printf '+'
   printf ' %q' "$@"
@@ -277,6 +298,10 @@ next_release_version() {
 }
 
 RELEASE_CHANNEL="$(normalize_release_channel "$RELEASE_CHANNEL")"
+
+if [[ "$RELEASE_CHANNEL" == "test" ]]; then
+  validate_uat_release_config
+fi
 
 if [[ -z "$CICI_RELEASE_VERSION" ]]; then
   CICI_RELEASE_VERSION="$(next_release_version)"

@@ -1,14 +1,21 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-10T12:28:56Z
+updated_at: 2026-08-11T02:11:54Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-10T12:28:56Z
+last_run_at: 2026-08-11T02:11:54Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## 2026-08-11 TASK-278 AI表格 UAT scope 回归修复预检
+
+- 根因回读：UAT `2.8.60-beta.1` 实际 HUMAN scopes 与旧 Compose 默认一致，缺少 Semattice `metadata.version.get-current` 必需的 `metadata.read`；服务器没有受管 env 覆盖该项。
+- 配置回归：新 Compose 渲染 HUMAN scopes 为 `metadata.read,runtime.record.read,runtime.record.create,runtime.record.update`，SERVICE scopes 保持独立。
+- 自动化：Shell 语法、发布版本测试（含缺 scope 的失败关闭用例）、`AiTableDataServiceTest`、`OfficialAccessTokenServiceTest`、`2.8.61-beta.1` UAT dry-run 与 `git diff --check` 均通过。
+- 状态：本地修复预检通过；UAT 发布与受权租户对象/记录回读待执行。
 
 ## 2026-08-10 TASK-275 双租户最终业务验收
 

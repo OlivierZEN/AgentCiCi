@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-08-10T12:28:56Z
+updated_at: 2026-08-11T02:11:54Z
 updated_by: codex
 status: active
 ---
@@ -9,6 +9,12 @@ status: active
 # Issue List
 
 ## Open Issues
+
+- ISSUE-2026-08-11-ai-table-uat-metadata-scope:
+  - Symptom: 已登录 UAT 租户进入 AI表格后无法读取业务对象，页面显示“业务数据服务暂时不可用”。
+  - Verified root cause: UAT `cici-backend:2.8.60-beta.1` 实际 HUMAN OACT scopes 缺少 `metadata.read`；AI表格目录调用 `metadata.version.get-current`，Semattice 契约明确要求 `metadata.read`。缺失来自 AgentCiCi `docker-compose.uat-acr.override.yml`，不是租户数据为空。
+  - Resolution progress: TASK-278 已恢复 UAT HUMAN `metadata.read`，保留 SERVICE 独立 allowlist，并在测试发布入口增加 `metadata.read + runtime.record.read` 门禁。
+  - Status: fix in progress; awaiting `2.8.61-beta.1` UAT release and authorized tenant readback.
 
 - ISSUE-2026-08-10-new-tenant-owner-missing-oidc:
   - Symptom: 平台开通的新租户 Owner 无法通过生产 OIDC 登录；目标邮箱和手机号在 AgentCiCi 与 Keycloak 均无有效身份记录，登录事件为 `user_not_found`。

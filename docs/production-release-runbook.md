@@ -244,8 +244,16 @@ CICI_IMAGE_TAG=<release-version> CICI_APP_VERSION=<release-version> \
 docker compose --env-file uat.secrets.env \
   -f docker-compose.uat.yml \
   -f docker-compose.uat-acr.override.yml \
+  config | awk '/APP_AUTH_OFFICIAL_ACCESS_SEMATTICE_(SERVICE_)?SCOPES:/ {print}'
+
+CICI_IMAGE_TAG=<release-version> CICI_APP_VERSION=<release-version> \
+docker compose --env-file uat.secrets.env \
+  -f docker-compose.uat.yml \
+  -f docker-compose.uat-acr.override.yml \
   up -d --no-deps --force-recreate backend frontend
 ```
+
+发布前的渲染结果必须确认 HUMAN `APP_AUTH_OFFICIAL_ACCESS_SEMATTICE_SCOPES` 至少包含 `metadata.read` 与 `runtime.record.read`，否则 AI表格会在对象目录阶段失败；SERVICE scopes 独立校验，不得用扩大 HUMAN scope 代替。该回读只输出 scope 行，不打印 `uat.secrets.env` 的其他配置。
 
 `uat.secrets.env` 只保存机密与运行时业务配置，严禁写入 `CICI_IMAGE_TAG`、`CICI_APP_VERSION` 或镜像 tag。发布后必须回读两个容器的 image、`/system/version`、health 与同源入口；失败时仅以同样的覆盖层切回上一不可变 tag。
 

@@ -12,9 +12,9 @@ services:
     environment:
       CICI_APP_VERSION: ${CICI_APP_VERSION:?set CICI_APP_VERSION}
       APP_SEMATTICE_CONSOLE_BASE_URL: ${APP_SEMATTICE_CONSOLE_BASE_URL:-https://uat.agentcici.com}
-      # DevAutopilot initialization projects the HUMAN owner and tenant SERVICE
-      # principals through Semattice's public capability boundary.
-      APP_AUTH_OFFICIAL_ACCESS_SEMATTICE_SCOPES: ${APP_AUTH_OFFICIAL_ACCESS_SEMATTICE_SCOPES:-identity.principal.sync,runtime.record.read,runtime.record.create,runtime.record.update}
+      # Tenant HUMAN access must cover the AI table metadata catalog and governed
+      # record operations. Principal projection uses its dedicated server-only token.
+      APP_AUTH_OFFICIAL_ACCESS_SEMATTICE_SCOPES: ${APP_AUTH_OFFICIAL_ACCESS_SEMATTICE_SCOPES:-metadata.read,runtime.record.read,runtime.record.create,runtime.record.update}
       APP_AUTH_OFFICIAL_ACCESS_SEMATTICE_SERVICE_SCOPES: ${APP_AUTH_OFFICIAL_ACCESS_SEMATTICE_SERVICE_SCOPES:-identity.principal.sync,runtime.record.read,runtime.record.create,runtime.record.update}
 
   frontend:

@@ -2,13 +2,13 @@
 kind: feature-spec
 feature_id: FEAT-158
 title: AgentCiCi AI表格业务对象实时列表
-status: completed
+status: in_implementation
 owner_role: fullstack-agent
-task_ids: TASK-266
+task_ids: TASK-266, TASK-278
 related_decisions: none
-related_issues: ISSUE-2026-08-05-ai-table-auth-header
-updated_at: 2026-08-04T23:57:37Z
-updated_by: MANAGER-001
+related_issues: ISSUE-2026-08-05-ai-table-auth-header, ISSUE-2026-08-11-ai-table-uat-metadata-scope
+updated_at: 2026-08-11T02:11:54Z
+updated_by: codex
 ---
 
 # FEAT-158 - AgentCiCi AI表格业务对象实时列表
@@ -90,6 +90,7 @@ AgentCiCi 左侧入口已命名为“AI表格”。用户已确认高保真桌�
 
 ## 实施进展
 
+- 修复中：UAT `2.8.60-beta.1` 的版本化 Compose 覆盖层遗漏 HUMAN `metadata.read`，导致 `metadata.version.get-current` 在对象目录阶段被 Semattice 拒绝并映射为“业务数据服务暂时不可用”。TASK-278 将恢复 HUMAN `metadata.read`、保留 SERVICE 独立 allowlist，并在测试发布入口增加 `metadata.read + runtime.record.read` 配置门禁；待下一生产目标 beta 发布后用受权租户会话回读对象与记录。
 - 已完成：高保真桌面交互与多主题视觉方向；用户已确认形态。
 - 已完成：修复目录/记录请求缺少当前工作台 Bearer 会话的问题，新增定向回归并通过前端全量 34 文件/208 项测试和生产构建。
 - 已完成：热修复已发布为 `2.8.49 / 760776a354f5`；线上健康、版本、Nginx、HTTPS/HTTP 与 AI表格鉴权边界 smoke 通过。受权成员数据回读需要在真实成员会话中完成，当前发布会话未持有或伪造该凭据。

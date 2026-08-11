@@ -1,0 +1,56 @@
+task_id: TASK-278
+assignee: codex
+assigned_by: codex
+status: active
+assigned_at: 2026-08-11T02:11:54Z
+expires_at: none
+spec_path: docs/specs/FEAT-158-semattice-business-object-list-preview.md
+task_status_path: .claw/tasks/TASK-278.md
+branch: main
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - deploy/docker-compose.uat-acr.override.yml
+  - scripts/release-acr.sh
+  - scripts/test-release-versioning.sh
+  - docs/production-release-runbook.md
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/issue-list.md
+  - .claw/test-report.md
+  - .claw/devops.md
+protected_paths:
+  - .claw/developers/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+scope_files:
+  - deploy/docker-compose.uat-acr.override.yml
+  - scripts/release-acr.sh
+  - scripts/test-release-versioning.sh
+  - docs/production-release-runbook.md
+  - docs/specs/FEAT-158-semattice-business-object-list-preview.md
+  - .claw/tasks/TASK-278.md
+  - .claw/assignments/TASK-278.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/issue-list.md
+  - .claw/test-report.md
+  - .claw/devops.md
+touch_policy: exclusive
+shared_contracts:
+  - AgentCiCi-to-Semattice official access token boundary
+  - Semattice metadata.version.get-current metadata.read contract
+  - AgentCiCi UAT next-production beta release rule
+task_boundary:
+  - "修复 UAT HUMAN OACT 缺少 metadata.read 导致 AI表格目录失败的配置回归。"
+  - "为测试发布增加最低 AI表格 scope 门禁，并发布下一生产目标 beta 到 UAT。"
+  - "不修改 Semattice 源码、业务数据、对象授权策略或生产环境。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: false
+identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
+signature: "codex; user reported the UAT AI table tenant-data read failure on 2026-08-11."
