@@ -1,12 +1,20 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-11T08:46:23Z
+updated_at: 2026-08-12T14:00:02Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-12 TASK-291 / TASK-292 UAT `2.8.61-beta.17`
+
+- Git tag/commit 为 `2.8.61-beta.17 / 9bf64d836810`；backend/frontend ACR index digest 为 `sha256:d4b2abe67e01467d7ec6184b1e38962b5dc1630826682ec449b0bd7bd1e67441` / `sha256:0d25185c30c61cc9813fcdd7cc593177cb007fcec1dec40ef6fe8e0c7f845548`，均为 linux/amd64 且 image label 与 tag 对齐；未更新 `latest`。
+- 完整备份 `/data/apps/agentcici/backups/20260812T1350Z-before-2.8.61-beta.17` 包含 Compose、受管环境、PostgreSQL、KB、Qdrant 和 beta.16 回滚说明；数据库归档与两个 tar 归档均校验可读，全部文件非空且 `0600`。即时应用回滚目标为 `2.8.61-beta.16`。
+- 仅 force-recreate backend/frontend；database、Redis、RabbitMQ、Qdrant 的容器 ID 发布前后分别保持 `d14ef...`、`db094...`、`4166...`、`26aec...`，均 healthy/restart=0。
+- backend/frontend healthy/restart=0；`/system/version=2.8.61-beta.17 / 9bf64d836810`、health=`UP`、Flyway 最近记录均成功、Nginx 有效。五项 UAT 公网 smoke、平台集成路由 200、匿名 API 401 和 30 秒稳定窗口通过，backend severe error=0、frontend 5xx=0。
+- 前端资源已核验含代码解释器、联网搜索、网页抓取与两个新增工具标记。三项集成默认关闭且没有真实 UAT 厂商凭据，本次未执行连接测试或 Agent 会话调用；生产未修改。
 
 ## 2026-08-11 UAT ACR 持久 pull 登录
 

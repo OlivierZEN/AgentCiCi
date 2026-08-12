@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-12T13:05:08Z
+updated_at: 2026-08-12T14:00:02Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-12T13:05:08Z
+last_run_at: 2026-08-12T14:00:02Z
 last_run_status: passed_with_vendor_business_acceptance_pending
 ---
 
@@ -12,12 +12,16 @@ last_run_status: passed_with_vendor_business_acceptance_pending
 
 ## 2026-08-12 TASK-292 平台联网搜索与网页抓取集成
 
+- UAT 发布：远端 `main@9bf64d8`、tag `2.8.61-beta.17` 与两个 ACR linux/amd64 镜像的 version/revision label 一致；运行 `/system/version` 回读同一版本和提交。
+- UAT 运行：backend/frontend healthy/restart=0，health=`UP`，Flyway 最近 5 条记录均成功，Nginx 配置有效；database、Redis、RabbitMQ、Qdrant 的容器 ID 与发布前一致且 restart=0。
+- UAT 边界：五项公共 smoke 通过，`/platform/integrations`=200、匿名 `/api/platform/integrations`=401；beta.17 前端资源包含 `managed_web_search`、`managed_web_extractor`、代码解释器、联网搜索和网页抓取标记。
+- 稳定窗口：修正 Nginx access log 字段解析后，backend severe error=0、frontend 5xx=0；首次统计的 3 条“5xx”为错误读取响应字节数字 `552`，原始状态码均为 200/401，已排除真实故障。
 - 后端定向：`ManagedWebToolClientTest,ManagedWebToolServiceTest,SandboxCodeInterpreterClientTest,SandboxCodeInterpreterServiceTest,ToolOrchestratorServiceTest` 共 16 项通过；覆盖精确工具声明、reasoning 不投影、独立密钥加密/掩码、API Host 与抓取 URL 门禁、未配置失败关闭、目录和执行器。
 - 后端构建：`mvn -q -DskipTests package` 通过；`git diff --check` 通过。
 - Spring 集成边界：`PlatformIntegrationGovernanceIntegrationTest` 在应用启动前被共享测试库既有 Flyway V81 checksum 漂移阻断；未 repair、未修改历史迁移，本任务无数据库迁移。
 - 前端：定向 2 文件/5 项通过；完整 46 文件/249 项通过；生产构建通过，仅有既有 chunk size warning。
 - 安全：API Key 未进入仓库/日志/测试；API Host 仅接受 HTTPS `*.maas.aliyuncs.com`；抓取目标拒绝明显本地、私网、链路本地、组播、`.local`、非 80/443 端口与用户信息。
-- 主线：功能提交 `9a8cb9a` 已合并本地 `main@1f362c7`，未推送远端。
+- 主线：功能提交 `9a8cb9a` 已合并，治理收尾后远端 `main` 固定发布提交为 `9bf64d8`；UAT tag 指向该提交。
 - 本地环境：backend/frontend 均从 `main@1f362c7` 构建为 `2.8.62-dev.1f362c7`；镜像 label、容器环境和 `/system/version` 均回读 `1f362c7d86d8`，两容器 healthy/restart=0。
 - 运行验证：`./stack verify` 通过；`https://cici.localhost/platform/integrations`=200，匿名 `/api/platform/integrations`=`401 application/json`；部署 JS 包含两条检测端点与当前版本。
 - 浏览器：目标路由按预期进入平台登录边界，console 0 error/warning；当前无受权平台会话，未绕过登录。
