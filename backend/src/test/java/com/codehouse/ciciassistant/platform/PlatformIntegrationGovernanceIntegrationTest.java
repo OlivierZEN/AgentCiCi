@@ -94,7 +94,7 @@ class PlatformIntegrationGovernanceIntegrationTest {
                                   "description": "平台代码解释器",
                                   "config": {
                                     "apiKey": "sk-ws-platform-key",
-                                    "apiBaseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+                                    "apiBaseUrl": "https://workspace-id.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
                                     "model": "qwen3.5-plus",
                                     "timeoutMs": "120000",
                                     "maxInputChars": "12000"

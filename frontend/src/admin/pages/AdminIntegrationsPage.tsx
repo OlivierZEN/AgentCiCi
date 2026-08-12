@@ -155,8 +155,8 @@ const FIELD_META: Record<string, Record<string, FieldMeta>> = {
     apiBaseUrl: {
       label: "API Host",
       required: true,
-      placeholder: "https://dashscope.aliyuncs.com/compatible-mode/v1",
-      hint: "填写百炼控制台为当前地域和业务空间提供的 OpenAI 兼容 API Host，仅接受 aliyuncs.com 的 HTTPS 地址。",
+      placeholder: "https://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+      hint: "从百炼控制台复制当前地域和业务空间的 OpenAI 兼容 API Host；不同地域地址不同，仅接受 HTTPS maas.aliyuncs.com 地址。",
     },
     model: {
       label: "执行模型",

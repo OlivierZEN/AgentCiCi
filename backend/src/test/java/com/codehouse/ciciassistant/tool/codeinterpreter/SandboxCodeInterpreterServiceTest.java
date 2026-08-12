@@ -40,7 +40,7 @@ class SandboxCodeInterpreterServiceTest {
         integrationAppService.updatePlatformManaged(IntegrationAppService.APP_CODE_CODE_INTERPRETER,
                 true, "managed sandbox", Map.of(
                         "apiKey", "sk-ws-sensitive",
-                        "apiBaseUrl", "https://dashscope.aliyuncs.com/compatible-mode/v1",
+                        "apiBaseUrl", "https://workspace-id.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
                         "model", "qwen3.5-plus"));
 
         IntegrationAppEntity entity = repository.findByCompanyIdAndAppCode(
@@ -51,7 +51,7 @@ class SandboxCodeInterpreterServiceTest {
         integrationAppService.updatePlatformManaged(IntegrationAppService.APP_CODE_CODE_INTERPRETER,
                 true, "managed sandbox", Map.of(
                         "apiKey", IntegrationAppService.CODE_INTERPRETER_SECRET_MASK,
-                        "apiBaseUrl", "https://dashscope.aliyuncs.com/compatible-mode/v1",
+                        "apiBaseUrl", "https://workspace-id.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
                         "model", "qwen3.5-plus"));
         assertThat(repository.findByCompanyIdAndAppCode(
                 "demo-org", IntegrationAppService.APP_CODE_CODE_INTERPRETER).orElseThrow().getConfigJson())
@@ -79,14 +79,19 @@ class SandboxCodeInterpreterServiceTest {
     @Test
     void rejectsNonAliyunAndNonHttpsApiHosts() {
         org.assertj.core.api.ThrowableAssert.ThrowingCallable http = () ->
-                SandboxCodeInterpreterService.validateApiBaseUrl("http://dashscope.aliyuncs.com/v1");
+                SandboxCodeInterpreterService.validateApiBaseUrl("http://workspace-id.cn-beijing.maas.aliyuncs.com/v1");
+        org.assertj.core.api.ThrowableAssert.ThrowingCallable genericDashscope = () ->
+                SandboxCodeInterpreterService.validateApiBaseUrl("https://dashscope.aliyuncs.com/compatible-mode/v1");
         org.assertj.core.api.ThrowableAssert.ThrowingCallable metadata = () ->
                 SandboxCodeInterpreterService.validateApiBaseUrl("https://169.254.169.254/latest/meta-data");
         org.assertj.core.api.ThrowableAssert.ThrowingCallable lookalike = () ->
                 SandboxCodeInterpreterService.validateApiBaseUrl("https://aliyuncs.com.evil.example/v1");
         assertThat(org.assertj.core.api.Assertions.catchThrowable(http)).isInstanceOf(IllegalArgumentException.class);
+        assertThat(org.assertj.core.api.Assertions.catchThrowable(genericDashscope)).isInstanceOf(IllegalArgumentException.class);
         assertThat(org.assertj.core.api.Assertions.catchThrowable(metadata)).isInstanceOf(IllegalArgumentException.class);
         assertThat(org.assertj.core.api.Assertions.catchThrowable(lookalike)).isInstanceOf(IllegalArgumentException.class);
+        SandboxCodeInterpreterService.validateApiBaseUrl(
+                "https://workspace-id.cn-beijing.maas.aliyuncs.com/compatible-mode/v1");
     }
 
     private static final class FakeRepository implements IntegrationAppRepository {

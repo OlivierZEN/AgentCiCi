@@ -17,7 +17,7 @@ last_run_status: passed_with_vendor_business_acceptance_pending
 - Spring 集成边界：`PlatformIntegrationGovernanceIntegrationTest` 启动时被共享测试库既有 Flyway V81 checksum 漂移阻断；未执行 repair、未修改历史迁移，本功能没有数据库迁移。
 - 前端定向：平台集成 2 文件/4 项通过；完整前端 46 文件/248 项通过。
 - 前端构建：`npm run build` 通过，仅保留既有 chunk size warning。
-- 安全边界：无真实 API Key 进入仓库、日志或测试输出；可配置 API Host 只接受 `aliyuncs.com` HTTPS 地址。
+- 安全边界：无真实 API Key 进入仓库、日志或测试输出；API Host 默认留空且只接受百炼按地域提供的 `*.maas.aliyuncs.com` HTTPS 业务空间地址。
 - 主线与本地环境：功能提交 `0c58cfb` 已合并本地 `main@8f76e39`；backend/frontend 从该主线构建，版本 `2.8.62-dev.8f76e39`，两容器 healthy/restart=0，目标路由 200、匿名平台接口 `401 application/json`，镜像 label 和运行环境提交均为 `8f76e39abedf`。
 - 浏览器：目标路由按预期进入平台登录边界，console 0 error/warning；当前无受权平台会话，未绕过登录。
 - 业务边界：集成默认关闭且本地未配置真实 API Key，因此真实百炼连接与 Agent 会话业务调用待平台管理员完成。

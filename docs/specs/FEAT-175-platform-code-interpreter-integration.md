@@ -48,7 +48,7 @@ updated_by: codex
 - 平台集成配置使用 `integration_app` 的平台治理作用域，Tavily 与讯飞已验证该模式。
 - 内置工具通过 `BuiltinToolCatalog`、`PlatformGovernanceService` 和 `ToolOrchestratorService` 完成目录、治理与执行。
 - 官方文档：<https://help.aliyun.com/zh/model-studio/qwen-code-interpreter>。Responses API 通过 `code_interpreter` tool 启用；代码解释器会增加多轮推理 Token 消耗。
-- 服务地址因地域和业务空间而异，必须由运营配置；仅允许 HTTPS 的阿里云 `aliyuncs.com` API Host。
+- 服务地址因地域和业务空间而异，必须由运营从百炼控制台复制配置；不预填通用 DashScope 地址，仅允许 HTTPS 的业务空间 `*.maas.aliyuncs.com` API Host。
 
 ## 方案设计
 
@@ -79,7 +79,7 @@ updated_by: codex
 ## 风险与回滚
 
 - 风险：多轮推理增加 Token；通过中风险标识、运行次数/Token 回传、输入上限和超时控制。
-- 风险：可配置 URL 形成 SSRF；仅接受无用户信息、无查询参数的 HTTPS `aliyuncs.com` Host。
+- 风险：可配置 URL 形成 SSRF；仅接受无用户信息、无查询参数的 HTTPS `*.maas.aliyuncs.com` 业务空间 Host。
 - 风险：上游模型或协议变化；失败关闭并返回稳定错误码，不回退到本地代码执行。
 - 回滚：停用平台集成或工具治理即可立即停止注入；代码回滚不涉及迁移。
 
@@ -89,6 +89,7 @@ updated_by: codex
 - 单元/执行器、完整前端与生产构建通过；共享测试库的既有 V81 checksum 漂移继续阻断 Spring 集成用例，未修改历史迁移或 repair。
 - 功能提交 `0c58cfb` 已合并本地 `main@8f76e39`，backend/frontend 已从该主线提交更新本地开发环境并完成健康、版本、路由和匿名鉴权边界回读。
 - 平台页面当前无受权登录态且未配置真实 API Key；真实厂商连接和 Agent 会话业务验收由平台管理员后续完成，不影响默认关闭的安全交付边界。
+- 官方示例要求按地域填写业务空间专属 `*.maas.aliyuncs.com` 地址；实现已将 API Host 改为必填且默认留空，避免误用通用 DashScope 地址。
 
 ## 交接说明
 

@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-291 / FEAT-175 已完成：按阿里云百炼官方 Responses API 封装受管 Python 代码解释器，在平台集成统一加密配置 API Key、API Host、模型、超时和输入限制，在工具目录生成可治理的 `sandbox_code_interpreter`；不在 AgentCiCi 宿主机执行代码，不将代码解释器与同次上游 Function Calling 混用。功能提交 `0c58cfb` 已合并本地 `main@8f76e39`，本地 backend/frontend 从该主线提交构建为 `2.8.62-dev.8f76e39`，两容器 healthy/restart=0、目标路由 200、匿名平台接口 JSON 401、镜像 label 与运行环境提交一致。后端定向 10 项、package、前端完整 46 文件/248 项和生产构建通过；Spring 集成用例仍被既有共享测试库 V81 checksum 漂移阻断且未 repair。平台页面当前无受权登录态，且未配置真实 API Key，因此真实厂商调用与 Agent 会话业务验收待平台管理员完成。
+- TASK-291 / FEAT-175 已完成：按阿里云百炼官方 Responses API 封装受管 Python 代码解释器，在平台集成统一加密配置 API Key、业务空间 API Host、模型、超时和输入限制，在工具目录生成可治理的 `sandbox_code_interpreter`；API Host 默认留空并仅接受官方按地域提供的 `*.maas.aliyuncs.com` 地址，不在 AgentCiCi 宿主机执行代码，不将代码解释器与同次上游 Function Calling 混用。功能提交 `0c58cfb` 已合并本地 `main@8f76e39`，本地 backend/frontend 从该主线提交构建为 `2.8.62-dev.8f76e39`，两容器 healthy/restart=0、目标路由 200、匿名平台接口 JSON 401、镜像 label 与运行环境提交一致。后端定向 10 项、package、前端完整 46 文件/248 项和生产构建通过；Spring 集成用例仍被既有共享测试库 V81 checksum 漂移阻断且未 repair。平台页面当前无受权登录态，且未配置真实 API Key，因此真实厂商调用与 Agent 会话业务验收待平台管理员完成。
 
 - TASK-290 / FEAT-174 已修复管理端新增成员失败：`user_account.public_id` 由 PostgreSQL 触发器生成，旧链路同事务 Repository 回读命中 JPA 一级缓存旧实体；现在 flush 后强制 refresh，再进入 Keycloak provisioning。修复提交 `ab1b02c` 已进入本地 main；身份链路定向 21 项与后端 package 通过。本地 backend 已从该 main 提交构建为 `2.8.62-dev.ab1b02c`，health=`UP`、healthy/restart=0、edge 200、匿名用户 API 401、启动错误 0，其他服务 ID 未因本次 backend 更新改变。UAT 保持 `2.8.61-beta.16 / aef334205280`，故障目标四类记录均为 0；待单独授权发布与真实邀请验收。
 

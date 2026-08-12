@@ -18,7 +18,6 @@ public class SandboxCodeInterpreterService {
 
     public static final String TOOL_NAME = "sandbox_code_interpreter";
     private static final Logger log = LoggerFactory.getLogger(SandboxCodeInterpreterService.class);
-    private static final String DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1";
     private static final String DEFAULT_MODEL = "qwen3.5-plus";
 
     private final SandboxCodeInterpreterClient client;
@@ -134,7 +133,10 @@ public class SandboxCodeInterpreterService {
 
     public void validateConfigurationDraft(Map<String, Object> config) {
         Map<String, Object> safeConfig = config == null ? Map.of() : config;
-        String apiBaseUrl = firstNonBlank(safeConfig.get("apiBaseUrl"), DEFAULT_BASE_URL);
+        String apiBaseUrl = firstNonBlank(safeConfig.get("apiBaseUrl"));
+        if (apiBaseUrl.isBlank()) {
+            throw new IllegalArgumentException("请填写百炼业务空间对应地域的 API Host");
+        }
         validateApiBaseUrl(apiBaseUrl);
         String model = firstNonBlank(safeConfig.get("model"), DEFAULT_MODEL);
         validateModel(model);
@@ -152,7 +154,10 @@ public class SandboxCodeInterpreterService {
         if (IntegrationAppService.CODE_INTERPRETER_SECRET_MASK.equals(overrideKey)) overrideKey = "";
         String apiKey = overrideKey.isBlank() ? storedKey : overrideKey;
         if (apiKey.isBlank()) return Optional.empty();
-        String apiBaseUrl = firstNonBlank(override == null ? null : override.apiBaseUrl(), raw.get("apiBaseUrl"), DEFAULT_BASE_URL);
+        String apiBaseUrl = firstNonBlank(override == null ? null : override.apiBaseUrl(), raw.get("apiBaseUrl"));
+        if (apiBaseUrl.isBlank()) {
+            throw new IllegalArgumentException("请填写百炼业务空间对应地域的 API Host");
+        }
         String model = firstNonBlank(override == null ? null : override.model(), raw.get("model"), DEFAULT_MODEL);
         validateApiBaseUrl(apiBaseUrl);
         validateModel(model);
@@ -170,9 +175,9 @@ public class SandboxCodeInterpreterService {
         }
         String host = uri.getHost();
         if (!"https".equalsIgnoreCase(uri.getScheme()) || host == null
-                || !(host.equals("aliyuncs.com") || host.endsWith(".aliyuncs.com"))
+                || !host.endsWith(".maas.aliyuncs.com")
                 || uri.getUserInfo() != null || uri.getQuery() != null || uri.getFragment() != null) {
-            throw new IllegalArgumentException("代码解释器 API Host 必须是 aliyuncs.com 的 HTTPS 地址");
+            throw new IllegalArgumentException("代码解释器 API Host 必须是百炼业务空间的 HTTPS maas.aliyuncs.com 地址");
         }
     }
 
