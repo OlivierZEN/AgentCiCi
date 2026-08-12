@@ -4,9 +4,24 @@ import react from "@vitejs/plugin-react";
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, ".", "");
   const backendTarget = env.VITE_BACKEND_TARGET || "http://127.0.0.1:8080";
+  const runtimeEnv = (globalThis as typeof globalThis & {
+    process?: { env?: Record<string, string | undefined> };
+  }).process?.env ?? {};
+  const releaseVersion = (runtimeEnv.VITE_CICI_APP_VERSION || env.VITE_CICI_APP_VERSION || "dev")
+    .trim()
+    .replace(/[^A-Za-z0-9._-]+/g, "-");
 
   return {
     plugins: [react()],
+    build: {
+      rollupOptions: {
+        output: {
+          entryFileNames: `assets/[name]-[hash]-${releaseVersion}.js`,
+          chunkFileNames: `assets/[name]-[hash]-${releaseVersion}.js`,
+          assetFileNames: `assets/[name]-[hash]-${releaseVersion}[extname]`,
+        },
+      },
+    },
     server: {
       host: "0.0.0.0",
       port: 5173,

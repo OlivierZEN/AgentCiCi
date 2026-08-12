@@ -89,6 +89,8 @@ class SematticeProjectDeliveryWriteToolServiceTest {
         assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest(
                 "退出后又自动进入系统，没有真正注销")).isTrue();
         assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest(
+                "我在研发交付页面点击项目筛选后，筛选面板偶尔不会展开，需要刷新页面才能恢复")).isTrue();
+        assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest(
                 "希望项目列表支持按负责人筛选")).isTrue();
         assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest(
                 "把已确认需求的审批规则改成产品总监确认")).isTrue();
@@ -116,7 +118,7 @@ class SematticeProjectDeliveryWriteToolServiceTest {
         String marker = "<!-- DEV_AUTOPILOT_INTAKE_V1 " + objectMapper.writeValueAsString(Map.ofEntries(
                 Map.entry("classification", "defect"), Map.entry("project", "DAS-001"),
                 Map.entry("requirement", ""), Map.entry("title", "退出登录后会话仍然有效"),
-                Map.entry("original_report", original), Map.entry("pm_assessment", "已有退出能力偏离预期，判定为缺陷"),
+                Map.entry("original_report", "退出后又自动进入系统， 没有真正注销"), Map.entry("pm_assessment", "已有退出能力偏离预期，判定为缺陷"),
                 Map.entry("priority", "P1"), Map.entry("severity", "high"),
                 Map.entry("environment", "待开发者验证"), Map.entry("reproduction_steps", List.of("待开发者验证")),
                 Map.entry("expected_result", "退出后保持未登录"), Map.entry("actual_result", "退出后自动重新进入系统"),
@@ -152,6 +154,78 @@ class SematticeProjectDeliveryWriteToolServiceTest {
         assertThat(SematticeProjectDeliveryWriteToolService.hasPendingIntake(completedMessages)).isFalse();
         assertThat(SematticeProjectDeliveryWriteToolService.confirmedIntent(
                 "确认提交", completedMessages, "conversation-1", objectMapper)).isEmpty();
+    }
+
+    @Test
+    void restoresNewDefectAfterAProjectWasCompletedInTheSameConversation() throws Exception {
+        String original = "提交一个Bug。退出后又自动进入系统，并没有真正注销用户的登录状态。";
+        String marker = "<!-- DEV_AUTOPILOT_INTAKE_V1 " + objectMapper.writeValueAsString(Map.ofEntries(
+                Map.entry("classification", "defect"), Map.entry("project", "企业级智能体平台"),
+                Map.entry("requirement", ""), Map.entry("title", "退出登录后会话仍然有效"),
+                Map.entry("original_report", original), Map.entry("pm_assessment", "已有退出能力偏离预期，判定为缺陷"),
+                Map.entry("priority", "P1"), Map.entry("severity", "high"),
+                Map.entry("environment", "Web"), Map.entry("reproduction_steps", List.of("点击退出")),
+                Map.entry("expected_result", "保持未登录"), Map.entry("actual_result", "自动重新进入系统"),
+                Map.entry("acceptance_criteria", List.of()), Map.entry("impact_analysis", List.of()),
+                Map.entry("user_supplements", List.of()), Map.entry("assumptions", List.of("待开发者验证")),
+                Map.entry("clarification_question", ""), Map.entry("ready_for_confirmation", true),
+                Map.entry("cancelled", false))) + " -->";
+        List<Map<String, Object>> messages = List.of(
+                Map.of("role", "user", "content", "创建一个研发项目：企业级智能体平台"),
+                Map.of("role", "assistant", "content", "请回复确认创建项目：企业级智能体平台"),
+                Map.of("role", "user", "content", "确认创建项目：企业级智能体平台"),
+                Map.of("role", "assistant", "content", "已在 Semattice 创建项目：企业级智能体平台（DAS-001）。"),
+                Map.of("role", "user", "content", "查看当前所有的研发项目"),
+                Map.of("role", "assistant", "content", "当前有 1 个研发项目。"),
+                Map.of("role", "user", "content", original),
+                Map.of("role", "assistant", "content", "缺陷受理草案，请回复确认提交缺陷。\n" + marker));
+
+        var confirmed = SematticeProjectDeliveryWriteToolService.confirmedIntent(
+                "确认提交缺陷", messages, "conversation-sequential", objectMapper);
+
+        assertThat(confirmed).hasValueSatisfying(intent -> {
+            assertThat(intent.operation()).isEqualTo("create_defect");
+            assertThat(intent.parentReference()).isEqualTo("企业级智能体平台");
+            assertThat(intent.description()).isEqualTo(original);
+            assertThat(intent.intake()).containsEntry("conversation_id", "conversation-sequential");
+        });
+        assertThat(SematticeProjectDeliveryWriteToolService.hasPendingIntake(messages)).isTrue();
+    }
+
+    @Test
+    void restoresAClassifiedDefectFromVisibleDraftWhenModelOmitsMarker() {
+        String original = "UAT验收：我在研发交付页面点击项目筛选后，筛选面板偶尔不会展开，需要刷新页面才能恢复。";
+        List<Map<String, Object>> messages = List.of(
+                Map.of("role", "user", "content", original),
+                Map.of("role", "assistant", "content", "## UAT缺陷受理处理中\n缺陷标题：研发交付页面项目筛选面板偶发性无法展开\n请回复：确认提交缺陷"),
+                Map.of("role", "user", "content", "确认提交缺陷"),
+                Map.of("role", "assistant", "content", "本轮没有获得 Semattice 的真实写入成功回执。"),
+                Map.of("role", "user", "content", "项目：智能体平台"),
+                Map.of("role", "assistant", "content", """
+                        ## UAT 缺陷创建草案
+                        **标题**：研发交付页面项目筛选面板偶发性无法展开
+                        **优先级**：P2
+                        **严重程度**：medium
+                        **环境**：UAT
+                        **关联项目**：智能体平台 (DAS-751707A5)
+                        如你确认无误，回复 `确认创建`。
+                        """));
+
+        var confirmed = SematticeProjectDeliveryWriteToolService.confirmedIntent(
+                "确认创建", messages, "conversation-uat", objectMapper);
+
+        assertThat(confirmed).hasValueSatisfying(intent -> {
+            assertThat(intent.operation()).isEqualTo("create_defect");
+            assertThat(intent.parentReference()).isEqualTo("智能体平台");
+            assertThat(intent.title()).isEqualTo("研发交付页面项目筛选面板偶发性无法展开");
+            assertThat(intent.description()).isEqualTo(original);
+            assertThat(intent.priority()).isEqualTo("P2");
+            assertThat(intent.severity()).isEqualTo("medium");
+            assertThat(intent.intake()).containsEntry("classification", "defect")
+                    .containsEntry("original_report", original)
+                    .containsEntry("user_supplements", List.of("项目：智能体平台"));
+        });
+        assertThat(SematticeProjectDeliveryWriteToolService.hasPendingIntake(messages)).isTrue();
     }
 
     @Test

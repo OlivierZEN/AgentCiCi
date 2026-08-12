@@ -443,6 +443,27 @@ public class SkillDefinitionService {
         if (skill.getSourceType() != SkillSourceType.PLATFORM_STANDARD) {
             throw new IllegalArgumentException("Only platform standard skills can be materialized automatically");
         }
+        BuiltinSkillSpec builtin = BUILTIN_SKILLS.stream()
+                .filter(spec -> spec.skillCode().equals(skillCode))
+                .findFirst()
+                .orElse(null);
+        if (builtin != null && !matchesBuiltinDefinition(skill, builtin)) {
+            skill.update(
+                    skillCode,
+                    builtin.name(),
+                    builtin.description(),
+                    skill.isEnabled(),
+                    builtin.promptFragment(),
+                    builtin.draftSpecText(),
+                    builtin.toolWhitelist(),
+                    builtin.kbWhitelist(),
+                    builtin.handoffRule(),
+                    builtin.outputContract(),
+                    skill.getRuntimeApiDraftJson(),
+                    builtin.riskLevel()
+            );
+            skill = skillDefinitionRepository.save(skill);
+        }
         Optional<SkillVersionEntity> published = skill.getCurrentPublishedVersionId() == null
                 ? Optional.empty()
                 : skillVersionRepository.findByIdAndCompanyId(skill.getCurrentPublishedVersionId(), companyId)
@@ -451,7 +472,7 @@ public class SkillDefinitionService {
             published = skillVersionRepository.findTopByCompanyIdAndSkillIdAndPublishStatusOrderByVersionNoDesc(
                     companyId, skill.getId(), "PUBLISHED");
         }
-        if (published.isPresent()) {
+        if (published.isPresent() && matchesPublishedSnapshot(skill, published.get())) {
             if (!java.util.Objects.equals(skill.getCurrentPublishedVersionId(), published.get().getId())) {
                 skill.markPublished(published.get().getId(), "system");
                 skillDefinitionRepository.save(skill);
@@ -467,6 +488,27 @@ public class SkillDefinitionService {
         skill.markPublished(created.getId(), "system");
         skillDefinitionRepository.save(skill);
         return created.getId();
+    }
+
+    private boolean matchesBuiltinDefinition(SkillDefinitionEntity skill, BuiltinSkillSpec builtin) {
+        return Objects.equals(skill.getName(), builtin.name())
+                && Objects.equals(skill.getDescription(), builtin.description())
+                && Objects.equals(skill.getPromptFragment(), builtin.promptFragment())
+                && Objects.equals(skill.getDraftSpecText(), builtin.draftSpecText())
+                && Objects.equals(skill.getToolWhitelist(), builtin.toolWhitelist())
+                && Objects.equals(skill.getKbWhitelist(), builtin.kbWhitelist())
+                && Objects.equals(skill.getHandoffRule(), builtin.handoffRule())
+                && Objects.equals(skill.getOutputContract(), builtin.outputContract())
+                && Objects.equals(skill.getRiskLevel(), builtin.riskLevel());
+    }
+
+    private boolean matchesPublishedSnapshot(SkillDefinitionEntity skill, SkillVersionEntity published) {
+        return Objects.equals(trimToNull(published.getSpecText()), trimToNull(skill.getDraftSpecText()))
+                && Objects.equals(trimToNull(published.getCompiledPromptFragment()), trimToNull(skill.getPromptFragment()))
+                && Objects.equals(trimToNull(published.getEffectiveToolWhitelist()), trimToNull(skill.getToolWhitelist()))
+                && Objects.equals(trimToNull(published.getEffectiveKbWhitelist()), trimToNull(skill.getKbWhitelist()))
+                && Objects.equals(normalizeRiskLevel(published.getRiskLevel()), normalizeRiskLevel(skill.getRiskLevel()))
+                && Objects.equals(trimToNull(published.getRuntimeApiSnapshotJson()), trimToNull(skill.getRuntimeApiDraftJson()));
     }
 
     public SkillDefinitionEntity getSkill(String companyId, Long id) {

@@ -27,6 +27,7 @@ final class DeliveryWriteReceiptGuard {
     );
     private static final Pattern SUCCESS_CLAIM = Pattern.compile(
             "(?:已经|已|成功)(?:在\\s*Semattice\\s*)?(?:创建|记录|提交|写入|更新|修改|删除|关闭|重开|分派|保存|登记|处理完成)"
+                    + "|(?:已经|已)(?:在\\s*Semattice\\s*)?[^。；\\n]{0,24}(?:创建|记录|提交|写入|更新|修改|删除|关闭|重开|分派|保存|登记)"
                     + "|(?:创建|记录|提交|写入|更新|修改|删除|关闭|重开|分派|保存|登记)(?:成功|完成)",
             Pattern.CASE_INSENSITIVE);
 
@@ -93,6 +94,10 @@ final class DeliveryWriteReceiptGuard {
     private static boolean containsCompletedSuccessClaim(String answer) {
         var matcher = SUCCESS_CLAIM.matcher(answer);
         while (matcher.find()) {
+            String claim = matcher.group().replaceAll("\\s+", "");
+            if (containsAny(claim, "确认后", "确认无误后", "等待", "准备后")) {
+                continue;
+            }
             String prefix = answer.substring(Math.max(0, matcher.start() - 32), matcher.start())
                     .replaceAll("\\s+", "");
             if (containsAny(prefix,
