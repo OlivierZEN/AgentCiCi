@@ -19,9 +19,11 @@ import com.codehouse.ciciassistant.auth.domain.UserRepository;
 import com.codehouse.ciciassistant.auth.service.AdminUserService;
 import com.codehouse.ciciassistant.auth.service.KeycloakIdentityProvisioningService;
 import com.codehouse.ciciassistant.platform.service.PlatformAuditService;
+import jakarta.persistence.EntityManager;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class AdminUserServiceTest {
 
@@ -41,7 +43,7 @@ class AdminUserServiceTest {
         when(provisioning.resendHumanActivation(account)).thenReturn(
                 new KeycloakIdentityProvisioningService.ProvisionResult(true, true, "subject-1"));
 
-        AdminUserService service = new AdminUserService(users, companies, accounts, identifiers, externalIdentities, provisioning, audit);
+        AdminUserService service = service(users, companies, accounts, identifiers, externalIdentities, provisioning, audit);
 
         assertThat(service.resendActivationEmail(
                 "company-1", pending.getId(), "actor-1", RoleCodes.ORG_ADMIN))
@@ -69,7 +71,7 @@ class AdminUserServiceTest {
         when(provisioning.resendHumanActivation(account)).thenReturn(
                 new KeycloakIdentityProvisioningService.ProvisionResult(true, false, "subject-1"));
 
-        AdminUserService service = new AdminUserService(
+        AdminUserService service = service(
                 users, companies, accounts, identifiers, externalIdentities, provisioning, audit);
 
         assertThat(service.resendActivationEmail(
@@ -96,7 +98,7 @@ class AdminUserServiceTest {
         UserEntity active = new UserEntity(Mockito.mock(CompanyEntity.class), new UserAccountEntity("13900000003"), RoleCodes.ORG_USER);
         when(users.findByIdAndCompany_Id(active.getId(), "company-1")).thenReturn(Optional.of(active));
 
-        AdminUserService service = new AdminUserService(users, companies, accounts, identifiers, externalIdentities, provisioning, audit);
+        AdminUserService service = service(users, companies, accounts, identifiers, externalIdentities, provisioning, audit);
 
         org.assertj.core.api.Assertions.assertThatThrownBy(
                 () -> service.resendActivationEmail(
@@ -128,7 +130,7 @@ class AdminUserServiceTest {
         when(accounts.findById(account.getId())).thenReturn(Optional.of(account));
         when(users.findByCompany_IdAndAccount_Id("company-1", account.getId())).thenReturn(Optional.of(suspended));
 
-        AdminUserService service = new AdminUserService(users, companies, accounts, identifiers, externalIdentities, provisioning, audit);
+        AdminUserService service = service(users, companies, accounts, identifiers, externalIdentities, provisioning, audit);
 
         assertThat(service.inviteMember("company-1", "13900000001", "member@example.com", "成员", RoleCodes.ORG_ADMIN))
                 .containsEntry("memberStatus", UserEntity.STATUS_SUSPENDED)
@@ -154,7 +156,7 @@ class AdminUserServiceTest {
         when(provisioning.ensureHumanIdentity(account)).thenReturn(
                 new KeycloakIdentityProvisioningService.ProvisionResult(false, true, "subject-1"));
 
-        AdminUserService service = new AdminUserService(
+        AdminUserService service = service(
                 users, companies, accounts, identifiers, externalIdentities, provisioning, audit);
 
         assertThat(service.reconcileIdentity(
@@ -183,7 +185,7 @@ class AdminUserServiceTest {
                 Mockito.mock(CompanyEntity.class), new UserAccountEntity("13900000005"), RoleCodes.ORG_USER);
         when(users.findByIdAndCompany_Id(active.getId(), "company-1")).thenReturn(Optional.of(active));
 
-        AdminUserService service = new AdminUserService(
+        AdminUserService service = service(
                 users, companies, accounts, identifiers, externalIdentities, provisioning, audit);
 
         org.assertj.core.api.Assertions.assertThatThrownBy(
@@ -209,7 +211,7 @@ class AdminUserServiceTest {
         when(externalIdentities.findByAccount_Id(account.getId())).thenReturn(
                 Optional.of(Mockito.mock(AccountExternalIdentityEntity.class)));
 
-        AdminUserService service = new AdminUserService(
+        AdminUserService service = service(
                 users, companies, accounts, identifiers, externalIdentities, provisioning, audit);
 
         org.assertj.core.api.Assertions.assertThatThrownBy(
@@ -237,12 +239,73 @@ class AdminUserServiceTest {
                 "company-1", "company_member.identity_reconciled", pending.getId(), "idempotencyKey=request-4;"))
                 .thenReturn(true);
 
-        AdminUserService service = new AdminUserService(
+        AdminUserService service = service(
                 users, companies, accounts, identifiers, externalIdentities, provisioning, audit);
 
         assertThat(service.reconcileIdentity(
                 "company-1", pending.getId(), "13900000008", "request-4", "actor-1", RoleCodes.ORG_ADMIN))
                 .containsEntry("memberStatus", UserEntity.STATUS_PENDING_ACTIVATION);
         verifyNoInteractions(provisioning);
+    }
+
+    @Test
+    void refreshesGeneratedPublicIdBeforeProvisioningANewMember() {
+        UserRepository users = Mockito.mock(UserRepository.class);
+        CompanyRepository companies = Mockito.mock(CompanyRepository.class);
+        UserAccountRepository accounts = Mockito.mock(UserAccountRepository.class);
+        AccountLoginIdentifierRepository identifiers = Mockito.mock(AccountLoginIdentifierRepository.class);
+        AccountExternalIdentityRepository externalIdentities = Mockito.mock(AccountExternalIdentityRepository.class);
+        KeycloakIdentityProvisioningService provisioning = Mockito.mock(KeycloakIdentityProvisioningService.class);
+        PlatformAuditService audit = Mockito.mock(PlatformAuditService.class);
+        EntityManager entityManager = Mockito.mock(EntityManager.class);
+        UserAccountEntity account = new UserAccountEntity("13900000009");
+        CompanyEntity company = Mockito.mock(CompanyEntity.class);
+
+        when(identifiers.findByIdentifierTypeAndNormalizedValueAndStatus(any(), any(), any()))
+                .thenReturn(Optional.empty());
+        when(accounts.findByPrimaryMobile("13900000009")).thenReturn(Optional.empty());
+        when(accounts.saveAndFlush(any(UserAccountEntity.class))).thenReturn(account);
+        when(identifiers.findByAccount_IdAndIdentifierTypeAndStatus(any(), any(), any()))
+                .thenReturn(Optional.empty());
+        Mockito.doAnswer(invocation -> {
+            ReflectionTestUtils.setField(account, "publicId", "U2026TEST0001");
+            return null;
+        }).when(entityManager).refresh(account);
+        when(users.findByCompany_IdAndAccount_Id("company-1", account.getId())).thenReturn(Optional.empty());
+        when(companies.findById("company-1")).thenReturn(Optional.of(company));
+        when(provisioning.ensureHumanIdentity(account)).thenAnswer(invocation -> {
+            assertThat(account.getPublicId()).isEqualTo("U2026TEST0001");
+            return new KeycloakIdentityProvisioningService.ProvisionResult(false, true, "subject-1");
+        });
+
+        AdminUserService service = new AdminUserService(
+                users, companies, accounts, identifiers, externalIdentities, provisioning, audit, entityManager);
+
+        assertThat(service.inviteMember(
+                "company-1", "13900000009", "member@example.com", "新成员", RoleCodes.ORG_USER))
+                .containsEntry("memberStatus", UserEntity.STATUS_PENDING_ACTIVATION)
+                .containsEntry("roleCode", RoleCodes.ORG_USER);
+        verify(entityManager).refresh(account);
+        verify(provisioning).ensureHumanIdentity(account);
+        verify(accounts, never()).findById(account.getId());
+    }
+
+    private static AdminUserService service(
+            UserRepository users,
+            CompanyRepository companies,
+            UserAccountRepository accounts,
+            AccountLoginIdentifierRepository identifiers,
+            AccountExternalIdentityRepository externalIdentities,
+            KeycloakIdentityProvisioningService provisioning,
+            PlatformAuditService audit) {
+        return new AdminUserService(
+                users,
+                companies,
+                accounts,
+                identifiers,
+                externalIdentities,
+                provisioning,
+                audit,
+                Mockito.mock(EntityManager.class));
     }
 }

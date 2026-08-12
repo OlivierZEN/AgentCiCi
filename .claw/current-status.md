@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-12T06:55:03Z
+updated_at: 2026-08-12T07:27:07Z
 updated_by: codex
 phase: review
-active_task: TASK-288
-next_action: "使用有效本地 HUMAN 会话在现有失败会话再次确认提交，回读 Semattice record ID、revision 与 correlation；代码回归、打包及本地运行已通过，未绕过登录门禁。"
+active_task: TASK-290
+next_action: "完成新增成员公共编号修复的后端 package，将提交归并本地 main，并从 main 更新 cc-local-stack backend 后回读版本、健康和重启次数。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-290 / FEAT-174 已定位管理端新增成员失败：`user_account.public_id` 由 PostgreSQL 触发器生成，但 `AdminUserService` 的同事务 Repository 回读命中 JPA 一级缓存旧实体，Keycloak provisioning 因公共编号为空失败。UAT `2.8.61-beta.16 / aef334205280` health 与公共 smoke 正常，故障目标四类记录均为 0、事务无残留。修复改为 flush 后强制 refresh；身份链路定向 21 项与后端 package 通过，待本地 main 归并和本地全栈 backend 验证；UAT 未修改。
 
 - TASK-289 已完成：平台集成卡片再次消失并非数据删除，而是上一修复只在隔离分支，`main@4459993` 的后续本地构建重新带回 `/platform/integrations` SPA 路由。修复已以 `0d55564` 正式进入本地 main，前端改用 `/api/platform/integrations` 并保留加载/错误/重试/空状态；46 文件/247 项、生产构建通过。本地制品为 `2.8.62-dev.0d55564`，容器 healthy/restart=0，目标路由 200，部署 JS 与匿名 JSON 401 证明请求进入后端鉴权；受权平台页面刷新后完成卡片视觉回读。
 
