@@ -1,11 +1,11 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-12T15:20:00Z
+updated_at: 2026-08-12T15:35:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-12T15:20:00Z
-last_run_status: passed_with_local_deployment_pending
+last_run_at: 2026-08-12T15:35:00Z
+last_run_status: passed_with_authorized_business_acceptance_pending
 ---
 
 # Test Report
@@ -16,7 +16,10 @@ last_run_status: passed_with_local_deployment_pending
 - 代码：可见草稿兜底解析新增产品经理分析、需求验收标准、变更影响、缺陷复现/预期/实际结果及开发者验证表格提取；只有可见草稿没有具体事实时才使用通用默认值。
 - 同构回归：使用截图中的原始需求草稿，精确断言 4 条分析、5 条验收标准和 4 条开发者验证项进入原生字段及 `intake` 审计信封。
 - 测试：`SematticeProjectDeliveryWriteToolServiceTest,DeliveryWriteReceiptGuardTest,ChatOrchestratorServiceModelIdentityTest` 通过；`mvn -q -DskipTests package` 与 `git diff --check` 通过。
-- 状态：`passed_with_local_deployment_pending`（尚待本地主线归并、开发环境运行回读与真实对话业务验收）。
+- 本地主线与制品：功能提交 `f7798d1` 合并为 `main@87fae991dbb7`；backend 镜像 label、运行环境和 `/system/version` 均回读 `2.8.62-dev.87fae99 / 87fae991dbb7`，容器 healthy/restart=0。
+- 运行门禁：完整 `./stack verify` 通过域名源码扫描、基础设施/数据库隔离、TLS、OIDC、应用健康/版本与匿名鉴权；Semattice 等状态服务未重建且全部 restart=0。
+- 边界：没有改写既有错误记录 `REQ-6F34ECF3`，避免绕过正式能力破坏审计；平台管理员会话不能替代租户产品经理真实对话。
+- 状态：`passed_with_authorized_business_acceptance_pending`（代码、构建、运行和故障同构字段断言通过；真实租户新记录回读待业务用户完成）。
 
 ## 2026-08-12 TASK-293 DevAutopilot 授权初始化
 

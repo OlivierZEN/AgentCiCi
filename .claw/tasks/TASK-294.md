@@ -1,7 +1,7 @@
 ---
 kind: task-status
 task_id: TASK-294
-status: in_progress
+status: completed
 updated_at: 2026-08-12T15:00:00Z
 updated_by: codex
 assignee: codex
@@ -11,6 +11,8 @@ depends_on: none
 ---
 
 # TASK-294 - 修正 DevAutopilot 受理草稿字段映射
+
+完成于 2026-08-12；功能提交 `f7798d1`，本地主线合并提交 `87fae99`，开发环境 backend `2.8.62-dev.87fae99`。
 
 ## 范围
 

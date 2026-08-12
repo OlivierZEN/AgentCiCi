@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-12T15:20:00Z
+updated_at: 2026-08-12T15:35:00Z
 updated_by: codex
-phase: implementation
-active_task: "TASK-294"
-next_action: "完成 TASK-294 本地主线归并和 cici.localhost backend 验收；UAT/生产不在本轮范围。"
+phase: completed
+active_task: null
+next_action: "由租户业务用户发起一条新需求/缺陷并确认写入，核对 Semattice 原生字段和 intake 与可见草稿一致；UAT/生产不在本轮范围。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-294 / FEAT-178 / INT-015 正在收尾：已确认 Semattice 忠实保存了 AgentCiCi 提交的通用占位值，字段错乱发生在产品经理可见草稿缺少隐藏 intake 标记时的兜底解析。修复现在从可见草稿恢复产品经理分析、验收标准、影响分析和开发者验证项，并要求可见草稿与 `DEV_AUTOPILOT_INTAKE_V1` 使用同一组事实；故障同构定向测试和后端 package 已通过，待合并本地 `main` 并更新开发环境。
+- TASK-294 / FEAT-178 / INT-015 已完成实现：已确认 Semattice 忠实保存了 AgentCiCi 提交的通用占位值，字段错乱发生在产品经理可见草稿缺少隐藏 intake 标记时的兜底解析。修复从可见草稿恢复产品经理分析、验收标准、影响分析和开发者验证项，并要求可见草稿与 `DEV_AUTOPILOT_INTAKE_V1` 使用同一组事实。功能提交 `f7798d1` 已合并本地 `main@87fae991dbb7`，backend 运行 `2.8.62-dev.87fae99`、healthy/restart=0，定向测试、package 和完整 stack verify 通过；真实租户新记录回读待业务用户完成，UAT/生产未修改。
 
 - TASK-293 / FEAT-177 / INT-014 已完成：AgentCiCi 在 DevAutopilot 新开通、标准模板同步和新增开发者后编排 Semattice 固定授权模板，只有 4 角色、4 权限包、7 对象策略和全部主体分配通过有效权限验证后才写入授权回执并显示初始化完成。功能提交 `38f8598` 已合并本地 `main@41740bdd55e6`，本地版本 `2.8.62-dev.41740bd` healthy/restart=0、Flyway V111 与完整 stack verify 通过。平台管理员已通过正式 `initializations` 补齐 `org3gxskla32gln3bvop`，4 个主体分配和模板摘要回读一致，重复同步幂等；未修改 UAT/生产。
 
