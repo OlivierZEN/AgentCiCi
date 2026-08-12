@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-12T13:43:45Z
+updated_at: 2026-08-12T14:00:02Z
 updated_by: codex
 phase: completed
 active_task: null
@@ -23,6 +23,8 @@ read_next:
 ## Latest Snapshot
 
 - TASK-293 / FEAT-177 / INT-014 已完成：AgentCiCi 在 DevAutopilot 新开通、标准模板同步和新增开发者后编排 Semattice 固定授权模板，只有 4 角色、4 权限包、7 对象策略和全部主体分配通过有效权限验证后才写入授权回执并显示初始化完成。功能提交 `38f8598` 已合并本地 `main@41740bdd55e6`，本地版本 `2.8.62-dev.41740bd` healthy/restart=0、Flyway V111 与完整 stack verify 通过。平台管理员已通过正式 `initializations` 补齐 `org3gxskla32gln3bvop`，4 个主体分配和模板摘要回读一致，重复同步幂等；未修改 UAT/生产。
+
+- TASK-291 / TASK-292 已从远端 `main@9bf64d8` 发布 UAT `2.8.61-beta.17`。backend/frontend ACR index digest 为 `sha256:d4b2abe67e01467d7ec6184b1e38962b5dc1630826682ec449b0bd7bd1e67441` / `sha256:0d25185c30c61cc9813fcdd7cc593177cb007fcec1dec40ef6fe8e0c7f845548`；发布前备份 `/data/apps/agentcici/backups/20260812T1350Z-before-2.8.61-beta.17` 已校验且全部 `0600`，回滚目标为 beta.16。仅重建 backend/frontend，四个状态服务 ID 未变；版本/commit、health、Flyway、Nginx、公开 smoke、匿名 401 和稳定窗口均通过，两容器 healthy/restart=0。前端制品已确认包含代码解释器、联网搜索和网页抓取入口。三项集成默认关闭且 UAT 未录入真实厂商凭据，真实连接检测与 Agent 会话业务验收仍待平台管理员完成；生产未修改。
 
 - TASK-292 / FEAT-176 已完成：平台集成新增独立的“联网搜索（百炼）”“网页抓取（百炼）”配置卡和 `managed_web_search` / `managed_web_extract` 内置工具，原有 Tavily 未改变。搜索请求只声明 `web_search`，抓取按官方协议同时声明 `web_search` 与 `web_extractor`；两项默认关闭，API Key 加密，API Host 限制为 HTTPS `*.maas.aliyuncs.com`，抓取目标拒绝明显本地/私网地址。功能提交 `9a8cb9a` 已合并本地 `main@1f362c7`，backend/frontend 从该主线构建为 `2.8.62-dev.1f362c7`，镜像 label、运行环境、版本 API 提交一致，两容器 healthy/restart=0、目标路由 200、匿名平台接口 JSON 401、完整 stack verify 通过。后端定向 16 项与 package、前端完整 46 文件/249 项和生产构建通过；Spring 集成仍被既有 V81 checksum 漂移阻断且未 repair。平台页面无受权登录态且未配置真实 API Key，真实厂商连接与 Agent 会话业务验收待平台管理员完成。
 
