@@ -18,6 +18,7 @@ import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryReviewToolS
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryWriteToolService;
 import com.codehouse.ciciassistant.skill.service.SkillApiToolService;
 import com.codehouse.ciciassistant.tool.codeinterpreter.SandboxCodeInterpreterService;
+import com.codehouse.ciciassistant.tool.managedweb.ManagedWebToolService;
 import com.codehouse.ciciassistant.tool.service.BuiltinToolCatalog;
 import com.codehouse.ciciassistant.tool.tavily.TavilyToolService;
 import com.codehouse.ciciassistant.userworkflow.service.AssistantScheduleToolService;
@@ -27,6 +28,40 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class ToolOrchestratorServiceTest {
+
+    @Test
+    void exposesAndDispatchesBothGovernedManagedWebTools() {
+        McpServerService mcp = mock(McpServerService.class);
+        PlatformGovernanceService governance = mock(PlatformGovernanceService.class);
+        SkillApiToolService skillApi = mock(SkillApiToolService.class);
+        ManagedWebToolService managedWeb = mock(ManagedWebToolService.class);
+        when(mcp.getAllToolsForOrg("org-1")).thenReturn(List.of());
+        when(skillApi.getRuntimeToolDefinitions(List.of())).thenReturn(List.of());
+        for (String name : ManagedWebToolService.ALL_TOOL_NAMES) {
+            when(governance.isRuntimeToolEnabled("org-1", name)).thenReturn(true);
+            when(managedWeb.toolDefinition(name)).thenReturn(Map.of(
+                    "type", "function", "function", Map.of("name", name)));
+        }
+        when(managedWeb.dispatch("org-1", "user-1", ManagedWebToolService.TOOL_EXTRACT,
+                "{\"url\":\"https://example.com\"}"))
+                .thenReturn("{\"success\":true,\"answer\":\"page\"}");
+
+        ToolOrchestratorService orchestrator = new ToolOrchestratorService(
+                mcp, mock(CloudccOpenApiService.class), mock(CrmProductSalesAnalysisToolService.class),
+                mock(EmailToolService.class), mock(UserMemoryService.class), mock(TavilyToolService.class),
+                governance, skillApi, mock(SematticeProjectDeliveryToolService.class),
+                mock(SematticeProjectDeliveryWriteToolService.class), mock(SematticeProjectDeliveryReviewToolService.class),
+                allowSafetyGateway(), new ObjectMapper().findAndRegisterModules());
+        orchestrator.setManagedWebToolService(managedWeb);
+
+        assertThat(orchestrator.getToolDefinitions("org-1", ManagedWebToolService.ALL_TOOL_NAMES, List.of()))
+                .extracting(item -> String.valueOf(((Map<?, ?>) item.get("function")).get("name")))
+                .contains(ManagedWebToolService.TOOL_SEARCH, ManagedWebToolService.TOOL_EXTRACT);
+        assertThat(orchestrator.executeTool("org-1", "user-1", ManagedWebToolService.TOOL_EXTRACT,
+                "{\"url\":\"https://example.com\"}", ManagedWebToolService.ALL_TOOL_NAMES)).contains("page");
+        assertThat(BuiltinToolCatalog.list()).extracting(BuiltinToolCatalog.ToolCatalogItem::toolName)
+                .contains(ManagedWebToolService.TOOL_SEARCH, ManagedWebToolService.TOOL_EXTRACT);
+    }
 
     @Test
     void exposesAndDispatchesGovernedCodeInterpreter() {

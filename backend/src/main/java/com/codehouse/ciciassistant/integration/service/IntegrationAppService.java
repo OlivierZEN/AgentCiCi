@@ -14,7 +14,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,18 +26,25 @@ public class IntegrationAppService {
     public static final String APP_CODE_TAVILY = "tavily";
     public static final String APP_CODE_IFLYTEK_ASR = "iflytek_asr";
     public static final String APP_CODE_CODE_INTERPRETER = "code_interpreter";
+    public static final String APP_CODE_MANAGED_WEB_SEARCH = "managed_web_search";
+    public static final String APP_CODE_MANAGED_WEB_EXTRACTOR = "managed_web_extractor";
 
     /** Displayed to the frontend when an encrypted apiKey exists. The frontend never receives the ciphertext. */
     public static final String API_KEY_MASK = "tvly-****";
     public static final String IFLYTEK_SECRET_MASK = "iflytek-****";
     public static final String CODE_INTERPRETER_SECRET_MASK = "bailian-****";
+    public static final String MANAGED_WEB_SECRET_MASK = "bailian-****";
     public static final String CLOUDCC_SECRET_MASK = "cloudcc-****";
-    public static final String PLATFORM_MANAGED_MESSAGE = "Tavily 搜索、讯飞实时转写和代码解释器由运营平台统一配置，组织后台不可修改。";
+    public static final String PLATFORM_MANAGED_MESSAGE = "Tavily 搜索、讯飞实时转写、代码解释器、联网搜索和网页抓取由运营平台统一配置，组织后台不可修改。";
 
     private static final String DEFAULT_IFLYTEK_REALTIME_URL = "wss://office-api-ast-dx.iflyaisol.com/ast/communicate/v1";
     private static final Map<String, BuiltinAppDef> BUILTIN_APPS = builtinApps();
-    private static final Set<String> PLATFORM_MANAGED_APP_CODES = Set.of(
-            APP_CODE_TAVILY, APP_CODE_IFLYTEK_ASR, APP_CODE_CODE_INTERPRETER);
+    private static final List<String> PLATFORM_MANAGED_APP_CODES = List.of(
+            APP_CODE_TAVILY,
+            APP_CODE_IFLYTEK_ASR,
+            APP_CODE_CODE_INTERPRETER,
+            APP_CODE_MANAGED_WEB_SEARCH,
+            APP_CODE_MANAGED_WEB_EXTRACTOR);
 
     private final IntegrationAppRepository repository;
     private final ObjectMapper objectMapper;
@@ -182,6 +188,10 @@ public class IntegrationAppService {
         return decryptSecret(rawConfig, "apiKey", CODE_INTERPRETER_SECRET_MASK);
     }
 
+    public Optional<String> decryptManagedWebApiKey(Map<String, Object> rawConfig) {
+        return decryptSecret(rawConfig, "apiKey", MANAGED_WEB_SECRET_MASK);
+    }
+
     private Optional<String> decryptSecret(Map<String, Object> rawConfig, String key, String mask) {
         if (rawConfig == null) return Optional.empty();
         Object value = rawConfig.get(key);
@@ -212,6 +222,9 @@ public class IntegrationAppService {
 
     private void ensureBuiltinRows(String companyId) {
         for (BuiltinAppDef def : BUILTIN_APPS.values()) {
+            if (isPlatformManagedApp(def.appCode())) {
+                continue;
+            }
             boolean exists = repository.findByCompanyIdAndAppCode(companyId, def.appCode()).isPresent();
             if (!exists) {
                 repository.save(new IntegrationAppEntity(
@@ -272,6 +285,12 @@ public class IntegrationAppService {
             maskSecrets(config, "accessKeySecret", IFLYTEK_SECRET_MASK);
         } else if (APP_CODE_CODE_INTERPRETER.equals(e.getAppCode())) {
             maskSecrets(config, "apiKey", CODE_INTERPRETER_SECRET_MASK);
+            config.putIfAbsent("apiBaseUrl", "");
+            config.putIfAbsent("model", "qwen3.5-plus");
+            config.putIfAbsent("timeoutMs", "120000");
+            config.putIfAbsent("maxInputChars", "12000");
+        } else if (isManagedWebApp(e.getAppCode())) {
+            maskSecrets(config, "apiKey", MANAGED_WEB_SECRET_MASK);
             config.putIfAbsent("apiBaseUrl", "");
             config.putIfAbsent("model", "qwen3.5-plus");
             config.putIfAbsent("timeoutMs", "120000");
@@ -356,6 +375,17 @@ public class IntegrationAppService {
                     v = "12000";
                 }
             }
+            if (isManagedWebApp(def.appCode())) {
+                if ((v == null || String.valueOf(v).isBlank()) && "model".equals(key)) {
+                    v = "qwen3.5-plus";
+                }
+                if ((v == null || String.valueOf(v).isBlank()) && "timeoutMs".equals(key)) {
+                    v = "120000";
+                }
+                if ((v == null || String.valueOf(v).isBlank()) && "maxInputChars".equals(key)) {
+                    v = "12000";
+                }
+            }
 
             // Tavily apiKey: encrypt new plaintext; preserve existing encrypted envelope when
             // the incoming value is blank or the frontend mask sentinel.
@@ -369,6 +399,10 @@ public class IntegrationAppService {
             }
             if (APP_CODE_CODE_INTERPRETER.equals(def.appCode()) && "apiKey".equals(key)) {
                 out.put(key, encryptOrPreserveSecret(existing.get(key), v, CODE_INTERPRETER_SECRET_MASK));
+                continue;
+            }
+            if (isManagedWebApp(def.appCode()) && "apiKey".equals(key)) {
+                out.put(key, encryptOrPreserveSecret(existing.get(key), v, MANAGED_WEB_SECRET_MASK));
                 continue;
             }
             if (APP_CODE_CLOUDCC_CRM.equals(def.appCode()) && "secretKey".equals(key)) {
@@ -458,7 +492,24 @@ public class IntegrationAppService {
                 "调用阿里云百炼受管 Python 沙箱完成精确计算、数据分析与代码验证，并生成可治理的内置工具。",
                 List.of("apiKey", "apiBaseUrl", "model", "timeoutMs", "maxInputChars"),
                 false));
+        apps.put(APP_CODE_MANAGED_WEB_SEARCH, new BuiltinAppDef(
+                APP_CODE_MANAGED_WEB_SEARCH,
+                "联网搜索（百炼）",
+                "调用百炼联网搜索获取时效信息并生成可治理的内置工具；兼容 Responses API 不提供可验证来源列表。",
+                List.of("apiKey", "apiBaseUrl", "model", "timeoutMs", "maxInputChars"),
+                false));
+        apps.put(APP_CODE_MANAGED_WEB_EXTRACTOR, new BuiltinAppDef(
+                APP_CODE_MANAGED_WEB_EXTRACTOR,
+                "网页抓取（百炼）",
+                "调用百炼网页抓取读取公开 URL 内容并生成可治理的内置工具；单次请求会同时使用搜索与抓取能力。",
+                List.of("apiKey", "apiBaseUrl", "model", "timeoutMs", "maxInputChars"),
+                false));
         return Collections.unmodifiableMap(apps);
+    }
+
+    private static boolean isManagedWebApp(String appCode) {
+        return APP_CODE_MANAGED_WEB_SEARCH.equals(appCode)
+                || APP_CODE_MANAGED_WEB_EXTRACTOR.equals(appCode);
     }
 
     private record BuiltinAppDef(String appCode,

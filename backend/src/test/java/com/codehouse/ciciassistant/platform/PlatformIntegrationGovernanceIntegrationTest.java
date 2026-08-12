@@ -48,6 +48,8 @@ class PlatformIntegrationGovernanceIntegrationTest {
                 .andExpect(jsonPath("$.data[?(@.appCode == 'tavily')]").exists())
                 .andExpect(jsonPath("$.data[?(@.appCode == 'iflytek_asr')]").exists())
                 .andExpect(jsonPath("$.data[?(@.appCode == 'code_interpreter')]").exists())
+                .andExpect(jsonPath("$.data[?(@.appCode == 'managed_web_search')]").exists())
+                .andExpect(jsonPath("$.data[?(@.appCode == 'managed_web_extractor')]").exists())
                 .andExpect(jsonPath("$.data[?(@.appCode == 'cloudcc_crm')]").doesNotExist());
 
         mockMvc.perform(put("/platform/integrations/{appCode}", "tavily")
@@ -112,7 +114,7 @@ class PlatformIntegrationGovernanceIntegrationTest {
         JsonNode orgApps = objectMapper.readTree(orgList.getResponse().getContentAsString()).path("data");
         assertThat(orgApps).extracting(node -> node.path("appCode").asText())
                 .contains("cloudcc_crm", "feishu_bot")
-                .doesNotContain("tavily", "iflytek_asr", "code_interpreter");
+                .doesNotContain("tavily", "iflytek_asr", "code_interpreter", "managed_web_search", "managed_web_extractor");
 
         mockMvc.perform(put("/integrations/{appCode}", "tavily")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + orgToken)

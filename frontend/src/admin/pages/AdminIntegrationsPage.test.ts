@@ -37,6 +37,24 @@ describe("platform integration response handling", () => {
     ]);
   });
 
+  it("keeps managed web search and extractor as two independent cards", async () => {
+    const response = new Response(JSON.stringify({
+      success: true,
+      data: [
+        { id: 4, appCode: "managed_web_search", appName: "联网搜索（百炼）", enabled: false },
+        { id: 5, appCode: "managed_web_extractor", appName: "网页抓取（百炼）", enabled: false },
+      ],
+    }), {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" },
+    });
+
+    await expect(readIntegrationAppsResponse(response)).resolves.toEqual([
+      expect.objectContaining({ appCode: "managed_web_search", enabled: false }),
+      expect.objectContaining({ appCode: "managed_web_extractor", enabled: false }),
+    ]);
+  });
+
   it("reports an actionable error instead of silently rendering an empty page for SPA HTML", async () => {
     const response = new Response("<!doctype html><html></html>", {
       status: 200,
