@@ -30,12 +30,12 @@ class KeycloakOidcLoginServiceTest {
     void canonicalizesNonCallbackHostsBeforeCreatingOidcState() {
         KeycloakOidcLoginService service = service();
 
-        assertThat(service.isCanonicalStartHost("agentcici.com")).isFalse();
-        assertThat(service.isCanonicalStartHost("x.agentcici.com")).isTrue();
+        assertThat(service.isCanonicalStartHost("other.example.test")).isFalse();
+        assertThat(service.isCanonicalStartHost("agentcici.example.test")).isTrue();
         assertThat(service.canonicalStartUri("/admin/ops?tab=access").toString())
-                .isEqualTo("https://x.agentcici.com/auth/oidc/login?return_to=%2Fadmin%2Fops%3Ftab%3Daccess");
+                .isEqualTo("https://agentcici.example.test/auth/oidc/login?return_to=%2Fadmin%2Fops%3Ftab%3Daccess");
         assertThat(service.canonicalPasswordUpdateUri("/app").toString())
-                .isEqualTo("https://x.agentcici.com/auth/oidc/password?return_to=%2Fapp");
+                .isEqualTo("https://agentcici.example.test/auth/oidc/password?return_to=%2Fapp");
     }
 
     @Test
@@ -55,8 +55,8 @@ class KeycloakOidcLoginServiceTest {
     void rejectsLookalikeOrMalformedStartHosts() {
         KeycloakOidcLoginService service = service();
 
-        assertThat(service.isCanonicalStartHost("x.agentcici.com.evil.example")).isFalse();
-        assertThat(service.isCanonicalStartHost("x.agentcici.com:444")).isFalse();
+        assertThat(service.isCanonicalStartHost("agentcici.example.test.evil.example")).isFalse();
+        assertThat(service.isCanonicalStartHost("agentcici.example.test:444")).isFalse();
         assertThat(service.isCanonicalStartHost("not a host")).isFalse();
     }
 
@@ -98,8 +98,8 @@ class KeycloakOidcLoginServiceTest {
                     org.mockito.Mockito.mock(AccountExternalIdentityRepository.class),
                     org.mockito.Mockito.mock(AuthService.class),
                     org.mockito.Mockito.mock(OidcLoginStateStore.class),
-                    new ObjectMapper(), true, issuer, "agentcici-bff", "test-client-secret",
-                    "https://x.agentcici.com/auth/oidc/callback");
+                    new ObjectMapper(), true, issuer, issuer, "agentcici-bff", "test-client-secret",
+                    "https://agentcici.example.test/auth/oidc/callback");
 
             assertThat(service.verifyServiceAccessToken(token))
                     .isEqualTo(new KeycloakOidcLoginService.ServiceAccessToken(
@@ -122,10 +122,11 @@ class KeycloakOidcLoginServiceTest {
                 org.mockito.Mockito.mock(OidcLoginStateStore.class),
                 new ObjectMapper(),
                 enabled,
-                "https://sso.agentcici.com/realms/agentcici",
+                "https://sso.example.test/realms/agentcici",
+                "https://sso.example.test/realms/agentcici",
                 "agentcici-bff",
                 "test-client-secret",
-                "https://x.agentcici.com/auth/oidc/callback");
+                "https://agentcici.example.test/auth/oidc/callback");
     }
 
     private static String unsignedBase64(BigInteger value) {

@@ -11,6 +11,8 @@ import com.codehouse.ciciassistant.auth.service.CloudccSsoService;
 import com.codehouse.ciciassistant.auth.service.KeycloakOidcLoginService;
 import com.codehouse.ciciassistant.auth.service.OfficialAccessTokenService;
 import com.codehouse.ciciassistant.platform.service.DevAutopilotHandoffService;
+import com.codehouse.ciciassistant.semattice.SematticeConsoleHandoffService;
+import com.codehouse.ciciassistant.semattice.SematticeConsoleLocation;
 import org.junit.jupiter.api.Test;
 
 class AuthControllerTest {
@@ -24,9 +26,9 @@ class AuthControllerTest {
                 authService,
                 mock(CloudccSsoService.class),
                 oidc,
-                mock(OfficialAccessTokenService.class),
                 mock(DevAutopilotHandoffService.class),
-                "");
+                mock(SematticeConsoleHandoffService.class),
+                new SematticeConsoleLocation(""));
 
         assertThatThrownBy(() -> controller.changeMyPassword(
                 new AuthController.ChangeMyPasswordRequest("old-password", "new-password")))

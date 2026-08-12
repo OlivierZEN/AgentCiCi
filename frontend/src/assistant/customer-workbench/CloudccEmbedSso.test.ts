@@ -131,10 +131,10 @@ describe("CloudCC embedded workbench SSO recovery contract", () => {
     const instance: Record<string, unknown> = {
       ...component.data(),
       elePropObj: {},
-      workspaceUrl: "https://x.agentcici.com/app?aiApp=customer-workbench&embed=crm",
+      workspaceUrl: "https://agentcici.example.test/app?aiApp=customer-workbench&embed=crm",
       agentCompanyId: "agent-org",
       enableSso: true,
-      ssoEndpoint: "https://x.agentcici.com/auth/cloudcc-sso/ticket",
+      ssoEndpoint: "https://agentcici.example.test/auth/cloudcc-sso/ticket",
     };
     Object.entries(component.methods).forEach(([name, method]) => {
       instance[name] = method.bind(instance);

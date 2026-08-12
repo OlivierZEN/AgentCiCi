@@ -33,10 +33,8 @@ describe("admin auth async scope", () => {
     const stylesSource = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
 
     expect(shellSource).toContain('"/auth/semattice/console"');
-    expect(shellSource).toContain('target.hash.startsWith("#oact=")');
-    expect(shellSource).toContain('window.location.assign(target.toString())');
+    expect(shellSource).toContain('window.location.assign(redirectUri)');
     expect(shellSource).toContain("Semattice 管理端");
-    expect(shellSource).toContain('new Set([window.location.hostname, "semattice.agentcici.com"])');
     expect(shellSource).not.toContain("cici_semattice_token");
     expect(stylesSource).toMatch(/\.admin-product-switch__menu\s*\{[^}]*left:\s*0;/s);
     expect(stylesSource).not.toMatch(/\.admin-product-switch__menu\s*\{[^}]*right:\s*0;/s);

@@ -39,7 +39,7 @@ class OfficialAccessTokenServiceTest {
         CompanyEntity company = new CompanyEntity("orgaaaaaaaaaaaaaaaaa", "测试公司", "ACTIVE");
         UserEntity member = new UserEntity(company, account, "OWNER");
         AccountExternalIdentityEntity identity = new AccountExternalIdentityEntity(
-                account, "https://sso.agentcici.com/realms/agentcici", "keycloak-user-subject");
+                account, "https://sso.example.test/realms/agentcici", "keycloak-user-subject");
         SematticeProvisioningBindingEntity binding = new SematticeProvisioningBindingEntity(
                 "reservation-1", company.getId(), "idempotency-1");
         binding.complete("11111111-1111-4111-8111-111111111111", "operation-1", true, null);
@@ -52,7 +52,7 @@ class OfficialAccessTokenServiceTest {
                 bindingRepository,
                 approvalService,
                 true,
-                "https://x.agentcici.com",
+                "https://agentcici.example.test",
                 "oact-test-1",
                 Base64.getEncoder().encodeToString(keys.getPrivate().getEncoded()),
                 List.of("metadata.version.read", "record.read"),
@@ -67,7 +67,7 @@ class OfficialAccessTokenServiceTest {
                 .parseSignedClaims(issued.token())
                 .getPayload();
 
-        assertThat(claims.getIssuer()).isEqualTo("https://x.agentcici.com");
+        assertThat(claims.getIssuer()).isEqualTo("https://agentcici.example.test");
         assertThat(claims.getSubject()).isEqualTo(account.getId());
         assertThat(claims.getAudience()).containsExactly(OfficialAccessTokenService.SEMATTICE_AUDIENCE);
         assertThat(claims.get("tenant_id", String.class)).isEqualTo("11111111-1111-4111-8111-111111111111");
@@ -118,7 +118,7 @@ class OfficialAccessTokenServiceTest {
                 bindingRepository,
                 approvalService,
                 true,
-                "https://x.agentcici.com",
+                "https://agentcici.example.test",
                 "oact-test-1",
                 Base64.getEncoder().encodeToString(keys.getPrivate().getEncoded()),
                 List.of("metadata.version.read", "identity.principal.sync"),
@@ -146,7 +146,7 @@ class OfficialAccessTokenServiceTest {
                 org.mockito.Mockito.mock(SematticeProvisioningBindingRepository.class),
                 org.mockito.Mockito.mock(SematticeMetadataApprovalService.class),
                 true,
-                "https://x.agentcici.com",
+                "https://agentcici.example.test",
                 "oact-test-1",
                 Base64.getEncoder().encodeToString(keys.getPrivate().getEncoded()),
                 List.of("metadata.version.read", "record.read"),

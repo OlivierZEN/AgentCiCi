@@ -2,10 +2,11 @@ package com.codehouse.ciciassistant.auth.api;
 
 import com.codehouse.ciciassistant.auth.service.AuthService;
 import com.codehouse.ciciassistant.auth.service.KeycloakOidcLoginService;
-import com.codehouse.ciciassistant.auth.service.OfficialAccessTokenService;
 import com.codehouse.ciciassistant.auth.RoleCodes;
 import com.codehouse.ciciassistant.auth.service.CloudccSsoService;
 import com.codehouse.ciciassistant.platform.service.DevAutopilotHandoffService;
+import com.codehouse.ciciassistant.semattice.SematticeConsoleHandoffService;
+import com.codehouse.ciciassistant.semattice.SematticeConsoleLocation;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.tenant.TenantContext;
@@ -14,7 +15,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -37,22 +37,22 @@ public class AuthController {
     private final AuthService authService;
     private final CloudccSsoService cloudccSsoService;
     private final KeycloakOidcLoginService keycloakOidcLoginService;
-    private final OfficialAccessTokenService officialAccessTokenService;
     private final DevAutopilotHandoffService devAutopilotHandoffs;
-    private final String sematticeBaseUrl;
+    private final SematticeConsoleHandoffService sematticeConsoleHandoffs;
+    private final SematticeConsoleLocation sematticeConsoleLocation;
 
     public AuthController(AuthService authService,
                           CloudccSsoService cloudccSsoService,
                           KeycloakOidcLoginService keycloakOidcLoginService,
-                          OfficialAccessTokenService officialAccessTokenService,
                           DevAutopilotHandoffService devAutopilotHandoffs,
-                          @Value("${app.semattice.console-base-url:${app.semattice.base-url:}}") String sematticeBaseUrl) {
+                          SematticeConsoleHandoffService sematticeConsoleHandoffs,
+                          SematticeConsoleLocation sematticeConsoleLocation) {
         this.authService = authService;
         this.cloudccSsoService = cloudccSsoService;
         this.keycloakOidcLoginService = keycloakOidcLoginService;
-        this.officialAccessTokenService = officialAccessTokenService;
         this.devAutopilotHandoffs = devAutopilotHandoffs;
-        this.sematticeBaseUrl = trimTrailingSlash(sematticeBaseUrl);
+        this.sematticeConsoleHandoffs = sematticeConsoleHandoffs;
+        this.sematticeConsoleLocation = sematticeConsoleLocation;
     }
 
     @PostMapping("/sms/send")
@@ -169,13 +169,12 @@ public class AuthController {
         if (TenantContext.getRoles().stream().noneMatch(RoleCodes::isOrgAdminRole)) {
             throw new ForbiddenException("当前成员没有组织管理权限");
         }
-        if (sematticeBaseUrl.isBlank()) {
+        if (!sematticeConsoleLocation.configured()) {
             throw new IllegalStateException("Semattice console is not configured");
         }
-        OfficialAccessTokenService.IssuedToken issued = authService.issueSematticeOfficialAccess(
-                companyId, userId, officialAccessTokenService);
-        return ApiResponse.ok(Map.of("redirectUri", sematticeBaseUrl + "/console/#oact=" + issued.token()),
-                "Semattice console access issued");
+        SematticeConsoleHandoffService.HandoffTicket handoff = sematticeConsoleHandoffs.issue(companyId, userId);
+        return ApiResponse.ok(Map.of("redirectUri", sematticeConsoleLocation.handoffUri(handoff.ticket()).toString()),
+                "Semattice console handoff issued");
     }
 
     @PostMapping("/devautopilot/handoff")
@@ -302,14 +301,6 @@ public class AuthController {
     }
 
     public record UpdateMyAvatarRequest(String avatarBase64) {
-    }
-
-    private static String trimTrailingSlash(String value) {
-        String normalized = value == null ? "" : value.trim();
-        while (normalized.endsWith("/")) {
-            normalized = normalized.substring(0, normalized.length() - 1);
-        }
-        return normalized;
     }
 
     public record UpdateMyProfileRequest(

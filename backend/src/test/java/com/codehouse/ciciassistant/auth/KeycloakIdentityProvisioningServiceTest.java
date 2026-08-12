@@ -42,7 +42,7 @@ class KeycloakIdentityProvisioningServiceTest {
 
     @Test
     void rejectsAnOidcCallbackAsAnInvitationLandingPage() {
-        assertThatThrownBy(() -> service(true, false, "https://x.agentcici.com/auth/oidc/callback"))
+        assertThatThrownBy(() -> service(true, false, "https://agentcici.example.test/auth/oidc/callback"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("must target /app");
     }
@@ -87,7 +87,7 @@ class KeycloakIdentityProvisioningServiceTest {
         try {
             KeycloakIdentityProvisioningService service = new KeycloakIdentityProvisioningService(
                     Mockito.mock(AccountExternalIdentityRepository.class), Mockito.mock(UserAccountRepository.class),
-                    mapper, false, true, issuer(server), "agentcici-provisioner", "test-secret", "");
+                    mapper, false, true, issuer(server), issuer(server), "agentcici-provisioner", "test-secret", "");
 
             service.renameServiceClient("dev-autopilot-developer", "dev-autopilot-developer-wukong");
 
@@ -125,7 +125,7 @@ class KeycloakIdentityProvisioningServiceTest {
                 respond(exchange, 201, "");
             } else if (path.endsWith("/users/new-subject/execute-actions-email")) {
                 assertThat(exchange.getRequestURI().getRawQuery())
-                        .contains("redirect_uri=https%3A%2F%2Fx.agentcici.com%2Fapp")
+                        .contains("redirect_uri=https%3A%2F%2Fagentcici.example.test%2Fapp")
                         .contains("lifespan=86400");
                 activationEmails.incrementAndGet();
                 respond(exchange, 204, "");
@@ -174,7 +174,7 @@ class KeycloakIdentityProvisioningServiceTest {
                 respond(exchange, 500, "");
             } else if (path.endsWith("/users/pending-subject/execute-actions-email")) {
                 assertThat(exchange.getRequestURI().getRawQuery())
-                        .contains("redirect_uri=https%3A%2F%2Fx.agentcici.com%2Fapp")
+                        .contains("redirect_uri=https%3A%2F%2Fagentcici.example.test%2Fapp")
                         .contains("lifespan=86400");
                 activationEmails.incrementAndGet();
                 respond(exchange, 204, "");
@@ -337,7 +337,8 @@ class KeycloakIdentityProvisioningServiceTest {
                 Mockito.mock(AccountExternalIdentityRepository.class),
                 Mockito.mock(UserAccountRepository.class),
                 new ObjectMapper(), humanEnabled, machineEnabled,
-                "https://sso.agentcici.com/realms/agentcici", "agentcici-provisioner", "test-secret", redirectUri);
+                "https://sso.example.test/realms/agentcici", "https://sso.example.test/realms/agentcici",
+                "agentcici-provisioner", "test-secret", redirectUri);
     }
 
     private KeycloakIdentityProvisioningService provisioningService(
@@ -347,7 +348,7 @@ class KeycloakIdentityProvisioningServiceTest {
             boolean humanEnabled) {
         return new KeycloakIdentityProvisioningService(
                 identities, accounts, new ObjectMapper(), humanEnabled, false,
-                issuer, "agentcici-provisioner", "test-secret", "https://x.agentcici.com/app");
+                issuer, issuer, "agentcici-provisioner", "test-secret", "https://agentcici.example.test/app");
     }
 
     private static UserAccountEntity account(String id, String publicId, String email) throws Exception {

@@ -67,6 +67,18 @@ class TenantContextFilterTest {
     }
 
     @Test
+    void shouldLetSematticeConsoleHandoffReachItsHmacValidator() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/internal/semattice/console-handoffs/redeem");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(response.getStatus()).isNotEqualTo(401);
+        assertThat(chain.getRequest()).isSameAs(request);
+    }
+
+    @Test
     void shouldRejectLegacyTokenWithoutCompanyIdClaim() throws Exception {
         JwtService jwtService = mock(JwtService.class);
         Claims legacyClaims = mock(Claims.class);

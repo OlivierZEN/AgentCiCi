@@ -61,7 +61,7 @@ export const helpDocs: HelpDoc[] = [
           "`/` 是员工用户工作台，用于日常对话和个人任务。",
           "组织管理员先登录 `/`，再从“切换组织”菜单中选择目标组织的“管理后台”，进入 `/admin/*` 完成组织级配置。",
           "`/platform/login` 是平台控制面入口，用于运营和治理。",
-          "`/help` 或 `help.agentcici.com` 是公开帮助中心。",
+          "`/help` 是公开帮助中心；独立帮助域名由部署网关映射到该相对路径。",
         ],
       },
       {
@@ -280,7 +280,7 @@ export const helpDocs: HelpDoc[] = [
       },
       {
         title: "请求示例",
-        code: "curl -X POST https://x.agentcici.com/openapi/v1/chat-messages \\\n  -H \"Authorization: Bearer <AGENTCICI_API_KEY>\" \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Idempotency-Key: demo-request-001\" \\\n  -d '{\"user\":\"customer-001\",\"query\":\"保修政策是什么？\",\"responseMode\":\"blocking\"}'",
+        code: "curl -X POST $AGENTCICI_BASE_URL/openapi/v1/chat-messages \\\n  -H \"Authorization: Bearer <AGENTCICI_API_KEY>\" \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Idempotency-Key: demo-request-001\" \\\n  -d '{\"user\":\"customer-001\",\"query\":\"保修政策是什么？\",\"responseMode\":\"blocking\"}'",
       },
       {
         title: "结果验证",
