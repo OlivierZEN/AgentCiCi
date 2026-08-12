@@ -1461,6 +1461,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Completed Tasks
 
+### TASK-286 - Semattice 管理端单次交接票据提供方
+
+- status: `done`
+- priority: `critical`
+- owner_role: `backend-developer`
+- integration_id: `INT-013`
+- spec_path: `docs/specs/FEAT-173-semattice-console-handoff.md`
+- task_status_path: `.claw/tasks/TASK-286.md`
+- completion_evidence: `短时单次 ticket、服务间 HMAC 兑换、HttpOnly 会话、防重放、旧 POST 入口 405、后端定向测试、前端 244 项与本地真实 handoff 通过`
+- next_action: `Done；各环境只配置 Public Origin 与 Internal Base URL，业务源码不得写入域名`
+
 ### TASK-281 - DevAutopilot 缺陷 Tool 与可信写入回执
 
 - status: `done`
