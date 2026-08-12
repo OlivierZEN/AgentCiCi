@@ -153,6 +153,9 @@ public class TenantContextFilter extends OncePerRequestFilter {
         if (path.startsWith("/internal/semattice/provisioning/")) {
             return true;
         }
+        if (path.startsWith("/internal/semattice/console-handoffs/")) {
+            return true;
+        }
         return isExactPublicPath(path);
     }
 

@@ -33,6 +33,7 @@ public class KeycloakIdentityProvisioningService {
     private final boolean humanProvisioningEnabled;
     private final boolean machineProvisioningEnabled;
     private final String issuer;
+    private final String backchannelBaseUrl;
     private final String adminClientId;
     private final String adminClientSecret;
     private final String invitationRedirectUri;
@@ -44,6 +45,7 @@ public class KeycloakIdentityProvisioningService {
                                                @Value("${app.auth.oidc.provisioning.enabled:false}") boolean humanProvisioningEnabled,
                                                @Value("${app.auth.oidc.machine-provisioning.enabled:false}") boolean machineProvisioningEnabled,
                                                @Value("${app.auth.oidc.issuer:}") String issuer,
+                                               @Value("${app.auth.oidc.backchannel-base-url:${app.auth.oidc.issuer:}}") String backchannelBaseUrl,
                                                @Value("${app.auth.oidc.provisioning.admin-client-id:}") String adminClientId,
                                                @Value("${app.auth.oidc.provisioning.admin-client-secret:}") String adminClientSecret,
                                                @Value("${app.auth.oidc.provisioning.invitation-redirect-uri:}") String invitationRedirectUri) {
@@ -53,11 +55,13 @@ public class KeycloakIdentityProvisioningService {
         this.humanProvisioningEnabled = humanProvisioningEnabled;
         this.machineProvisioningEnabled = machineProvisioningEnabled;
         this.issuer = trimTrailingSlash(issuer);
+        this.backchannelBaseUrl = trimTrailingSlash(backchannelBaseUrl);
         this.adminClientId = trim(adminClientId);
         this.adminClientSecret = trim(adminClientSecret);
         this.invitationRedirectUri = trim(invitationRedirectUri);
         if ((humanProvisioningEnabled || machineProvisioningEnabled)
-                && (this.issuer.isBlank() || this.adminClientId.isBlank() || this.adminClientSecret.isBlank())) {
+                && (this.issuer.isBlank() || this.backchannelBaseUrl.isBlank()
+                || this.adminClientId.isBlank() || this.adminClientSecret.isBlank())) {
             throw new IllegalArgumentException("Keycloak provisioning configuration is incomplete");
         }
         if (humanProvisioningEnabled && this.invitationRedirectUri.isBlank()) {
@@ -387,7 +391,7 @@ public class KeycloakIdentityProvisioningService {
     }
 
     private String obtainAdminToken() throws Exception {
-        HttpRequest request = HttpRequest.newBuilder(URI.create(issuer + "/protocol/openid-connect/token"))
+        HttpRequest request = HttpRequest.newBuilder(URI.create(backchannelBaseUrl + "/protocol/openid-connect/token"))
                 .timeout(Duration.ofSeconds(15))
                 .header("Content-Type", "application/x-www-form-urlencoded")
                 .POST(HttpRequest.BodyPublishers.ofString(form(Map.of(
@@ -558,11 +562,11 @@ public class KeycloakIdentityProvisioningService {
     }
 
     private String adminBaseUrl() {
-        int marker = issuer.lastIndexOf("/realms/");
-        if (marker < 0 || marker + 8 >= issuer.length()) {
+        int marker = backchannelBaseUrl.lastIndexOf("/realms/");
+        if (marker < 0 || marker + 8 >= backchannelBaseUrl.length()) {
             throw new IllegalStateException("Keycloak issuer must include /realms/{realm}");
         }
-        return issuer.substring(0, marker) + "/admin/realms/" + issuer.substring(marker + 8);
+        return backchannelBaseUrl.substring(0, marker) + "/admin/realms/" + backchannelBaseUrl.substring(marker + 8);
     }
 
     private static String form(Map<String, String> values) {

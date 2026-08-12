@@ -258,12 +258,10 @@ export default function AdminShell() {
       });
       const json = await response.json().catch(() => null);
       const redirectUri = typeof json?.data?.redirectUri === "string" ? json.data.redirectUri : "";
-      const target = redirectUri ? new URL(redirectUri) : null;
-      const allowedHosts = new Set([window.location.hostname, "semattice.agentcici.com"]);
-      if (!response.ok || !target || target.protocol !== "https:" || !allowedHosts.has(target.hostname) || !target.hash.startsWith("#oact=")) {
+      if (!response.ok || !redirectUri) {
         throw new Error("Semattice 管理端暂时无法进入，请确认当前组织已开通且具有管理权限。");
       }
-      window.location.assign(target.toString());
+      window.location.assign(redirectUri);
     } catch (error) {
       setProductMenuNotice(error instanceof Error ? error.message : "Semattice 管理端暂时无法进入，请稍后重试。");
       setSematticeEntryPending(false);

@@ -46,6 +46,7 @@ public class KeycloakOidcLoginService {
     private final ObjectMapper objectMapper;
     private final boolean enabled;
     private final String issuer;
+    private final String backchannelBaseUrl;
     private final String clientId;
     private final String clientSecret;
     private final String redirectUri;
@@ -57,6 +58,7 @@ public class KeycloakOidcLoginService {
                                     ObjectMapper objectMapper,
                                     @Value("${app.auth.oidc.enabled:false}") boolean enabled,
                                     @Value("${app.auth.oidc.issuer:}") String issuer,
+                                    @Value("${app.auth.oidc.backchannel-base-url:${app.auth.oidc.issuer:}}") String backchannelBaseUrl,
                                     @Value("${app.auth.oidc.client-id:agentcici-bff}") String clientId,
                                     @Value("${app.auth.oidc.client-secret:}") String clientSecret,
                                     @Value("${app.auth.oidc.redirect-uri:}") String redirectUri) {
@@ -66,11 +68,13 @@ public class KeycloakOidcLoginService {
         this.objectMapper = objectMapper;
         this.enabled = enabled;
         this.issuer = trimTrailingSlash(issuer);
+        this.backchannelBaseUrl = trimTrailingSlash(backchannelBaseUrl);
         this.clientId = trim(clientId);
         this.clientSecret = trim(clientSecret);
         this.redirectUri = trim(redirectUri);
-        if (enabled && (this.issuer.isBlank() || this.clientId.isBlank() || this.clientSecret.isBlank() || this.redirectUri.isBlank())) {
-            throw new IllegalArgumentException("OIDC issuer, client ID, client secret and redirect URI are required when enabled");
+        if (enabled && (this.issuer.isBlank() || this.backchannelBaseUrl.isBlank() || this.clientId.isBlank()
+                || this.clientSecret.isBlank() || this.redirectUri.isBlank())) {
+            throw new IllegalArgumentException("OIDC issuer, backchannel base URL, client ID, client secret and redirect URI are required when enabled");
         }
     }
 
@@ -231,7 +235,7 @@ public class KeycloakOidcLoginService {
                     "client_id", clientId,
                     "client_secret", clientSecret,
                     "code_verifier", verifier);
-            HttpRequest request = HttpRequest.newBuilder(URI.create(issuer + "/protocol/openid-connect/token"))
+            HttpRequest request = HttpRequest.newBuilder(URI.create(backchannelBaseUrl + "/protocol/openid-connect/token"))
                     .timeout(Duration.ofSeconds(15))
                     .header("Content-Type", "application/x-www-form-urlencoded")
                     .POST(HttpRequest.BodyPublishers.ofString(queryString(form)))
@@ -278,7 +282,7 @@ public class KeycloakOidcLoginService {
     }
 
     private PublicKey resolveJwk(String kid) throws Exception {
-        HttpRequest request = HttpRequest.newBuilder(URI.create(issuer + "/protocol/openid-connect/certs"))
+        HttpRequest request = HttpRequest.newBuilder(URI.create(backchannelBaseUrl + "/protocol/openid-connect/certs"))
                 .timeout(Duration.ofSeconds(10)).GET().build();
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         if (response.statusCode() != 200) {

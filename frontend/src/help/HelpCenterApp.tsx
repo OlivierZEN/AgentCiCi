@@ -3,14 +3,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import "./help-center.css";
 import { featuredSlugs, helpCategories, helpDocs, roleEntrypoints, type HelpDoc } from "./helpContent";
 
-const helpHostnames = new Set(["help.agentcici.com"]);
-
-function isHelpHost() {
-  return typeof window !== "undefined" && helpHostnames.has(window.location.hostname);
-}
-
 function toDocPath(slug: string) {
-  return isHelpHost() ? `/${slug}` : `/help/${slug}`;
+  return `/help/${slug}`;
 }
 
 function normalizeSlug(pathname: string) {
@@ -100,7 +94,7 @@ export default function HelpCenterApp() {
   return (
     <div className="help-shell">
       <header className="help-topbar">
-        <Link className="help-brand" to={isHelpHost() ? "/" : "/help"}>
+        <Link className="help-brand" to="/help">
           <span className="help-brand__mark">Ci</span>
           <span>
             <strong>AgentCiCi Help Center</strong>
@@ -244,7 +238,7 @@ function HelpArticle({ doc, previousDoc, nextDoc }: { doc: HelpDoc; previousDoc?
   return (
     <article className="help-article">
       <div className="help-breadcrumb">
-        <Link to={isHelpHost() ? "/" : "/help"}>帮助中心</Link>
+        <Link to="/help">帮助中心</Link>
         <span>/</span>
         <span>{getCategoryTitle(doc.category)}</span>
       </div>
@@ -349,7 +343,7 @@ function NotFound({ requestedSlug }: { requestedSlug: string }) {
       <span className="help-eyebrow">未找到文档</span>
       <h1>没有找到这个帮助页面</h1>
       <p>请求路径 `{requestedSlug}` 还没有对应文档。你可以回到首页使用搜索，或从左侧目录进入现有内容。</p>
-      <Link to={isHelpHost() ? "/" : "/help"}>回到帮助中心首页</Link>
+      <Link to="/help">回到帮助中心首页</Link>
     </section>
   );
 }
