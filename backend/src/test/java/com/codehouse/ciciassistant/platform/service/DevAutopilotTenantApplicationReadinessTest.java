@@ -17,6 +17,7 @@ import com.codehouse.ciciassistant.agent.service.AgentDefinitionService;
 import com.codehouse.ciciassistant.agent.service.AgentServicePrincipalExecutionService;
 import com.codehouse.ciciassistant.auth.domain.CompanyRepository;
 import com.codehouse.ciciassistant.auth.service.ServicePrincipalService;
+import com.codehouse.ciciassistant.semattice.SematticeDevAutopilotAuthorizationClient;
 import com.codehouse.ciciassistant.semattice.SematticeDevAutopilotTemplateClient;
 import com.codehouse.ciciassistant.semattice.SematticeProvisioningService;
 import java.util.List;
@@ -35,6 +36,7 @@ class DevAutopilotTenantApplicationReadinessTest {
             mock(CompanyRepository.class),
             mock(SematticeProvisioningService.class),
             mock(SematticeDevAutopilotTemplateClient.class),
+            mock(SematticeDevAutopilotAuthorizationClient.class),
             mock(ServicePrincipalService.class),
             mock(AgentDefinitionService.class),
             mock(DevAutopilotProductManagerAgentPublisher.class),
@@ -49,7 +51,10 @@ class DevAutopilotTenantApplicationReadinessTest {
                 org.mockito.ArgumentMatchers.eq(Boolean.class),
                 org.mockito.ArgumentMatchers.eq("company-a"),
                 org.mockito.ArgumentMatchers.eq("activation-a"),
-                org.mockito.ArgumentMatchers.eq("activation-a")))
+                org.mockito.ArgumentMatchers.eq("activation-a"),
+                org.mockito.ArgumentMatchers.eq("activation-a"),
+                org.mockito.ArgumentMatchers.eq("company-a"),
+                org.mockito.ArgumentMatchers.eq(SematticeDevAutopilotAuthorizationClient.TEMPLATE_VERSION)))
                 .thenReturn(false);
 
         assertThat(service.initializationReady("company-a", "activation-a")).isFalse();
@@ -61,7 +66,10 @@ class DevAutopilotTenantApplicationReadinessTest {
                 org.mockito.ArgumentMatchers.eq(Boolean.class),
                 org.mockito.ArgumentMatchers.eq("company-a"),
                 org.mockito.ArgumentMatchers.eq("activation-a"),
-                org.mockito.ArgumentMatchers.eq("activation-a")))
+                org.mockito.ArgumentMatchers.eq("activation-a"),
+                org.mockito.ArgumentMatchers.eq("activation-a"),
+                org.mockito.ArgumentMatchers.eq("company-a"),
+                org.mockito.ArgumentMatchers.eq(SematticeDevAutopilotAuthorizationClient.TEMPLATE_VERSION)))
                 .thenReturn(true);
 
         assertThat(service.initializationReady("company-a", "activation-a")).isTrue();
@@ -71,10 +79,14 @@ class DevAutopilotTenantApplicationReadinessTest {
                 org.mockito.ArgumentMatchers.eq(Boolean.class),
                 org.mockito.ArgumentMatchers.eq("company-a"),
                 org.mockito.ArgumentMatchers.eq("activation-a"),
-                org.mockito.ArgumentMatchers.eq("activation-a"));
+                org.mockito.ArgumentMatchers.eq("activation-a"),
+                org.mockito.ArgumentMatchers.eq("activation-a"),
+                org.mockito.ArgumentMatchers.eq("company-a"),
+                org.mockito.ArgumentMatchers.eq(SematticeDevAutopilotAuthorizationClient.TEMPLATE_VERSION));
         assertThat(readinessSql.getValue())
                 .contains("agent_skill_binding", "semattice-project-delivery-management",
-                        "agent_workflow_skill_ref", "skill_version.publish_status='PUBLISHED'");
+                        "agent_workflow_skill_ref", "skill_version.publish_status='PUBLISHED'",
+                        "authorization_template_version", "authorization_verified_at");
     }
 
     @Test
@@ -86,6 +98,7 @@ class DevAutopilotTenantApplicationReadinessTest {
                 mock(CompanyRepository.class),
                 mock(SematticeProvisioningService.class),
                 mock(SematticeDevAutopilotTemplateClient.class),
+                mock(SematticeDevAutopilotAuthorizationClient.class),
                 principals,
                 mock(AgentDefinitionService.class),
                 mock(DevAutopilotProductManagerAgentPublisher.class),
@@ -136,6 +149,22 @@ class DevAutopilotTenantApplicationReadinessTest {
         verifyNoInteractions(metadataJdbc);
     }
 
+    @Test
+    void authorizationReconciliationKeyIsStableAndChangesWithTheAuthoritativeAssignmentSet() {
+        var owner = new SematticeDevAutopilotAuthorizationClient.Assignment("human-owner", "application_admin");
+        var productManager = new SematticeDevAutopilotAuthorizationClient.Assignment("service-pm", "product_manager");
+        String ordered = DevAutopilotTenantApplicationService.authorizationReconciliationKey(
+                "11111111-1111-4111-8111-111111111111", List.of(owner, productManager));
+        String reversed = DevAutopilotTenantApplicationService.authorizationReconciliationKey(
+                "11111111-1111-4111-8111-111111111111", List.of(productManager, owner));
+        String withDeveloper = DevAutopilotTenantApplicationService.authorizationReconciliationKey(
+                "11111111-1111-4111-8111-111111111111", List.of(owner, productManager,
+                        new SematticeDevAutopilotAuthorizationClient.Assignment("service-dev", "developer")));
+
+        assertThat(ordered).isEqualTo(reversed).hasSizeLessThanOrEqualTo(96);
+        assertThat(withDeveloper).isNotEqualTo(ordered).hasSizeLessThanOrEqualTo(96);
+    }
+
     private DevAutopilotTenantApplicationService service(JdbcTemplate targetJdbc,
                                                           SematticeDevAutopilotTemplateClient template) {
         return new DevAutopilotTenantApplicationService(
@@ -143,6 +172,7 @@ class DevAutopilotTenantApplicationReadinessTest {
                 mock(CompanyRepository.class),
                 mock(SematticeProvisioningService.class),
                 template,
+                mock(SematticeDevAutopilotAuthorizationClient.class),
                 mock(ServicePrincipalService.class),
                 mock(AgentDefinitionService.class),
                 mock(DevAutopilotProductManagerAgentPublisher.class),
