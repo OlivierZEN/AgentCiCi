@@ -212,6 +212,7 @@ public class SematticeProjectDeliveryWriteToolService {
                 5. 只有分类、父项目/父需求或用户真正期望无法判断时，才问一个业务语言的聚焦问题。不要一次列多个问题。
                 6. 信息充分时展示分类依据、专业整理和待开发者验证项，请用户只回复“确认提交需求”“确认提交缺陷”“确认提交变更”或“确认提交”。
                 7. 用户取消时明确回复已取消；不得保留可确认状态。
+                8. 可见草稿与最后的 JSON 注释必须使用同一份结构化事实：可见的分析要点必须完整进入 `pm_assessment`，可见的验收标准必须逐条完整进入 `acceptance_criteria`，可见的影响分析必须逐条完整进入 `impact_analysis`，待开发者验证项必须完整进入 `assumptions`。不得用“后续细化”“待进一步评估”等通用占位句替换已经生成的具体内容。
 
                 如果是创建项目，严格按以下中文结构输出，其中占位符必须替换为你理解出的完整项目名称：
                 我理解你要创建一个研发项目。
@@ -799,21 +800,44 @@ public class SematticeProjectDeliveryWriteToolService {
             environment = "待开发者验证";
         }
 
-        String assessment = switch (classification) {
+        String classificationReason = firstLabeledValue(compact, "分类理由", "分类依据");
+        List<String> analysisPoints = sectionBulletItems(draft, "分析要点", "产品经理分析");
+        String defaultAssessment = switch (classification) {
             case "defect" -> "产品经理根据用户原始描述识别为已有能力偏离正常预期，分类为缺陷";
             case "change" -> "产品经理根据用户原始描述识别为对已确认范围或规则的调整，分类为变更";
             default -> "产品经理根据用户原始描述识别为新增能力或业务结果，分类为需求";
         };
+        List<String> assessmentParts = new ArrayList<>();
+        if (!classificationReason.isBlank()) {
+            assessmentParts.add(classificationReason);
+        }
+        assessmentParts.addAll(analysisPoints);
+        String assessment = assessmentParts.isEmpty() ? defaultAssessment : String.join("；", assessmentParts);
+        List<String> parsedReproduction = sectionBulletItems(draft, "复现步骤", "复现线索");
         List<String> reproduction = "defect".equals(classification)
-                ? List.of("由全栈开发者基于用户原始描述复现并验证") : List.of();
+                ? (parsedReproduction.isEmpty()
+                    ? List.of("由全栈开发者基于用户原始描述复现并验证") : parsedReproduction)
+                : List.of();
+        String parsedExpected = firstLabeledValue(compact, "预期结果");
         String expected = "defect".equals(classification)
-                ? "功能应符合用户正常使用预期，具体结果由全栈开发者验证" : "";
-        String actual = "defect".equals(classification) ? original : "";
+                ? (parsedExpected.isBlank() ? "功能应符合用户正常使用预期，具体结果由全栈开发者验证" : parsedExpected)
+                : "";
+        String parsedActual = firstLabeledValue(compact, "实际结果");
+        String actual = "defect".equals(classification) ? (parsedActual.isBlank() ? original : parsedActual) : "";
+        List<String> parsedAcceptance = sectionBulletItems(draft, "验收标准", "验收条件");
         List<String> acceptance = "requirement".equals(classification)
-                ? List.of("由产品经理与全栈开发者基于用户原始描述细化并验证验收标准") : List.of();
+                ? (parsedAcceptance.isEmpty()
+                    ? List.of("由产品经理与全栈开发者基于用户原始描述细化并验证验收标准") : parsedAcceptance)
+                : List.of();
+        List<String> parsedImpact = sectionBulletItems(draft, "影响分析", "影响范围");
         List<String> impact = "change".equals(classification)
-                ? List.of("由产品经理与全栈开发者评估受影响范围并完成验证") : List.of();
-        List<String> assumptions = List.of("工程细节由全栈开发者在源代码、开发环境和测试环境中验证");
+                ? (parsedImpact.isEmpty()
+                    ? List.of("由产品经理与全栈开发者评估受影响范围并完成验证") : parsedImpact)
+                : List.of();
+        List<String> verificationItems = sectionTableItems(draft, "待开发者验证项", "开发者验证项");
+        List<String> assumptions = verificationItems.isEmpty()
+                ? List.of("工程细节由全栈开发者在源代码、开发环境和测试环境中验证")
+                : verificationItems;
 
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("version", "DEV_AUTOPILOT_INTAKE_V1");
@@ -843,6 +867,81 @@ public class SematticeProjectDeliveryWriteToolService {
     private static String firstMatch(String value, String regex) {
         Matcher matcher = Pattern.compile(regex).matcher(value == null ? "" : value);
         return matcher.find() ? normalizeText(matcher.group(1)) : "";
+    }
+
+    private static List<String> sectionBulletItems(String value, String... sectionNames) {
+        if (value == null || value.isBlank()) {
+            return List.of();
+        }
+        Set<String> names = Set.of(sectionNames);
+        List<String> items = new ArrayList<>();
+        boolean inSection = false;
+        for (String rawLine : value.split("\\R")) {
+            String line = stripMarkdown(rawLine);
+            String heading = line.replaceFirst("^#{1,6}\\s*", "")
+                    .replaceFirst("[：:]$", "").trim();
+            if (names.contains(heading)) {
+                inSection = true;
+                continue;
+            }
+            if (!inSection) {
+                continue;
+            }
+            if (line.matches("^#{1,6}\\s+.+") || line.matches("^[^|•*\\-].{0,24}[：:]$")) {
+                break;
+            }
+            Matcher bullet = Pattern.compile("^(?:[-*•]|\\d+[.)、])\\s*(.+)$").matcher(line);
+            if (bullet.matches()) {
+                String item = normalizeText(bullet.group(1));
+                if (!item.isBlank()) {
+                    items.add(item);
+                }
+            }
+        }
+        return List.copyOf(items);
+    }
+
+    private static List<String> sectionTableItems(String value, String... sectionNames) {
+        if (value == null || value.isBlank()) {
+            return List.of();
+        }
+        Set<String> names = Set.of(sectionNames);
+        List<String> items = new ArrayList<>();
+        boolean inSection = false;
+        for (String rawLine : value.split("\\R")) {
+            String line = stripMarkdown(rawLine);
+            String heading = line.replaceFirst("^#{1,6}\\s*", "")
+                    .replaceFirst("[：:]$", "").trim();
+            if (names.contains(heading)) {
+                inSection = true;
+                continue;
+            }
+            if (!inSection) {
+                continue;
+            }
+            if (line.matches("^#{1,6}\\s+.+")) {
+                break;
+            }
+            if (!line.startsWith("|") || !line.endsWith("|")) {
+                continue;
+            }
+            String[] cells = line.substring(1, line.length() - 1).split("\\|");
+            if (cells.length < 2) {
+                continue;
+            }
+            String label = normalizeText(cells[0]);
+            String detail = normalizeText(cells[1]);
+            if (label.isBlank() || detail.isBlank() || "问题".equals(label) || "说明".equals(detail)
+                    || label.matches("-+") || detail.matches("-+")) {
+                continue;
+            }
+            items.add(label + "：" + detail);
+        }
+        return List.copyOf(items);
+    }
+
+    private static String stripMarkdown(String value) {
+        return value == null ? "" : value.replace("**", "").replace("`", "").trim();
     }
 
     /** Reads either a prose label (`标题：...`) or a Markdown table row (`| 标题 | ... |`). */

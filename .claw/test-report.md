@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-12T14:00:02Z
+updated_at: 2026-08-12T15:20:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-12T14:00:02Z
-last_run_status: passed_with_vendor_business_acceptance_pending
+last_run_at: 2026-08-12T15:20:00Z
+last_run_status: passed_with_local_deployment_pending
 ---
 
 # Test Report
+
+## 2026-08-12 TASK-294 DevAutopilot 受理草稿字段保真
+
+- 根因证据：本地 Semattice 记录 `REQ-6F34ECF3` 的标题与原始报告正确，但摘要、验收标准和开发者验证项已在 AgentCiCi 调用前退化为通用占位内容；Semattice 只是按输入持久化。
+- 代码：可见草稿兜底解析新增产品经理分析、需求验收标准、变更影响、缺陷复现/预期/实际结果及开发者验证表格提取；只有可见草稿没有具体事实时才使用通用默认值。
+- 同构回归：使用截图中的原始需求草稿，精确断言 4 条分析、5 条验收标准和 4 条开发者验证项进入原生字段及 `intake` 审计信封。
+- 测试：`SematticeProjectDeliveryWriteToolServiceTest,DeliveryWriteReceiptGuardTest,ChatOrchestratorServiceModelIdentityTest` 通过；`mvn -q -DskipTests package` 与 `git diff --check` 通过。
+- 状态：`passed_with_local_deployment_pending`（尚待本地主线归并、开发环境运行回读与真实对话业务验收）。
 
 ## 2026-08-12 TASK-293 DevAutopilot 授权初始化
 

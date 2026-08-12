@@ -108,6 +108,8 @@ class SematticeProjectDeliveryWriteToolServiceTest {
         assertThat(prompt).contains("待开发者验证");
         assertThat(prompt).contains("完整项目名称是“AgentCiCi企业级智能体平台”，不是“新”");
         assertThat(prompt).contains("不调用任何工具，不写入 Semattice");
+        assertThat(prompt).contains("可见草稿与最后的 JSON 注释必须使用同一份结构化事实");
+        assertThat(prompt).contains("不得用“后续细化”“待进一步评估”等通用占位句");
         assertThat(prompt).contains("确认创建项目：<完整项目名称>");
         assertThat(prompt).contains("DEV_AUTOPILOT_INTAKE_V1");
     }
@@ -271,6 +273,87 @@ class SematticeProjectDeliveryWriteToolServiceTest {
                     .containsEntry("conversation_id", "workbench:devautopilot-pm");
         });
         assertThat(SematticeProjectDeliveryWriteToolService.hasPendingIntake(messages)).isTrue();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void preservesProfessionalRequirementAnalysisAndAcceptanceFromVisibleDraft() throws Exception {
+        String original = "提个需求，我希望在当前用户与智能体的对话框中，可以通过复制粘贴的方式上传截图，可以连续粘贴多张";
+        List<Map<String, Object>> messages = List.of(
+                Map.of("role", "user", "content", original),
+                Map.of("role", "assistant", "content", """
+                        ## 需求受理草稿（Dev Autopilot）
+
+                        ### 事项分类依据
+                        | 判断维度 | 内容 |
+                        |----------|------|
+                        | 事项类型 | 需求（Requirement） |
+                        | 分类理由 | 新增当前系统不支持的能力，属于功能增强 |
+                        | 关联项目 | 企业级智能体平台 CCAgent（项目编号：DAS-A2AFD106） |
+
+                        ### 专业整理详情
+                        | 字段 | 内容 |
+                        |------|------|
+                        | 需求标题 | 对话框支持截图粘贴上传（多张连续） |
+                        | 优先级 | P2（提升用户体验，非核心阻塞） |
+                        | 环境 | 待技术团队评估 |
+
+                        ### 用户原始报告（逐字）
+                        > 提个需求，我希望在当前用户与智能体的对话框中，可以通过复制粘贴的方式上传截图，可以连续粘贴多张
+
+                        ### 产品经理分析与验收标准
+                        **分析要点**:
+                        - 需要前端实现剪贴板图片捕获事件监听
+                        - 需要后端支持图片接收与存储
+                        - 需要考虑连续粘贴的队列管理与上传状态提示
+                        - 需处理不同格式图片的兼容
+
+                        **验收标准**:
+                        - 用户在对话框内 Ctrl+V 或 Command+V 可插入本地截图
+                        - 支持连续多次粘贴操作（无次数限制）
+                        - 粘贴后即时显示缩略图预览
+                        - 提供已上传图片的管理（删除/替换）
+                        - 后台完成实际上传并关联到对话记录
+
+                        ### 待开发者验证项
+                        | 问题 | 说明 |
+                        |------|------|
+                        | 技术可行性 | 浏览器剪贴板 API 对图片访问权限范围 |
+                        | 性能影响 | 大尺寸图片或高频连续粘贴的资源占用 |
+                        | 兼容性 | 主流浏览器版本的 API 支持情况 |
+                        | 安全合规 | 图片上传是否涉及敏感内容过滤 |
+
+                        如需将此需求提交至研发管理系统进行跟踪，请回复：`确认提交需求`
+                        """));
+
+        var confirmed = SematticeProjectDeliveryWriteToolService.confirmedIntent(
+                "确认提交需求", messages, "workbench:devautopilot-pm", objectMapper);
+
+        assertThat(confirmed).hasValueSatisfying(intent -> {
+            assertThat(intent.operation()).isEqualTo("create_requirement");
+            assertThat(intent.parentReference()).isEqualTo("DAS-A2AFD106");
+            assertThat(intent.title()).isEqualTo("对话框支持截图粘贴上传（多张连续）");
+            assertThat(intent.description())
+                    .contains("新增当前系统不支持的能力")
+                    .contains("剪贴板图片捕获事件监听")
+                    .contains("不同格式图片的兼容");
+            assertThat(intent.acceptanceCriteria()).containsExactly(
+                    "用户在对话框内 Ctrl+V 或 Command+V 可插入本地截图",
+                    "支持连续多次粘贴操作（无次数限制）",
+                    "粘贴后即时显示缩略图预览",
+                    "提供已上传图片的管理（删除/替换）",
+                    "后台完成实际上传并关联到对话记录");
+            assertThat(intent.intake()).containsEntry("original_report", original);
+            assertThat((List<String>) intent.intake().get("assumptions")).containsExactly(
+                    "技术可行性：浏览器剪贴板 API 对图片访问权限范围",
+                    "性能影响：大尺寸图片或高频连续粘贴的资源占用",
+                    "兼容性：主流浏览器版本的 API 支持情况",
+                    "安全合规：图片上传是否涉及敏感内容过滤");
+        });
+        JsonNode arguments = objectMapper.readTree(confirmed.orElseThrow().toArguments(objectMapper));
+        assertThat(arguments.path("summary").asText()).contains("剪贴板图片捕获事件监听");
+        assertThat(arguments.path("acceptance_criteria").size()).isEqualTo(5);
+        assertThat(arguments.path("intake").path("assumptions").size()).isEqualTo(4);
     }
 
     @Test
