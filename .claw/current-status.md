@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-12T05:38:00Z
+updated_at: 2026-08-12T06:55:03Z
 updated_by: codex
 phase: review
 active_task: TASK-288
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-289 已完成：平台集成卡片再次消失并非数据删除，而是上一修复只在隔离分支，`main@4459993` 的后续本地构建重新带回 `/platform/integrations` SPA 路由。修复已以 `0d55564` 正式进入本地 main，前端改用 `/api/platform/integrations` 并保留加载/错误/重试/空状态；46 文件/247 项、生产构建通过。本地制品为 `2.8.62-dev.0d55564`，容器 healthy/restart=0，目标路由 200，部署 JS 与匿名 JSON 401 证明请求进入后端鉴权；受权平台页面刷新后完成卡片视觉回读。
 
 - TASK-288 / FEAT-171 已修复产品经理确认缺陷不落库：真实故障草稿使用“缺陷受理草稿”Markdown 表格且漏写不可见 intake 标记，既有兜底无法恢复确认意图，确认轮因此 `toolCount=0`。现在需求/缺陷/变更的受理草稿和摘要、表格/冒号字段均可恢复，并优先采用 `DAS-*` 父项目编号；编排待处理识别同步补齐，可信写后回读门禁未放宽。故障同构测试、编排/回执回归、package、diff check 与本地 stack verify 通过；真实浏览器因已知手机号测试凭据不被当前本地 Keycloak 接受而待补验，未绕过身份门禁。
 

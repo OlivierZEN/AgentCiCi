@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-12T05:38:00Z
+updated_at: 2026-08-12T06:55:03Z
 updated_by: codex
 board_status: active
 ---
@@ -1470,6 +1470,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-289 - 平台集成卡片主线恢复
+
+- status: `done`
+- priority: `high`
+- owner_role: `frontend-agent`
+- spec_path: `n/a`
+- task_status_path: `.claw/tasks/TASK-289.md`
+- assignment_path: `n/a`
+- blocked_by: `none`
+- next_action: 已进入本地 main 并部署 `2.8.62-dev.0d55564`；平台管理员刷新页面完成视觉回读。
 
 ### TASK-286 - Semattice 管理端单次交接票据提供方
 

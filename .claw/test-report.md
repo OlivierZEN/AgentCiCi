@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-12T05:38:00Z
+updated_at: 2026-08-12T06:55:03Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-12T05:38:00Z
-last_run_status: passed_with_business_acceptance_pending
+last_run_at: 2026-08-12T06:55:03Z
+last_run_status: passed_with_authorized_visual_pending
 ---
 
 # Test Report
+
+## 2026-08-12 TASK-289 平台集成卡片主线恢复
+
+- 根因：`main@4459993` 仍请求 `/platform/integrations`，首次 TASK-288 平台修复只存在于隔离分支，后续 main 构建覆盖本地镜像后再次返回 SPA HTML。
+- 代码：修复以 `0d55564` 进入本地 main；平台使用 `/api/platform/integrations`，非 JSON 不再静默空白。
+- 测试：定向 2 文件/3 项、完整前端 46 文件/247 项通过；`npm run build` 通过，仅保留既有 chunk size warning。
+- 本地：镜像/容器资源 `sha256:4293a3bbdbf3fa452603c009d3f767d245c523b9fc985ff4ce1768d44580f195`，版本 `2.8.62-dev.0d55564`；容器 healthy/restart=0，目标路由 200，部署 JS 包含正确 API 和错误状态，匿名 API 返回 `401 application/json`。
+- 边界：当前证据证明代码、制品、路由和鉴权入口；受权页面卡片视觉由用户刷新后确认。UAT/生产未修改。
+- 状态：`passed_with_authorized_visual_pending`
 
 ## 2026-08-12 TASK-288 产品经理可见缺陷草案确认恢复
 
