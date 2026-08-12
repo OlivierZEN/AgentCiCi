@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-12T07:36:57Z
+updated_at: 2026-08-12T11:05:00Z
 updated_by: codex
 phase: review
-active_task: TASK-290
-next_action: "按用户授权发布下一 UAT beta 候选，并以受权组织管理员创建专用测试成员，回读账号、登录标识、成员、Keycloak 身份和激活邮件状态。"
+active_task: TASK-291
+next_action: "提交并合并 TASK-291 到本地 main，从主线重建本地 backend/frontend，完成平台接口、工具目录、容器与版本回读。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-291 / FEAT-175 已完成实现并进入 review：按阿里云百炼官方 Responses API 封装受管 Python 代码解释器，在平台集成统一加密配置 API Key、API Host、模型、超时和输入限制，在工具目录生成可治理的 `sandbox_code_interpreter`；不在 AgentCiCi 宿主机执行代码，不将代码解释器与同次上游 Function Calling 混用。后端定向 10 项、package、前端完整 46 文件/248 项和生产构建通过；Spring 集成用例仍被既有共享测试库 V81 checksum 漂移阻断且未 repair。待本地 main 归并和环境回读。
 
 - TASK-290 / FEAT-174 已修复管理端新增成员失败：`user_account.public_id` 由 PostgreSQL 触发器生成，旧链路同事务 Repository 回读命中 JPA 一级缓存旧实体；现在 flush 后强制 refresh，再进入 Keycloak provisioning。修复提交 `ab1b02c` 已进入本地 main；身份链路定向 21 项与后端 package 通过。本地 backend 已从该 main 提交构建为 `2.8.62-dev.ab1b02c`，health=`UP`、healthy/restart=0、edge 200、匿名用户 API 401、启动错误 0，其他服务 ID 未因本次 backend 更新改变。UAT 保持 `2.8.61-beta.16 / aef334205280`，故障目标四类记录均为 0；待单独授权发布与真实邀请验收。
 

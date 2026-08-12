@@ -26,16 +26,19 @@ public class IntegrationAppService {
     public static final String APP_CODE_FEISHU_BOT = "feishu_bot";
     public static final String APP_CODE_TAVILY = "tavily";
     public static final String APP_CODE_IFLYTEK_ASR = "iflytek_asr";
+    public static final String APP_CODE_CODE_INTERPRETER = "code_interpreter";
 
     /** Displayed to the frontend when an encrypted apiKey exists. The frontend never receives the ciphertext. */
     public static final String API_KEY_MASK = "tvly-****";
     public static final String IFLYTEK_SECRET_MASK = "iflytek-****";
+    public static final String CODE_INTERPRETER_SECRET_MASK = "bailian-****";
     public static final String CLOUDCC_SECRET_MASK = "cloudcc-****";
-    public static final String PLATFORM_MANAGED_MESSAGE = "Tavily 搜索和讯飞实时转写由运营平台统一配置，组织后台不可修改。";
+    public static final String PLATFORM_MANAGED_MESSAGE = "Tavily 搜索、讯飞实时转写和代码解释器由运营平台统一配置，组织后台不可修改。";
 
     private static final String DEFAULT_IFLYTEK_REALTIME_URL = "wss://office-api-ast-dx.iflyaisol.com/ast/communicate/v1";
     private static final Map<String, BuiltinAppDef> BUILTIN_APPS = builtinApps();
-    private static final Set<String> PLATFORM_MANAGED_APP_CODES = Set.of(APP_CODE_TAVILY, APP_CODE_IFLYTEK_ASR);
+    private static final Set<String> PLATFORM_MANAGED_APP_CODES = Set.of(
+            APP_CODE_TAVILY, APP_CODE_IFLYTEK_ASR, APP_CODE_CODE_INTERPRETER);
 
     private final IntegrationAppRepository repository;
     private final ObjectMapper objectMapper;
@@ -148,6 +151,12 @@ public class IntegrationAppService {
                 .map(e -> readJsonToMap(e.getConfigJson()));
     }
 
+    /** Runtime-internal read used by platform connection tests before an integration is enabled. */
+    public Optional<Map<String, Object>> findStoredRawConfig(String companyId, String appCode) {
+        return repository.findByCompanyIdAndAppCode(configScopeId(companyId, appCode), appCode)
+                .map(e -> readJsonToMap(e.getConfigJson()));
+    }
+
     public Optional<Boolean> isEnabled(String companyId, String appCode) {
         return repository.findByCompanyIdAndAppCode(configScopeId(companyId, appCode), appCode)
                 .map(IntegrationAppEntity::isEnabled);
@@ -167,6 +176,10 @@ public class IntegrationAppService {
 
     public Optional<String> decryptIflytekAccessKeySecret(Map<String, Object> rawConfig) {
         return decryptSecret(rawConfig, "accessKeySecret", IFLYTEK_SECRET_MASK);
+    }
+
+    public Optional<String> decryptCodeInterpreterApiKey(Map<String, Object> rawConfig) {
+        return decryptSecret(rawConfig, "apiKey", CODE_INTERPRETER_SECRET_MASK);
     }
 
     private Optional<String> decryptSecret(Map<String, Object> rawConfig, String key, String mask) {
@@ -257,6 +270,12 @@ public class IntegrationAppService {
             maskSecrets(config, "apiKey", API_KEY_MASK);
         } else if (APP_CODE_IFLYTEK_ASR.equals(e.getAppCode())) {
             maskSecrets(config, "accessKeySecret", IFLYTEK_SECRET_MASK);
+        } else if (APP_CODE_CODE_INTERPRETER.equals(e.getAppCode())) {
+            maskSecrets(config, "apiKey", CODE_INTERPRETER_SECRET_MASK);
+            config.putIfAbsent("apiBaseUrl", "https://dashscope.aliyuncs.com/compatible-mode/v1");
+            config.putIfAbsent("model", "qwen3.5-plus");
+            config.putIfAbsent("timeoutMs", "120000");
+            config.putIfAbsent("maxInputChars", "12000");
         }
         return Map.of(
                 "id", e.getId(),
@@ -326,6 +345,20 @@ public class IntegrationAppService {
                     v = "com";
                 }
             }
+            if (APP_CODE_CODE_INTERPRETER.equals(def.appCode())) {
+                if ((v == null || String.valueOf(v).isBlank()) && "apiBaseUrl".equals(key)) {
+                    v = "https://dashscope.aliyuncs.com/compatible-mode/v1";
+                }
+                if ((v == null || String.valueOf(v).isBlank()) && "model".equals(key)) {
+                    v = "qwen3.5-plus";
+                }
+                if ((v == null || String.valueOf(v).isBlank()) && "timeoutMs".equals(key)) {
+                    v = "120000";
+                }
+                if ((v == null || String.valueOf(v).isBlank()) && "maxInputChars".equals(key)) {
+                    v = "12000";
+                }
+            }
 
             // Tavily apiKey: encrypt new plaintext; preserve existing encrypted envelope when
             // the incoming value is blank or the frontend mask sentinel.
@@ -335,6 +368,10 @@ public class IntegrationAppService {
             }
             if (APP_CODE_IFLYTEK_ASR.equals(def.appCode()) && "accessKeySecret".equals(key)) {
                 out.put(key, encryptOrPreserveSecret(existing.get(key), v, IFLYTEK_SECRET_MASK));
+                continue;
+            }
+            if (APP_CODE_CODE_INTERPRETER.equals(def.appCode()) && "apiKey".equals(key)) {
+                out.put(key, encryptOrPreserveSecret(existing.get(key), v, CODE_INTERPRETER_SECRET_MASK));
                 continue;
             }
             if (APP_CODE_CLOUDCC_CRM.equals(def.appCode()) && "secretKey".equals(key)) {
@@ -418,6 +455,12 @@ public class IntegrationAppService {
                 "接入讯飞实时语音转写能力，为会议纪要听记提供 16k PCM 实时识别和说话人分离。",
                 List.of("appId", "accessKeyId", "accessKeySecret", "realtimeUrl", "lang", "domain"),
                 true));
+        apps.put(APP_CODE_CODE_INTERPRETER, new BuiltinAppDef(
+                APP_CODE_CODE_INTERPRETER,
+                "代码解释器",
+                "调用阿里云百炼受管 Python 沙箱完成精确计算、数据分析与代码验证，并生成可治理的内置工具。",
+                List.of("apiKey", "apiBaseUrl", "model", "timeoutMs", "maxInputChars"),
+                false));
         return Collections.unmodifiableMap(apps);
     }
 

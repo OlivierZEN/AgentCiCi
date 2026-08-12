@@ -8,6 +8,7 @@ import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryToolService
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryUpdateToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryReviewToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryWriteToolService;
+import com.codehouse.ciciassistant.tool.codeinterpreter.SandboxCodeInterpreterService;
 import com.codehouse.ciciassistant.tool.tavily.TavilyToolService;
 import com.codehouse.ciciassistant.userworkflow.service.AssistantScheduleToolService;
 import java.util.List;
@@ -55,7 +56,9 @@ public final class BuiltinToolCatalog {
             new ToolCatalogItem(TavilyToolService.TOOL_SEARCH, "Tavily 网页搜索",
                     "调用 Tavily API 做面向 LLM 的网页搜索，返回命中 URL、摘要与相关度。", "低风险", "web"),
             new ToolCatalogItem(TavilyToolService.TOOL_EXTRACT, "Tavily 正文抽取",
-                    "调用 Tavily API 抓取指定 URL 的正文，返回清洗后的 markdown/text。", "低风险", "web")
+                    "调用 Tavily API 抓取指定 URL 的正文，返回清洗后的 markdown/text。", "低风险", "web"),
+            new ToolCatalogItem(SandboxCodeInterpreterService.TOOL_NAME, "受管代码解释器",
+                    "在阿里云受管 Python 沙箱中完成精确计算、数据分析与代码验证；不在 AgentCiCi 宿主机执行代码。", "中风险", "analysis")
     );
 
     private BuiltinToolCatalog() {

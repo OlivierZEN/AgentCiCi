@@ -1,14 +1,24 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-12T07:36:57Z
+updated_at: 2026-08-12T11:05:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-12T07:36:57Z
-last_run_status: passed_with_uat_business_acceptance_pending
+last_run_at: 2026-08-12T11:05:00Z
+last_run_status: passed_with_shared_db_integration_blocked
 ---
 
 # Test Report
+
+## 2026-08-12 TASK-291 平台代码解释器集成与内置工具
+
+- 后端定向：`SandboxCodeInterpreterClientTest,SandboxCodeInterpreterServiceTest,ToolOrchestratorServiceTest` 共 10 项通过；覆盖 Responses 请求体只含 `code_interpreter`、reasoning 不投影、密钥加密/掩码、URL SSRF 门禁、未配置失败关闭和运行时目录/执行器。
+- 后端构建：`mvn -q -DskipTests package` 通过，`git diff --check` 通过。
+- Spring 集成边界：`PlatformIntegrationGovernanceIntegrationTest` 启动时被共享测试库既有 Flyway V81 checksum 漂移阻断；未执行 repair、未修改历史迁移，本功能没有数据库迁移。
+- 前端定向：平台集成 2 文件/4 项通过；完整前端 46 文件/248 项通过。
+- 前端构建：`npm run build` 通过，仅保留既有 chunk size warning。
+- 安全边界：无真实 API Key 进入仓库、日志或测试输出；可配置 API Host 只接受 `aliyuncs.com` HTTPS 地址。
+- 状态：`passed_with_shared_db_integration_blocked`
 
 ## 2026-08-12 TASK-290 管理端新增成员公共编号回读修复
 

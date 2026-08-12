@@ -17,6 +17,7 @@ import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryToolService
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryReviewToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryWriteToolService;
 import com.codehouse.ciciassistant.skill.service.SkillApiToolService;
+import com.codehouse.ciciassistant.tool.codeinterpreter.SandboxCodeInterpreterService;
 import com.codehouse.ciciassistant.tool.service.BuiltinToolCatalog;
 import com.codehouse.ciciassistant.tool.tavily.TavilyToolService;
 import com.codehouse.ciciassistant.userworkflow.service.AssistantScheduleToolService;
@@ -26,6 +27,37 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class ToolOrchestratorServiceTest {
+
+    @Test
+    void exposesAndDispatchesGovernedCodeInterpreter() {
+        McpServerService mcp = mock(McpServerService.class);
+        PlatformGovernanceService governance = mock(PlatformGovernanceService.class);
+        SkillApiToolService skillApi = mock(SkillApiToolService.class);
+        SandboxCodeInterpreterService codeInterpreter = mock(SandboxCodeInterpreterService.class);
+        when(mcp.getAllToolsForOrg("org-1")).thenReturn(List.of());
+        when(skillApi.getRuntimeToolDefinitions(List.of())).thenReturn(List.of());
+        when(governance.isRuntimeToolEnabled("org-1", SandboxCodeInterpreterService.TOOL_NAME)).thenReturn(true);
+        when(codeInterpreter.toolDefinition()).thenReturn(Map.of(
+                "type", "function", "function", Map.of("name", SandboxCodeInterpreterService.TOOL_NAME)));
+        when(codeInterpreter.dispatch("org-1", "user-1", "{\"task\":\"12**3\"}"))
+                .thenReturn("{\"success\":true,\"answer\":\"1728\"}");
+
+        ToolOrchestratorService orchestrator = new ToolOrchestratorService(
+                mcp, mock(CloudccOpenApiService.class), mock(CrmProductSalesAnalysisToolService.class),
+                mock(EmailToolService.class), mock(UserMemoryService.class), mock(TavilyToolService.class),
+                governance, skillApi, mock(SematticeProjectDeliveryToolService.class),
+                mock(SematticeProjectDeliveryWriteToolService.class), mock(SematticeProjectDeliveryReviewToolService.class),
+                allowSafetyGateway(), new ObjectMapper().findAndRegisterModules());
+        orchestrator.setSandboxCodeInterpreterService(codeInterpreter);
+
+        assertThat(orchestrator.getToolDefinitions("org-1", List.of(SandboxCodeInterpreterService.TOOL_NAME), List.of()))
+                .anySatisfy(item -> assertThat(((Map<?, ?>) item.get("function")).get("name"))
+                        .isEqualTo(SandboxCodeInterpreterService.TOOL_NAME));
+        assertThat(orchestrator.executeTool("org-1", "user-1", SandboxCodeInterpreterService.TOOL_NAME,
+                "{\"task\":\"12**3\"}", List.of(SandboxCodeInterpreterService.TOOL_NAME)))
+                .contains("1728");
+        verify(codeInterpreter).dispatch("org-1", "user-1", "{\"task\":\"12**3\"}");
+    }
 
     @Test
     void exposesAndDispatchesCrmProductSalesRankAsNativeBuiltinTool() {

@@ -65,6 +65,8 @@ function categoryLabel(category: string): string {
       return "知识库";
     case "web":
       return "网页";
+    case "analysis":
+      return "分析计算";
     default:
       return category || "未分类";
   }

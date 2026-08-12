@@ -47,6 +47,7 @@ class PlatformIntegrationGovernanceIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[?(@.appCode == 'tavily')]").exists())
                 .andExpect(jsonPath("$.data[?(@.appCode == 'iflytek_asr')]").exists())
+                .andExpect(jsonPath("$.data[?(@.appCode == 'code_interpreter')]").exists())
                 .andExpect(jsonPath("$.data[?(@.appCode == 'cloudcc_crm')]").doesNotExist());
 
         mockMvc.perform(put("/platform/integrations/{appCode}", "tavily")
@@ -84,6 +85,26 @@ class PlatformIntegrationGovernanceIntegrationTest {
                 .andExpect(jsonPath("$.data.appCode").value("iflytek_asr"))
                 .andExpect(jsonPath("$.data.config.accessKeySecret").value(IntegrationAppService.IFLYTEK_SECRET_MASK));
 
+        mockMvc.perform(put("/platform/integrations/{appCode}", "code_interpreter")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "enabled": true,
+                                  "description": "平台代码解释器",
+                                  "config": {
+                                    "apiKey": "sk-ws-platform-key",
+                                    "apiBaseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+                                    "model": "qwen3.5-plus",
+                                    "timeoutMs": "120000",
+                                    "maxInputChars": "12000"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.appCode").value("code_interpreter"))
+                .andExpect(jsonPath("$.data.config.apiKey").value(IntegrationAppService.CODE_INTERPRETER_SECRET_MASK));
+
         MvcResult orgList = mockMvc.perform(get("/integrations")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + orgToken))
                 .andExpect(status().isOk())
@@ -91,7 +112,7 @@ class PlatformIntegrationGovernanceIntegrationTest {
         JsonNode orgApps = objectMapper.readTree(orgList.getResponse().getContentAsString()).path("data");
         assertThat(orgApps).extracting(node -> node.path("appCode").asText())
                 .contains("cloudcc_crm", "feishu_bot")
-                .doesNotContain("tavily", "iflytek_asr");
+                .doesNotContain("tavily", "iflytek_asr", "code_interpreter");
 
         mockMvc.perform(put("/integrations/{appCode}", "tavily")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + orgToken)
