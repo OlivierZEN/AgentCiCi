@@ -282,6 +282,36 @@
   border-color: var(--theme-line);
 }
 
+/* Sidebar navigation: neutralize legacy blue/cyan/green gradients and shadows. */
+:root[data-theme] .sidebar-nav__group,
+:root[data-theme] .sidebar-nav__group.is-open,
+:root[data-theme] .sidebar-nav__item,
+:root[data-theme] .sidebar-nav__item:hover,
+:root[data-theme] .sidebar-nav__item.is-active,
+:root[data-theme] .sidebar-nav__badge {
+  color: var(--theme-text);
+  background: transparent;
+  background-image: none;
+  border-color: var(--theme-line);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+:root[data-theme] .sidebar-nav__group.is-open,
+:root[data-theme] .sidebar-nav__item.is-active {
+  background: var(--theme-surface-muted);
+}
+
+:root[data-theme] .sidebar-nav__item:hover {
+  background: var(--theme-surface-strong);
+}
+
+:root[data-theme] .sidebar-nav__badge {
+  color: #ffffff;
+  background: var(--theme-accent);
+}
+
 :root[data-theme] .cici-workbench {
   color: var(--theme-text);
   background: var(--theme-canvas);
@@ -529,6 +559,19 @@
   color: var(--theme-text);
   background-color: var(--theme-surface);
   border-color: var(--theme-line);
+}
+
+/* Strip legacy gradients/shadows/glass from all buttons inside themed pages. */
+:root[data-theme] button,
+:root[data-theme] .cici-btn,
+:root[data-theme] .cici-product-icon-button,
+:root[data-theme] .icon-btn--primary,
+:root[data-theme] .workspace-placeholder__cta,
+:root[data-theme] .boot-login__btn--primary {
+  background-image: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 :root[data-theme] .cici-btn--primary,

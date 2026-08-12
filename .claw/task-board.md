@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-11T06:26:32Z
+updated_at: 2026-08-11T14:59:32Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,42 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-287 - 技能治理 V5 正式 React 落地
+
+- status: `review`
+- priority: `high`
+- owner_role: `frontend-agent`
+- spec_path: `docs/specs/FEAT-172-platform-capability-governance-workbench.md`
+- task_status_path: `.claw/tasks/TASK-287.md`
+- assignment_path: `n/a`
+- blocked_by: `none`
+- next_action: 使用受权平台会话复核正式列表、策略包、抽屉、编辑与预览桌面截图；确认后关闭任务。
+
+### TASK-285 - 运营控制台能力治理工作台高保真原型
+
+- status: `review`
+- priority: `high`
+- owner_role: `frontend-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-172-platform-capability-governance-workbench.md`
+- task_status_path: `n/a`
+- blocked_by: `none`
+- scope_files: `能力治理信息架构、高保真HTML原型、桌面端交互与视觉验证`
+- next_action: `用户审阅 V5 策略包列表原型；确认后拆分正式 React 实现任务，当前只接入 core-default，规划态策略包保持只读预设`
+
+### TASK-283 - 普通用户研发事项受理与全栈开发者交接
+
+- status: `review`
+- priority: `critical`
+- owner_role: `integration-agent`
+- claimed_by: `codex`
+- integration_id: `INT-009`
+- spec_path: `docs/specs/FEAT-171-user-friendly-delivery-intake.md`
+- task_status_path: `.claw/tasks/TASK-283.md`
+- blocked_by: `none`
+- scope_files: `delivery intake prompt/parser, Semattice writer, developer assignment, focused tests`
+- next_action: `在 UAT 验证真实需求/缺陷/变更对话、intake 回读和停用开发者负例后转 done`
 
 ### TASK-280 - 组织成员统一身份修复入口
 
@@ -1449,6 +1485,27 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-284 - 运营控制台模型配置导航去重
+
+- status: `done`
+- priority: `medium`
+- owner_role: `frontend-agent`
+- spec_path: `docs/specs/FEAT-124-platform-operations-information-architecture.md`
+- task_status_path: `n/a`
+- completion_evidence: `侧栏收敛为单一“模型配置”入口；厂商治理与场景路由页签及子路由保持不变；定向 8 项、完整前端 44 文件/237 项和生产构建通过`
+- next_action: `受权平台账号刷新运营控制台，完成桌面视觉复核`
+
+### TASK-282 - AgentCiCi 本地全容器入口
+
+- status: `done`
+- priority: `high`
+- owner_role: `integration-agent`
+- integration_id: `INT-012`
+- spec_path: `docs/specs/FEAT-170-local-container-runtime.md`
+- task_status_path: `.claw/tasks/TASK-282.md`
+- completion_evidence: `backend/frontend镜像重建和运行通过；Flyway、共享基础设施连接、health、OACT JWKS、匿名边界及frontend nginx -t通过`
+- next_action: `完整测试套件、真实身份业务流和前端依赖漏洞处置通过后，才可形成UAT候选`
 
 ### TASK-281 - DevAutopilot 缺陷 Tool 与可信写入回执
 
