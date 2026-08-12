@@ -9,6 +9,7 @@ import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryUpdateToolS
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryReviewToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryWriteToolService;
 import com.codehouse.ciciassistant.tool.codeinterpreter.SandboxCodeInterpreterService;
+import com.codehouse.ciciassistant.tool.managedweb.ManagedWebToolService;
 import com.codehouse.ciciassistant.tool.tavily.TavilyToolService;
 import com.codehouse.ciciassistant.userworkflow.service.AssistantScheduleToolService;
 import java.util.List;
@@ -58,7 +59,11 @@ public final class BuiltinToolCatalog {
             new ToolCatalogItem(TavilyToolService.TOOL_EXTRACT, "Tavily 正文抽取",
                     "调用 Tavily API 抓取指定 URL 的正文，返回清洗后的 markdown/text。", "低风险", "web"),
             new ToolCatalogItem(SandboxCodeInterpreterService.TOOL_NAME, "受管代码解释器",
-                    "在阿里云受管 Python 沙箱中完成精确计算、数据分析与代码验证；不在 AgentCiCi 宿主机执行代码。", "中风险", "analysis")
+                    "在阿里云受管 Python 沙箱中完成精确计算、数据分析与代码验证；不在 AgentCiCi 宿主机执行代码。", "中风险", "analysis"),
+            new ToolCatalogItem(ManagedWebToolService.TOOL_SEARCH, "受管联网搜索",
+                    "调用百炼联网搜索获取时效信息；兼容 Responses 协议不提供可验证来源列表。", "低风险", "web"),
+            new ToolCatalogItem(ManagedWebToolService.TOOL_EXTRACT, "受管网页抓取",
+                    "调用百炼读取公开网页并按任务提取内容；一次请求同时使用搜索与抓取能力。", "中风险", "web")
     );
 
     private BuiltinToolCatalog() {

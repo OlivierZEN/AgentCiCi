@@ -13,6 +13,7 @@ import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryReviewToolS
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryWriteToolService;
 import com.codehouse.ciciassistant.skill.service.SkillApiToolService;
 import com.codehouse.ciciassistant.tool.codeinterpreter.SandboxCodeInterpreterService;
+import com.codehouse.ciciassistant.tool.managedweb.ManagedWebToolService;
 import com.codehouse.ciciassistant.tool.service.ToolNameNormalizer;
 import com.codehouse.ciciassistant.tool.tavily.TavilyToolService;
 import com.codehouse.ciciassistant.userworkflow.service.AssistantScheduleToolService;
@@ -49,6 +50,7 @@ public class ToolOrchestratorService {
     private final UserMemoryService userMemoryService;
     private final TavilyToolService tavilyToolService;
     private SandboxCodeInterpreterService sandboxCodeInterpreterService;
+    private ManagedWebToolService managedWebToolService;
     private final PlatformGovernanceService platformGovernanceService;
     private final SkillApiToolService skillApiToolService;
     private final SematticeProjectDeliveryToolService sematticeProjectDeliveryToolService;
@@ -94,6 +96,11 @@ public class ToolOrchestratorService {
     @Autowired(required = false)
     void setSandboxCodeInterpreterService(SandboxCodeInterpreterService sandboxCodeInterpreterService) {
         this.sandboxCodeInterpreterService = sandboxCodeInterpreterService;
+    }
+
+    @Autowired(required = false)
+    void setManagedWebToolService(ManagedWebToolService managedWebToolService) {
+        this.managedWebToolService = managedWebToolService;
     }
 
     /**
@@ -175,6 +182,14 @@ public class ToolOrchestratorService {
                 && isAllowed(normalizedAllowedToolNames, SandboxCodeInterpreterService.TOOL_NAME, false)
                 && platformGovernanceService.isRuntimeToolEnabled(companyId, SandboxCodeInterpreterService.TOOL_NAME)) {
             result.add(sandboxCodeInterpreterService.toolDefinition());
+        }
+
+        if (managedWebToolService != null) {
+            for (String toolName : ManagedWebToolService.ALL_TOOL_NAMES) {
+                if (!isAllowed(normalizedAllowedToolNames, toolName, false)) continue;
+                if (!platformGovernanceService.isRuntimeToolEnabled(companyId, toolName)) continue;
+                result.add(managedWebToolService.toolDefinition(toolName));
+            }
         }
 
         // Skill-private declarative API tools are injected only from the resolved active skill context.
@@ -353,6 +368,14 @@ public class ToolOrchestratorService {
                     ? "Code interpreter service is not ready"
                     : safeToolResult(companyId, userId, canonicalToolName,
                             sandboxCodeInterpreterService.dispatch(companyId, userId, safeArgumentsJson));
+        }
+
+
+        if (canonicalToolName != null && ManagedWebToolService.ALL_TOOL_NAMES.contains(canonicalToolName)) {
+            return managedWebToolService == null
+                    ? "Managed web service is not ready"
+                    : safeToolResult(companyId, userId, canonicalToolName,
+                            managedWebToolService.dispatch(companyId, userId, canonicalToolName, safeArgumentsJson));
         }
 
         // MCP-discovered tools

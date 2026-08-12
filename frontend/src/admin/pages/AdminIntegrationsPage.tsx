@@ -39,6 +39,8 @@ const SECRET_FIELDS: Record<string, string[]> = {
   feishu_bot: ["appSecret"],
   iflytek_asr: ["accessKeySecret"],
   code_interpreter: ["apiKey"],
+  managed_web_search: ["apiKey"],
+  managed_web_extractor: ["apiKey"],
 };
 
 type FieldMeta = {
@@ -175,6 +177,66 @@ const FIELD_META: Record<string, Record<string, FieldMeta>> = {
       hint: "允许 1000–50000，用于限制单次任务和文本数据规模。",
     },
   },
+  managed_web_search: {
+    apiKey: {
+      label: "API Key",
+      required: true,
+      placeholder: "sk-ws-xxxxxxxxxxxxxxxx",
+      hint: "百炼业务空间 API Key。保存后加密存储；留空或保留掩码继续使用现有 Key。",
+    },
+    apiBaseUrl: {
+      label: "API Host",
+      required: true,
+      placeholder: "https://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+      hint: "从百炼控制台复制当前地域和业务空间的 OpenAI 兼容 API Host，仅接受 HTTPS maas.aliyuncs.com 地址。",
+    },
+    model: {
+      label: "搜索模型",
+      required: true,
+      placeholder: "qwen3.5-plus",
+      hint: "填写官方联网搜索文档当前支持的 Qwen 模型。兼容 Responses API 不返回可验证来源列表。",
+    },
+    timeoutMs: {
+      label: "请求超时（毫秒）",
+      placeholder: "120000",
+      hint: "允许 10000–180000，联网搜索可能包含多轮搜索与总结。",
+    },
+    maxInputChars: {
+      label: "最大输入字符数",
+      placeholder: "12000",
+      hint: "允许 1000–50000，用于限制单次问题与背景信息规模。",
+    },
+  },
+  managed_web_extractor: {
+    apiKey: {
+      label: "API Key",
+      required: true,
+      placeholder: "sk-ws-xxxxxxxxxxxxxxxx",
+      hint: "百炼业务空间 API Key。此配置与联网搜索卡片独立保存，保存后加密存储。",
+    },
+    apiBaseUrl: {
+      label: "API Host",
+      required: true,
+      placeholder: "https://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+      hint: "从百炼控制台复制当前地域和业务空间的 OpenAI 兼容 API Host，仅接受 HTTPS maas.aliyuncs.com 地址。",
+    },
+    model: {
+      label: "抓取模型",
+      required: true,
+      placeholder: "qwen3.5-plus",
+      hint: "填写官方网页抓取文档当前支持的 Qwen 模型；每次抓取会同时声明 web_search 与 web_extractor。",
+    },
+    timeoutMs: {
+      label: "请求超时（毫秒）",
+      placeholder: "120000",
+      hint: "允许 10000–180000，网页加载与正文提取可能需要较长时间。",
+    },
+    maxInputChars: {
+      label: "最大输入字符数",
+      placeholder: "12000",
+      hint: "允许 1000–50000，用于限制 URL 与提取要求的总输入规模。",
+    },
+  },
 };
 
 function getFieldMeta(appCode: string, key: string): FieldMeta {
@@ -278,6 +340,41 @@ export function IntegrationSettingsPage({ token, apiBase, title, subtitle, class
       };
       if (payload.ok) {
         setTestResult(`测试成功：${payload.model ?? "已配置模型"}，沙箱调用 ${payload.codeInterpreterCalls ?? 0} 次，${payload.latencyMs ?? 0}ms`);
+      } else {
+        setTestResult(`测试失败（${payload.code ?? "ERROR"}）：${payload.message ?? ""}`);
+      }
+    } catch (err) {
+      setTestResult(`测试失败：${(err as Error).message}`);
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const testManagedWeb = async () => {
+    if (!editing || !["managed_web_search", "managed_web_extractor"].includes(editing.appCode)) return;
+    setTesting(true);
+    setTestResult("");
+    try {
+      const apiKey = form.apiKey && form.apiKey !== "bailian-****" ? form.apiKey : "";
+      const endpoint = editing.appCode === "managed_web_search" ? "managed-web-search" : "managed-web-extractor";
+      const res = await fetch(`${apiBase}/${endpoint}/test`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ apiKey, apiBaseUrl: form.apiBaseUrl ?? "", model: form.model ?? "" }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        setTestResult(`测试失败：${json.message ?? "unknown error"}`);
+        return;
+      }
+      const payload = (json.data ?? {}) as {
+        ok?: boolean; latencyMs?: number; model?: string; searchCalls?: number; extractorCalls?: number; code?: string; message?: string;
+      };
+      if (payload.ok) {
+        const usage = editing.appCode === "managed_web_search"
+          ? `搜索调用 ${payload.searchCalls ?? 0} 次`
+          : `搜索 ${payload.searchCalls ?? 0} 次、抓取 ${payload.extractorCalls ?? 0} 次`;
+        setTestResult(`测试成功：${payload.model ?? "已配置模型"}，${usage}，${payload.latencyMs ?? 0}ms`);
       } else {
         setTestResult(`测试失败（${payload.code ?? "ERROR"}）：${payload.message ?? ""}`);
       }
@@ -472,6 +569,16 @@ export function IntegrationSettingsPage({ token, apiBase, title, subtitle, class
                   onClick={() => void testCodeInterpreter()}
                 >
                   {testing ? "测试中..." : "测试沙箱"}
+                </button>
+              )}
+              {["managed_web_search", "managed_web_extractor"].includes(editing.appCode) && (
+                <button
+                  type="button"
+                  className="cici-btn cici-btn--ghost"
+                  disabled={testing}
+                  onClick={() => void testManagedWeb()}
+                >
+                  {testing ? "测试中..." : editing.appCode === "managed_web_search" ? "测试搜索" : "测试抓取"}
                 </button>
               )}
               <button type="button" className="cici-btn cici-btn--primary" disabled={saving} onClick={() => void save()}>

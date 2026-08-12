@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-12T11:45:43Z
+updated_at: 2026-08-12T12:40:22Z
 updated_by: codex
-phase: completed
-active_task: null
-next_action: "平台管理员在受权页面录入百炼 API Key，执行测试沙箱并启用后，再完成真实厂商调用与 Agent 会话业务验收。"
+phase: implementation
+active_task: TASK-292
+next_action: "实现并验证百炼联网搜索与网页抓取的独立平台配置、Responses 客户端和内置工具。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-292 / FEAT-176 进行中：新增独立的联网搜索与网页抓取平台配置和内置工具；原有 Tavily 不变。搜索严格只声明 `web_search`，网页抓取按官方 Responses 协议同时声明 `web_search` 与 `web_extractor`；两项默认关闭，API Key 加密，业务空间 API Host 限制为 HTTPS `*.maas.aliyuncs.com`，抓取目标拒绝明显本地/私网地址。待实现、测试、合并本地 main 并更新本地开发环境。
 
 - TASK-291 / FEAT-175 已完成：按阿里云百炼官方 Responses API 封装受管 Python 代码解释器，在平台集成统一加密配置 API Key、业务空间 API Host、模型、超时和输入限制，在工具目录生成可治理的 `sandbox_code_interpreter`；API Host 默认留空并仅接受官方按地域提供的 `*.maas.aliyuncs.com` 地址，不在 AgentCiCi 宿主机执行代码，不将代码解释器与同次上游 Function Calling 混用。功能提交 `0c58cfb` 已合并本地 `main@8f76e39`，本地 backend/frontend 从该主线提交构建为 `2.8.62-dev.8f76e39`，两容器 healthy/restart=0、目标路由 200、匿名平台接口 JSON 401、镜像 label 与运行环境提交一致。后端定向 10 项、package、前端完整 46 文件/248 项和生产构建通过；Spring 集成用例仍被既有共享测试库 V81 checksum 漂移阻断且未 repair。平台页面当前无受权登录态，且未配置真实 API Key，因此真实厂商调用与 Agent 会话业务验收待平台管理员完成。
 

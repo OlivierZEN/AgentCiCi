@@ -8,6 +8,7 @@ import com.codehouse.ciciassistant.integration.service.IntegrationAppService;
 import com.codehouse.ciciassistant.platform.service.PlatformAuditService;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import com.codehouse.ciciassistant.tool.codeinterpreter.SandboxCodeInterpreterService;
+import com.codehouse.ciciassistant.tool.managedweb.ManagedWebToolService;
 import com.codehouse.ciciassistant.tool.tavily.TavilyToolService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -28,17 +29,20 @@ public class PlatformIntegrationAppController {
     private final IntegrationAppService integrationAppService;
     private final TavilyToolService tavilyToolService;
     private final SandboxCodeInterpreterService sandboxCodeInterpreterService;
+    private final ManagedWebToolService managedWebToolService;
     private final PlatformAuditService platformAuditService;
     private final PlatformAccountProperties platformAccountProperties;
 
     public PlatformIntegrationAppController(IntegrationAppService integrationAppService,
                                             TavilyToolService tavilyToolService,
                                             SandboxCodeInterpreterService sandboxCodeInterpreterService,
+                                            ManagedWebToolService managedWebToolService,
                                             PlatformAuditService platformAuditService,
                                             PlatformAccountProperties platformAccountProperties) {
         this.integrationAppService = integrationAppService;
         this.tavilyToolService = tavilyToolService;
         this.sandboxCodeInterpreterService = sandboxCodeInterpreterService;
+        this.managedWebToolService = managedWebToolService;
         this.platformAuditService = platformAuditService;
         this.platformAccountProperties = platformAccountProperties;
     }
@@ -56,6 +60,7 @@ public class PlatformIntegrationAppController {
         if (IntegrationAppService.APP_CODE_CODE_INTERPRETER.equals(appCode)) {
             sandboxCodeInterpreterService.validateConfigurationDraft(request.config());
         }
+        managedWebToolService.validateConfigurationDraft(appCode, request.config());
         Map<String, Object> payload = integrationAppService.updatePlatformManaged(
                 appCode,
                 request.enabled(),
@@ -82,6 +87,29 @@ public class PlatformIntegrationAppController {
         Map<String, Object> result = sandboxCodeInterpreterService.testConnection(apiKey, apiBaseUrl, model);
         writeAudit("platform.integration.test", IntegrationAppService.APP_CODE_CODE_INTERPRETER,
                 "ok=" + result.getOrDefault("ok", false));
+        return ApiResponse.ok(result);
+    }
+
+    @PostMapping("/managed-web-search/test")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
+    public ApiResponse<Map<String, Object>> testManagedWebSearch(
+            @RequestBody(required = false) TestManagedWebRequest request) {
+        return testManagedWeb(IntegrationAppService.APP_CODE_MANAGED_WEB_SEARCH, request);
+    }
+
+    @PostMapping("/managed-web-extractor/test")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
+    public ApiResponse<Map<String, Object>> testManagedWebExtractor(
+            @RequestBody(required = false) TestManagedWebRequest request) {
+        return testManagedWeb(IntegrationAppService.APP_CODE_MANAGED_WEB_EXTRACTOR, request);
+    }
+
+    private ApiResponse<Map<String, Object>> testManagedWeb(String appCode, TestManagedWebRequest request) {
+        String apiKey = request == null ? null : request.apiKey();
+        String apiBaseUrl = request == null ? null : request.apiBaseUrl();
+        String model = request == null ? null : request.model();
+        Map<String, Object> result = managedWebToolService.testConnection(appCode, apiKey, apiBaseUrl, model);
+        writeAudit("platform.integration.test", appCode, "ok=" + result.getOrDefault("ok", false));
         return ApiResponse.ok(result);
     }
 
@@ -114,5 +142,8 @@ public class PlatformIntegrationAppController {
     }
 
     public record TestCodeInterpreterRequest(String apiKey, String apiBaseUrl, String model) {
+    }
+
+    public record TestManagedWebRequest(String apiKey, String apiBaseUrl, String model) {
     }
 }

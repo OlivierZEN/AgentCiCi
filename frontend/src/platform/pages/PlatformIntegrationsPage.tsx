@@ -20,7 +20,7 @@ export default function PlatformIntegrationsPage() {
       token={token}
       apiBase={PLATFORM_INTEGRATIONS_API_BASE}
       title="平台集成配置"
-      subtitle="统一控制 Tavily 搜索、讯飞实时转写和受管代码解释器等平台能力。"
+      subtitle="统一控制 Tavily、联网搜索、网页抓取、实时转写和受管代码解释器等平台能力。"
       className="platform-page platform-integrations-page"
     />
   );

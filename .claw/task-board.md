@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-12T11:45:43Z
+updated_at: 2026-08-12T12:40:22Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,16 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-292 - 平台联网搜索与网页抓取集成
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-176-platform-managed-web-tools.md`
+- task_status_path: `.claw/tasks/TASK-292.md`
+- blocked_by: `none`
+- next_action: 实现两个独立平台配置、Responses API 客户端、内置工具、前端字段和定向测试。
 
 ### TASK-290 - 管理端新增成员公共编号回读修复
 
