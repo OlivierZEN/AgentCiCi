@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-11T06:26:32Z
+updated_at: 2026-08-12T00:51:11Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-287 - 技能治理 V5 正式 React 落地
+
+- status: `review`
+- priority: `high`
+- owner_role: `frontend-agent`
+- spec_path: `docs/specs/FEAT-172-platform-capability-governance-workbench.md`
+- task_status_path: `.claw/tasks/TASK-287.md`
+- assignment_path: `n/a`
+- blocked_by: `none`
+- next_action: 使用受权平台会话复核正式列表、策略包、抽屉、编辑与预览桌面截图；确认后关闭任务。
 
 ### TASK-280 - 组织成员统一身份修复入口
 
