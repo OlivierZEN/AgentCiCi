@@ -30,6 +30,8 @@
 - 生产发布、ACR 镜像推送、线上部署、回滚或发布验收必须以 `docs/production-release-runbook.md` 为长期事实源。
 - 其他 agent 接手部署时，必须先读取 `docs/production-release-runbook.md` 与 `.claw/devops.md` 的当前环境摘要；不得沿用旧域名文档、临时任务记录或只推 `latest` 的历史命令。
 - 统一发布入口是 `scripts/release-acr.sh`；真实发布前必须先运行 `./scripts/release-acr.sh --dry-run`，并确保镜像 tag、Git tag、`CICI_APP_VERSION`、`VITE_CICI_APP_VERSION`、`CICI_IMAGE_TAG` 使用同一个版本。
+- AgentCiCi 只维护一条发布线。当前目标生产版本为 `Q` 时，本地 DEV 必须为 `Q-dev.<7位Git SHA>`，UAT 必须为 `Q-beta.N`，生产必须为 `Q`；生产 `Q` 完成前不得把 DEV 基础版本提前推进到下一版，也不得将较高 DEV 基础版本降号发布到较低 UAT。
+- 生产 `Q` 发布并通过发布后门禁后，才允许把 AgentCiCi 本地版本基线和后续 UAT 目标一起推进到下一版本；具体关系与检查项以 `docs/production-release-runbook.md` 为准。
 
 ## PR 处理默认规则
 
