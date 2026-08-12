@@ -10,8 +10,13 @@ import com.codehouse.ciciassistant.auth.service.ServicePrincipalService;
 import com.codehouse.ciciassistant.common.error.ConflictException;
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.common.error.ResourceNotFoundException;
+import com.codehouse.ciciassistant.semattice.SematticeDevAutopilotAuthorizationClient;
 import com.codehouse.ciciassistant.semattice.SematticeDevAutopilotTemplateClient;
 import com.codehouse.ciciassistant.semattice.SematticeProvisioningService;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.Comparator;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -35,6 +40,7 @@ public class DevAutopilotTenantApplicationService {
     private final CompanyRepository companies;
     private final SematticeProvisioningService provisioning;
     private final SematticeDevAutopilotTemplateClient template;
+    private final SematticeDevAutopilotAuthorizationClient authorizationTemplate;
     private final ServicePrincipalService principals;
     private final AgentDefinitionService agents;
     private final DevAutopilotProductManagerAgentPublisher productManagerAgentPublisher;
@@ -46,6 +52,7 @@ public class DevAutopilotTenantApplicationService {
     public DevAutopilotTenantApplicationService(JdbcTemplate jdbc, CompanyRepository companies,
                                                  SematticeProvisioningService provisioning,
                                                  SematticeDevAutopilotTemplateClient template,
+                                                 SematticeDevAutopilotAuthorizationClient authorizationTemplate,
                                                  ServicePrincipalService principals,
                                                  AgentDefinitionService agents,
                                                  DevAutopilotProductManagerAgentPublisher productManagerAgentPublisher,
@@ -54,6 +61,7 @@ public class DevAutopilotTenantApplicationService {
                                                  @Value("${app.devautopilot.template.pm-scopes:}") List<String> pmScopes,
                                                  @Value("${app.devautopilot.template.developer-scopes:}") List<String> developerScopes) {
         this.jdbc = jdbc; this.companies = companies; this.provisioning = provisioning; this.template = template;
+        this.authorizationTemplate = authorizationTemplate;
         this.principals = principals; this.agents = agents; this.productManagerAgentPublisher = productManagerAgentPublisher;
         this.execution = execution; this.audit = audit;
         this.pmScopes = pmScopes == null ? List.of() : pmScopes.stream().filter(v -> v != null && !v.isBlank()).map(String::trim).distinct().toList();
@@ -83,6 +91,7 @@ public class DevAutopilotTenantApplicationService {
             var metadata = template.apply(companyId, command.idempotencyKey());
             initializeProductManager(companyId, activationId, ownerMemberId);
             reconcilePrincipalProjections(companyId, activationId, platformActor);
+            reconcileAuthorizationTemplate(companyId, activationId);
             jdbc.update("""
                     UPDATE tenant_application_activation SET actual_state='ACTIVE',metadata_version_id=?,metadata_digest=?,updated_at=CURRENT_TIMESTAMP WHERE id=?
                     """,
@@ -209,8 +218,10 @@ public class DevAutopilotTenantApplicationService {
         var metadata = reconcileMetadataBaseline(companyId, activation.id());
         initializeProductManager(companyId, activation.id(), initialOwnerMemberId(companyId));
         reconcilePrincipalProjections(companyId, activation.id(), platformActor);
+        var authorization = reconcileAuthorizationTemplate(companyId, activation.id());
         audit.log(companyId, platformActor, "PLATFORM", "tenant_application.initialization_reconciled", "tenant_application", activation.id(),
-                "DevAutopilot standard tenant resources reconciled; metadata=" + metadata.metadataVersionId());
+                "DevAutopilot standard tenant resources reconciled; metadata=" + metadata.metadataVersionId()
+                        + "; authorization=" + authorization.authorizationDigest());
         return requireView(companyId);
     }
 
@@ -249,6 +260,8 @@ public class DevAutopilotTenantApplicationService {
         if (count != null && count > 0) throw new ConflictException("DevAutopilot product manager already exists for this tenant");
         String agentId = "devautopilot-pm-" + UUID.randomUUID().toString().substring(0, 8);
         Map<String, Object> principal = createProductManagerResources(companyId, activation.id(), displayName, actorMemberId, ownerMemberId, agentId);
+        principals.synchronizeProjection(companyId, (String) principal.get("principalId"), actorMemberId);
+        reconcileAuthorizationTemplate(companyId, activation.id());
         audit.log(companyId, actorMemberId, "ORG_ADMIN", "tenant_application.product_manager_added", "tenant_application", activation.id(), "DevAutopilot product-manager resource added");
         return teamResource(activation.id(), principal);
     }
@@ -262,6 +275,8 @@ public class DevAutopilotTenantApplicationService {
                 OfficialAccessTokenService.SEMATTICE_AUDIENCE, null, developerScopes);
         String principalId = (String) principal.get("principalId");
         resource(activation.id(), "developer", "SERVICE_PRINCIPAL", generatedAlias("developer"), displayName, principalId, false);
+        principals.synchronizeProjection(companyId, principalId, actorMemberId);
+        reconcileAuthorizationTemplate(companyId, activation.id());
         audit.log(companyId, actorMemberId, "ORG_ADMIN", "tenant_application.developer_added", "tenant_application", activation.id(), "DevAutopilot developer resource added");
         return teamResource(activation.id(), principal);
     }
@@ -355,6 +370,8 @@ public class DevAutopilotTenantApplicationService {
                     jdbc.update("UPDATE tenant_application_resource SET lifecycle_state='ACTIVE' WHERE id=?", resource.id());
                 }
             }
+            reconcilePrincipalProjections(companyId, row.id(), platformActor);
+            reconcileAuthorizationTemplate(companyId, row.id());
             setProductManagerBinding(companyId, row.id(), true);
             jdbc.update("UPDATE tenant_application_activation SET actual_state='ACTIVE',last_error_code=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?", row.id());
             audit.log(companyId, platformActor, "PLATFORM", "tenant_application.resumed", "tenant_application", row.id(), "DevAutopilot application and tenant resources resumed");
@@ -411,6 +428,77 @@ public class DevAutopilotTenantApplicationService {
                 INSERT INTO tenant_application_resource(id,activation_id,logical_role,resource_type,resource_alias,display_name,external_id,lifecycle_state,is_primary)
                 VALUES (?,?,?,?,?,?,?,'ACTIVE',?)
                 """, UUID.randomUUID().toString(), activationId, role, type, alias, name, externalId, primary);
+    }
+
+    SematticeDevAutopilotAuthorizationClient.AuthorizationView reconcileAuthorizationTemplate(String companyId,
+                                                                                                String activationId) {
+        List<SematticeDevAutopilotAuthorizationClient.Assignment> assignments = authorizationAssignments(companyId, activationId);
+        var result = authorizationTemplate.apply(companyId, activationId,
+                authorizationReconciliationKey(activationId, assignments), assignments);
+        if (!companyId.equals(result.companyId())
+                || !SematticeDevAutopilotAuthorizationClient.TEMPLATE_VERSION.equals(result.templateVersion())
+                || result.authorizationDigest() == null || result.authorizationDigest().length() != 64
+                || result.roleCount() != 4 || result.permissionSetCount() != 4 || result.objectCount() != 7
+                || result.assignmentCount() != assignments.size() || !result.verified()
+                || !("applied".equals(result.state()) || "already_applied".equals(result.state()))) {
+            throw new IllegalStateException("Semattice DevAutopilot authorization baseline is incomplete");
+        }
+        jdbc.update("""
+                UPDATE tenant_application_activation
+                SET authorization_template_version=?,authorization_digest=?,authorization_role_count=?,
+                    authorization_permission_set_count=?,authorization_assignment_count=?,
+                    authorization_verified_at=CURRENT_TIMESTAMP,last_error_code=NULL,updated_at=CURRENT_TIMESTAMP
+                WHERE id=?
+                """, result.templateVersion(), result.authorizationDigest(), result.roleCount(),
+                result.permissionSetCount(), result.assignmentCount(), activationId);
+        return result;
+    }
+
+    private List<SematticeDevAutopilotAuthorizationClient.Assignment> authorizationAssignments(String companyId,
+                                                                                                String activationId) {
+        String applicationAdminMemberId = initialOwnerMemberId(companyId);
+        String applicationAdmin = jdbc.queryForObject("""
+                SELECT account_id FROM company_member
+                WHERE id=? AND company_id=? AND member_status='ACTIVE'
+                """, String.class, applicationAdminMemberId, companyId);
+        if (applicationAdmin == null || applicationAdmin.isBlank()) {
+            throw new IllegalStateException("DevAutopilot application administrator is unavailable");
+        }
+        List<SematticeDevAutopilotAuthorizationClient.Assignment> result = new java.util.ArrayList<>();
+        result.add(new SematticeDevAutopilotAuthorizationClient.Assignment(applicationAdmin, "application_admin"));
+        result.addAll(jdbc.query("""
+                SELECT external_id,logical_role
+                FROM tenant_application_resource
+                WHERE activation_id=? AND resource_type='SERVICE_PRINCIPAL'
+                  AND logical_role IN ('product_manager','developer','observer')
+                ORDER BY logical_role,external_id
+                """, (rs, rowNum) -> new SematticeDevAutopilotAuthorizationClient.Assignment(
+                rs.getString(1), rs.getString(2)), activationId));
+        long productManagers = result.stream().filter(item -> "product_manager".equals(item.logicalRole())).count();
+        if (productManagers != 1) {
+            throw new IllegalStateException("DevAutopilot requires exactly one product-manager identity");
+        }
+        return result.stream()
+                .sorted(Comparator.comparing(SematticeDevAutopilotAuthorizationClient.Assignment::logicalRole)
+                        .thenComparing(SematticeDevAutopilotAuthorizationClient.Assignment::principalId))
+                .toList();
+    }
+
+    static String authorizationReconciliationKey(String activationId,
+                                                  List<SematticeDevAutopilotAuthorizationClient.Assignment> assignments) {
+        require(activationId, "activationId");
+        try {
+            String canonical = assignments.stream()
+                    .sorted(Comparator.comparing(SematticeDevAutopilotAuthorizationClient.Assignment::logicalRole)
+                            .thenComparing(SematticeDevAutopilotAuthorizationClient.Assignment::principalId))
+                    .map(item -> item.logicalRole() + ":" + item.principalId())
+                    .reduce((left, right) -> left + "\n" + right).orElse("");
+            String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                    .digest(canonical.getBytes(StandardCharsets.UTF_8)));
+            return "devautopilot.authorization.v1:" + activationId + ":" + digest.substring(0, 16);
+        } catch (Exception exception) {
+            throw new IllegalStateException("Cannot derive DevAutopilot authorization reconciliation key", exception);
+        }
     }
 
     private TeamResourceView teamResource(String activationId, Map<String, Object> principal) {
@@ -485,6 +573,8 @@ public class DevAutopilotTenantApplicationService {
                 SELECT EXISTS (
                     SELECT 1
                     FROM tenant_application_resource resource
+                    JOIN tenant_application_activation app_activation
+                      ON app_activation.id=resource.activation_id
                     JOIN agent_definition agent
                       ON agent.company_id=? AND agent.agent_id=resource.external_id
                     JOIN agent_channel_binding channel
@@ -492,7 +582,7 @@ public class DevAutopilotTenantApplicationService {
                      AND channel.channel_id='web' AND channel.enabled=TRUE
                     JOIN agent_service_principal_binding execution
                       ON execution.company_id=agent.company_id AND execution.agent_id=agent.agent_id
-                     AND execution.enabled=TRUE AND execution.delegation_policy='TENANT_APP_ROLE'
+                     AND execution.delegation_policy='TENANT_APP_ROLE'
                     JOIN agent_skill_binding skill_binding
                       ON skill_binding.company_id=agent.company_id AND skill_binding.agent_id=agent.agent_id
                      AND skill_binding.enabled=TRUE AND skill_binding.activation_mode='always-on'
@@ -510,16 +600,38 @@ public class DevAutopilotTenantApplicationService {
                     WHERE resource.activation_id=? AND resource.logical_role='product_manager'
                       AND resource.resource_type='AGENT' AND resource.is_primary=TRUE
                       AND agent.enabled=TRUE AND agent.published_version_id IS NOT NULL
+                      AND ((app_activation.actual_state='ACTIVE' AND execution.enabled=TRUE)
+                        OR (app_activation.actual_state='SUSPENDED' AND execution.enabled=FALSE))
                 ) AND EXISTS (
                     SELECT 1
                     FROM tenant_application_resource resource
+                    JOIN tenant_application_activation app_activation
+                      ON app_activation.id=resource.activation_id
                     JOIN principal authority ON authority.id=resource.external_id
                     WHERE resource.activation_id=? AND resource.logical_role='product_manager'
                       AND resource.resource_type='SERVICE_PRINCIPAL' AND resource.is_primary=TRUE
                       AND authority.principal_type='SERVICE'
-                      AND authority.lifecycle_status IN ('ACTIVE','SUSPENDED')
+                      AND ((app_activation.actual_state='ACTIVE' AND authority.lifecycle_status='ACTIVE')
+                        OR (app_activation.actual_state='SUSPENDED' AND authority.lifecycle_status='SUSPENDED'))
+                ) AND EXISTS (
+                    SELECT 1
+                    FROM tenant_application_activation activation
+                    WHERE activation.id=? AND activation.company_id=?
+                      AND activation.authorization_template_version=?
+                      AND length(activation.authorization_digest)=64
+                      AND activation.authorization_role_count=4
+                      AND activation.authorization_permission_set_count=4
+                      AND activation.authorization_verified_at IS NOT NULL
+                      AND activation.authorization_assignment_count=(
+                          SELECT 1 + count(*)
+                          FROM tenant_application_resource resource
+                          WHERE resource.activation_id=activation.id
+                            AND resource.resource_type='SERVICE_PRINCIPAL'
+                            AND resource.logical_role IN ('product_manager','developer','observer')
+                      )
                 )
-                """, Boolean.class, companyId, activationId, activationId);
+                """, Boolean.class, companyId, activationId, activationId, activationId, companyId,
+                SematticeDevAutopilotAuthorizationClient.TEMPLATE_VERSION);
         return Boolean.TRUE.equals(ready);
     }
     private static void require(String v,String name) { if (v==null||v.isBlank()) throw new IllegalArgumentException(name+" is required"); }
