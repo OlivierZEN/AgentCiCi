@@ -17,15 +17,15 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-293 - DevAutopilot 授权初始化编排
 
-- status: `in_progress`
+- status: `done`
 - priority: `critical`
 - owner_role: `integration-agent`
 - claimed_by: `codex`
 - integration_id: `INT-014`
 - spec_path: `docs/specs/FEAT-177-devautopilot-authorization-initialization.md`
 - task_status_path: `.claw/tasks/TASK-293.md`
-- blocked_by: `cc-semattice TASK-077`
-- next_action: 接入固定授权模板回执，收紧初始化完成条件，并完成开发租户正式补齐。
+- blocked_by: `none`
+- next_action: 已完成本地正式补齐与授权回读；UAT/生产未修改。
 
 ### TASK-292 - 平台联网搜索与网页抓取集成
 

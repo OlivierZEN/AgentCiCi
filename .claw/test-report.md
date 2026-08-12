@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-12T13:05:08Z
+updated_at: 2026-08-12T13:43:45Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-12T13:05:08Z
-last_run_status: passed_with_vendor_business_acceptance_pending
+last_run_at: 2026-08-12T13:43:45Z
+last_run_status: passed
 ---
 
 # Test Report
+
+## 2026-08-12 TASK-293 DevAutopilot 授权初始化
+
+- 定向测试：`DevAutopilotTenantApplicationReadinessTest`、`SematticeDevAutopilotAuthorizationClientTest` 通过；后端 `mvn -q -DskipTests package` 通过。
+- 本地主线与制品：功能提交 `38f8598` 合并为 `main@41740bdd55e6`；backend/frontend 镜像及页面版本均为 `2.8.62-dev.41740bd`，两个容器 healthy、restart=0。
+- 迁移与栈验证：Flyway V111 成功；`./stack verify` 通过基础设施、数据库隔离、TLS、OIDC、健康/版本和匿名鉴权边界。
+- 正式补齐：平台管理员在租户页执行 `initializations` 成功，卡片由“待补齐”变为“已完成”；activation 回读 `devautopilot.authorization.v1`、digest 长度 64、role/set/assignment=4/4/4、verified_at 非空。
+- 幂等：再次执行“同步标准模板”成功，页面保持“已完成”，Semattice 固定资源和 4 个有效分配未重复；未直接写数据库或绕过平台授权。
+- 状态：`passed`（本地开发环境代码、部署、正式业务补偿和跨库回读通过；UAT/生产未修改）。
 
 ## 2026-08-12 TASK-292 平台联网搜索与网页抓取集成
 
