@@ -5332,6 +5332,38 @@ select {
   margin-top: 18px;
 }
 
+.integration-settings__notice {
+  margin-bottom: 0;
+}
+
+.integration-state {
+  min-height: 112px;
+  margin-top: 18px;
+  padding: 22px 4px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.integration-state strong {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.integration-state p {
+  margin: 4px 0 0;
+  line-height: 1.55;
+}
+
+.integration-state--error strong {
+  color: #b42318;
+}
+
 .integration-card {
   border: 1px solid var(--border);
   border-radius: var(--radius);

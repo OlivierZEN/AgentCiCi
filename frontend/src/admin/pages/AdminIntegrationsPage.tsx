@@ -12,6 +12,27 @@ type IntegrationApp = {
   builtin: boolean;
 };
 
+type IntegrationLoadState = "loading" | "ready" | "error";
+
+type IntegrationAppsResponse = {
+  success?: boolean;
+  data?: unknown;
+  message?: string;
+};
+
+export async function readIntegrationAppsResponse(res: Response): Promise<IntegrationApp[]> {
+  const contentType = res.headers.get("content-type")?.toLowerCase() ?? "";
+  if (!contentType.includes("application/json")) {
+    throw new Error("平台集成接口返回了非 JSON 响应");
+  }
+
+  const json = (await res.json()) as IntegrationAppsResponse;
+  if (!res.ok || !json.success) {
+    throw new Error(json.message ?? "加载失败");
+  }
+  return Array.isArray(json.data) ? (json.data as IntegrationApp[]) : [];
+}
+
 const SECRET_FIELDS: Record<string, string[]> = {
   tavily: ["apiKey"],
   cloudcc_crm: ["secretKey"],
@@ -144,6 +165,8 @@ type IntegrationSettingsPageProps = {
 export function IntegrationSettingsPage({ token, apiBase, title, subtitle, className = "" }: IntegrationSettingsPageProps) {
   const [notice, setNotice] = useState("");
   const [apps, setApps] = useState<IntegrationApp[]>([]);
+  const [loadState, setLoadState] = useState<IntegrationLoadState>("loading");
+  const [loadError, setLoadError] = useState("");
   const [editing, setEditing] = useState<IntegrationApp | null>(null);
   const [form, setForm] = useState<Record<string, string>>({});
   const [formDescription, setFormDescription] = useState("");
@@ -152,13 +175,16 @@ export function IntegrationSettingsPage({ token, apiBase, title, subtitle, class
   const [testResult, setTestResult] = useState<string>("");
 
   const loadApps = async () => {
-    const res = await fetch(apiBase, { headers: { Authorization: `Bearer ${token}` } });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      setNotice(json.message ?? "加载失败");
-      return;
+    setLoadState("loading");
+    setLoadError("");
+    try {
+      const res = await fetch(apiBase, { headers: { Authorization: `Bearer ${token}` } });
+      setApps(await readIntegrationAppsResponse(res));
+      setLoadState("ready");
+    } catch (err) {
+      setLoadError((err as Error).message || "加载失败");
+      setLoadState("error");
     }
-    setApps((json.data ?? []) as IntegrationApp[]);
   };
 
   const openEdit = (app: IntegrationApp) => {
@@ -248,42 +274,73 @@ export function IntegrationSettingsPage({ token, apiBase, title, subtitle, class
         <p className="subtle">{subtitle}</p>
       </header>
 
-      <div className="integration-grid">
-        {apps.map((app) => (
-          <article key={app.id} className="integration-card">
-            <div className="integration-card__head">
-              <div>
-                <h3>{app.appName}</h3>
-                <p className="subtle integration-card__desc">{app.description}</p>
-              </div>
-            </div>
+      {notice && <p className="notice integration-settings__notice" role="status">{notice}</p>}
 
-            <div className="integration-card__actions">
-              <button
-                type="button"
-                className="integration-icon-btn"
-                onClick={() => openEdit(app)}
-                aria-label="编辑应用配置"
-                title="编辑"
-              >
-                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden>
-                  <path d="M12 2.75 13.65 4.4l2.33-.38.95 2.16 2.23.8-.2 2.35L20.75 12l-1.79 1.67.2 2.35-2.23.8-.95 2.16-2.33-.38L12 21.25l-1.65-1.65-2.33.38-.95-2.16-2.23-.8.2-2.35L3.25 12l1.79-1.67-.2-2.35 2.23-.8.95-2.16 2.33.38L12 2.75Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-                  <circle cx="12" cy="12" r="3.25" stroke="currentColor" strokeWidth="1.6" />
-                </svg>
-              </button>
-              <div className="integration-card__toggle-wrap">
-                <span className="integration-card__toggle-status">{app.enabled ? "已启用" : "已停用"}</span>
+      {loadState === "loading" && (
+        <div className="integration-state" role="status" aria-live="polite">
+          正在加载平台集成配置…
+        </div>
+      )}
+
+      {loadState === "error" && (
+        <div className="integration-state integration-state--error" role="alert">
+          <div>
+            <strong>平台集成加载失败</strong>
+            <p>{loadError}</p>
+          </div>
+          <button type="button" className="cici-btn cici-btn--ghost" onClick={() => void loadApps()}>
+            重试
+          </button>
+        </div>
+      )}
+
+      {loadState === "ready" && apps.length === 0 && (
+        <div className="integration-state" role="status">
+          <div>
+            <strong>暂无平台集成</strong>
+            <p>当前没有可配置的平台代管能力。</p>
+          </div>
+        </div>
+      )}
+
+      {loadState === "ready" && apps.length > 0 && (
+        <div className="integration-grid">
+          {apps.map((app) => (
+            <article key={app.id} className="integration-card">
+              <div className="integration-card__head">
+                <div>
+                  <h3>{app.appName}</h3>
+                  <p className="subtle integration-card__desc">{app.description}</p>
+                </div>
+              </div>
+
+              <div className="integration-card__actions">
                 <button
                   type="button"
-                  className={`cici-toggle ${app.enabled ? "cici-toggle--on" : ""}`}
-                  onClick={() => void toggleEnabled(app)}
-                  aria-label={app.enabled ? "停用应用" : "启用应用"}
-                />
+                  className="integration-icon-btn"
+                  onClick={() => openEdit(app)}
+                  aria-label="编辑应用配置"
+                  title="编辑"
+                >
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden>
+                    <path d="M12 2.75 13.65 4.4l2.33-.38.95 2.16 2.23.8-.2 2.35L20.75 12l-1.79 1.67.2 2.35-2.23.8-.95 2.16-2.33-.38L12 21.25l-1.65-1.65-2.33.38-.95-2.16-2.23-.8.2-2.35L3.25 12l1.79-1.67-.2-2.35 2.23-.8.95-2.16 2.33.38L12 2.75Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+                    <circle cx="12" cy="12" r="3.25" stroke="currentColor" strokeWidth="1.6" />
+                  </svg>
+                </button>
+                <div className="integration-card__toggle-wrap">
+                  <span className="integration-card__toggle-status">{app.enabled ? "已启用" : "已停用"}</span>
+                  <button
+                    type="button"
+                    className={`cici-toggle ${app.enabled ? "cici-toggle--on" : ""}`}
+                    onClick={() => void toggleEnabled(app)}
+                    aria-label={app.enabled ? "停用应用" : "启用应用"}
+                  />
+                </div>
               </div>
-            </div>
-          </article>
-        ))}
-      </div>
+            </article>
+          ))}
+        </div>
+      )}
 
       {editing && (
         <div className="cici-modal-overlay" onClick={() => setEditing(null)}>

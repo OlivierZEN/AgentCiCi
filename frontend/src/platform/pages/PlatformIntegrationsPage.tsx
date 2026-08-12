@@ -1,6 +1,8 @@
 import { LS_PLATFORM_TOKEN } from "../../constants";
 import { IntegrationSettingsPage } from "../../admin/pages/AdminIntegrationsPage";
 
+export const PLATFORM_INTEGRATIONS_API_BASE = "/api/platform/integrations";
+
 function readToken(): string {
   const raw = localStorage.getItem(LS_PLATFORM_TOKEN);
   if (!raw) return "";
@@ -16,7 +18,7 @@ export default function PlatformIntegrationsPage() {
   return (
     <IntegrationSettingsPage
       token={token}
-      apiBase="/platform/integrations"
+      apiBase={PLATFORM_INTEGRATIONS_API_BASE}
       title="平台集成配置"
       subtitle="统一控制 Tavily 搜索和讯飞实时转写等平台代管能力。"
       className="platform-page platform-integrations-page"
