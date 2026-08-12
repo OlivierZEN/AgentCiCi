@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-11T15:32:00Z
+updated_at: 2026-08-12T04:55:30Z
 updated_by: codex
 phase: review
 active_task: TASK-287
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-288 已完成并部署本地开发环境：平台集成页从错误的 SPA 路由 `/platform/integrations` 改为同源后端 API `/api/platform/integrations`，恢复 Tavily 与讯飞代管配置卡片的数据请求；新增加载、错误重试和空数据状态，避免非 JSON 响应再次表现为整页空白。前端 46 文件/247 项、生产构建和 diff check 通过；仅重建 `cc-local-stack` 的 `cici-frontend`，容器 healthy/restart=0，`https://cici.localhost/platform/integrations`=200，部署 JS 包包含正确 API 与状态文案，匿名 API 按预期返回 JSON 401。当前浏览器无受权平台会话，未绕过认证；登录后视觉回读由平台管理员刷新页面完成。
 
 - TASK-287 / FEAT-172 已按用户确认的 V5 正式落地 React：侧栏三个技能菜单合并为“技能治理”，模型配置、平台集成、工具目录实现未动；首页提供真实技能列表与策略包列表，技能详情改为 `880px` 概览/技能版本/依赖影响抽屉，技能编辑四步骤、草稿预览和核心策略编辑均为独立页面。现有 API、权限、草稿、发布、回滚和依赖图逻辑保持不变；只有 `core-default` 可管理，三个未来策略包仅显示“规划中”。完整前端 44 文件/244 项、生产构建、diff check、8080 health 与 5173 HTTP 通过。本地正式路由匿名访问按预期回到平台登录，当前无受权会话，未绕过认证，桌面截图待登录后复核。
 

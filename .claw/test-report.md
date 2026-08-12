@@ -1,14 +1,25 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-11T14:59:32Z
+updated_at: 2026-08-12T04:55:30Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-11T14:59:32Z
-last_run_status: passed_with_product_review_pending
+last_run_at: 2026-08-12T04:55:30Z
+last_run_status: passed_with_authorized_visual_pending
 ---
 
 # Test Report
+
+## 2026-08-12 TASK-288 平台集成配置卡片恢复
+
+- 定向测试：`npm test -- --run src/platform/pages/PlatformIntegrationsPage.test.ts src/admin/pages/AdminIntegrationsPage.test.ts` -> 2 文件 / 3 项通过；覆盖 `/api` 命名空间、成功 JSON 和 SPA HTML 拒绝。
+- 完整前端：`npm test -- --run` -> 46 文件 / 247 项通过。
+- 构建与静态检查：`npm run build`、`git diff --check` 通过；仅保留既有 chunk size warning。
+- 本地部署：修复提交 `1a9cbde27f77` 构建 `cc-aixone/agentcici-frontend:local`，镜像/运行资源 `sha256:cb5ff90d765862bd8ae308758afa1493ff7aaf2418491327832b3a5f6b3af6dc`；仅重建 `cici-frontend`，容器 healthy、restart=0。
+- 路由与制品：`https://cici.localhost/platform/integrations` 返回 200；部署资源 `index-BXi6MJFo-2.8.62-dev.1.js` 包含 `/api/platform/integrations` 和加载/错误/空状态文案；匿名 `/api/platform/integrations` 返回 `401 application/json`，证明请求进入后端鉴权而非 SPA fallback。
+- 浏览器边界：无受权平台会话时目标路由按设计重定向 `/platform/login`；未读取或伪造凭据，Tavily/讯飞卡片的登录态视觉回读待平台管理员刷新后确认。
+- 治理校验：`validate-state.py .claw` 仍被仓库既有历史任务归档、旧规格状态/front matter、owner role 和旧时间格式债务阻断；输出没有 TASK-288 新错误，本轮未跨范围清理历史状态。
+- 状态：`passed_with_authorized_visual_pending`
 
 ## 2026-08-11 TASK-287 技能治理 V5 正式 React 落地
 

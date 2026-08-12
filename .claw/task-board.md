@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-12T00:51:11Z
+updated_at: 2026-08-12T04:55:30Z
 updated_by: codex
 board_status: active
 ---
@@ -1460,6 +1460,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-288 - 平台集成配置卡片恢复
+
+- status: `done`
+- priority: `high`
+- owner_role: `frontend-agent`
+- spec_path: `n/a`
+- task_status_path: `.claw/tasks/TASK-288.md`
+- assignment_path: `n/a`
+- blocked_by: `none`
+- next_action: 已部署本地开发环境；受权平台管理员刷新“平台集成”后可继续配置 Tavily 与讯飞。
 
 ### TASK-286 - Semattice 管理端单次交接票据提供方
 
