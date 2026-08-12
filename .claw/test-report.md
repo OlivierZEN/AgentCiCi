@@ -1,14 +1,97 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-11T08:46:23Z
+updated_at: 2026-08-11T14:59:32Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-11T08:46:23Z
-last_run_status: passed
+last_run_at: 2026-08-11T14:59:32Z
+last_run_status: passed_with_product_review_pending
 ---
 
 # Test Report
+
+## 2026-08-11 TASK-287 技能治理 V5 正式 React 落地
+
+- 定向测试：`npm test -- --run src/platform/PlatformShell.test.ts src/platform/pages/PlatformSkillsPage.test.ts` -> 2 文件 / 18 项通过。
+- 完整前端：`npm test` -> 44 文件 / 244 项通过。
+- 构建：`npm run build` -> TypeScript 与 Vite 生产构建通过；仅保留既有 chunk size warning。
+- 静态检查：目标 `git diff --check` 通过；统一技能导航对 `/skills`、策略、详情、编辑、预览和策略编辑深链选中态均有测试覆盖。
+- 本地运行：PostgreSQL/Redis/RabbitMQ/Qdrant 启动，backend local profile 启动并迁移本地 schema 到 V110；`/actuator/health={"status":"UP"}`，Vite 5173 返回 HTTP 200。
+- 浏览器边界：匿名打开 `/platform/skills` 正确重定向 `/platform/login`。当前无受权平台会话，未输入或绕过凭据，因此正式页面桌面截图、console 和交互视觉 QA 仍待登录后复核；V5 原型既有 1280×720 设计 QA passed。
+
+## 2026-08-11 TASK-285 核心策略包列表预设原型 V5
+
+- 范围：保留 V4 全部技能治理结构与交互，只把核心策略包首页从单对象摘要调整为未来可扩展列表。
+- 列表：展示“平台核心安全策略、数据出境策略、模型调用策略、工具执行策略”4 行；当前 1 个生效、3 个规划中，没有新建策略包或发布规划项的动作。
+- 功能边界：生效策略“管理”进入 `#policy/edit`，策略名称、适用范围、策略说明、提示片段、人工移交规则及保存草稿动作完整；规划项“说明”只显示未启用反馈且保持 `#skills/policies`。
+- 浏览器：`1280 × 720` CSS viewport，`clientWidth=scrollWidth=1265`；4 个列表行、3 个规划态；console 只有 Vite/React 开发信息，`0 error / 0 warning`。
+- 构建：`npm run build` 通过；`npm run test:sites` 4/4 通过；作用域 `git diff --check` 通过。
+- 治理校验：`validate-state.py .claw` 仍被仓库既有旧时间格式、历史规格状态/front matter、活动区已完成任务和归档数量债务阻断；输出没有 TASK-285/FEAT-172 新错误，本轮未跨范围清理历史状态。
+- 视觉：`screenshots/v5-01-policy-package-list.jpg` 已检查；与 V4 单对象页组成 `screenshots/v5-policy-list-comparison.jpg` 同屏对比，无待处理 P0/P1/P2。
+- 边界：只修改本地高保真原型及设计事实，不新增后端策略包/API/运行时逻辑，不修改正式 React 页面，不部署 UAT/生产。
+- 状态：`passed_with_product_review_pending`
+
+## 2026-08-11 TASK-285 技能治理合并原型 V4
+
+- 范围：侧栏将“技能目录、策略与版本、依赖与影响”合并为“技能治理”；能力治理保留“技能治理、模型配置、平台集成、工具目录”四项，后三项页面与路由不在原型调整范围。
+- 首页：技能列表与核心策略包为同层入口；核心策略包首页展示当前 v1、17 项适用技能、三类规则摘要和独立编辑入口。
+- 抽屉：技能速览宽 `880px`，通过“概览 / 技能版本 / 依赖与影响”三个只读页签渐进展示；抽屉内 `input/select/textarea=0`。
+- 完整性：版本页签保留 v4 草稿、v3 当前生效、v2 稳定回滚点、v1 归档及预览/查看/设为回滚点动作；依赖页签保留 6 个 Agent、3 个工作流、1 个历史引用、0 个阻断项及三条生产引用。
+- 独立页面：技能编辑继续保留治理设置、模板内容、能力边界、本版说明和全部字段；草稿预览保持只读独立页面；核心策略编辑保留五类字段和保存策略草稿动作。
+- 浏览器：`1280 × 720` CSS viewport，关键页面 `clientWidth=scrollWidth=1265`；搜索“经营”只返回“CRM 经营分析”；模型配置冻结提示不改变 `#skills`；console `0 error / 0 warning`。
+- 构建：`npm run build` 通过；`npm run test:sites` 4/4 通过；`git diff --check` 通过。
+- 设计 QA：`prototypes/capability-governance-v2/design-qa.md` 为 `final result: passed`，六张 V4 截图覆盖首页、核心策略、三个抽屉页签和独立编辑。
+- 边界：仅本地高保真原型与治理文档，未修改正式 React/API，未重建本地业务容器，未部署 UAT/生产。
+- 状态：`passed_with_product_review_pending`
+
+## 2026-08-11 TASK-285 技能治理渐进式 HTML 原型 V3
+
+- 范围边界：能力治理恢复“技能目录、策略与版本、依赖与影响、模型配置、平台集成、工具目录”六项；后三项点击只提示保持现状，路由和当前页面不变。
+- 技能路径：技能列表 → `520px` 只读抽屉 → 独立技能编辑；编辑页没有目录表格或抽屉，四个步骤覆盖治理设置、模板内容、能力边界、本版说明。
+- 策略路径：“策略与版本”先展示技能模板版本/核心策略包列表，再进入独立技能版本历史或核心策略编辑页。
+- 依赖路径：“依赖与影响”先展示技能影响列表，再通过摘要抽屉进入完整依赖页。
+- 浏览器：`1280 × 720` CSS viewport；关键页面 `scrollWidth=clientWidth=1265`，无外层横向溢出；搜索“经营”只返回“CRM 经营分析”；console `0 error / 0 warning`。
+- 交互：详情抽屉、编辑四步骤、草稿预览、策略类型切换、策略编辑、依赖抽屉和完整依赖页通过；模型配置冻结提示保持 `#skill/dependencies` 不变。
+- 构建：`npm run build` 通过；`npm run test:sites` 4/4 通过；`git diff --check` 通过。
+- 治理校验：`validate-state.py .claw` 仍被仓库既有旧时间格式、历史规格 front matter/status 和已完成任务归档债务阻断；输出没有 TASK-285/FEAT-172 错误，本轮未跨范围批量清理历史状态。
+- 设计 QA：`prototypes/capability-governance-v2/design-qa.md` 为 `final result: passed`；桌面视口截图覆盖技能目录和完整技能编辑页。
+- 边界：仅本地高保真原型与治理文档，未修改正式 React/API，未更新本地业务容器，未部署 UAT/生产。
+- 状态：`passed_with_product_review_pending`
+
+## 2026-08-11 TASK-285 能力治理渐进式 HTML 原型 V2
+
+- 用户反馈：V1 三栏常驻工作台被明确否决，原因是把目录、编辑、版本、依赖、风险和动作继续堆在同一页面。V2 保留 V1 证据但不沿用其结构。
+- 核心路径：技能列表 → `520px` 只读抽屉 → 独立治理配置/版本/依赖/发布预览；模型厂商列表 → 只读抽屉 → 独立配置；场景模型路由独立页面。
+- 浏览器：`1600 × 1000`；列表、编辑和模型路由状态均为 `clientWidth=1600 / scrollWidth=1600`；console `0 error / 0 warning`。
+- 渐进边界：抽屉无 `input/select/textarea`；进入 `#skill/config` 后列表和抽屉均不存在；预览页无编辑控件，只展示差异和发布检查。
+- 交互：搜索“经营”返回 1 项“CRM 经营分析”；清空搜索后“待检查”筛选返回 1 项“Semattice 研发交付管理”；核心策略包进入独立 `#skills/policy` 页面；版本、依赖、返回和模型厂商编辑路径通过。
+- 构建：`npm run build` 通过；`npm run test:sites` 4/4 通过；`git diff --check` 通过。
+- 治理校验：`validate-state.py .claw` 仍因仓库既有旧时间格式、已完成任务未归档和完成任务保留数量债务返回 1；过滤输出没有 TASK-285/FEAT-172 错误，本轮未跨范围清理历史状态。
+- 设计 QA：全页和聚焦对比板已检查；修复平台账号换行与核心策略包错误路由后，`prototypes/capability-governance-v2/design-qa.md` 为 `final result: passed`。
+- 边界：仅本地原型与设计文档，未修改正式 React/API，未部署 UAT/生产。
+- 状态：`passed_with_product_review_pending`
+
+## 2026-08-11 TASK-285 能力治理高保真 HTML 原型
+
+- 原型：`prototypes/capability-governance-v1/index.html`，单文件 HTML/CSS/JS，无外部运行依赖；本地通过 `http://127.0.0.1:4179/` 访问。
+- 信息架构：验证“治理总览、技能治理、模型治理、工具与集成”四个入口；技能治理统一目录、治理配置、版本管理、依赖影响和核心策略包，模型治理保留“厂商与模型、场景路由”。
+- 桌面布局：`1600 × 1000` 下 body `clientWidth=1600`、`scrollWidth=1600`；技能与模型三栏为 `326 / 654 / 304 px`，未出现原页面右侧空洞或外层横向滚动。
+- 交互：技能搜索“经营”仅保留“CRM 经营分析”；版本/依赖、场景路由、平台集成页签均成功切换；主要原型动作有可见反馈。
+- 视觉证据：`screenshots/01-overview.png`、`02-skills.jpg`、`03-models.jpg`、`04-tools-integrations.jpg` 已逐张检查。
+- 浏览器：console `0 error / 0 warning`；临时测试视口已恢复默认。
+- 治理校验：`git diff --check` 通过；`validate-state.py .claw` 仍因仓库既有历史任务归档、旧规格状态/front matter 与旧时间格式债务返回 1，输出没有 TASK-285/FEAT-172 字段或状态错误，本轮未跨范围批量改写历史事实。
+- 边界：仅交付本地原型和设计文档，未修改生产 React/API，未重建本地业务容器，未部署 UAT/生产。
+- 状态：`passed_with_product_review_pending`
+
+## 2026-08-11 TASK-284 运营控制台模型配置导航去重
+
+- 导航契约：能力治理下只有一个“模型配置”入口，默认进入 `/platform/models/providers`；`/platform/models`、`/platform/models/providers` 和 `/platform/models/routes` 均保持该入口选中。
+- 功能边界：`PlatformModelsPage` 的“模型厂商治理”“场景模型路由”页签、既有子路由与配置请求未修改。
+- 定向测试：`PlatformShell.test.ts` 与 `PlatformModelsPage.test.tsx` 共 8 项通过。
+- 完整前端：Vitest 44 文件/237 项通过；`npm run build` 通过，仅有既有 bundle-size warning；`git diff --check` 通过。
+- 本地环境：`cc-local-stack` 从当前工作树定向重建 `cici-frontend`；运行容器 healthy、restart=0，厂商与路由深链均为 200，部署 JS 包含“模型配置”和两个原有页签文本，且不再包含“模型厂商与目录”。其他本地服务未重建，UAT/生产未修改。
+- 浏览器边界：本地真实路由按认证设计重定向 `/platform/login`；未伪造平台认证或使用凭据，因此受权页面的桌面截图、页签点击和 console 复核待平台账号登录后完成。
+- 状态：`passed_with_visual_acceptance_pending`
 
 ## 2026-08-11 本地 Demo Company company_id 初始化修复
 

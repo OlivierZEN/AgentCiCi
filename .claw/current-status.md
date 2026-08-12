@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-11T08:46:23Z
+updated_at: 2026-08-11T15:32:00Z
 updated_by: codex
-phase: verification
-active_task: TASK-280
-next_action: "Demo Company 管理员刷新 beta.9 用户页确认 18611892001 的信息归位；再以无既有 Keycloak SSO 的独立浏览器完成登录回归。"
+phase: review
+active_task: TASK-287
+next_action: "使用受权平台会话完成 TASK-287 正式页面桌面截图复核；代码、完整前端测试、构建和本地运行已通过，未绕过登录门禁。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,12 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-287 / FEAT-172 已按用户确认的 V5 正式落地 React：侧栏三个技能菜单合并为“技能治理”，模型配置、平台集成、工具目录实现未动；首页提供真实技能列表与策略包列表，技能详情改为 `880px` 概览/技能版本/依赖影响抽屉，技能编辑四步骤、草稿预览和核心策略编辑均为独立页面。现有 API、权限、草稿、发布、回滚和依赖图逻辑保持不变；只有 `core-default` 可管理，三个未来策略包仅显示“规划中”。完整前端 44 文件/244 项、生产构建、diff check、8080 health 与 5173 HTTP 通过。本地正式路由匿名访问按预期回到平台登录，当前无受权会话，未绕过认证，桌面截图待登录后复核。
+
+- TASK-285 / FEAT-172 V5 已完成并进入 review：V4 的技能治理合并、`880px` 抽屉、独立技能编辑/预览和核心策略编辑全部保留；核心策略包首页由单对象摘要升级为可扩展列表，当前 1 个 `core-default` 生效策略可管理，数据出境、模型调用、工具执行三个方向明确标记“规划中”且不提供编辑或发布动作。`1280×720` 下列表 4 行、3 个规划态、无外层横向溢出；规划说明不离开当前路由，现有策略仍进入完整编辑页，console 0 error/warning；构建、Sites 4/4 和设计 QA passed。V1-V4 只保留迭代证据。
+
+- TASK-284 已完成并更新本地开发环境：运营控制台侧栏将“模型厂商与目录”“场景模型路由”收敛为单一“模型配置”入口，现有模型厂商治理、场景模型路由页签、子路由和配置行为不变；两个子路由均保持统一菜单选中态。定向 8 项、完整前端 44 文件/237 项和生产构建通过；本地仅重建 `cici-frontend`，容器 healthy/restart=0，两个深链 200，部署资源确认新入口存在且旧重复文本消失。真实路由仍受平台登录门禁保护，受权桌面视觉复核待完成。
 
 - UAT 主机已为 `op-registry.cloudcc.cn/cloudcc-ai-native` 配置 root-only 持久 pull 登录，当前实际前后端镜像回读为 `2.8.61-beta.15`。配置仅使用专用 pull-only 机器人凭据，Docker 原生 config 无 credential helper，必须纳入受管轮换；manifest、backend health、容器 restart=0 和全套匿名公网 smoke 均通过。未读取或记录认证值。
 

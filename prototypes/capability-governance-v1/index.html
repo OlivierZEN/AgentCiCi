@@ -1,0 +1,795 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AgentCiCi 能力治理工作台原型</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --canvas: #f3f7fc;
+      --surface: #ffffff;
+      --surface-soft: #f8fbff;
+      --surface-muted: #eef4fb;
+      --ink: #17233d;
+      --ink-2: #40516e;
+      --ink-3: #71809a;
+      --line: #ccd9ea;
+      --line-strong: #aebfd6;
+      --accent: #1677d2;
+      --accent-strong: #0c5fae;
+      --accent-soft: #e9f3fd;
+      --success: #21845b;
+      --warning: #a66512;
+      --danger: #bb3d4b;
+      --focus: rgba(22, 119, 210, 0.2);
+      --radius: 12px;
+      --radius-small: 8px;
+      --sidebar: 272px;
+      --inspector: 304px;
+      --catalog: 326px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-width: 1280px; min-height: 100%; background: var(--canvas); }
+    body {
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    button, input, select, textarea { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: .55; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .top-rule { height: 4px; background: var(--accent-strong); }
+    .app-shell {
+      height: calc(100vh - 4px);
+      display: grid;
+      grid-template-columns: var(--sidebar) minmax(0, 1fr);
+      gap: 14px;
+      padding: 14px;
+    }
+
+    .sidebar, .main-shell {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      min-height: 0;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      padding: 20px 16px 14px;
+      overflow: hidden;
+    }
+
+    .eyebrow {
+      margin: 0 0 4px;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 750;
+      letter-spacing: .08em;
+    }
+
+    .brand-title { margin: 0; font-size: 25px; line-height: 1.2; letter-spacing: -.04em; }
+    .account {
+      margin-top: 14px;
+      padding: 12px 13px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+    .account span { display: block; color: var(--ink-3); font-size: 11px; font-weight: 650; }
+    .account strong { display: block; margin-top: 2px; font-size: 15px; }
+
+    .sidebar-scroll { margin: 24px -6px 0; padding: 0 6px; overflow-y: auto; }
+    .nav-primary {
+      width: 100%;
+      padding: 10px 8px;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      background: transparent;
+      text-align: left;
+      font-weight: 720;
+    }
+    .nav-group { padding: 13px 0 16px; border-bottom: 1px solid var(--line); }
+    .nav-group-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 8px 8px;
+      color: var(--ink-3);
+      font-size: 11px;
+      font-weight: 750;
+      letter-spacing: .06em;
+    }
+    .nav-items { display: grid; gap: 1px; }
+    .nav-item {
+      position: relative;
+      width: 100%;
+      padding: 9px 8px;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      color: var(--ink-2);
+      text-align: left;
+      font-weight: 650;
+    }
+    .nav-item:hover { color: var(--accent-strong); }
+    .nav-item.active { color: var(--accent-strong); font-weight: 780; }
+    .nav-item.active::after {
+      content: "";
+      position: absolute;
+      left: 8px;
+      right: 58%;
+      bottom: 5px;
+      height: 2px;
+      background: var(--accent);
+    }
+    .nav-note { padding: 7px 8px 0; color: var(--ink-3); font-size: 11px; line-height: 1.55; }
+    .sidebar-footer { margin-top: auto; padding-top: 12px; display: flex; align-items: center; justify-content: space-between; color: var(--ink-3); font-size: 11px; }
+    .sidebar-footer button { border: 0; background: transparent; color: var(--ink-2); font-weight: 650; }
+
+    .main-shell { display: flex; flex-direction: column; overflow: hidden; }
+    .page-header {
+      min-height: 108px;
+      padding: 20px 26px 16px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    .breadcrumb { margin-bottom: 4px; color: var(--ink-3); font-size: 11px; font-weight: 650; }
+    .page-title { margin: 0; font-size: 28px; line-height: 1.2; letter-spacing: -.04em; }
+    .page-subtitle { margin: 5px 0 0; color: var(--ink-3); max-width: 68ch; }
+    .header-actions { display: flex; gap: 8px; padding-top: 10px; }
+    .button {
+      min-height: 34px;
+      padding: 7px 13px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-small);
+      background: var(--surface);
+      color: var(--ink-2);
+      font-weight: 700;
+    }
+    .button:hover { border-color: var(--accent); color: var(--accent-strong); }
+    .button.primary { background: var(--accent); border-color: var(--accent); color: white; }
+    .button.primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); color: white; }
+    .button.text { min-height: auto; padding: 3px 0; border: 0; border-radius: 0; background: transparent; color: var(--accent-strong); }
+    .button.danger-text { color: var(--danger); }
+
+    .health-strip {
+      min-height: 52px;
+      padding: 0 26px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface-soft);
+    }
+    .health-items { display: flex; align-items: center; gap: 24px; }
+    .health-item { display: flex; align-items: center; gap: 7px; color: var(--ink-2); white-space: nowrap; }
+    .health-item strong { color: var(--ink); font-size: 14px; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+    .dot.warn { background: var(--warning); }
+    .dot.danger { background: var(--danger); }
+    .health-summary { color: var(--ink-3); font-size: 12px; }
+
+    .workspace { flex: 1; min-height: 0; overflow: hidden; }
+    .three-pane {
+      height: 100%;
+      display: grid;
+      grid-template-columns: var(--catalog) minmax(500px, 1fr) var(--inspector);
+    }
+    .two-pane { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 340px; }
+    .pane { min-width: 0; min-height: 0; overflow: auto; }
+    .catalog-pane, .content-pane { border-right: 1px solid var(--line); }
+    .pane-inner { padding: 18px 20px 28px; }
+
+    .pane-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 12px; }
+    .pane-heading h2, .pane-heading h3 { margin: 0; font-size: 16px; }
+    .pane-heading span { color: var(--ink-3); font-size: 11px; }
+    .section-label { margin: 0 0 6px; color: var(--ink-3); font-size: 11px; font-weight: 750; letter-spacing: .06em; }
+    .search {
+      width: 100%;
+      height: 36px;
+      padding: 0 11px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-small);
+      background: var(--surface);
+    }
+    .search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus); outline: 0; }
+    .filter-row { display: flex; gap: 14px; margin: 10px 0 5px; border-bottom: 1px solid var(--line); }
+    .filter-tab, .view-tab {
+      padding: 7px 0 8px;
+      border: 0;
+      border-bottom: 2px solid transparent;
+      border-radius: 0;
+      background: transparent;
+      color: var(--ink-3);
+      font-weight: 700;
+    }
+    .filter-tab.active, .view-tab.active { border-bottom-color: var(--accent); color: var(--accent-strong); }
+
+    .object-list { display: grid; }
+    .object-row {
+      width: 100%;
+      padding: 13px 0;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      background: transparent;
+      text-align: left;
+    }
+    .object-row:hover .object-title { color: var(--accent-strong); }
+    .object-row.selected .object-title { color: var(--accent-strong); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 5px; }
+    .object-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .object-title { font-size: 14px; font-weight: 760; }
+    .status-text { font-size: 11px; font-weight: 700; color: var(--success); }
+    .status-text.warn { color: var(--warning); }
+    .object-desc { margin-top: 4px; color: var(--ink-3); font-size: 12px; line-height: 1.45; }
+    .object-meta { display: flex; gap: 12px; margin-top: 8px; color: var(--ink-3); font-size: 11px; }
+
+    .detail-head { padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+    .detail-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+    .detail-title { margin: 0; font-size: 21px; letter-spacing: -.03em; }
+    .detail-description { margin: 5px 0 0; color: var(--ink-3); max-width: 72ch; }
+    .detail-meta { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 12px; color: var(--ink-2); font-size: 12px; }
+    .detail-meta strong { color: var(--ink); }
+    .tabs { display: flex; gap: 22px; border-bottom: 1px solid var(--line); }
+    .view-tab { padding-top: 13px; }
+    .tab-panel { padding-top: 18px; }
+
+    .section { padding: 17px 0; border-bottom: 1px solid var(--line); }
+    .section:first-child { padding-top: 0; }
+    .section:last-child { border-bottom: 0; }
+    .section h3 { margin: 0 0 4px; font-size: 15px; }
+    .section-copy { margin: 0 0 14px; color: var(--ink-3); font-size: 12px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px 14px; }
+    .field { display: grid; gap: 6px; }
+    .field.full { grid-column: 1 / -1; }
+    .field label { color: var(--ink-2); font-size: 12px; font-weight: 700; }
+    .field input, .field select, .field textarea {
+      width: 100%;
+      min-height: 38px;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-small);
+      background: var(--surface);
+    }
+    .field textarea { min-height: 88px; resize: vertical; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus); outline: 0; }
+    .check-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .check-row:last-child { border-bottom: 0; }
+    .check-copy strong { display: block; }
+    .check-copy span { color: var(--ink-3); font-size: 11px; }
+    .check-row input { width: 17px; height: 17px; accent-color: var(--accent); }
+    .action-row { display: flex; justify-content: flex-end; gap: 8px; padding-top: 15px; }
+
+    .inspector-pane { background: var(--surface-soft); }
+    .inspector-pane .pane-inner { padding-left: 18px; padding-right: 18px; }
+    .readiness { display: flex; align-items: center; gap: 12px; padding: 12px 0 15px; border-bottom: 1px solid var(--line); }
+    .readiness-score {
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--accent);
+      border-radius: 50%;
+      color: var(--accent-strong);
+      font-size: 16px;
+      font-weight: 800;
+      background: var(--surface);
+    }
+    .readiness-copy strong { display: block; font-size: 14px; }
+    .readiness-copy span { color: var(--ink-3); font-size: 11px; }
+    .inspector-section { padding: 16px 0; border-bottom: 1px solid var(--line); }
+    .inspector-section:last-child { border-bottom: 0; }
+    .inspector-section h3 { margin: 0 0 10px; font-size: 13px; }
+    .metric-line { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 5px 0; color: var(--ink-2); }
+    .metric-line strong { color: var(--ink); font-size: 14px; }
+    .risk-list { display: grid; gap: 9px; }
+    .risk-item { display: grid; grid-template-columns: 8px 1fr; gap: 8px; align-items: start; }
+    .risk-item .dot { margin-top: 6px; }
+    .risk-item strong { display: block; font-size: 12px; }
+    .risk-item span { display: block; color: var(--ink-3); font-size: 11px; }
+    .activity { display: grid; gap: 11px; }
+    .activity-item { padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+    .activity-item:last-child { border: 0; padding-bottom: 0; }
+    .activity-item strong { display: block; font-size: 12px; }
+    .activity-item span { color: var(--ink-3); font-size: 11px; }
+
+    .data-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .data-table th, .data-table td { padding: 11px 9px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    .data-table th { color: var(--ink-3); background: var(--surface-soft); font-size: 11px; font-weight: 760; }
+    .data-table td { color: var(--ink-2); }
+    .data-table strong { color: var(--ink); }
+    .text-success { color: var(--success); font-weight: 700; }
+    .text-warning { color: var(--warning); font-weight: 700; }
+    .text-danger { color: var(--danger); font-weight: 700; }
+
+    .overview { height: 100%; overflow: auto; padding: 20px 24px 32px; }
+    .overview-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(360px, .7fr); gap: 22px; }
+    .summary-line { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; margin-bottom: 20px; }
+    .summary-cell { padding: 15px 16px; border-right: 1px solid var(--line); background: var(--surface); }
+    .summary-cell:last-child { border-right: 0; }
+    .summary-cell span { display: block; color: var(--ink-3); font-size: 11px; }
+    .summary-cell strong { display: block; margin-top: 3px; font-size: 18px; }
+    .overview-section { border-top: 1px solid var(--line); padding-top: 15px; margin-top: 20px; }
+    .overview-section:first-child { margin-top: 0; }
+    .overview-section h2 { margin: 0 0 4px; font-size: 17px; }
+    .overview-section > p { margin: 0 0 12px; color: var(--ink-3); }
+    .attention-list { border-top: 1px solid var(--line); }
+    .attention-row { display: grid; grid-template-columns: 110px minmax(0, 1fr) 130px 78px; gap: 12px; align-items: center; padding: 13px 0; border-bottom: 1px solid var(--line); }
+    .attention-domain { color: var(--ink-3); font-size: 11px; font-weight: 730; }
+    .attention-main strong { display: block; }
+    .attention-main span { color: var(--ink-3); font-size: 11px; }
+    .attention-impact { color: var(--ink-2); font-size: 12px; }
+
+    .empty-graph {
+      min-height: 270px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface-soft);
+      text-align: center;
+    }
+    .graph-copy strong { display: block; font-size: 14px; }
+    .graph-copy span { display: block; margin-top: 5px; color: var(--ink-3); }
+    .toast {
+      position: fixed;
+      right: 28px;
+      bottom: 26px;
+      z-index: 20;
+      max-width: 360px;
+      padding: 11px 14px;
+      border: 1px solid var(--line-strong);
+      border-radius: 9px;
+      background: var(--surface);
+      color: var(--ink);
+      box-shadow: 0 12px 28px rgba(32, 56, 88, .12);
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+      transition: opacity 160ms ease-out, transform 160ms ease-out;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    .prototype-label { color: var(--accent-strong); font-size: 11px; font-weight: 760; }
+
+    @media (max-width: 1450px) {
+      :root { --sidebar: 246px; --catalog: 292px; --inspector: 280px; }
+      .app-shell { gap: 10px; padding: 10px; }
+      .page-header { padding-left: 20px; padding-right: 20px; }
+      .health-strip { padding-left: 20px; padding-right: 20px; }
+      .pane-inner { padding-left: 16px; padding-right: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="top-rule"></div>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="运营控制台导航">
+      <p class="eyebrow">运营平台</p>
+      <h1 class="brand-title">运营控制台</h1>
+      <div class="account">
+        <span>平台账号</span>
+        <strong>CloudCC Platform Admin</strong>
+      </div>
+
+      <div class="sidebar-scroll">
+        <button class="nav-primary" type="button">运营总览</button>
+        <section class="nav-group">
+          <div class="nav-group-title"><span>能力治理</span><span>4</span></div>
+          <div class="nav-items" id="capability-nav">
+            <button class="nav-item active" type="button" data-view="overview">治理总览</button>
+            <button class="nav-item" type="button" data-view="skills">技能治理</button>
+            <button class="nav-item" type="button" data-view="models">模型治理</button>
+            <button class="nav-item" type="button" data-view="resources">工具与集成</button>
+          </div>
+          <p class="nav-note">围绕能力对象完成配置、发布、依赖判断与风险处置。</p>
+        </section>
+        <section class="nav-group">
+          <div class="nav-group-title"><span>运营管理</span><span>5</span></div>
+          <div class="nav-items">
+            <button class="nav-item" type="button">套餐目录</button>
+            <button class="nav-item" type="button">加购包与 Credits</button>
+            <button class="nav-item" type="button">租户目录</button>
+            <button class="nav-item" type="button">注册用户</button>
+            <button class="nav-item" type="button">演示线索</button>
+          </div>
+        </section>
+        <section class="nav-group">
+          <div class="nav-group-title"><span>风险与质量</span><span>4</span></div>
+          <div class="nav-items">
+            <button class="nav-item" type="button">质量总览</button>
+            <button class="nav-item" type="button">标准评测资产</button>
+            <button class="nav-item" type="button">运行洞察</button>
+            <button class="nav-item" type="button">平台审计</button>
+          </div>
+        </section>
+      </div>
+      <div class="sidebar-footer"><button type="button">平台偏好</button><span>2.8.62-dev.1</span></div>
+    </aside>
+
+    <main class="main-shell">
+      <header class="page-header">
+        <div>
+          <div class="breadcrumb">运营控制台 / <span id="breadcrumb-domain">能力治理</span></div>
+          <h2 class="page-title" id="page-title">能力治理总览</h2>
+          <p class="page-subtitle" id="page-subtitle">集中查看技能、模型、工具和平台集成的健康状态、待处理风险与发布变更。</p>
+        </div>
+        <div class="header-actions">
+          <span class="prototype-label">高保真原型 V1</span>
+          <button class="button" type="button" data-toast="已打开最近 30 天能力变更记录。">变更记录</button>
+          <button class="button primary" type="button" data-toast="当前没有等待执行的发布任务。">发布队列</button>
+        </div>
+      </header>
+
+      <div class="health-strip">
+        <div class="health-items">
+          <div class="health-item"><span class="dot"></span><span>技能</span><strong>17 / 17</strong></div>
+          <div class="health-item"><span class="dot warn"></span><span>模型路由</span><strong>4 / 5</strong></div>
+          <div class="health-item"><span class="dot"></span><span>工具</span><strong>23 / 23</strong></div>
+          <div class="health-item"><span class="dot warn"></span><span>托管集成</span><strong>1 / 2</strong></div>
+        </div>
+        <div class="health-summary">2 项需要处理 · 最近同步 18:47</div>
+      </div>
+
+      <section class="workspace" id="workspace"></section>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const skills = [
+      { id: "meeting", name: "AI 听记", desc: "实时转写后的结构化纪要与行动项生成。", version: "v3", state: "已启用", bindings: 6, workflows: 3, risk: "中风险" },
+      { id: "health", name: "CRM 商机健康扫描", desc: "评估推进度、停留时长与风险信号。", version: "v2", state: "已启用", bindings: 4, workflows: 2, risk: "低风险" },
+      { id: "lead", name: "CRM 线索分诊", desc: "识别线索价值并输出后续跟进建议。", version: "v1", state: "已启用", bindings: 2, workflows: 1, risk: "中风险" },
+      { id: "analysis", name: "CRM 经营分析", desc: "基于授权 CRM 数据输出经营诊断。", version: "v3", state: "已启用", bindings: 5, workflows: 4, risk: "高风险" },
+      { id: "renewal", name: "CRM 续约预警", desc: "识别续约窗口内的流失风险。", version: "v1", state: "已启用", bindings: 3, workflows: 2, risk: "中风险" },
+      { id: "delivery", name: "研发交付管理", desc: "受治理检索并确认式创建研发事项。", version: "v4", state: "待检查", bindings: 3, workflows: 3, risk: "高风险" },
+      { id: "handoff", name: "人工移交规范", desc: "约束需要人工接管的触发条件与摘要。", version: "v2", state: "已启用", bindings: 8, workflows: 5, risk: "低风险" }
+    ];
+
+    const providers = [
+      { id: "onekey", name: "OneKeyToken", state: "已启用", models: 1, route: 5, base: "https://my.onekeytoken.com/v1" },
+      { id: "aliyun", name: "阿里云百炼", state: "未启用", models: 0, route: 0, base: "https://dashscope.aliyuncs.com/compatible-mode/v1" },
+      { id: "deepseek", name: "深度求索", state: "未启用", models: 0, route: 0, base: "https://api.deepseek.com/v1" },
+      { id: "openai", name: "OpenAI", state: "未启用", models: 0, route: 0, base: "https://api.openai.com/v1" },
+      { id: "ollama", name: "本地 Ollama", state: "未启用", models: 0, route: 0, base: "http://host.docker.internal:11434/v1" }
+    ];
+
+    const tools = [
+      { name: "Semattice 记录查询", type: "业务数据", state: "可用", skills: 4, updated: "今天 17:32" },
+      { name: "Semattice 记录创建", type: "业务数据", state: "可用", skills: 2, updated: "今天 17:32" },
+      { name: "CRM 客户查询", type: "业务系统", state: "可用", skills: 5, updated: "昨天 22:18" },
+      { name: "CRM 商机查询", type: "业务系统", state: "可用", skills: 4, updated: "昨天 22:18" },
+      { name: "网络搜索", type: "平台托管", state: "待配置", skills: 1, updated: "8 月 9 日" }
+    ];
+
+    let currentView = "overview";
+    let selectedSkillId = "meeting";
+    let selectedProviderId = "onekey";
+    let skillTab = "config";
+    let modelTab = "providers";
+    let resourceTab = "tools";
+    let skillFilter = "";
+
+    const workspace = document.getElementById("workspace");
+    const pageTitle = document.getElementById("page-title");
+    const pageSubtitle = document.getElementById("page-subtitle");
+    const breadcrumbDomain = document.getElementById("breadcrumb-domain");
+    const toast = document.getElementById("toast");
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" })[char]);
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toast.classList.remove("show"), 2300);
+    }
+
+    function updateHeader(title, subtitle, domain = "能力治理") {
+      pageTitle.textContent = title;
+      pageSubtitle.textContent = subtitle;
+      breadcrumbDomain.textContent = domain;
+    }
+
+    function renderOverview() {
+      updateHeader("能力治理总览", "集中查看技能、模型、工具和平台集成的健康状态、待处理风险与发布变更。");
+      workspace.innerHTML = `
+        <div class="overview">
+          <div class="summary-line">
+            <div class="summary-cell"><span>平台标准技能</span><strong>17</strong></div>
+            <div class="summary-cell"><span>当前生效版本</span><strong>17</strong></div>
+            <div class="summary-cell"><span>可用模型</span><strong>1</strong></div>
+            <div class="summary-cell"><span>工具与集成</span><strong>25</strong></div>
+          </div>
+          <div class="overview-grid">
+            <div>
+              <section class="overview-section">
+                <div class="pane-heading"><div><h2>优先处理</h2><span>按运行影响和发布阻塞排序</span></div><button class="button text" type="button" data-view-link="overview">刷新状态</button></div>
+                <div class="attention-list">
+                  <div class="attention-row">
+                    <div class="attention-domain">模型治理</div>
+                    <div class="attention-main"><strong>客户洞察场景尚未配置模型路由</strong><span>运行时将回退到平台首个可用模型</span></div>
+                    <div class="attention-impact"><span class="text-warning">影响 2 个 Agent</span></div>
+                    <button class="button text" type="button" data-view-link="models">处理</button>
+                  </div>
+                  <div class="attention-row">
+                    <div class="attention-domain">平台集成</div>
+                    <div class="attention-main"><strong>网络搜索集成凭据待补齐</strong><span>最后检测：未执行</span></div>
+                    <div class="attention-impact"><span class="text-warning">1 项能力受限</span></div>
+                    <button class="button text" type="button" data-view-link="resources">处理</button>
+                  </div>
+                  <div class="attention-row">
+                    <div class="attention-domain">技能治理</div>
+                    <div class="attention-main"><strong>研发交付管理 v4 待完成发布预检</strong><span>3 个工作流版本引用当前模板</span></div>
+                    <div class="attention-impact"><span class="text-danger">高风险变更</span></div>
+                    <button class="button text" type="button" data-skill-link="delivery">审阅</button>
+                  </div>
+                </div>
+              </section>
+              <section class="overview-section">
+                <div class="pane-heading"><div><h2>能力域状态</h2><span>从对象、版本、依赖和运行配置判断</span></div></div>
+                <table class="data-table">
+                  <thead><tr><th>治理域</th><th>对象</th><th>生效配置</th><th>待处理</th><th>最近变更</th></tr></thead>
+                  <tbody>
+                    <tr><td><strong>技能治理</strong></td><td>17 项技能</td><td class="text-success">17 个版本</td><td>1 项预检</td><td>今天 17:10</td></tr>
+                    <tr><td><strong>模型治理</strong></td><td>7 个厂商</td><td>1 个可用模型</td><td class="text-warning">1 条路由</td><td>今天 15:42</td></tr>
+                    <tr><td><strong>工具与集成</strong></td><td>23 + 2</td><td>24 项可用</td><td class="text-warning">1 项配置</td><td>昨天 22:18</td></tr>
+                  </tbody>
+                </table>
+              </section>
+            </div>
+            <aside>
+              <section class="overview-section">
+                <div class="pane-heading"><div><h2>最近变更</h2><span>平台审计摘要</span></div></div>
+                <div class="activity">
+                  <div class="activity-item"><strong>AI 听记升级到 v3</strong><span>张宇 · 今天 17:10 · 已发布</span></div>
+                  <div class="activity-item"><strong>研发交付管理保存 v4 草稿</strong><span>王琳 · 今天 16:42 · 待预检</span></div>
+                  <div class="activity-item"><strong>聊天场景切换到 onekeytoken/auto</strong><span>系统管理员 · 今天 15:42</span></div>
+                  <div class="activity-item"><strong>Semattice 记录创建工具恢复</strong><span>健康检查 · 昨天 22:18</span></div>
+                </div>
+              </section>
+              <section class="overview-section">
+                <div class="pane-heading"><div><h2>发布纪律</h2><span>当前策略包 v1</span></div></div>
+                <div class="risk-list">
+                  <div class="risk-item"><span class="dot"></span><div><strong>先验证影响范围</strong><span>发布前必须确认绑定 Agent 与工作流版本。</span></div></div>
+                  <div class="risk-item"><span class="dot"></span><div><strong>小范围验证后扩展</strong><span>高风险技能与模型路由不得直接全量切换。</span></div></div>
+                  <div class="risk-item"><span class="dot"></span><div><strong>保留明确回滚点</strong><span>每次发布前记录当前生效版本。</span></div></div>
+                </div>
+              </section>
+            </aside>
+          </div>
+        </div>`;
+      bindSharedActions();
+    }
+
+    function skillCatalogRows() {
+      return skills.filter((skill) => `${skill.name}${skill.desc}`.toLowerCase().includes(skillFilter.toLowerCase())).map((skill) => `
+        <button class="object-row ${skill.id === selectedSkillId ? "selected" : ""}" type="button" data-skill-id="${skill.id}">
+          <div class="object-top"><span class="object-title">${escapeHtml(skill.name)}</span><span class="status-text ${skill.state === "待检查" ? "warn" : ""}">${skill.state}</span></div>
+          <div class="object-desc">${escapeHtml(skill.desc)}</div>
+          <div class="object-meta"><span>${skill.version}</span><span>${skill.bindings} 个 Agent</span><span>${skill.risk}</span></div>
+        </button>`).join("");
+    }
+
+    function skillConfigPanel(skill) {
+      return `
+        <div class="section">
+          <p class="section-label">治理配置</p>
+          <h3>租户可用策略</h3>
+          <p class="section-copy">定义租户是否可见、默认绑定方式与平台启停状态，不改变技能正文。</p>
+          <div class="form-grid">
+            <div class="field"><label for="visibility">可见性</label><select id="visibility"><option>可见</option><option>隐藏</option></select></div>
+            <div class="field"><label for="binding">绑定策略</label><select id="binding"><option>按需绑定</option><option>默认启用</option><option>强制启用</option></select></div>
+          </div>
+          <div class="check-row"><div class="check-copy"><strong>对租户启用</strong><span>关闭后，新绑定和运行时调用均不可用。</span></div><input type="checkbox" checked aria-label="对租户启用" /></div>
+        </div>
+        <div class="section">
+          <p class="section-label">当前版本</p>
+          <h3>${escapeHtml(skill.name)} ${skill.version}</h3>
+          <p class="section-copy">模板正文和边界规则通过新版本发布，不直接覆盖当前线上版本。</p>
+          <div class="form-grid">
+            <div class="field full"><label for="description">版本说明</label><textarea id="description">${escapeHtml(skill.desc)}\n本版本强化结构化输出、证据边界和人工确认要求。</textarea></div>
+            <div class="field"><label for="risk">风险等级</label><select id="risk"><option>${skill.risk}</option><option>低风险</option><option>中风险</option><option>高风险</option></select></div>
+            <div class="field"><label for="contract">输出契约</label><input id="contract" value="结构化摘要 + 行动项 + 证据说明" /></div>
+          </div>
+          <div class="action-row"><button class="button" type="button" data-toast="已恢复为当前线上版本内容。">恢复当前版本</button><button class="button primary" type="button" data-toast="治理配置已作为原型草稿保存。">保存治理配置</button></div>
+        </div>`;
+    }
+
+    function skillVersionsPanel(skill) {
+      return `
+        <div class="section">
+          <div class="pane-heading"><div><p class="section-label">版本管理</p><h3>${escapeHtml(skill.name)} 版本时间线</h3></div><button class="button primary" type="button" data-toast="已创建 ${escapeHtml(skill.name)} 的新草稿版本。">创建新草稿</button></div>
+          <p class="section-copy">发布和回滚先经过影响预检，当前对象上下文保持不变。</p>
+          <table class="data-table">
+            <thead><tr><th style="width:14%">版本</th><th style="width:19%">状态</th><th>变更说明</th><th style="width:18%">影响</th><th style="width:15%">动作</th></tr></thead>
+            <tbody>
+              <tr><td><strong>${skill.version}</strong></td><td class="text-success">当前生效</td><td>强化输出结构与人工确认要求</td><td>${skill.workflows} 个工作流</td><td>—</td></tr>
+              <tr><td><strong>v${Math.max(1, Number(skill.version.slice(1)) - 1)}</strong></td><td>可回滚</td><td>调整工具白名单和异常兜底</td><td>历史引用 1</td><td><button class="button text" type="button" data-toast="回滚前需再次确认影响范围。">回滚</button></td></tr>
+              <tr><td><strong>草稿</strong></td><td class="text-warning">待预检</td><td>补充租户数据边界和审计说明</td><td>未发布</td><td><button class="button text" type="button" data-toast="已打开草稿编辑区。">编辑</button></td></tr>
+            </tbody>
+          </table>
+        </div>`;
+    }
+
+    function skillDependencyPanel(skill) {
+      return `
+        <div class="section">
+          <div class="pane-heading"><div><p class="section-label">依赖影响</p><h3>${escapeHtml(skill.name)} 运行引用</h3></div><span>${skill.workflows} 个工作流版本 · ${skill.bindings} 个 Agent</span></div>
+          <p class="section-copy">当前视图只展示受治理引用关系，不在此处编辑 Agent 或工作流。</p>
+          ${skill.id === "lead" ? `<div class="empty-graph"><div class="graph-copy"><strong>当前技能尚未被运行版本引用</strong><span>可先完成技能配置，再由组织管理员绑定到 Agent。</span></div></div>` : `
+          <table class="data-table" aria-label="${escapeHtml(skill.name)} 依赖关系列表">
+            <thead><tr><th>引用对象</th><th>类型</th><th>关系</th><th>运行版本</th><th>状态</th></tr></thead>
+            <tbody>
+              <tr><td><strong>售后服务助手</strong></td><td>Agent</td><td>当前绑定</td><td>${skill.version}</td><td class="text-success">运行中</td></tr>
+              <tr><td><strong>客户洞察助手</strong></td><td>Agent</td><td>当前绑定</td><td>${skill.version}</td><td class="text-success">运行中</td></tr>
+              <tr><td><strong>售后处理 v6</strong></td><td>工作流版本</td><td>显式引用</td><td>${skill.version}</td><td class="text-success">已发布</td></tr>
+              <tr><td><strong>客户经营 v3</strong></td><td>工作流版本</td><td>显式引用</td><td>${skill.version}</td><td class="text-success">已发布</td></tr>
+            </tbody>
+          </table>`}
+        </div>`;
+    }
+
+    function skillInspector(skill) {
+      const score = skill.state === "待检查" ? 72 : 94;
+      return `
+        <div class="pane-inner">
+          <p class="section-label">治理检查器</p>
+          <div class="readiness"><div class="readiness-score">${score}</div><div class="readiness-copy"><strong>${score >= 90 ? "可以进入发布预检" : "仍有发布阻塞"}</strong><span>基于配置、版本和依赖自动判断</span></div></div>
+          <section class="inspector-section"><h3>影响范围</h3><div class="metric-line"><span>绑定 Agent</span><strong>${skill.bindings}</strong></div><div class="metric-line"><span>已发布工作流</span><strong>${skill.workflows}</strong></div><div class="metric-line"><span>历史版本引用</span><strong>${skill.id === "meeting" ? 1 : 0}</strong></div></section>
+          <section class="inspector-section"><h3>发布检查</h3><div class="risk-list">
+            <div class="risk-item"><span class="dot"></span><div><strong>治理配置完整</strong><span>可见性、绑定策略和启停状态有效。</span></div></div>
+            <div class="risk-item"><span class="dot"></span><div><strong>当前版本可回滚</strong><span>${skill.version} 已记录稳定回滚点。</span></div></div>
+            <div class="risk-item"><span class="dot ${skill.state === "待检查" ? "danger" : "warn"}"></span><div><strong>${skill.state === "待检查" ? "发布预检未完成" : "建议完成小范围验证"}</strong><span>${skill.state === "待检查" ? "存在高风险模板变更。" : "当前无硬阻塞，发布前仍需验证。"}</span></div></div>
+          </div></section>
+          <section class="inspector-section"><h3>最近变更</h3><div class="activity"><div class="activity-item"><strong>${skill.version} 更新模板边界</strong><span>今天 17:10 · 张宇</span></div><div class="activity-item"><strong>治理配置已校验</strong><span>昨天 20:44 · 系统检查</span></div></div></section>
+          <section class="inspector-section"><button class="button primary" style="width:100%" type="button" data-toast="发布预检已完成，原型未执行真实发布。">运行发布预检</button><button class="button text danger-text" style="margin-top:10px" type="button" data-toast="停用属于高风险操作，正式页面需二次确认。">停用当前技能</button></section>
+        </div>`;
+    }
+
+    function renderSkills() {
+      updateHeader("技能治理", "在同一工作台完成标准技能目录、治理配置、版本发布、核心策略与依赖影响。", "能力治理 / 技能治理");
+      const skill = skills.find((item) => item.id === selectedSkillId) || skills[0];
+      const panel = skillTab === "config" ? skillConfigPanel(skill) : skillTab === "versions" ? skillVersionsPanel(skill) : skillTab === "dependencies" ? skillDependencyPanel(skill) : renderPolicyPanel();
+      workspace.innerHTML = `
+        <div class="three-pane">
+          <aside class="pane catalog-pane"><div class="pane-inner">
+            <div class="pane-heading"><div><h2>标准技能</h2><span>${skills.length} 项</span></div><button class="button text" type="button" data-skill-tab="policy">核心策略包 v1</button></div>
+            <input class="search" id="skill-search" placeholder="搜索技能名称或能力说明" value="${escapeHtml(skillFilter)}" />
+            <div class="filter-row"><button class="filter-tab active" type="button">全部</button><button class="filter-tab" type="button">已启用</button><button class="filter-tab" type="button">待检查</button></div>
+            <div class="object-list" id="skill-list">${skillCatalogRows()}</div>
+          </div></aside>
+          <article class="pane content-pane"><div class="pane-inner">
+            <header class="detail-head">
+              <div class="detail-title-row"><div><p class="section-label">平台标准技能</p><h2 class="detail-title">${escapeHtml(skill.name)}</h2><p class="detail-description">${escapeHtml(skill.desc)}</p></div><button class="button" type="button" data-toast="已打开只读版本对比。">对比版本</button></div>
+              <div class="detail-meta"><span><strong>${skill.version}</strong> 当前版本</span><span><strong>${skill.risk}</strong></span><span><strong>${skill.state}</strong></span><span>最近更新 今天 17:10</span></div>
+            </header>
+            <div class="tabs" role="tablist" aria-label="技能治理视图">
+              <button class="view-tab ${skillTab === "config" ? "active" : ""}" type="button" data-skill-tab="config">治理配置</button>
+              <button class="view-tab ${skillTab === "versions" ? "active" : ""}" type="button" data-skill-tab="versions">版本管理</button>
+              <button class="view-tab ${skillTab === "dependencies" ? "active" : ""}" type="button" data-skill-tab="dependencies">依赖影响</button>
+              <button class="view-tab ${skillTab === "policy" ? "active" : ""}" type="button" data-skill-tab="policy">核心策略包</button>
+            </div>
+            <div class="tab-panel">${panel}</div>
+          </div></article>
+          <aside class="pane inspector-pane">${skillInspector(skill)}</aside>
+        </div>`;
+      bindSkillActions();
+      bindSharedActions();
+    }
+
+    function renderPolicyPanel() {
+      return `
+        <div class="section">
+          <div class="pane-heading"><div><p class="section-label">跨技能策略</p><h3>核心策略包 v1</h3></div><span class="text-success">当前生效</span></div>
+          <p class="section-copy">集中管理所有平台标准技能共同遵循的证据边界、人工确认和异常移交规则。</p>
+          <div class="form-grid">
+            <div class="field"><label for="policy-name">策略名称</label><input id="policy-name" value="AgentCiCi 核心运行策略" /></div>
+            <div class="field"><label for="policy-scope">来源技能</label><input id="policy-scope" value="conversation-core, safe-handoff" /></div>
+            <div class="field full"><label for="policy-content">策略正文</label><textarea id="policy-content">所有高风险写操作必须在用户明确确认后执行。\n回答必须区分事实、推断与待确认项。\n工具执行失败时不得声称业务已完成。</textarea></div>
+          </div>
+          <div class="action-row"><button class="button" type="button" data-toast="已装载策略包历史版本。">查看历史版本</button><button class="button primary" type="button" data-toast="已创建核心策略包草稿 v2。">保存为草稿 v2</button></div>
+        </div>`;
+    }
+
+    function renderModels() {
+      updateHeader("模型治理", "统一维护模型厂商、可用模型目录与各业务场景的运行路由。", "能力治理 / 模型治理");
+      const provider = providers.find((item) => item.id === selectedProviderId) || providers[0];
+      workspace.innerHTML = `
+        <div class="three-pane">
+          <aside class="pane catalog-pane"><div class="pane-inner">
+            <div class="pane-heading"><div><h2>模型厂商</h2><span>7 个厂商</span></div><button class="button text" type="button" data-toast="已刷新厂商运行状态。">刷新</button></div>
+            <input class="search" placeholder="搜索模型厂商" />
+            <div class="filter-row"><button class="filter-tab active" type="button">全部</button><button class="filter-tab" type="button">已启用</button></div>
+            <div class="object-list">${providers.map((item) => `
+              <button class="object-row ${item.id === selectedProviderId ? "selected" : ""}" type="button" data-provider-id="${item.id}">
+                <div class="object-top"><span class="object-title">${escapeHtml(item.name)}</span><span class="status-text ${item.state !== "已启用" ? "warn" : ""}">${item.state}</span></div>
+                <div class="object-desc">${escapeHtml(item.base)}</div>
+                <div class="object-meta"><span>${item.models} 个模型</span><span>${item.route} 条路由</span></div>
+              </button>`).join("")}</div>
+          </div></aside>
+          <article class="pane content-pane"><div class="pane-inner">
+            <header class="detail-head"><div class="detail-title-row"><div><p class="section-label">模型厂商</p><h2 class="detail-title">${escapeHtml(provider.name)}</h2><p class="detail-description">维护平台级凭据、API 地址与允许运行的模型目录。</p></div><button class="button" type="button" data-toast="连接检测成功，验证模型为 onekeytoken/auto。">检测连接</button></div><div class="detail-meta"><span><strong>${provider.state}</strong></span><span><strong>${provider.models}</strong> 个可用模型</span><span><strong>${provider.route}</strong> 条场景路由</span></div></header>
+            <div class="tabs" role="tablist"><button class="view-tab ${modelTab === "providers" ? "active" : ""}" type="button" data-model-tab="providers">厂商与模型</button><button class="view-tab ${modelTab === "routes" ? "active" : ""}" type="button" data-model-tab="routes">场景路由</button></div>
+            <div class="tab-panel">${modelTab === "providers" ? `
+              <div class="section"><p class="section-label">连接配置</p><h3>厂商接入</h3><p class="section-copy">凭据保存后不再明文显示，检测使用当前输入但不会自动保存。</p><div class="form-grid"><div class="field full"><label>API 地址</label><input value="${escapeHtml(provider.base)}" /></div><div class="field full"><label>API Key</label><input type="password" value="••••••••••••••••••••" /></div></div><div class="check-row"><div class="check-copy"><strong>启用厂商</strong><span>只有检测通过且目录中存在允许模型时才可用于路由。</span></div><input type="checkbox" ${provider.state === "已启用" ? "checked" : ""} /></div><div class="action-row"><button class="button" type="button" data-toast="已拉取远程模型目录。">拉取目录</button><button class="button primary" type="button" data-toast="模型厂商配置已保存为原型状态。">保存配置</button></div></div>
+              <div class="section"><div class="pane-heading"><div><p class="section-label">允许运行</p><h3>平台模型目录</h3></div><span>已选 ${provider.models} 个</span></div><table class="data-table"><thead><tr><th>模型</th><th>能力</th><th>计费归属</th><th>状态</th></tr></thead><tbody><tr><td><strong>onekeytoken/auto</strong></td><td>Chat Completions</td><td>平台托管</td><td class="text-success">可用于路由</td></tr></tbody></table></div>` : `
+              <div class="section"><div class="pane-heading"><div><p class="section-label">运行路由</p><h3>场景模型路由</h3></div><button class="button primary" type="button" data-toast="场景路由变更已保存。">保存路由</button></div><p class="section-copy">场景优先使用显式路由；失效时按平台目录和 Agent 偏好顺序回退。</p><table class="data-table"><thead><tr><th>业务场景</th><th>当前模型</th><th>状态</th><th>最近验证</th></tr></thead><tbody><tr><td><strong>对话运行</strong></td><td>onekeytoken/auto</td><td class="text-success">有效</td><td>今天 18:30</td></tr><tr><td><strong>技能编写</strong></td><td>onekeytoken/auto</td><td class="text-success">有效</td><td>今天 18:30</td></tr><tr><td><strong>AI 听记</strong></td><td>onekeytoken/auto</td><td class="text-success">有效</td><td>今天 17:10</td></tr><tr><td><strong>客户洞察</strong></td><td>未配置</td><td class="text-warning">使用回退</td><td>—</td></tr><tr><td><strong>评测运行</strong></td><td>onekeytoken/auto</td><td class="text-success">有效</td><td>昨天 20:18</td></tr></tbody></table></div>`}</div>
+          </div></article>
+          <aside class="pane inspector-pane"><div class="pane-inner"><p class="section-label">模型检查器</p><div class="readiness"><div class="readiness-score">80</div><div class="readiness-copy"><strong>1 条路由待处理</strong><span>其余运行配置有效</span></div></div><section class="inspector-section"><h3>运行摘要</h3><div class="metric-line"><span>启用厂商</span><strong>1</strong></div><div class="metric-line"><span>可用模型</span><strong>1</strong></div><div class="metric-line"><span>有效路由</span><strong>4 / 5</strong></div></section><section class="inspector-section"><h3>风险提示</h3><div class="risk-list"><div class="risk-item"><span class="dot warn"></span><div><strong>客户洞察使用回退</strong><span>建议显式绑定模型并完成真实检测。</span></div></div><div class="risk-item"><span class="dot"></span><div><strong>凭据保持脱敏</strong><span>页面和日志均不应输出保存后的 Key。</span></div></div></div></section><section class="inspector-section"><h3>最近检测</h3><div class="activity-item"><strong>OneKeyToken 连接成功</strong><span>resolvedModel=qwen3.5-flash · 18:30</span></div></section></div></aside>
+        </div>`;
+      bindModelActions();
+      bindSharedActions();
+    }
+
+    function renderResources() {
+      updateHeader("工具与集成", "统一查看运行工具和平台托管集成，配置动作仍保持各自权限与检测边界。", "能力治理 / 工具与集成");
+      workspace.innerHTML = `
+        <div class="two-pane">
+          <article class="pane content-pane"><div class="pane-inner">
+            <header class="detail-head"><div class="detail-title-row"><div><p class="section-label">运行能力</p><h2 class="detail-title">工具与平台集成</h2><p class="detail-description">工具决定 Agent 可以执行什么，平台集成提供受托管的外部能力与凭据。</p></div><button class="button primary" type="button" data-toast="已打开新增平台工具流程。">新增平台工具</button></div><div class="detail-meta"><span><strong>23</strong> 个工具</span><span><strong>2</strong> 个托管集成</span><span><strong>1</strong> 项待配置</span></div></header>
+            <div class="tabs"><button class="view-tab ${resourceTab === "tools" ? "active" : ""}" type="button" data-resource-tab="tools">工具目录</button><button class="view-tab ${resourceTab === "integrations" ? "active" : ""}" type="button" data-resource-tab="integrations">平台集成</button></div>
+            <div class="tab-panel">${resourceTab === "tools" ? `
+              <div class="section"><div class="pane-heading"><div><p class="section-label">可执行能力</p><h3>平台工具目录</h3></div><input class="search" style="width:280px" placeholder="搜索工具名称" /></div><table class="data-table"><thead><tr><th>工具</th><th>类型</th><th>关联技能</th><th>状态</th><th>最近更新</th></tr></thead><tbody>${tools.map((tool) => `<tr><td><strong>${escapeHtml(tool.name)}</strong></td><td>${tool.type}</td><td>${tool.skills}</td><td class="${tool.state === "可用" ? "text-success" : "text-warning"}">${tool.state}</td><td>${tool.updated}</td></tr>`).join("")}</tbody></table></div>` : `
+              <div class="section"><p class="section-label">平台托管</p><h3>外部能力集成</h3><p class="section-copy">这些配置由平台统一维护，租户管理员不能覆盖凭据。</p><table class="data-table"><thead><tr><th>集成</th><th>用途</th><th>配置状态</th><th>最近检测</th><th>动作</th></tr></thead><tbody><tr><td><strong>网络搜索</strong></td><td>为 Agent 提供互联网检索</td><td class="text-warning">待配置凭据</td><td>未检测</td><td><button class="button text" type="button" data-toast="已打开网络搜索集成配置。">配置</button></td></tr><tr><td><strong>实时语音转写</strong></td><td>AI 听记实时语音识别</td><td class="text-success">已启用</td><td>今天 16:20</td><td><button class="button text" type="button" data-toast="已打开实时语音转写配置。">查看</button></td></tr></tbody></table></div>`}</div>
+          </div></article>
+          <aside class="pane inspector-pane"><div class="pane-inner"><p class="section-label">能力检查器</p><div class="readiness"><div class="readiness-score">92</div><div class="readiness-copy"><strong>核心工具运行正常</strong><span>1 项非核心集成待配置</span></div></div><section class="inspector-section"><h3>使用范围</h3><div class="metric-line"><span>被技能引用</span><strong>14</strong></div><div class="metric-line"><span>被工作流引用</span><strong>11</strong></div><div class="metric-line"><span>高风险工具</span><strong>3</strong></div></section><section class="inspector-section"><h3>治理要求</h3><div class="risk-list"><div class="risk-item"><span class="dot"></span><div><strong>写工具需要确认</strong><span>创建、更新和审批动作必须有用户确认。</span></div></div><div class="risk-item"><span class="dot"></span><div><strong>凭据由平台托管</strong><span>组织侧不能读取或替换平台 Secret。</span></div></div><div class="risk-item"><span class="dot warn"></span><div><strong>网络搜索未就绪</strong><span>依赖该集成的技能将无法联网检索。</span></div></div></div></section></div></aside>
+        </div>`;
+      bindResourceActions();
+      bindSharedActions();
+    }
+
+    function setView(view) {
+      currentView = view;
+      document.querySelectorAll("[data-view]").forEach((button) => button.classList.toggle("active", button.dataset.view === view));
+      if (view === "overview") renderOverview();
+      if (view === "skills") renderSkills();
+      if (view === "models") renderModels();
+      if (view === "resources") renderResources();
+    }
+
+    function bindSkillRows() {
+      document.querySelectorAll("[data-skill-id]").forEach((button) => button.addEventListener("click", () => { selectedSkillId = button.dataset.skillId; skillTab = "config"; renderSkills(); }));
+    }
+
+    function bindSkillActions() {
+      bindSkillRows();
+      document.querySelectorAll("[data-skill-tab]").forEach((button) => button.addEventListener("click", () => { skillTab = button.dataset.skillTab; renderSkills(); }));
+      const search = document.getElementById("skill-search");
+      if (search) search.addEventListener("input", (event) => { skillFilter = event.target.value; document.getElementById("skill-list").innerHTML = skillCatalogRows(); bindSkillRows(); });
+    }
+
+    function bindModelActions() {
+      document.querySelectorAll("[data-provider-id]").forEach((button) => button.addEventListener("click", () => { selectedProviderId = button.dataset.providerId; renderModels(); }));
+      document.querySelectorAll("[data-model-tab]").forEach((button) => button.addEventListener("click", () => { modelTab = button.dataset.modelTab; renderModels(); }));
+    }
+
+    function bindResourceActions() {
+      document.querySelectorAll("[data-resource-tab]").forEach((button) => button.addEventListener("click", () => { resourceTab = button.dataset.resourceTab; renderResources(); }));
+    }
+
+    function bindSharedActions() {
+      document.querySelectorAll("[data-toast]").forEach((button) => button.addEventListener("click", () => showToast(button.dataset.toast)));
+      document.querySelectorAll("[data-view-link]").forEach((button) => button.addEventListener("click", () => setView(button.dataset.viewLink)));
+      document.querySelectorAll("[data-skill-link]").forEach((button) => button.addEventListener("click", () => { selectedSkillId = button.dataset.skillLink; skillTab = "config"; setView("skills"); }));
+    }
+
+    document.querySelectorAll("[data-view]").forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
+    document.querySelectorAll("[data-toast]").forEach((button) => button.addEventListener("click", () => showToast(button.dataset.toast)));
+    renderOverview();
+  </script>
+</body>
+</html>
