@@ -7,6 +7,7 @@ import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.codehouse.ciciassistant.integration.service.IntegrationAppService;
 import com.codehouse.ciciassistant.platform.service.PlatformAuditService;
 import com.codehouse.ciciassistant.tenant.TenantContext;
+import com.codehouse.ciciassistant.tool.codeinterpreter.SandboxCodeInterpreterService;
 import com.codehouse.ciciassistant.tool.tavily.TavilyToolService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -26,15 +27,18 @@ public class PlatformIntegrationAppController {
 
     private final IntegrationAppService integrationAppService;
     private final TavilyToolService tavilyToolService;
+    private final SandboxCodeInterpreterService sandboxCodeInterpreterService;
     private final PlatformAuditService platformAuditService;
     private final PlatformAccountProperties platformAccountProperties;
 
     public PlatformIntegrationAppController(IntegrationAppService integrationAppService,
                                             TavilyToolService tavilyToolService,
+                                            SandboxCodeInterpreterService sandboxCodeInterpreterService,
                                             PlatformAuditService platformAuditService,
                                             PlatformAccountProperties platformAccountProperties) {
         this.integrationAppService = integrationAppService;
         this.tavilyToolService = tavilyToolService;
+        this.sandboxCodeInterpreterService = sandboxCodeInterpreterService;
         this.platformAuditService = platformAuditService;
         this.platformAccountProperties = platformAccountProperties;
     }
@@ -49,6 +53,9 @@ public class PlatformIntegrationAppController {
     public ApiResponse<Map<String, Object>> update(
             @PathVariable String appCode,
             @Valid @RequestBody UpdateIntegrationAppRequest request) {
+        if (IntegrationAppService.APP_CODE_CODE_INTERPRETER.equals(appCode)) {
+            sandboxCodeInterpreterService.validateConfigurationDraft(request.config());
+        }
         Map<String, Object> payload = integrationAppService.updatePlatformManaged(
                 appCode,
                 request.enabled(),
@@ -63,6 +70,19 @@ public class PlatformIntegrationAppController {
     public ApiResponse<Map<String, Object>> testTavily(@RequestBody(required = false) TestTavilyRequest request) {
         String override = request == null ? null : request.apiKey();
         return ApiResponse.ok(tavilyToolService.testConnection(platformScopeId(), override));
+    }
+
+    @PostMapping("/code-interpreter/test")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
+    public ApiResponse<Map<String, Object>> testCodeInterpreter(
+            @RequestBody(required = false) TestCodeInterpreterRequest request) {
+        String apiKey = request == null ? null : request.apiKey();
+        String apiBaseUrl = request == null ? null : request.apiBaseUrl();
+        String model = request == null ? null : request.model();
+        Map<String, Object> result = sandboxCodeInterpreterService.testConnection(apiKey, apiBaseUrl, model);
+        writeAudit("platform.integration.test", IntegrationAppService.APP_CODE_CODE_INTERPRETER,
+                "ok=" + result.getOrDefault("ok", false));
+        return ApiResponse.ok(result);
     }
 
     private void writeAudit(String eventType, String resourceKey, String detail) {
@@ -91,5 +111,8 @@ public class PlatformIntegrationAppController {
     }
 
     public record TestTavilyRequest(String apiKey) {
+    }
+
+    public record TestCodeInterpreterRequest(String apiKey, String apiBaseUrl, String model) {
     }
 }

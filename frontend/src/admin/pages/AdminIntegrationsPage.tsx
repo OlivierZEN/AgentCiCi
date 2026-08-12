@@ -38,6 +38,7 @@ const SECRET_FIELDS: Record<string, string[]> = {
   cloudcc_crm: ["secretKey"],
   feishu_bot: ["appSecret"],
   iflytek_asr: ["accessKeySecret"],
+  code_interpreter: ["apiKey"],
 };
 
 type FieldMeta = {
@@ -144,6 +145,36 @@ const FIELD_META: Record<string, Record<string, FieldMeta>> = {
       hint: "默认 com，按讯飞实时转写服务的领域参数传递。",
     },
   },
+  code_interpreter: {
+    apiKey: {
+      label: "API Key",
+      required: true,
+      placeholder: "sk-ws-xxxxxxxxxxxxxxxx",
+      hint: "阿里云百炼业务空间 API Key。保存后加密存储且不再明文展示；留空或保留掩码继续使用现有 Key。",
+    },
+    apiBaseUrl: {
+      label: "API Host",
+      required: true,
+      placeholder: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      hint: "填写百炼控制台为当前地域和业务空间提供的 OpenAI 兼容 API Host，仅接受 aliyuncs.com 的 HTTPS 地址。",
+    },
+    model: {
+      label: "执行模型",
+      required: true,
+      placeholder: "qwen3.5-plus",
+      hint: "填写支持代码解释器的模型。建议使用当前百炼文档列出的 Qwen Plus 或 Max 系列。",
+    },
+    timeoutMs: {
+      label: "请求超时（毫秒）",
+      placeholder: "120000",
+      hint: "允许 10000–180000。代码解释器可能进行多轮模型推理，建议保留 120000。",
+    },
+    maxInputChars: {
+      label: "最大输入字符数",
+      placeholder: "12000",
+      hint: "允许 1000–50000，用于限制单次任务和文本数据规模。",
+    },
+  },
 };
 
 function getFieldMeta(appCode: string, key: string): FieldMeta {
@@ -216,6 +247,37 @@ export function IntegrationSettingsPage({ token, apiBase, title, subtitle, class
       const payload = (json.data ?? {}) as { ok?: boolean; latencyMs?: number; resultCount?: number; code?: string; message?: string };
       if (payload.ok) {
         setTestResult(`测试成功：${payload.latencyMs ?? 0}ms，返回 ${payload.resultCount ?? 0} 条结果`);
+      } else {
+        setTestResult(`测试失败（${payload.code ?? "ERROR"}）：${payload.message ?? ""}`);
+      }
+    } catch (err) {
+      setTestResult(`测试失败：${(err as Error).message}`);
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const testCodeInterpreter = async () => {
+    if (!editing || editing.appCode !== "code_interpreter") return;
+    setTesting(true);
+    setTestResult("");
+    try {
+      const apiKey = form.apiKey && form.apiKey !== "bailian-****" ? form.apiKey : "";
+      const res = await fetch(`${apiBase}/code-interpreter/test`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ apiKey, apiBaseUrl: form.apiBaseUrl ?? "", model: form.model ?? "" }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        setTestResult(`测试失败：${json.message ?? "unknown error"}`);
+        return;
+      }
+      const payload = (json.data ?? {}) as {
+        ok?: boolean; latencyMs?: number; model?: string; codeInterpreterCalls?: number; code?: string; message?: string;
+      };
+      if (payload.ok) {
+        setTestResult(`测试成功：${payload.model ?? "已配置模型"}，沙箱调用 ${payload.codeInterpreterCalls ?? 0} 次，${payload.latencyMs ?? 0}ms`);
       } else {
         setTestResult(`测试失败（${payload.code ?? "ERROR"}）：${payload.message ?? ""}`);
       }
@@ -400,6 +462,16 @@ export function IntegrationSettingsPage({ token, apiBase, title, subtitle, class
                   onClick={() => void testTavily()}
                 >
                   {testing ? "测试中..." : "测试连接"}
+                </button>
+              )}
+              {editing.appCode === "code_interpreter" && (
+                <button
+                  type="button"
+                  className="cici-btn cici-btn--ghost"
+                  disabled={testing}
+                  onClick={() => void testCodeInterpreter()}
+                >
+                  {testing ? "测试中..." : "测试沙箱"}
                 </button>
               )}
               <button type="button" className="cici-btn cici-btn--primary" disabled={saving} onClick={() => void save()}>

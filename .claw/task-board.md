@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-12T07:36:57Z
+updated_at: 2026-08-12T11:05:00Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-291 - 平台代码解释器集成与内置工具
+
+- status: `review`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-175-platform-code-interpreter-integration.md`
+- task_status_path: `.claw/tasks/TASK-291.md`
+- blocked_by: `none`
+- next_action: 提交并合并本地 main，从主线重建本地 backend/frontend，完成平台接口、工具目录、容器与版本回读。
 
 ### TASK-290 - 管理端新增成员公共编号回读修复
 

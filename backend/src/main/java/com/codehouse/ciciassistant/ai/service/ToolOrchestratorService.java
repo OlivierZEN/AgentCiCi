@@ -12,6 +12,7 @@ import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryToolService
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryReviewToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryWriteToolService;
 import com.codehouse.ciciassistant.skill.service.SkillApiToolService;
+import com.codehouse.ciciassistant.tool.codeinterpreter.SandboxCodeInterpreterService;
 import com.codehouse.ciciassistant.tool.service.ToolNameNormalizer;
 import com.codehouse.ciciassistant.tool.tavily.TavilyToolService;
 import com.codehouse.ciciassistant.userworkflow.service.AssistantScheduleToolService;
@@ -47,6 +48,7 @@ public class ToolOrchestratorService {
     private final EmailToolService emailToolService;
     private final UserMemoryService userMemoryService;
     private final TavilyToolService tavilyToolService;
+    private SandboxCodeInterpreterService sandboxCodeInterpreterService;
     private final PlatformGovernanceService platformGovernanceService;
     private final SkillApiToolService skillApiToolService;
     private final SematticeProjectDeliveryToolService sematticeProjectDeliveryToolService;
@@ -87,6 +89,11 @@ public class ToolOrchestratorService {
     @Autowired(required = false)
     void setAssistantScheduleToolService(AssistantScheduleToolService assistantScheduleToolService) {
         this.assistantScheduleToolService = assistantScheduleToolService;
+    }
+
+    @Autowired(required = false)
+    void setSandboxCodeInterpreterService(SandboxCodeInterpreterService sandboxCodeInterpreterService) {
+        this.sandboxCodeInterpreterService = sandboxCodeInterpreterService;
     }
 
     /**
@@ -162,6 +169,12 @@ public class ToolOrchestratorService {
                 continue;
             }
             result.add(tavilyToolService.toolDefinition(toolName));
+        }
+
+        if (sandboxCodeInterpreterService != null
+                && isAllowed(normalizedAllowedToolNames, SandboxCodeInterpreterService.TOOL_NAME, false)
+                && platformGovernanceService.isRuntimeToolEnabled(companyId, SandboxCodeInterpreterService.TOOL_NAME)) {
+            result.add(sandboxCodeInterpreterService.toolDefinition());
         }
 
         // Skill-private declarative API tools are injected only from the resolved active skill context.
@@ -333,6 +346,13 @@ public class ToolOrchestratorService {
         if (canonicalToolName != null && canonicalToolName.startsWith("tavily_") && TavilyToolService.ALL_TOOL_NAMES.contains(canonicalToolName)) {
             return safeToolResult(companyId, userId, canonicalToolName,
                     tavilyToolService.dispatch(companyId, userId, canonicalToolName, safeArgumentsJson));
+        }
+
+        if (SandboxCodeInterpreterService.TOOL_NAME.equals(canonicalToolName)) {
+            return sandboxCodeInterpreterService == null
+                    ? "Code interpreter service is not ready"
+                    : safeToolResult(companyId, userId, canonicalToolName,
+                            sandboxCodeInterpreterService.dispatch(companyId, userId, safeArgumentsJson));
         }
 
         // MCP-discovered tools
