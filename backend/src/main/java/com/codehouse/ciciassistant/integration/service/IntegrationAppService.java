@@ -272,7 +272,7 @@ public class IntegrationAppService {
             maskSecrets(config, "accessKeySecret", IFLYTEK_SECRET_MASK);
         } else if (APP_CODE_CODE_INTERPRETER.equals(e.getAppCode())) {
             maskSecrets(config, "apiKey", CODE_INTERPRETER_SECRET_MASK);
-            config.putIfAbsent("apiBaseUrl", "https://dashscope.aliyuncs.com/compatible-mode/v1");
+            config.putIfAbsent("apiBaseUrl", "");
             config.putIfAbsent("model", "qwen3.5-plus");
             config.putIfAbsent("timeoutMs", "120000");
             config.putIfAbsent("maxInputChars", "12000");
@@ -346,9 +346,6 @@ public class IntegrationAppService {
                 }
             }
             if (APP_CODE_CODE_INTERPRETER.equals(def.appCode())) {
-                if ((v == null || String.valueOf(v).isBlank()) && "apiBaseUrl".equals(key)) {
-                    v = "https://dashscope.aliyuncs.com/compatible-mode/v1";
-                }
                 if ((v == null || String.valueOf(v).isBlank()) && "model".equals(key)) {
                     v = "qwen3.5-plus";
                 }
