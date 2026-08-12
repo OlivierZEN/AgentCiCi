@@ -110,6 +110,9 @@ const router = createBrowserRouter(createRoutesFromElements(
             <Route path="skills" element={<PlatformSkillsPage />} />
             <Route path="skills/policies" element={<PlatformSkillsPage />} />
             <Route path="skills/dependencies" element={<PlatformSkillsPage />} />
+            <Route path="skills/policy/edit" element={<PlatformSkillsPage />} />
+            <Route path="skills/:skillId/edit" element={<PlatformSkillsPage />} />
+            <Route path="skills/:skillId/preview" element={<PlatformSkillsPage />} />
             <Route path="skills/:skillId" element={<PlatformSkillsPage />} />
             <Route path="tools" element={<PlatformToolsPage />} />
             <Route path="tools/:toolName" element={<PlatformToolsPage />} />

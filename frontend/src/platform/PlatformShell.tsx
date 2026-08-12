@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, ChevronRight, Palette } from "lucide-react";
 import { NavLink, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { authFetch, clearAuthPayload, readAuthPayload, writeAuthPayload } from "../auth/authStorage";
@@ -15,6 +15,62 @@ type AuthPayload = {
   displayName?: string;
   themeCode?: string;
 };
+
+export type PlatformNavigationItem = {
+  to: string;
+  label: string;
+  end?: boolean;
+  activePrefixes?: string[];
+};
+
+type PlatformNavigationGroup = {
+  id: string;
+  label: string;
+  items: PlatformNavigationItem[];
+};
+
+export const PLATFORM_NAVIGATION_GROUPS: PlatformNavigationGroup[] = [
+  {
+    id: "capability",
+    label: "能力治理",
+    items: [
+      { to: "/platform/skills", label: "技能治理", activePrefixes: ["/platform/skills"] },
+      { to: "/platform/models/providers", label: "模型配置", activePrefixes: ["/platform/models"] },
+      { to: "/platform/integrations", label: "平台集成" },
+      { to: "/platform/tools", label: "工具目录" },
+    ],
+  },
+  {
+    id: "operations",
+    label: "运营管理",
+    items: [
+      { to: "/platform/billing", label: "套餐目录", end: true },
+      { to: "/platform/billing/packages", label: "加购包与 Credits" },
+      { to: "/platform/tenants", label: "租户目录" },
+      { to: "/platform/registered-users", label: "注册用户" },
+      { to: "/platform/demo-leads", label: "演示线索" },
+    ],
+  },
+  {
+    id: "quality",
+    label: "风险与质量",
+    items: [
+      { to: "/platform/evaluation", label: "质量总览", end: true },
+      { to: "/platform/evaluation/suites", label: "标准评测资产" },
+      { to: "/platform/evaluation/runs", label: "运行洞察" },
+      { to: "/platform/audit", label: "平台审计" },
+    ],
+  },
+];
+
+function pathMatchesPrefix(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+export function isPlatformNavigationItemActive(item: PlatformNavigationItem, pathname: string): boolean {
+  if (item.activePrefixes?.some((prefix) => pathMatchesPrefix(pathname, prefix))) return true;
+  return item.end ? pathname === item.to : pathMatchesPrefix(pathname, item.to);
+}
 
 function readAuth(): AuthPayload | null {
   return readAuthPayload<AuthPayload>(LS_PLATFORM_TOKEN);
@@ -39,43 +95,6 @@ export default function PlatformShell() {
   });
   const nav = useNavigate();
   const location = useLocation();
-
-  const navigationGroups = useMemo(() => [
-    {
-      id: "capability",
-      label: "能力治理",
-      items: [
-        { to: "/platform/skills", label: "技能目录", end: true },
-        { to: "/platform/skills/policies", label: "策略与版本" },
-        { to: "/platform/skills/dependencies", label: "依赖与影响" },
-        { to: "/platform/models/providers", label: "模型厂商与目录" },
-        { to: "/platform/models/routes", label: "场景模型路由" },
-        { to: "/platform/integrations", label: "平台集成" },
-        { to: "/platform/tools", label: "工具目录" },
-      ],
-    },
-    {
-      id: "operations",
-      label: "运营管理",
-      items: [
-        { to: "/platform/billing", label: "套餐目录", end: true },
-        { to: "/platform/billing/packages", label: "加购包与 Credits" },
-        { to: "/platform/tenants", label: "租户目录" },
-        { to: "/platform/registered-users", label: "注册用户" },
-        { to: "/platform/demo-leads", label: "演示线索" },
-      ],
-    },
-    {
-      id: "quality",
-      label: "风险与质量",
-      items: [
-        { to: "/platform/evaluation", label: "质量总览", end: true },
-        { to: "/platform/evaluation/suites", label: "标准评测资产" },
-        { to: "/platform/evaluation/runs", label: "运行洞察" },
-        { to: "/platform/audit", label: "平台审计" },
-      ],
-    },
-  ], []);
 
   useAuthStorageSync<AuthPayload>(LS_PLATFORM_TOKEN, (payload) => {
     setAuth(payload);
@@ -126,8 +145,8 @@ export default function PlatformShell() {
           <NavLink to="/platform" end className={({ isActive }) => (isActive ? "active" : "")}>
             <span>运营总览</span>
           </NavLink>
-          {navigationGroups.map((group) => {
-            const groupActive = group.items.some((item) => location.pathname === item.to || location.pathname.startsWith(`${item.to}/`));
+          {PLATFORM_NAVIGATION_GROUPS.map((group) => {
+            const groupActive = group.items.some((item) => isPlatformNavigationItemActive(item, location.pathname));
             const expanded = expandedGroups[group.id];
             return (
               <section key={group.id} className={`platform-nav__group${groupActive ? " is-active" : ""}`}>
@@ -143,7 +162,12 @@ export default function PlatformShell() {
                 {expanded ? (
                   <div className="platform-nav__subnav">
                     {group.items.map((item) => (
-                      <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => (isActive ? "active" : "")}>
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        end={item.end}
+                        className={() => (isPlatformNavigationItemActive(item, location.pathname) ? "active" : "")}
+                      >
                         <span>{item.label}</span>
                       </NavLink>
                     ))}
