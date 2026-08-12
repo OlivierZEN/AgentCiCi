@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-08-12T07:27:07Z
+updated_at: 2026-08-12T07:36:57Z
 updated_by: codex
 status: active
 ---
@@ -14,8 +14,8 @@ status: active
   - Symptom: 组织管理端添加全新成员失败，页面提示 `Global account public ID is not available`。
   - Verified root cause: `AdminUserService` 在插入全局账号后用同事务 Repository `findById` 回读，JPA 一级缓存返回触发器执行前的旧实体，导致 Keycloak provisioning 读取到空 `public_id`；租户 Owner 创建链路已有 `EntityManager.refresh`，成员邀请链路遗漏。
   - Safety evidence: UAT 故障目标的 account/identifier/member/identity 均为 0，事务完整回滚，无半成品数据。
-  - Resolution progress: TASK-290 / FEAT-174 已改为 flush 后 refresh，并增加 provisioning 前公共编号存在的回归测试；后端 package 已通过，待本地 main 归并和本地全栈验证。
-  - Status: in progress (critical; UAT 尚未发布修复)。
+  - Resolution progress: TASK-290 / FEAT-174 已改为 flush 后 refresh，并增加 provisioning 前公共编号存在的回归测试；提交 `ab1b02c` 已进入本地 main，定向测试、package 和本地全栈 backend 验证通过。
+  - Status: code verified locally (critical; UAT 尚未发布修复，真实成员新增待业务验收)。
 
 - ISSUE-2026-08-10-new-tenant-owner-missing-oidc:
   - Symptom: 平台开通的新租户 Owner 无法通过生产 OIDC 登录；目标邮箱和手机号在 AgentCiCi 与 Keycloak 均无有效身份记录，登录事件为 `user_not_found`。

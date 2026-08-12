@@ -1,14 +1,25 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-12T06:55:03Z
+updated_at: 2026-08-12T07:36:57Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-12T06:55:03Z
-last_run_status: passed_with_authorized_visual_pending
+last_run_at: 2026-08-12T07:36:57Z
+last_run_status: passed_with_uat_business_acceptance_pending
 ---
 
 # Test Report
+
+## 2026-08-12 TASK-290 管理端新增成员公共编号回读修复
+
+- UAT 诊断：实际运行 `2.8.61-beta.16 / aef334205280`，health=`UP` 且公共 smoke 全部通过；故障目标手机号、邮箱的 account/identifier/member/identity 计数均为 0，证明失败事务完整回滚。
+- 根因：账号 insert 后的 Repository `findById` 命中 JPA 一级缓存，无法取得 PostgreSQL 触发器生成的 `public_id`；Keycloak provisioning 因此在任何远端写入前失败。
+- 修复：`AdminUserService` 在 `saveAndFlush` 后显式 `EntityManager.refresh`，回归测试断言 provisioning 前公共编号已存在且不再调用同事务 `findById`。
+- 测试：`AdminUserServiceTest,CompanyProvisioningServiceTest,KeycloakIdentityProvisioningServiceTest` 共 21 项通过；后端 `mvn -DskipTests package` 与 `git diff --check` 通过。
+- 本地主线：提交 `ab1b02c` 已进入本地 main；从该提交构建 `2.8.62-dev.ab1b02c`，镜像 `sha256:3bd08dcfdc2eaf847d72e5b5228b668fdad17ee3660c9d9d2bb1c11f8de32009`。
+- 本地运行：只重建 backend；health=`UP`、healthy/restart=0、edge 200、匿名 `/api/admin/users` 401、启动错误计数 0，其他服务 ID 保持不变。
+- 边界：未发布 UAT/生产，未发送邀请邮件或创建测试成员；真实业务新增需在发布后使用受权管理员和专用测试邮箱验收。
+- 状态：`passed_with_uat_business_acceptance_pending`
 
 ## 2026-08-12 TASK-289 平台集成卡片主线恢复
 

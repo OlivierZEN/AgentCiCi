@@ -7,7 +7,7 @@ owner_role: backend-agent
 task_ids: TASK-290
 related_decisions: "FEAT-145 HUMAN 统一身份"
 related_issues: ISSUE-2026-08-12-admin-member-public-id-stale
-updated_at: 2026-08-12T07:27:07Z
+updated_at: 2026-08-12T07:36:57Z
 updated_by: codex
 ---
 
@@ -42,4 +42,5 @@ updated_by: codex
 ## 实现进展
 
 - 已确认 UAT `2.8.61-beta.16` 仍可触发故障；目标手机号与邮箱对应的四类记录均为 0，事务已完整回滚。
-- 代码修复、21 项身份链路定向测试与后端 package 已通过；本地 main 归并与本地全栈更新待完成。
+- 代码修复、21 项身份链路定向测试与后端 package 已通过；提交 `ab1b02c` 已进入本地 main，本地 backend `2.8.62-dev.ab1b02c` 的版本、健康、重启、edge 与匿名鉴权边界验证通过。
+- UAT 与生产未修改；下一步是受权 UAT 发布后创建专用测试成员，回读全局账号、登录标识、成员、Keycloak 身份和激活邮件状态。

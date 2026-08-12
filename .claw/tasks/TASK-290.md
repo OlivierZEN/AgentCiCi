@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-290
-status: in_progress
-updated_at: 2026-08-12T07:27:07Z
+status: review
+updated_at: 2026-08-12T07:36:57Z
 updated_by: codex
 assignee: codex
 owner_role: backend-agent
@@ -35,3 +35,6 @@ related_issues: ISSUE-2026-08-12-admin-member-public-id-stale
 - 故障目标手机号、邮箱对应的 account/identifier/member/identity 均为 0，失败事务无残留。
 - `AdminUserServiceTest, CompanyProvisioningServiceTest, KeycloakIdentityProvisioningServiceTest` 共 21 项通过。
 - 后端 `mvn -DskipTests package` 通过。
+- 修复提交 `ab1b02c` 已快进归并到本地 `main`，未触碰被占用功能分支的未提交内容。
+- 本地 backend 从 `main@ab1b02c` 构建为 `2.8.62-dev.ab1b02c`，运行镜像 `sha256:3bd08dcfdc2eaf847d72e5b5228b668fdad17ee3660c9d9d2bb1c11f8de32009`；health=`UP`、healthy/restart=0、edge 200、匿名用户 API 401、启动错误 0。
+- 本次只重建本地 backend，frontend、PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak、Semattice 与 DevAutopilot 容器 ID 保持不变；UAT/生产未修改。

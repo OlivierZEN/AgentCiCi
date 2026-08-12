@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-12T07:27:07Z
+updated_at: 2026-08-12T07:36:57Z
 updated_by: codex
 phase: review
 active_task: TASK-290
-next_action: "完成新增成员公共编号修复的后端 package，将提交归并本地 main，并从 main 更新 cc-local-stack backend 后回读版本、健康和重启次数。"
+next_action: "按用户授权发布下一 UAT beta 候选，并以受权组织管理员创建专用测试成员，回读账号、登录标识、成员、Keycloak 身份和激活邮件状态。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-290 / FEAT-174 已定位管理端新增成员失败：`user_account.public_id` 由 PostgreSQL 触发器生成，但 `AdminUserService` 的同事务 Repository 回读命中 JPA 一级缓存旧实体，Keycloak provisioning 因公共编号为空失败。UAT `2.8.61-beta.16 / aef334205280` health 与公共 smoke 正常，故障目标四类记录均为 0、事务无残留。修复改为 flush 后强制 refresh；身份链路定向 21 项与后端 package 通过，待本地 main 归并和本地全栈 backend 验证；UAT 未修改。
+- TASK-290 / FEAT-174 已修复管理端新增成员失败：`user_account.public_id` 由 PostgreSQL 触发器生成，旧链路同事务 Repository 回读命中 JPA 一级缓存旧实体；现在 flush 后强制 refresh，再进入 Keycloak provisioning。修复提交 `ab1b02c` 已进入本地 main；身份链路定向 21 项与后端 package 通过。本地 backend 已从该 main 提交构建为 `2.8.62-dev.ab1b02c`，health=`UP`、healthy/restart=0、edge 200、匿名用户 API 401、启动错误 0，其他服务 ID 未因本次 backend 更新改变。UAT 保持 `2.8.61-beta.16 / aef334205280`，故障目标四类记录均为 0；待单独授权发布与真实邀请验收。
 
 - TASK-289 已完成：平台集成卡片再次消失并非数据删除，而是上一修复只在隔离分支，`main@4459993` 的后续本地构建重新带回 `/platform/integrations` SPA 路由。修复已以 `0d55564` 正式进入本地 main，前端改用 `/api/platform/integrations` 并保留加载/错误/重试/空状态；46 文件/247 项、生产构建通过。本地制品为 `2.8.62-dev.0d55564`，容器 healthy/restart=0，目标路由 200，部署 JS 与匿名 JSON 401 证明请求进入后端鉴权；受权平台页面刷新后完成卡片视觉回读。
 

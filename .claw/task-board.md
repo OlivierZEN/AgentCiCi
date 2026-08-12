@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-12T07:27:07Z
+updated_at: 2026-08-12T07:36:57Z
 updated_by: codex
 board_status: active
 ---
@@ -17,13 +17,13 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-290 - 管理端新增成员公共编号回读修复
 
-- status: `in_progress`
+- status: `review`
 - priority: `critical`
 - owner_role: `backend-agent`
 - spec_path: `docs/specs/FEAT-174-admin-member-public-id-refresh.md`
 - task_status_path: `.claw/tasks/TASK-290.md`
 - blocked_by: `none`
-- next_action: 完成后端 package，将修复提交归并本地 main，并从 main 更新本地全栈 backend 后验证版本与健康。
+- next_action: 按用户授权发布下一 UAT beta 候选，并用专用测试成员完成正式新增、Keycloak 身份与激活邮件回读。
 
 ### TASK-288 - 产品经理可见缺陷草案确认恢复
 
