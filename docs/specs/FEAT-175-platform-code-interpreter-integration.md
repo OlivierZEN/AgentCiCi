@@ -7,7 +7,7 @@ owner_role: fullstack-agent
 task_ids: TASK-291
 related_decisions: none
 related_issues: none
-updated_at: 2026-08-12T11:05:00Z
+updated_at: 2026-08-12T11:45:43Z
 updated_by: codex
 ---
 
@@ -87,7 +87,8 @@ updated_by: codex
 
 - 平台托管配置、密钥加密/掩码、草稿校验、连接检测、Responses API 客户端、运行时工具、工具目录和运营 UI 已实现。
 - 单元/执行器、完整前端与生产构建通过；共享测试库的既有 V81 checksum 漂移继续阻断 Spring 集成用例，未修改历史迁移或 repair。
-- 待提交、合并本地 `main` 并从主线更新本地开发环境。
+- 功能提交 `0c58cfb` 已合并本地 `main@8f76e39`，backend/frontend 已从该主线提交更新本地开发环境并完成健康、版本、路由和匿名鉴权边界回读。
+- 平台页面当前无受权登录态且未配置真实 API Key；真实厂商连接和 Agent 会话业务验收由平台管理员后续完成，不影响默认关闭的安全交付边界。
 
 ## 交接说明
 

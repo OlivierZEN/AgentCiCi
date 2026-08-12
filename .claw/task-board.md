@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-12T11:05:00Z
+updated_at: 2026-08-12T11:45:43Z
 updated_by: codex
 board_status: active
 ---
@@ -14,17 +14,6 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
-
-### TASK-291 - 平台代码解释器集成与内置工具
-
-- status: `review`
-- priority: `high`
-- owner_role: `fullstack-agent`
-- claimed_by: `codex`
-- spec_path: `docs/specs/FEAT-175-platform-code-interpreter-integration.md`
-- task_status_path: `.claw/tasks/TASK-291.md`
-- blocked_by: `none`
-- next_action: 提交并合并本地 main，从主线重建本地 backend/frontend，完成平台接口、工具目录、容器与版本回读。
 
 ### TASK-290 - 管理端新增成员公共编号回读修复
 
@@ -1516,6 +1505,16 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-291 - 平台代码解释器集成与内置工具
+
+- status: `done`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-175-platform-code-interpreter-integration.md`
+- task_status_path: `.claw/tasks/TASK-291.md`
+- completion_evidence: `功能提交 0c58cfb 合并 main@8f76e39；后端定向 10 项、package、前端 248 项和构建通过；本地 2.8.62-dev.8f76e39 两容器 healthy/restart=0、路由 200、匿名 API JSON 401、运行与镜像提交一致`
+- next_action: `平台管理员录入真实百炼 API Key，测试并启用后完成真实厂商调用与 Agent 会话业务验收`
 
 ### TASK-289 - 平台集成卡片主线恢复
 

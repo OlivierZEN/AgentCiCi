@@ -1,11 +1,11 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-12T11:05:00Z
+updated_at: 2026-08-12T11:45:43Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-12T11:05:00Z
-last_run_status: passed_with_shared_db_integration_blocked
+last_run_at: 2026-08-12T11:45:43Z
+last_run_status: passed_with_vendor_business_acceptance_pending
 ---
 
 # Test Report
@@ -18,7 +18,10 @@ last_run_status: passed_with_shared_db_integration_blocked
 - 前端定向：平台集成 2 文件/4 项通过；完整前端 46 文件/248 项通过。
 - 前端构建：`npm run build` 通过，仅保留既有 chunk size warning。
 - 安全边界：无真实 API Key 进入仓库、日志或测试输出；可配置 API Host 只接受 `aliyuncs.com` HTTPS 地址。
-- 状态：`passed_with_shared_db_integration_blocked`
+- 主线与本地环境：功能提交 `0c58cfb` 已合并本地 `main@8f76e39`；backend/frontend 从该主线构建，版本 `2.8.62-dev.8f76e39`，两容器 healthy/restart=0，目标路由 200、匿名平台接口 `401 application/json`，镜像 label 和运行环境提交均为 `8f76e39abedf`。
+- 浏览器：目标路由按预期进入平台登录边界，console 0 error/warning；当前无受权平台会话，未绕过登录。
+- 业务边界：集成默认关闭且本地未配置真实 API Key，因此真实百炼连接与 Agent 会话业务调用待平台管理员完成。
+- 状态：`passed_with_vendor_business_acceptance_pending`
 
 ## 2026-08-12 TASK-290 管理端新增成员公共编号回读修复
 
