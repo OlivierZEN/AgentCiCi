@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-176
 title: 平台联网搜索与网页抓取集成
-status: in_progress
+status: implemented
 owner_role: fullstack-agent
 task_ids: TASK-292
 related_decisions: none
 related_issues: none
-updated_at: 2026-08-12T12:40:22Z
+updated_at: 2026-08-12T13:05:08Z
 updated_by: codex
 ---
 
@@ -82,3 +82,10 @@ updated_by: codex
 - 风险：抓取目标可能指向敏感网络；拒绝明显的本地、私网、链路本地、组播及带用户信息 URL。
 - 风险：上游内容不可信；工具结果作为外部数据返回，不能提升为系统指令。
 - 回滚：关闭相应集成或工具治理即可停止注入；代码回滚不涉及迁移，Tavily 不受影响。
+
+## 实现与交接
+
+- 两张配置卡、密钥加密、连接检测、Responses 客户端、两个内置工具、目录治理和运行时分派已实现；原有 Tavily 代码路径未改变。
+- 后端定向 16 项、package、前端完整 46 文件/249 项和生产构建通过；共享测试库既有 V81 checksum 漂移继续阻断 Spring 集成用例，未 repair。
+- 功能提交 `9a8cb9a` 已合并本地 `main@1f362c7`，本地 backend/frontend 从该提交构建和运行，完整 stack verify 与版本指纹回读通过。
+- 集成默认关闭；平台管理员需分别录入百炼业务空间 API Key/API Host，执行“测试搜索”“测试抓取”后按需启用，再用 Agent 会话完成真实调用验收。
