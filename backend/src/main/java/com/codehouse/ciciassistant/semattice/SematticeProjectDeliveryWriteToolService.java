@@ -159,9 +159,13 @@ public class SematticeProjectDeliveryWriteToolService {
         if (messages == null || messages.isEmpty()) {
             return false;
         }
+        List<Map<String, Object>> activeMessages = activeIntakeWindow(messages);
+        if (activeMessages.isEmpty()) {
+            return false;
+        }
         ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
-        for (int index = messages.size() - 1; index >= 0; index--) {
-            Map<String, Object> message = messages.get(index);
+        for (int index = activeMessages.size() - 1; index >= 0; index--) {
+            Map<String, Object> message = activeMessages.get(index);
             String content = String.valueOf(message.getOrDefault("content", ""));
             if ("assistant".equals(String.valueOf(message.get("role")))
                     && isTerminalIntakeAnswer(content)) {
@@ -183,7 +187,7 @@ public class SematticeProjectDeliveryWriteToolService {
                 return !latest.path("cancelled").asBoolean(false);
             }
         }
-        return visiblePendingIntake(messages, objectMapper).isPresent();
+        return visiblePendingIntake(activeMessages, objectMapper).isPresent();
     }
 
     private static boolean isTerminalIntakeAnswer(String content) {
@@ -733,10 +737,16 @@ public class SematticeProjectDeliveryWriteToolService {
             }
             String compact = content.replaceAll("\\s+", "");
             boolean classifiedDraft = compact.contains("缺陷创建草案")
+                    || compact.contains("缺陷受理草稿")
+                    || compact.contains("缺陷受理摘要")
                     || compact.contains("缺陷内容摘要")
                     || compact.contains("需求创建草案")
+                    || compact.contains("需求受理草稿")
+                    || compact.contains("需求受理摘要")
                     || compact.contains("需求内容摘要")
                     || compact.contains("变更创建草案")
+                    || compact.contains("变更受理草稿")
+                    || compact.contains("变更受理摘要")
                     || compact.contains("变更内容摘要");
             boolean asksConfirmation = compact.contains("确认创建") || compact.contains("确认提交");
             if (classifiedDraft && asksConfirmation) {
@@ -770,16 +780,12 @@ public class SematticeProjectDeliveryWriteToolService {
         String compact = draft.replace("**", "").replace("`", "");
         String classification = compact.contains("缺陷") ? "defect"
                 : compact.contains("变更") ? "change" : compact.contains("需求") ? "requirement" : "";
-        String title = firstMatch(compact,
-                "(?m)(?:缺陷标题|需求标题|变更标题|标题)\\s*[：:]\\s*([^\\n|]+)");
-        String project = firstMatch(compact,
-                "(?m)(?:关联项目|父项目|项目)\\s*[：:]\\s*([^\\n|（(]+)");
-        String requirement = firstMatch(compact,
-                "(?m)(?:关联需求|父需求|需求)\\s*[：:]\\s*([^\\n|（(]+)");
+        String title = firstLabeledValue(compact, "缺陷标题", "需求标题", "变更标题", "标题");
+        String project = normalizeParentReference(firstLabeledValue(compact, "关联项目", "父项目", "项目"));
+        String requirement = normalizeParentReference(firstLabeledValue(compact, "关联需求", "父需求", "需求"));
         String priority = firstMatch(compact, "(?i)\\b(P[0-3])\\b").toUpperCase(Locale.ROOT);
         String severity = firstMatch(compact, "(?i)\\b(critical|high|medium|low)\\b").toLowerCase(Locale.ROOT);
-        String environment = firstMatch(compact,
-                "(?m)(?:环境|预计环境)\\s*[：:]\\s*([^\\n|]+)");
+        String environment = firstLabeledValue(compact, "测试环境", "预计环境", "环境");
         if (title.isBlank() || classification.isBlank()) {
             return Optional.empty();
         }
@@ -837,6 +843,34 @@ public class SematticeProjectDeliveryWriteToolService {
     private static String firstMatch(String value, String regex) {
         Matcher matcher = Pattern.compile(regex).matcher(value == null ? "" : value);
         return matcher.find() ? normalizeText(matcher.group(1)) : "";
+    }
+
+    /** Reads either a prose label (`标题：...`) or a Markdown table row (`| 标题 | ... |`). */
+    private static String firstLabeledValue(String value, String... labels) {
+        String source = value == null ? "" : value;
+        for (String label : labels) {
+            String quoted = Pattern.quote(label);
+            String tableValue = firstMatch(source,
+                    "(?m)^\\s*\\|\\s*" + quoted + "\\s*\\|\\s*([^\\n|]+)");
+            if (!tableValue.isBlank()) {
+                return tableValue;
+            }
+            String proseValue = firstMatch(source,
+                    "(?m)^\\s*(?:[-*]\\s*)?" + quoted + "\\s*[：:]\\s*([^\\n|]+)");
+            if (!proseValue.isBlank()) {
+                return proseValue;
+            }
+        }
+        return "";
+    }
+
+    private static String normalizeParentReference(String value) {
+        String normalized = normalizeText(value);
+        Matcher code = Pattern.compile("(?i)\\b(DAS-[A-Z0-9]+)\\b").matcher(normalized);
+        if (code.find()) {
+            return code.group(1).toUpperCase(Locale.ROOT);
+        }
+        return normalizeText(normalized.replaceFirst("[（(].*$", ""));
     }
 
     private record IntakeDraft(String classification,

@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-12T00:51:11Z
+updated_at: 2026-08-12T05:38:00Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,16 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-288 - 产品经理可见缺陷草案确认恢复
+
+- status: `review`
+- priority: `critical`
+- owner_role: `backend-agent`
+- spec_path: `docs/specs/FEAT-171-user-friendly-delivery-intake.md`
+- task_status_path: `.claw/tasks/TASK-288.md`
+- blocked_by: `none`
+- next_action: 使用有效本地 HUMAN 会话再次发送“确认提交缺陷”，回读 Semattice record ID、revision 与 correlation；不得绕过登录门禁。
 
 ### TASK-287 - 技能治理 V5 正式 React 落地
 

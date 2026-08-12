@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-08-11T02:34:13Z
+updated_at: 2026-08-12T05:38:00Z
 updated_by: codex
 status: active
 ---
@@ -96,6 +96,13 @@ status: active
   - Status: open (blocks assistant-entry CloudCC smoke, but does not change the separate CloudCC credential failure above).
 
 ## Resolved / Superseded
+
+- ISSUE-005:
+  - Symptom: 产品经理已展示“缺陷受理草稿”，用户回复“确认提交缺陷”后没有创建 Semattice 缺陷，回执门禁显示本轮没有真实写入成功回执。
+  - Verified root cause: 该模型回复遗漏不可见 `DEV_AUTOPILOT_INTAKE_V1` 标记；可见草稿兜底只识别“缺陷创建草案”和冒号字段，既不识别实际“缺陷受理草稿”标题，也不能解析 Markdown 表格，因此确认轮 `toolCount=0`，写入工具从未调用。
+  - Resolution: TASK-288 统一识别需求、缺陷、变更的受理草稿/摘要，支持 Markdown 表格与冒号字段，并优先从父项目信息提取稳定 `DAS-*` 编号；可信写后回读门禁保持不变。
+  - Verification: 故障同构定向测试、编排待处理草稿测试、回执门禁回归、后端 package 与本地 stack verify 通过；真实浏览器回读待有效本地 HUMAN 登录后补验。
+  - Status: code resolved; local business acceptance pending.
 
 - ISSUE-2026-08-11-ai-table-uat-metadata-scope:
   - Symptom: 已登录 UAT 租户进入 AI表格后无法读取业务对象，页面显示“业务数据服务暂时不可用”。

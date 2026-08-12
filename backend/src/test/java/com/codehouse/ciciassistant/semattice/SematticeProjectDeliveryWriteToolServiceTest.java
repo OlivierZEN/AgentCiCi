@@ -216,7 +216,7 @@ class SematticeProjectDeliveryWriteToolServiceTest {
 
         assertThat(confirmed).hasValueSatisfying(intent -> {
             assertThat(intent.operation()).isEqualTo("create_defect");
-            assertThat(intent.parentReference()).isEqualTo("智能体平台");
+            assertThat(intent.parentReference()).isEqualTo("DAS-751707A5");
             assertThat(intent.title()).isEqualTo("研发交付页面项目筛选面板偶发性无法展开");
             assertThat(intent.description()).isEqualTo(original);
             assertThat(intent.priority()).isEqualTo("P2");
@@ -224,6 +224,51 @@ class SematticeProjectDeliveryWriteToolServiceTest {
             assertThat(intent.intake()).containsEntry("classification", "defect")
                     .containsEntry("original_report", original)
                     .containsEntry("user_supplements", List.of("项目：智能体平台"));
+        });
+        assertThat(SematticeProjectDeliveryWriteToolService.hasPendingIntake(messages)).isTrue();
+    }
+
+    @Test
+    void restoresDefectFromProductManagerIntakeDraftMarkdownTableWhenMarkerIsMissing() {
+        String original = "反馈这个项目的一个问题： 当我在。登录进入系统之后，然后再点击。左下角的退出图标。系统退出到了登录过渡页面，然后通过统一登录又自动跳转进入了系统。实际上退出动作并没有注销当前用户的登录状态。";
+        List<Map<String, Object>> messages = List.of(
+                Map.of("role", "assistant", "content", "已在 Semattice 创建项目：企业级智能体平台CCAgent（DAS-A2AFD106）。"),
+                Map.of("role", "user", "content", original),
+                Map.of("role", "assistant", "content", """
+                        ## 缺陷受理草稿（Dev Autopilot）
+
+                        ### 事项分类依据
+                        | 判断维度 | 内容 |
+                        |----------|------|
+                        | **事项类型** | 缺陷（Defect） |
+                        | **分类理由** | 已有退出能力偏离正常预期，属于功能故障 |
+                        | **关联项目** | 企业级智能体平台 CCAgent（项目编号：DAS-A2AFD106） |
+
+                        ### 专业整理详情
+                        | 字段 | 内容 |
+                        |------|------|
+                        | **缺陷标题** | 退出登录未有效清除会话导致自动重登 |
+                        | **优先级** | P2（影响用户使用体验，但不阻塞核心流程） |
+                        | **严重度** | medium |
+                        | **测试环境** | 待开发者验证 |
+
+                        如需将此缺陷提交至研发管理系统进行跟踪，请回复：`确认提交缺陷`
+                        """));
+
+        var confirmed = SematticeProjectDeliveryWriteToolService.confirmedIntent(
+                "确认提交缺陷", messages, "workbench:devautopilot-pm", objectMapper);
+
+        assertThat(confirmed).hasValueSatisfying(intent -> {
+            assertThat(intent.operation()).isEqualTo("create_defect");
+            assertThat(intent.parentReference()).isEqualTo("DAS-A2AFD106");
+            assertThat(intent.title()).isEqualTo("退出登录未有效清除会话导致自动重登");
+            assertThat(intent.description()).isEqualTo(original);
+            assertThat(intent.priority()).isEqualTo("P2");
+            assertThat(intent.severity()).isEqualTo("medium");
+            assertThat(intent.environment()).isEqualTo("待开发者验证");
+            assertThat(intent.intake()).containsEntry("classification", "defect")
+                    .containsEntry("original_report", original)
+                    .containsEntry("conversation_id", "workbench:devautopilot-pm");
         });
         assertThat(SematticeProjectDeliveryWriteToolService.hasPendingIntake(messages)).isTrue();
     }

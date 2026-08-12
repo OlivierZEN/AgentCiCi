@@ -83,6 +83,10 @@ class DeliveryWriteReceiptGuardTest {
                 Map.of("role", "user", "content", "父项目：智能体平台"))))
                 .isTrue();
         assertThat(ChatOrchestratorService.hasPendingDeliveryDraft(List.of(
+                Map.of("role", "assistant", "content",
+                        "## 缺陷受理草稿（Dev Autopilot）\n如需提交请回复：确认提交缺陷"))))
+                .isTrue();
+        assertThat(ChatOrchestratorService.hasPendingDeliveryDraft(List.of(
                 Map.of("role", "assistant", "content", "当前研发项目列表"))))
                 .isFalse();
         assertThat(ChatOrchestratorService.hasPendingDeliveryDraft(List.of(

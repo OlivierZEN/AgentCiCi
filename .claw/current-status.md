@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-11T15:32:00Z
+updated_at: 2026-08-12T05:38:00Z
 updated_by: codex
 phase: review
-active_task: TASK-287
-next_action: "使用受权平台会话完成 TASK-287 正式页面桌面截图复核；代码、完整前端测试、构建和本地运行已通过，未绕过登录门禁。"
+active_task: TASK-288
+next_action: "使用有效本地 HUMAN 会话在现有失败会话再次确认提交，回读 Semattice record ID、revision 与 correlation；代码回归、打包及本地运行已通过，未绕过登录门禁。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-288 / FEAT-171 已修复产品经理确认缺陷不落库：真实故障草稿使用“缺陷受理草稿”Markdown 表格且漏写不可见 intake 标记，既有兜底无法恢复确认意图，确认轮因此 `toolCount=0`。现在需求/缺陷/变更的受理草稿和摘要、表格/冒号字段均可恢复，并优先采用 `DAS-*` 父项目编号；编排待处理识别同步补齐，可信写后回读门禁未放宽。故障同构测试、编排/回执回归、package、diff check 与本地 stack verify 通过；真实浏览器因已知手机号测试凭据不被当前本地 Keycloak 接受而待补验，未绕过身份门禁。
 
 - TASK-287 / FEAT-172 已按用户确认的 V5 正式落地 React：侧栏三个技能菜单合并为“技能治理”，模型配置、平台集成、工具目录实现未动；首页提供真实技能列表与策略包列表，技能详情改为 `880px` 概览/技能版本/依赖影响抽屉，技能编辑四步骤、草稿预览和核心策略编辑均为独立页面。现有 API、权限、草稿、发布、回滚和依赖图逻辑保持不变；只有 `core-default` 可管理，三个未来策略包仅显示“规划中”。完整前端 44 文件/244 项、生产构建、diff check、8080 health 与 5173 HTTP 通过。本地正式路由匿名访问按预期回到平台登录，当前无受权会话，未绕过认证，桌面截图待登录后复核。
 

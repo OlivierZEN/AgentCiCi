@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-11T14:59:32Z
+updated_at: 2026-08-12T05:38:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-11T14:59:32Z
-last_run_status: passed_with_product_review_pending
+last_run_at: 2026-08-12T05:38:00Z
+last_run_status: passed_with_business_acceptance_pending
 ---
 
 # Test Report
+
+## 2026-08-12 TASK-288 产品经理可见缺陷草案确认恢复
+
+- 根因证据：故障会话的草稿为“缺陷受理草稿”Markdown 表格且无 `DEV_AUTOPILOT_INTAKE_V1`；确认前后后端日志均为 `toolCount=0`，没有 Semattice 调用错误，证明失败发生在确认意图恢复阶段。
+- 回归：使用故障同构原始描述和表格草稿，短确认恢复为 `create_defect`；父项目=`DAS-A2AFD106`、标题、P2、medium、待开发者验证、conversation ID 与逐字原始描述均断言通过。
+- 编排：补充“缺陷/需求/变更受理草稿”的待处理上下文识别；无真实 `SEMATTICE_LIVE` record ID、revision、correlation 和 readback 时仍禁止宣称成功。
+- 测试：`SematticeProjectDeliveryWriteToolServiceTest,DeliveryWriteReceiptGuardTest,ChatOrchestratorServiceModelIdentityTest` 通过；`mvn -q -DskipTests package`、`git diff --check` 通过。
+- 本地运行：backend 修复镜像 healthy、restart=0，domain gate 与 stack verify 通过；浏览器登录因当前本地 Keycloak 不接受已知手机号测试凭据而停止，未重置账号或绕过身份门禁。
+- 状态：`passed_with_business_acceptance_pending`
 
 ## 2026-08-11 TASK-287 技能治理 V5 正式 React 落地
 

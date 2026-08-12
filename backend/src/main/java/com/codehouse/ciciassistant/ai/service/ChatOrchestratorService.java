@@ -1603,6 +1603,9 @@ public class ChatOrchestratorService {
             }
             if (normalized.contains("DEV_AUTOPILOT_INTAKE_V1")
                     || normalized.contains("研发事项受理")
+                    || normalized.contains("缺陷受理草稿")
+                    || normalized.contains("需求受理草稿")
+                    || normalized.contains("变更受理草稿")
                     || normalized.contains("缺陷提交草案")
                     || normalized.contains("待补充：父项目")
                     || normalized.contains("请补充父项目信息")
