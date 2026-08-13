@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-13T11:09:00Z
+updated_at: 2026-08-13T11:28:00Z
 updated_by: codex
 phase: review
 active_task: TASK-298
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-301 / FEAT-182 已完成：根因是前端选择任意 PDF 后把 `pdfPolicy` 能力说明作为错误 toast 并直接返回，请求未到后端。修复提交 `cabaebc7c641` 已进入本地 `main`，移除 PDF 特判并统一中文说明；backend/frontend 从该提交构建为 `2.8.61-dev.cabaebc`，均 healthy/restart=0，后端版本接口和前端资源指纹一致。受控文本型 PDF 通过正式上传、发布和 MQ 索引，最终 PUBLISHED、1 个切片、无解析错误；测试文档经正式删除 API 清理后，有效文档/切片恢复 0/0。前端 3 项定向测试、生产构建和后端 package 通过；Spring 集成仍受既有 V81 checksum 与 fixture 模型前置阻断，未 repair 或伪造通过。自动化浏览器无已登录 HUMAN 会话，受权页面点击级复核未覆盖；UAT/生产未修改。
+- TASK-301 / FEAT-182 已完成：`cabaebc` 放行文本型 PDF 后，复开修复 `d3cf1b7` 补齐持久上传阶段、异常捕获与异步索引最终态。本地前端已从 `main@d3cf1b7` 重建为 `2.8.61-dev.d3cf1b7`，frontend/backend healthy、restart=0，目标路由和制品指纹一致。已登录 Chrome 真实选择文本型 PDF，页面依次显示处理中、解析/索引中和成功，最终 PUBLISHED、1 个切片、状态可用；测试文档经正式 DELETE API 清理并刷新确认只保留原有文档。前端定向 7/7 与 production build 通过；UAT/生产未修改。
 
 - TASK-298 / FEAT-179 已回到 review：人工确认弹窗只保留能力选择，已移除厂商文档、HTTPS 校验、证据引用及其展示；“全部模型”可先加入平台目录，能力确认只决定后续场景路由候选。截图发现网关 HTML 被直接解析为 JSON 的错误，已由 `4da7a3b` 修复为显式 JSON 协商及可操作的版本一致性提示；操作者/时间、平台审计和撤销仍保留，未确认模型仍失败关闭。本地 frontend 已从本地 `main@4da7a3b` 重建为 `2.8.61-dev.4da7a3b`，backend 保持含能力 API 的 `2.8.61-dev.b8bf4d3`；两容器 healthy/restart=0，`/platform/models`=200、能力 API 匿名返回 401 JSON，完整 `./stack verify` 通过。前端定向 6 项与 production build 通过；Spring 集成仍在断言前被既有 `agentcici_test` Flyway V81 checksum 漂移阻断，未 repair。UAT/生产未修改，受权业务交互仍待验收。
 

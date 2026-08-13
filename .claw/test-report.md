@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-13T11:09:00Z
+updated_at: 2026-08-13T11:28:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-13T11:09:00Z
+last_run_at: 2026-08-13T11:28:00Z
 last_run_status: passed
 ---
 
@@ -12,6 +12,11 @@ last_run_status: passed
 
 ## 2026-08-13 TASK-301 知识库 PDF 上传门禁修复
 
+- 复开根因：允许 PDF 后，页面仍只依赖 3 秒 toast；上传、发布、响应解析和异步索引缺少完整异常捕获及稳定最终态。用户选择的 PDF 未产生上传请求时，页面会表现为“无任何反馈”。
+- 反馈修复：提交 `d3cf1b7` 增加持久上传状态和安全响应解析，覆盖文件检查、上传、提交索引、解析/索引、成功与失败；处理中禁用文件选择，成功仅在目标文档实际 `PUBLISHED` 后显示并包含切片数。
+- 前端验证：`AdminKnowledgeUploadPolicy.test.ts` 与 `AdminKnowledgeUploadFlow.test.ts` 共 2 文件/7 项通过；`npm run build` 与 `git diff --check` 通过，仅保留既有 chunk-size warning。
+- 本地制品：仅重建 `cici-frontend`，版本 `2.8.61-dev.d3cf1b7`，镜像 `sha256:5cad00e13f2374c502f3f7b8938ce883bb6fb23dff639c88a732ff48d5606128`；frontend/backend 均 healthy、restart=0，`https://cici.localhost/admin/kb`=200，部署 JS/CSS 文件名包含相同版本。
+- 已登录 Chrome 业务验收：真实选择 `TASK-301-upload-feedback.pdf` 后捕获“处理中…”和“正在解析并建立索引”，最终页面持续显示“文档上传成功……已生成 1 个切片并可用于检索”，表格状态“可用”；数据库独立回读 `application/pdf / PUBLISHED / 1`。测试文档经正式 DELETE API 清理，刷新后知识库恢复原有 1 个有效文档。
 - 根因：管理端在扩展名为 `pdf` 时把后端 `pdfPolicy` 能力说明作为 toast 并直接返回，未发起 `/kb/documents/upload`；后端已实现文本型 PDFBox 解析和明确失败路径。
 - 前端：新增统一上传预检，PDF 与其他允许扩展名一并放行；超限和不支持扩展名仍失败关闭。`npm test -- --run src/admin/pages/AdminKnowledgeUploadPolicy.test.ts` 为 1 文件/3 项通过，`npm run build` 通过，仅保留既有 chunk-size warning。
 - 后端：上传策略改为中文文本型 PDF 说明；`mvn -q -DskipTests package` 与 `git diff --check` 通过。

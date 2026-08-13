@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-301
-status: in_progress
-updated_at: 2026-08-13T11:20:00Z
+status: done
+updated_at: 2026-08-13T11:28:00Z
 updated_by: codex
 owner_role: fullstack-agent
 spec_path: docs/specs/FEAT-182-kb-pdf-upload-admission.md
@@ -34,3 +34,5 @@ spec_path: docs/specs/FEAT-182-kb-pdf-upload-admission.md
 - 受控文本型 PDF 通过正式上传与发布 API，最终 `PUBLISHED`、1 个切片、无解析错误；测试文档随后通过正式删除 API 清理，知识库恢复 0 个有效文档和 0 个有效切片。
 - 自动化浏览器没有已登录 HUMAN 会话，页面访问按设计进入 SSO；未读取、猜测或重置用户凭据，受权页面点击级复核不作为本任务完成的虚假证据。
 - 用户在已登录 Chrome 实测 PDF 后仍无反馈且无新 PDF 记录；Nginx 访问日志也没有对应 PDF 上传请求。现有 UI 仅有 3 秒 toast，且上传/发布的 `fetch`、JSON 解析和异步索引没有完整异常与最终状态反馈，因此任务复开。
+- 复开修复提交 `d3cf1b7` 已进入本地 `main`：页面持久显示文件检查、上传、发布、索引及最终成功/失败，网络和非 JSON 响应返回可操作中文错误，处理中禁止重复选择文件。
+- 本地前端已从该提交重建为 `2.8.61-dev.d3cf1b7`。已登录 Chrome 真实选择文本型 PDF 后依次回读“处理中”“正在解析并建立索引”“文档上传成功”，最终 `PUBLISHED`、1 个切片、状态“可用”；测试文档随后通过正式删除 API 清理。
