@@ -105,14 +105,11 @@ public class PlatformModelProviderController {
                 providerCode,
                 request.modelName(),
                 request.capabilities(),
-                request.documentationUrl(),
-                request.evidenceReference(),
                 TenantContext.getUserId().orElse("platform-operator"));
         writeAudit("platform.model.capability.confirm",
                 "model_capability",
                 providerCode + "::" + request.modelName().trim(),
-                "source=operator_documentation, capabilityCount=" + request.capabilities().size()
-                        + ", evidenceReference=" + request.evidenceReference().trim());
+                "source=operator_confirmation, capabilityCount=" + request.capabilities().size());
         return ApiResponse.ok(payload);
     }
 
@@ -124,7 +121,7 @@ public class PlatformModelProviderController {
         writeAudit("platform.model.capability.revoke",
                 "model_capability",
                 providerCode + "::" + modelName.trim(),
-                "source=operator_documentation");
+                "source=operator_confirmation");
         return ApiResponse.ok(payload);
     }
 
@@ -189,9 +186,7 @@ public class PlatformModelProviderController {
 
     public record ConfirmModelCapabilitiesRequest(
             @NotBlank String modelName,
-            @NotEmpty List<@NotBlank String> capabilities,
-            @NotBlank String documentationUrl,
-            @NotBlank String evidenceReference
+            @NotEmpty List<@NotBlank String> capabilities
     ) {
     }
 

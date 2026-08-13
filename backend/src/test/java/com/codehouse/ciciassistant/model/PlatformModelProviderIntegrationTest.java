@@ -310,13 +310,21 @@ class PlatformModelProviderIntegrationTest {
     }
 
     @Test
-    void platformOperatorCanConfirmAndRevokeSelectedModelCapabilitiesWithDocumentationEvidence() throws Exception {
+    void platformOperatorCanSelectThenConfirmAndRevokeModelCapabilities() throws Exception {
         String platformToken = platformToken();
         String providerCode = ModelProviderService.PROVIDER_ANTHROPIC;
         String modelName = "claude-document-confirmed";
         modelProviderService.deletePlatformModelRoute("skill-authoring");
         modelProviderService.updatePlatformProvider(providerCode, true, "https://api.example.invalid", "platform-secret");
-        markSelectedModelWithoutCapabilityEvidence(providerCode, modelName);
+
+        mockMvc.perform(put("/platform/models/providers/{providerCode}/selected-models", providerCode)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"selectedModels":["%s"]}
+                                """.formatted(modelName)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.selectedModels[0]").value(modelName));
 
         mockMvc.perform(put("/platform/models/providers/{providerCode}/model-capabilities", providerCode)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
@@ -324,15 +332,13 @@ class PlatformModelProviderIntegrationTest {
                         .content("""
                                 {
                                   "modelName": "%s",
-                                  "capabilities": ["text", "reasoning"],
-                                  "documentationUrl": "https://docs.example.invalid/models/claude-document-confirmed",
-                                  "evidenceReference": "模型能力说明 v2026-08，第 2 节"
+                                  "capabilities": ["text", "reasoning"]
                                 }
                                 """.formatted(modelName)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.capabilities[0]").value("text"))
-                .andExpect(jsonPath("$.data.evidence.source").value("operator_documentation"))
-                .andExpect(jsonPath("$.data.evidence.revocable").value(true));
+                .andExpect(jsonPath("$.data.confirmation.source").value("operator_confirmation"))
+                .andExpect(jsonPath("$.data.confirmation.revocable").value(true));
 
         mockMvc.perform(put("/platform/models/routes/{sceneCode}", "skill-authoring")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
@@ -409,7 +415,7 @@ class PlatformModelProviderIntegrationTest {
         provider.setConfigJson("""
                 {
                   "modelCapabilities":{"deepseek-chat":["text"],"deepseek-reasoner":["text","reasoning"]},
-                  "modelCapabilityEvidence":{
+                  "modelCapabilityConfirmations":{
                     "deepseek-chat":{"source":"provider_catalog","confirmedAt":"2026-08-13T00:00:00Z"},
                     "deepseek-reasoner":{"source":"provider_catalog","confirmedAt":"2026-08-13T00:00:00Z"}
                   }
@@ -419,18 +425,4 @@ class PlatformModelProviderIntegrationTest {
         providerRepository.save(provider);
     }
 
-    private void markSelectedModelWithoutCapabilityEvidence(String providerCode, String modelName) {
-        String scopeId = platformAccountProperties.getGovernanceCompanyId();
-        if (scopeId == null || scopeId.isBlank()) {
-            scopeId = PlatformAccountProperties.LEGACY_DEFAULT_GOVERNANCE_COMPANY_ID;
-        }
-        ModelProviderConfigEntity provider = providerRepository
-                .findByCompanyIdAndProviderCode(scopeId, providerCode)
-                .orElseThrow();
-        provider.setConfigJson("""
-                {"selectedModels":["%s"]}
-                """.formatted(modelName));
-        provider.touch();
-        providerRepository.save(provider);
-    }
 }

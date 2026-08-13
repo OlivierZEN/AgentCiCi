@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-13T07:55:37Z
+updated_at: 2026-08-13T08:39:15Z
 updated_by: codex
-phase: review
+phase: implementation
 active_task: TASK-298
-next_action: "以受权平台会话完成 TASK-298 的人工确认、文档跳转、撤销与场景路由业务验收；测试库基线恢复后补跑 Spring 集成。"
+next_action: "完成 TASK-298 的人工确认简化与目录先选模型调整，提交后更新本地开发环境。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-298 已恢复 implementation：用户要求去掉厂商文档、HTTPS 校验、证据引用及其页面展示，人工只选择能力并保存；“全部模型”目录允许先加入模型，能力确认只在后续场景路由前进行。保留平台角色、操作者/时间、审计与撤销，未确认模型仍不能进入场景候选。正在执行编译、测试和本地开发环境发布；UAT/生产不修改。
 
 - TASK-298 / FEAT-179 已回到 review：平台管理员/运营可对已选模型提交厂商 HTTPS 文档、可核验证据引用和能力清单，服务端记录来源、操作者与时间并写入审计；人工确认可撤销，撤销后该模型立即退出场景候选，现有路由保持失败关闭。模型名称和历史调用不能推断能力，厂商目录和受控检测仍分别保留其来源。提交 `f96efaf` 已从本地 `main` 构建为 `2.8.61-dev.f96efaf`；backend/frontend healthy/restart=0，制品含确认/撤销入口，`/platform/models`=200、匿名 API=401，完整 `./stack verify` 通过。后端 compile/package、前端定向 5 项与 production build 通过；Spring 集成仍在断言前被既有 `agentcici_test` Flyway V81 checksum 漂移阻断，未 repair。UAT/生产未修改，受权业务交互仍待验收。
 

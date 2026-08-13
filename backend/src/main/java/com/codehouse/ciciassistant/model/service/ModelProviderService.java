@@ -43,10 +43,11 @@ public class ModelProviderService {
     private static final String FETCH_REMOTE_UNAVAILABLE = "remote-unavailable";
     private static final String CONFIG_SELECTED_MODELS = "selectedModels";
     private static final String CONFIG_MODEL_CAPABILITIES = "modelCapabilities";
-    private static final String CONFIG_MODEL_CAPABILITY_EVIDENCE = "modelCapabilityEvidence";
+    private static final String CONFIG_MODEL_CAPABILITY_CONFIRMATIONS = "modelCapabilityConfirmations";
+    private static final String CONFIG_LEGACY_MODEL_CAPABILITY_EVIDENCE = "modelCapabilityEvidence";
     private static final String CAPABILITY_SOURCE_PROVIDER_CATALOG = "provider_catalog";
     private static final String CAPABILITY_SOURCE_CONTROLLED_CHECK = "controlled_live_check";
-    private static final String CAPABILITY_SOURCE_OPERATOR_DOCUMENTATION = "operator_documentation";
+    private static final String CAPABILITY_SOURCE_OPERATOR_CONFIRMATION = "operator_confirmation";
     private static final Set<String> TRUSTED_CAPABILITIES = Set.of(
             "text", "vision", "embedding", "realtime-asr", "file-asr",
             "code-interpreter", "web-search", "web-extractor", "tool", "reasoning");
@@ -210,7 +211,7 @@ public class ModelProviderService {
 
         List<String> selected = configuredModelsForProvider(entity, companyId);
         Map<String, List<String>> capabilities = trustedModelCapabilities(entity);
-        Map<String, ModelCapabilityEvidence> evidence = trustedModelCapabilityEvidence(entity);
+        Map<String, ModelCapabilityConfirmation> confirmations = trustedModelCapabilityConfirmations(entity);
 
         return Map.of(
                 "providerCode", providerCode,
@@ -219,7 +220,7 @@ public class ModelProviderService {
                 "recommendedModels", def.defaultModels(),
                 "selectedModels", selected,
                 "modelCapabilities", capabilities,
-                "modelCapabilityEvidence", capabilityEvidenceView(evidence),
+                "modelCapabilityConfirmations", capabilityConfirmationView(confirmations),
                 "apiBaseUrl", entity.getApiBaseUrl(),
                 "enabled", entity.isEnabled()
         );
@@ -250,8 +251,6 @@ public class ModelProviderService {
     public Map<String, Object> confirmPlatformModelCapabilities(String providerCode,
                                                                 String modelName,
                                                                 List<String> capabilities,
-                                                                String documentationUrl,
-                                                                String evidenceReference,
                                                                 String confirmedBy) {
         String scopeId = platformScopeId();
         ensureBuiltinRows(scopeId);
@@ -264,8 +263,6 @@ public class ModelProviderService {
         if (normalizedCapabilities.isEmpty()) {
             throw new IllegalArgumentException("请至少选择一项已支持的模型能力。");
         }
-        String normalizedDocumentationUrl = requireHttpsDocumentationUrl(documentationUrl);
-        String normalizedReference = requireEvidenceReference(evidenceReference);
         String actor = nullableToBlank(confirmedBy).trim();
         if (actor.isBlank()) {
             actor = "platform-operator";
@@ -273,20 +270,19 @@ public class ModelProviderService {
 
         Map<String, Object> config = new LinkedHashMap<>(readJsonToMap(entity.getConfigJson()));
         Map<String, List<String>> capabilityMap = new LinkedHashMap<>(storedModelCapabilities(entity));
-        Map<String, ModelCapabilityEvidence> evidenceMap = modelCapabilityEvidence(entity);
+        Map<String, ModelCapabilityConfirmation> confirmationMap = modelCapabilityConfirmations(entity);
         capabilityMap.put(normalizedModel, normalizedCapabilities);
-        evidenceMap.put(normalizedModel, new ModelCapabilityEvidence(
-                CAPABILITY_SOURCE_OPERATOR_DOCUMENTATION,
-                normalizedDocumentationUrl,
-                normalizedReference,
+        confirmationMap.put(normalizedModel, new ModelCapabilityConfirmation(
+                CAPABILITY_SOURCE_OPERATOR_CONFIRMATION,
                 Instant.now().toString(),
                 actor));
         config.put(CONFIG_MODEL_CAPABILITIES, capabilityMap);
-        config.put(CONFIG_MODEL_CAPABILITY_EVIDENCE, capabilityEvidenceStorage(evidenceMap));
+        config.put(CONFIG_MODEL_CAPABILITY_CONFIRMATIONS, capabilityConfirmationStorage(confirmationMap));
+        config.remove(CONFIG_LEGACY_MODEL_CAPABILITY_EVIDENCE);
         entity.setConfigJson(writeJson(config));
         entity.touch();
         providerRepository.save(entity);
-        return modelCapabilityView(providerCode, normalizedModel, capabilityMap.get(normalizedModel), evidenceMap.get(normalizedModel));
+        return modelCapabilityView(providerCode, normalizedModel, capabilityMap.get(normalizedModel), confirmationMap.get(normalizedModel));
     }
 
     @Transactional
@@ -295,17 +291,18 @@ public class ModelProviderService {
         ensureBuiltinRows(scopeId);
         ModelProviderConfigEntity entity = requireProviderEntity(scopeId, providerCode);
         String normalizedModel = requireModelName(modelName);
-        Map<String, ModelCapabilityEvidence> evidenceMap = modelCapabilityEvidence(entity);
-        ModelCapabilityEvidence evidence = evidenceMap.get(normalizedModel);
-        if (evidence == null || !CAPABILITY_SOURCE_OPERATOR_DOCUMENTATION.equals(evidence.source())) {
-            throw new IllegalArgumentException("只能撤销人工文档确认的模型能力。");
+        Map<String, ModelCapabilityConfirmation> confirmationMap = modelCapabilityConfirmations(entity);
+        ModelCapabilityConfirmation confirmation = confirmationMap.get(normalizedModel);
+        if (confirmation == null || !CAPABILITY_SOURCE_OPERATOR_CONFIRMATION.equals(confirmation.source())) {
+            throw new IllegalArgumentException("只能撤销人工确认的模型能力。");
         }
         Map<String, Object> config = new LinkedHashMap<>(readJsonToMap(entity.getConfigJson()));
         Map<String, List<String>> capabilityMap = new LinkedHashMap<>(storedModelCapabilities(entity));
         capabilityMap.remove(normalizedModel);
-        evidenceMap.remove(normalizedModel);
+        confirmationMap.remove(normalizedModel);
         config.put(CONFIG_MODEL_CAPABILITIES, capabilityMap);
-        config.put(CONFIG_MODEL_CAPABILITY_EVIDENCE, capabilityEvidenceStorage(evidenceMap));
+        config.put(CONFIG_MODEL_CAPABILITY_CONFIRMATIONS, capabilityConfirmationStorage(confirmationMap));
+        config.remove(CONFIG_LEGACY_MODEL_CAPABILITY_EVIDENCE);
         entity.setConfigJson(writeJson(config));
         entity.touch();
         providerRepository.save(entity);
@@ -442,13 +439,6 @@ public class ModelProviderService {
                 .map(String::trim)
                 .distinct()
                 .toList();
-        List<String> existing = configuredModelsForProvider(entity, companyId);
-        Map<String, List<String>> capabilities = trustedModelCapabilities(entity);
-        for (String modelName : normalized) {
-            if (!existing.contains(modelName) && !capabilities.containsKey(modelName)) {
-                throw new IllegalArgumentException("模型能力未确认，不能加入平台运行目录：" + modelName + "。请先刷新厂商模型目录或完成受控连通性检测。");
-            }
-        }
         config.put(CONFIG_SELECTED_MODELS, normalized);
         entity.setConfigJson(writeJson(config));
         entity.touch();
@@ -534,7 +524,7 @@ public class ModelProviderService {
                 "models", details.stream().map(ModelDetail::modelName).toList(),
                 "modelDetails", details,
                 "modelCapabilities", trustedModelCapabilities(entity),
-                "modelCapabilityEvidence", capabilityEvidenceView(trustedModelCapabilityEvidence(entity)),
+                "modelCapabilityConfirmations", capabilityConfirmationView(trustedModelCapabilityConfirmations(entity)),
                 "catalogSource", catalogSource(def),
                 "remoteFetchSupported", supportsRemoteModelFetch(def)
         );
@@ -879,10 +869,10 @@ public class ModelProviderService {
 
     private Map<String, List<String>> trustedModelCapabilities(ModelProviderConfigEntity entity) {
         Map<String, List<String>> stored = storedModelCapabilities(entity);
-        Map<String, ModelCapabilityEvidence> evidence = trustedModelCapabilityEvidence(entity);
+        Map<String, ModelCapabilityConfirmation> confirmations = trustedModelCapabilityConfirmations(entity);
         Map<String, List<String>> out = new LinkedHashMap<>();
         stored.forEach((modelName, capabilities) -> {
-            if (evidence.containsKey(modelName)) {
+            if (confirmations.containsKey(modelName)) {
                 out.put(modelName, capabilities);
             }
         });
@@ -905,51 +895,53 @@ public class ModelProviderService {
         return out;
     }
 
-    private Map<String, ModelCapabilityEvidence> trustedModelCapabilityEvidence(ModelProviderConfigEntity entity) {
-        Map<String, ModelCapabilityEvidence> all = modelCapabilityEvidence(entity);
-        Map<String, ModelCapabilityEvidence> out = new LinkedHashMap<>();
-        all.forEach((modelName, evidence) -> {
-            if (isTrustedCapabilitySource(evidence.source())) {
-                out.put(modelName, evidence);
+    private Map<String, ModelCapabilityConfirmation> trustedModelCapabilityConfirmations(ModelProviderConfigEntity entity) {
+        Map<String, ModelCapabilityConfirmation> all = modelCapabilityConfirmations(entity);
+        Map<String, ModelCapabilityConfirmation> out = new LinkedHashMap<>();
+        all.forEach((modelName, confirmation) -> {
+            if (isTrustedCapabilitySource(confirmation.source())) {
+                out.put(modelName, confirmation);
             }
         });
         return out;
     }
 
-    private Map<String, ModelCapabilityEvidence> modelCapabilityEvidence(ModelProviderConfigEntity entity) {
-        Object raw = readJsonToMap(entity.getConfigJson()).get(CONFIG_MODEL_CAPABILITY_EVIDENCE);
+    private Map<String, ModelCapabilityConfirmation> modelCapabilityConfirmations(ModelProviderConfigEntity entity) {
+        Map<String, Object> config = readJsonToMap(entity.getConfigJson());
+        Object raw = config.get(CONFIG_MODEL_CAPABILITY_CONFIRMATIONS);
+        if (!(raw instanceof Map<?, ?>)) {
+            raw = config.get(CONFIG_LEGACY_MODEL_CAPABILITY_EVIDENCE);
+        }
         if (!(raw instanceof Map<?, ?> rawMap)) {
             return new LinkedHashMap<>();
         }
-        Map<String, ModelCapabilityEvidence> out = new LinkedHashMap<>();
-        rawMap.forEach((rawName, rawEvidence) -> {
+        Map<String, ModelCapabilityConfirmation> out = new LinkedHashMap<>();
+        rawMap.forEach((rawName, rawConfirmation) -> {
             String modelName = rawName == null ? "" : String.valueOf(rawName).trim();
-            if (modelName.isBlank() || !(rawEvidence instanceof Map<?, ?> values)) {
+            if (modelName.isBlank() || !(rawConfirmation instanceof Map<?, ?> values)) {
                 return;
             }
-            String source = valueOfMap(values, "source");
+            String source = normalizeCapabilityConfirmationSource(valueOfMap(values, "source"));
             if (!isTrustedCapabilitySource(source)) {
                 return;
             }
-            out.put(modelName, new ModelCapabilityEvidence(
+            out.put(modelName, new ModelCapabilityConfirmation(
                     source,
-                    valueOfMap(values, "documentationUrl"),
-                    valueOfMap(values, "evidenceReference"),
                     valueOfMap(values, "confirmedAt"),
                     valueOfMap(values, "confirmedBy")));
         });
         return out;
     }
 
-    private Map<String, Object> capabilityEvidenceView(Map<String, ModelCapabilityEvidence> evidence) {
+    private Map<String, Object> capabilityConfirmationView(Map<String, ModelCapabilityConfirmation> confirmations) {
         Map<String, Object> out = new LinkedHashMap<>();
-        evidence.forEach((modelName, item) -> out.put(modelName, item.toView()));
+        confirmations.forEach((modelName, item) -> out.put(modelName, item.toView()));
         return out;
     }
 
-    private Map<String, Object> capabilityEvidenceStorage(Map<String, ModelCapabilityEvidence> evidence) {
+    private Map<String, Object> capabilityConfirmationStorage(Map<String, ModelCapabilityConfirmation> confirmations) {
         Map<String, Object> out = new LinkedHashMap<>();
-        evidence.forEach((modelName, item) -> out.put(modelName, item.toStorage()));
+        confirmations.forEach((modelName, item) -> out.put(modelName, item.toStorage()));
         return out;
     }
 
@@ -972,17 +964,18 @@ public class ModelProviderService {
                                             String source) {
         Map<String, Object> config = new LinkedHashMap<>(readJsonToMap(entity.getConfigJson()));
         Map<String, List<String>> catalog = new LinkedHashMap<>(storedModelCapabilities(entity));
-        Map<String, ModelCapabilityEvidence> evidence = modelCapabilityEvidence(entity);
+        Map<String, ModelCapabilityConfirmation> confirmations = modelCapabilityConfirmations(entity);
         for (ModelDetail detail : details == null ? List.<ModelDetail>of() : details) {
             String modelName = detail.modelName() == null ? "" : detail.modelName().trim();
             List<String> capabilities = normalizeCapabilities(detail.capabilities());
             if (!modelName.isBlank() && !capabilities.isEmpty()) {
                 catalog.put(modelName, capabilities);
-                evidence.put(modelName, new ModelCapabilityEvidence(source, "", "", Instant.now().toString(), ""));
+                confirmations.put(modelName, new ModelCapabilityConfirmation(source, Instant.now().toString(), ""));
             }
         }
         config.put(CONFIG_MODEL_CAPABILITIES, catalog);
-        config.put(CONFIG_MODEL_CAPABILITY_EVIDENCE, capabilityEvidenceStorage(evidence));
+        config.put(CONFIG_MODEL_CAPABILITY_CONFIRMATIONS, capabilityConfirmationStorage(confirmations));
+        config.remove(CONFIG_LEGACY_MODEL_CAPABILITY_EVIDENCE);
         entity.setConfigJson(writeJson(config));
         entity.touch();
         providerRepository.save(entity);
@@ -1278,39 +1271,14 @@ public class ModelProviderService {
         return normalized;
     }
 
-    private String requireHttpsDocumentationUrl(String documentationUrl) {
-        String normalized = nullableToBlank(documentationUrl).trim();
-        if (normalized.isBlank() || normalized.length() > 1024) {
-            throw new IllegalArgumentException("请提供不超过 1024 个字符的厂商 HTTPS 文档链接。");
-        }
-        try {
-            URI uri = URI.create(normalized);
-            if (!"https".equalsIgnoreCase(uri.getScheme())
-                    || uri.getHost() == null
-                    || uri.getRawUserInfo() != null) {
-                throw new IllegalArgumentException("能力确认只接受厂商 HTTPS 文档链接。");
-            }
-            return uri.toString();
-        } catch (IllegalArgumentException ex) {
-            if (ex.getMessage() != null && ex.getMessage().contains("能力确认")) {
-                throw ex;
-            }
-            throw new IllegalArgumentException("能力确认只接受格式正确的厂商 HTTPS 文档链接。");
-        }
-    }
-
-    private String requireEvidenceReference(String evidenceReference) {
-        String normalized = nullableToBlank(evidenceReference).trim();
-        if (normalized.isBlank() || normalized.length() > 256) {
-            throw new IllegalArgumentException("请填写不超过 256 个字符的文档版本、章节或证据说明。");
-        }
-        return normalized;
-    }
-
     private boolean isTrustedCapabilitySource(String source) {
         return CAPABILITY_SOURCE_PROVIDER_CATALOG.equals(source)
                 || CAPABILITY_SOURCE_CONTROLLED_CHECK.equals(source)
-                || CAPABILITY_SOURCE_OPERATOR_DOCUMENTATION.equals(source);
+                || CAPABILITY_SOURCE_OPERATOR_CONFIRMATION.equals(source);
+    }
+
+    private String normalizeCapabilityConfirmationSource(String source) {
+        return "operator_documentation".equals(source) ? CAPABILITY_SOURCE_OPERATOR_CONFIRMATION : source;
     }
 
     private String valueOfMap(Map<?, ?> values, String key) {
@@ -1330,12 +1298,12 @@ public class ModelProviderService {
     private Map<String, Object> modelCapabilityView(String providerCode,
                                                     String modelName,
                                                     List<String> capabilities,
-                                                    ModelCapabilityEvidence evidence) {
+                                                    ModelCapabilityConfirmation confirmation) {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("providerCode", providerCode);
         out.put("modelName", modelName);
         out.put("capabilities", capabilities == null ? List.of() : capabilities);
-        out.put("evidence", evidence == null ? Map.of() : evidence.toView());
+        out.put("confirmation", confirmation == null ? Map.of() : confirmation.toView());
         return out;
     }
 
@@ -1370,16 +1338,12 @@ public class ModelProviderService {
     private record ModelChoice(String providerCode, String providerName, String modelName, List<String> capabilities) {
     }
 
-    private record ModelCapabilityEvidence(String source,
-                                           String documentationUrl,
-                                           String evidenceReference,
+    private record ModelCapabilityConfirmation(String source,
                                            String confirmedAt,
                                            String confirmedBy) {
         private Map<String, Object> toStorage() {
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("source", source);
-            out.put("documentationUrl", documentationUrl);
-            out.put("evidenceReference", evidenceReference);
             out.put("confirmedAt", confirmedAt);
             out.put("confirmedBy", confirmedBy);
             return out;
@@ -1390,10 +1354,10 @@ public class ModelProviderService {
             out.put("sourceLabel", switch (source) {
                 case CAPABILITY_SOURCE_PROVIDER_CATALOG -> "厂商目录确认";
                 case CAPABILITY_SOURCE_CONTROLLED_CHECK -> "受控检测确认";
-                case CAPABILITY_SOURCE_OPERATOR_DOCUMENTATION -> "人工文档确认";
+                case CAPABILITY_SOURCE_OPERATOR_CONFIRMATION -> "人工确认";
                 default -> "能力确认";
             });
-            out.put("revocable", CAPABILITY_SOURCE_OPERATOR_DOCUMENTATION.equals(source));
+            out.put("revocable", CAPABILITY_SOURCE_OPERATOR_CONFIRMATION.equals(source));
             return out;
         }
     }

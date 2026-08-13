@@ -35,10 +35,8 @@ describe("provider catalog capability", () => {
 });
 
 describe("manual capability confirmation", () => {
-  it("requires selected capabilities and verifiable vendor HTTPS documentation", () => {
-    expect(capabilityConfirmationError([], "https://docs.vendor.example/model", "v1 §2")).toBe("请至少选择一项模型能力。");
-    expect(capabilityConfirmationError(["text"], "http://docs.vendor.example/model", "v1 §2")).toBe("厂商文档必须使用 HTTPS 地址。");
-    expect(capabilityConfirmationError(["text"], "https://docs.vendor.example/model", "")).toBe("请填写文档版本、章节或可核验引用。");
-    expect(capabilityConfirmationError(["text", "reasoning"], "https://docs.vendor.example/model", "v1 §2")).toBe("");
+  it("requires only one or more selected capabilities", () => {
+    expect(capabilityConfirmationError([])).toBe("请至少选择一项模型能力。");
+    expect(capabilityConfirmationError(["text", "reasoning"])).toBe("");
   });
 });

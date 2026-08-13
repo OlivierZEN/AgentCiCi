@@ -20,7 +20,7 @@ type ProviderModelsPayload = {
   recommendedModels: string[];
   selectedModels?: string[];
   modelCapabilities?: Record<string, string[]>;
-  modelCapabilityEvidence?: Record<string, ModelCapabilityEvidence>;
+  modelCapabilityConfirmations?: Record<string, ModelCapabilityConfirmation>;
 };
 
 type FetchModelDetailPayload = {
@@ -32,7 +32,7 @@ type FetchModelsPayload = {
   models?: string[];
   modelDetails?: FetchModelDetailPayload[];
   modelCapabilities?: Record<string, string[]>;
-  modelCapabilityEvidence?: Record<string, ModelCapabilityEvidence>;
+  modelCapabilityConfirmations?: Record<string, ModelCapabilityConfirmation>;
   remoteFetchSupported?: boolean;
   catalogSource?: string;
 };
@@ -45,11 +45,9 @@ type ModelCandidate = {
   capabilities?: string[];
 };
 
-type ModelCapabilityEvidence = {
+type ModelCapabilityConfirmation = {
   source: string;
   sourceLabel?: string;
-  documentationUrl?: string;
-  evidenceReference?: string;
   confirmedAt?: string;
   confirmedBy?: string;
   revocable?: boolean;
@@ -173,16 +171,8 @@ export function catalogEmptyMessage(catalogSource: CatalogSource, modelCount: nu
   return "没有匹配的模型";
 }
 
-export function capabilityConfirmationError(capabilities: CapabilityKey[], documentationUrl: string, evidenceReference: string): string {
-  if (capabilities.length === 0) return "请至少选择一项模型能力。";
-  try {
-    const url = new URL(documentationUrl.trim());
-    if (url.protocol !== "https:") return "厂商文档必须使用 HTTPS 地址。";
-  } catch {
-    return "请输入有效的厂商 HTTPS 文档地址。";
-  }
-  if (!evidenceReference.trim()) return "请填写文档版本、章节或可核验引用。";
-  return "";
+export function capabilityConfirmationError(capabilities: CapabilityKey[]): string {
+  return capabilities.length === 0 ? "请至少选择一项模型能力。" : "";
 }
 
 export default function PlatformModelsPage() {
@@ -198,11 +188,9 @@ export default function PlatformModelsPage() {
   const [modelRoutes, setModelRoutes] = useState<ModelRoute[]>([]);
   const [activeConfigTab, setActiveConfigTab] = useState<ModelConfigTab>("providers");
   const [capabilityMap, setCapabilityMap] = useState<Record<string, CapabilityKey[]>>({});
-  const [capabilityEvidenceMap, setCapabilityEvidenceMap] = useState<Record<string, ModelCapabilityEvidence>>({});
+  const [capabilityConfirmationMap, setCapabilityConfirmationMap] = useState<Record<string, ModelCapabilityConfirmation>>({});
   const [capabilityConfirmation, setCapabilityConfirmation] = useState<CapabilityConfirmationTarget | null>(null);
   const [capabilityDraft, setCapabilityDraft] = useState<CapabilityKey[]>([]);
-  const [documentationUrl, setDocumentationUrl] = useState("");
-  const [evidenceReference, setEvidenceReference] = useState("");
   const [capabilityFormError, setCapabilityFormError] = useState("");
   const [capabilityRevokeTarget, setCapabilityRevokeTarget] = useState<CapabilityConfirmationTarget | null>(null);
   const [allModelsOpen, setAllModelsOpen] = useState(false);
@@ -259,7 +247,7 @@ export default function PlatformModelsPage() {
   function applyProviderCapabilityData(
     providerCode: string,
     rawCapabilities: Record<string, string[]> | undefined,
-    rawEvidence: Record<string, ModelCapabilityEvidence> | undefined,
+    rawConfirmations: Record<string, ModelCapabilityConfirmation> | undefined,
   ) {
     const prefix = `${providerCode}::`;
     setCapabilityMap((prev) => {
@@ -271,10 +259,10 @@ export default function PlatformModelsPage() {
       });
       return next;
     });
-    setCapabilityEvidenceMap((prev) => {
-      const next = Object.fromEntries(Object.entries(prev).filter(([key]) => !key.startsWith(prefix))) as Record<string, ModelCapabilityEvidence>;
-      Object.entries(rawEvidence ?? {}).forEach(([name, evidence]) => {
-        next[selectedModelKey(providerCode, name)] = evidence;
+    setCapabilityConfirmationMap((prev) => {
+      const next = Object.fromEntries(Object.entries(prev).filter(([key]) => !key.startsWith(prefix))) as Record<string, ModelCapabilityConfirmation>;
+      Object.entries(rawConfirmations ?? {}).forEach(([name, confirmation]) => {
+        next[selectedModelKey(providerCode, name)] = confirmation;
       });
       return next;
     });
@@ -283,8 +271,6 @@ export default function PlatformModelsPage() {
   function openCapabilityConfirmation(providerCode: string, providerName: string, modelName: string) {
     setCapabilityConfirmation({ providerCode, providerName, modelName });
     setCapabilityDraft([]);
-    setDocumentationUrl("");
-    setEvidenceReference("");
     setCapabilityFormError("");
   }
 
@@ -324,7 +310,7 @@ export default function PlatformModelsPage() {
       const merged = dedupeModels([...(data.recommendedModels ?? []), ...(data.selectedModels ?? [])]);
       setProviderModels(merged);
       setSelectedModelsForProvider(providerCode, data.selectedModels ?? []);
-      applyProviderCapabilityData(providerCode, data.modelCapabilities, data.modelCapabilityEvidence);
+      applyProviderCapabilityData(providerCode, data.modelCapabilities, data.modelCapabilityConfirmations);
     } catch (err) {
       setError(err instanceof Error ? err.message : "加载模型列表失败");
     }
@@ -422,7 +408,7 @@ export default function PlatformModelsPage() {
       const remoteUnavailable = data.remoteFetchSupported === false || data.catalogSource === "unavailable";
       setProviderModels(models);
       setAllModelsCatalogSource(remoteUnavailable ? "unavailable" : "remote");
-      applyProviderCapabilityData(selected.providerCode, data.modelCapabilities, data.modelCapabilityEvidence);
+      applyProviderCapabilityData(selected.providerCode, data.modelCapabilities, data.modelCapabilityConfirmations);
       if (remoteUnavailable) {
         setNotice("当前厂商未开放远程模型枚举，暂无可选模型。");
       } else {
@@ -528,7 +514,7 @@ export default function PlatformModelsPage() {
 
   async function saveCapabilityConfirmation() {
     if (!capabilityConfirmation) return;
-    const validationError = capabilityConfirmationError(capabilityDraft, documentationUrl, evidenceReference);
+    const validationError = capabilityConfirmationError(capabilityDraft);
     if (validationError) {
       setCapabilityFormError(validationError);
       return;
@@ -546,8 +532,6 @@ export default function PlatformModelsPage() {
           body: JSON.stringify({
             modelName: capabilityConfirmation.modelName,
             capabilities: capabilityDraft,
-            documentationUrl: documentationUrl.trim(),
-            evidenceReference: evidenceReference.trim(),
           }),
         },
       );
@@ -765,7 +749,7 @@ export default function PlatformModelsPage() {
                       <div>
                         <h4>平台已选模型</h4>
                         <p className="model-capability-guidance">
-                          场景路由只使用已确认能力：厂商目录、受控检测或附带厂商文档证据的人工确认。
+                          先将模型加入平台目录，再人工确认可用于场景路由的能力。
                         </p>
                       </div>
                       <span className="model-count-badge">已选 {selectedModelsForCurrentProvider.length} 个</span>
@@ -776,7 +760,7 @@ export default function PlatformModelsPage() {
                       <div className="provider-model-board">
                         {selectedModelsForCurrentProvider.map((name) => {
                           const caps = capabilityMap[selectedModelKey(selected.providerCode, name)] ?? [];
-                          const evidence = capabilityEvidenceMap[selectedModelKey(selected.providerCode, name)];
+                          const confirmation = capabilityConfirmationMap[selectedModelKey(selected.providerCode, name)];
                           return (
                             <div className="provider-model-row" key={`${selected.providerCode}-${name}`}>
                               <div className="provider-model-row__left">
@@ -804,16 +788,6 @@ export default function PlatformModelsPage() {
                                     );
                                   })}
                                   {caps.length === 0 ? <span className="model-capability-unknown">能力未确认，不可用于场景路由</span> : null}
-                                  {evidence ? (
-                                    <span className="model-capability-evidence">
-                                      {evidence.documentationUrl ? (
-                                        <a href={evidence.documentationUrl} target="_blank" rel="noreferrer">{evidence.sourceLabel || "能力已确认"}</a>
-                                      ) : (
-                                        <span>{evidence.sourceLabel || "能力已确认"}</span>
-                                      )}
-                                      {evidence.evidenceReference ? <span>· {evidence.evidenceReference}</span> : null}
-                                    </span>
-                                  ) : null}
                                 </div>
                                 <div className="provider-model-row__actions">
                                   {caps.length === 0 ? (
@@ -824,7 +798,7 @@ export default function PlatformModelsPage() {
                                     >
                                       确认能力
                                     </button>
-                                  ) : evidence?.revocable ? (
+                                  ) : confirmation?.revocable ? (
                                     <button
                                       type="button"
                                       className="cici-btn cici-btn--text cici-btn--danger cici-btn--xs"
@@ -927,15 +901,16 @@ export default function PlatformModelsPage() {
               </button>
             </div>
             <div className="all-models-modal__toolbar">
-              <input
-                className="all-models-search"
-                value={allModelsSearch}
-                onChange={(event) => setAllModelsSearch(event.target.value)}
-                placeholder="搜索模型名称"
-              />
-              <span className="all-models-count">
-                共 {filteredModels.length} / {providerModels.length} 个
-              </span>
+              <div className="all-models-modal__toolbar-main">
+                <input
+                  className="all-models-search"
+                  value={allModelsSearch}
+                  onChange={(event) => setAllModelsSearch(event.target.value)}
+                  placeholder="搜索模型名称"
+                />
+                <span className="all-models-hint">可直接加入平台目录，能力在后续确认。</span>
+              </div>
+              <span className="all-models-count">共 {filteredModels.length} / {providerModels.length} 个</span>
             </div>
             <div className="all-models-modal__body">
               {allModelsLoading ? (
@@ -946,27 +921,13 @@ export default function PlatformModelsPage() {
                 <div className="all-models-list">
                   {filteredModels.map((name) => {
                     const selectedNow = selectedModels.has(selectedModelKey(selected.providerCode, name));
-                    const caps = capabilityMap[selectedModelKey(selected.providerCode, name)] ?? [];
                     return (
                       <div key={name} className="all-models-item">
                         <div className="all-models-item__name">{name}</div>
-                        <div className="all-models-item__caps">
-                          {caps.map((cap) => {
-                            const meta = CAPABILITY_META[cap];
-                            return (
-                              <span key={`${name}-${cap}`} className={`model-cap-pill model-cap-pill--${meta.tone}`}>
-                                <span className="model-cap-pill__icon">{meta.icon}</span>
-                                <span>{meta.label}</span>
-                              </span>
-                            );
-                          })}
-                          {caps.length === 0 ? <span className="model-capability-unknown">能力未确认</span> : null}
-                        </div>
                         <button
                           type="button"
                           className="all-models-item__action"
                           title={selectedNow ? "移出已选模型" : "加入已选模型"}
-                          disabled={!selectedNow && caps.length === 0}
                           onClick={() => void toggleSelectedModel(name)}
                         >
                           {selectedNow ? "-" : "+"}
@@ -996,7 +957,7 @@ export default function PlatformModelsPage() {
             </div>
             <div className="cici-modal__body model-capability-modal__body">
               <p className="cici-modal__description">
-                仅基于厂商公开 HTTPS 文档确认能力；模型名称和历史调用结果不能作为能力依据。
+                选择此模型实际可用的能力。保存后，模型只会出现在能力与协议匹配的场景路由中。
               </p>
               <dl className="model-capability-context">
                 <div><dt>厂商</dt><dd>{capabilityConfirmation.providerName}</dd></div>
@@ -1017,25 +978,6 @@ export default function PlatformModelsPage() {
                   })}
                 </div>
               </fieldset>
-              <label className="cici-field">
-                <span className="cici-field__label">厂商文档 HTTPS 地址</span>
-                <input
-                  className="cici-field__input"
-                  type="url"
-                  value={documentationUrl}
-                  onChange={(event) => setDocumentationUrl(event.target.value)}
-                  placeholder="https://docs.vendor.example/models/..."
-                />
-              </label>
-              <label className="cici-field">
-                <span className="cici-field__label">可核验证据引用</span>
-                <input
-                  className="cici-field__input"
-                  value={evidenceReference}
-                  onChange={(event) => setEvidenceReference(event.target.value)}
-                  placeholder="文档版本、页面或章节"
-                />
-              </label>
               {capabilityFormError ? <p className="model-capability-form-error">{capabilityFormError}</p> : null}
             </div>
             <div className="cici-modal__actions">
@@ -1061,7 +1003,7 @@ export default function PlatformModelsPage() {
             </div>
             <div className="cici-modal__body model-capability-modal__body">
               <p className="cici-modal__description">
-                将撤销 <strong>{capabilityRevokeTarget.modelName}</strong> 的人工文档确认。已配置到该模型的场景路由会立即变为不可用，直到重新确认并配置。
+                将撤销 <strong>{capabilityRevokeTarget.modelName}</strong> 的人工能力确认。已配置到该模型的场景路由会立即变为不可用，直到重新确认并配置。
               </p>
               <p className="model-capability-revoke-note">本操作会写入平台审计记录。</p>
             </div>

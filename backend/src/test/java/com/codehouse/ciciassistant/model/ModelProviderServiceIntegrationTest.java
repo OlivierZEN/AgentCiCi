@@ -182,7 +182,7 @@ class ModelProviderServiceIntegrationTest {
         String evidence = java.util.Arrays.stream(modelNames)
                 .map(modelName -> "\\\"" + modelName + "\\\":{\\\"source\\\":\\\"provider_catalog\\\",\\\"confirmedAt\\\":\\\"2026-08-13T00:00:00Z\\\"}")
                 .collect(Collectors.joining(","));
-        provider.setConfigJson("{\\\"modelCapabilities\\\":{" + capabilities + "},\\\"modelCapabilityEvidence\\\":{" + evidence + "}}");
+        provider.setConfigJson("{\\\"modelCapabilities\\\":{" + capabilities + "},\\\"modelCapabilityConfirmations\\\":{" + evidence + "}}");
         provider.touch();
         providerRepository.save(provider);
         modelProviderService.updatePlatformSelectedModels(providerCode, List.of(modelNames));
