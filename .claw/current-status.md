@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-13T10:55:00Z
+updated_at: 2026-08-13T11:09:00Z
 updated_by: codex
 phase: review
-active_task: TASK-301
-next_action: "从本地 main 提交构建 backend/frontend，并在 cici.localhost 以文本型 PDF 完成真实上传、索引和页面验收。"
+active_task: TASK-298
+next_action: "使用受权平台会话完成 TASK-298 的模型目录、能力确认与撤销业务验收；TASK-301 已完成。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-301 / FEAT-182 已进入本地部署前验证：根因是前端选择任意 PDF 后把 `pdfPolicy` 能力说明作为错误 toast 并直接返回，请求未到后端。现已移除 PDF 特判，保留大小/扩展名预检，统一中文文本型 PDF 说明；前端 3 项定向测试、生产构建和后端 package 通过。既有 PDF Spring 集成先被共享测试库 V81 checksum 漂移阻断；隔离 PostgreSQL 已成功从 V1 迁移到 V114，随后因用例未建立当前必需的平台模型前置而未进入 PDF 断言，未 repair 或伪造通过。下一步提交本地 main 并用真实本地平台模型配置完成 PDF 上传/索引验收。
+- TASK-301 / FEAT-182 已完成：根因是前端选择任意 PDF 后把 `pdfPolicy` 能力说明作为错误 toast 并直接返回，请求未到后端。修复提交 `cabaebc7c641` 已进入本地 `main`，移除 PDF 特判并统一中文说明；backend/frontend 从该提交构建为 `2.8.61-dev.cabaebc`，均 healthy/restart=0，后端版本接口和前端资源指纹一致。受控文本型 PDF 通过正式上传、发布和 MQ 索引，最终 PUBLISHED、1 个切片、无解析错误；测试文档经正式删除 API 清理后，有效文档/切片恢复 0/0。前端 3 项定向测试、生产构建和后端 package 通过；Spring 集成仍受既有 V81 checksum 与 fixture 模型前置阻断，未 repair 或伪造通过。自动化浏览器无已登录 HUMAN 会话，受权页面点击级复核未覆盖；UAT/生产未修改。
 
 - TASK-298 / FEAT-179 已回到 review：人工确认弹窗只保留能力选择，已移除厂商文档、HTTPS 校验、证据引用及其展示；“全部模型”可先加入平台目录，能力确认只决定后续场景路由候选。截图发现网关 HTML 被直接解析为 JSON 的错误，已由 `4da7a3b` 修复为显式 JSON 协商及可操作的版本一致性提示；操作者/时间、平台审计和撤销仍保留，未确认模型仍失败关闭。本地 frontend 已从本地 `main@4da7a3b` 重建为 `2.8.61-dev.4da7a3b`，backend 保持含能力 API 的 `2.8.61-dev.b8bf4d3`；两容器 healthy/restart=0，`/platform/models`=200、能力 API 匿名返回 401 JSON，完整 `./stack verify` 通过。前端定向 6 项与 production build 通过；Spring 集成仍在断言前被既有 `agentcici_test` Flyway V81 checksum 漂移阻断，未 repair。UAT/生产未修改，受权业务交互仍待验收。
 

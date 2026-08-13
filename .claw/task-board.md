@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-13T10:35:00Z
+updated_at: 2026-08-13T11:09:00Z
 updated_by: codex
 board_status: active
 ---
@@ -14,17 +14,6 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
-
-### TASK-301 - 知识库 PDF 上传门禁修复
-
-- status: `in_progress`
-- priority: `critical`
-- owner_role: `fullstack-agent`
-- claimed_by: `codex`
-- spec_path: `docs/specs/FEAT-182-kb-pdf-upload-admission.md`
-- task_status_path: `.claw/tasks/TASK-301.md`
-- blocked_by: `none`
-- next_action: `移除前端 PDF 误拦截，完成定向测试、提交、本地 main 构建与 cici.localhost 验收`
 
 ### TASK-300 - 机器开发者实例上限控制面
 
@@ -1572,6 +1561,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-301 - 知识库 PDF 上传门禁修复
+
+- status: `done`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-182-kb-pdf-upload-admission.md`
+- task_status_path: `.claw/tasks/TASK-301.md`
+- completion_evidence: `cabaebc7c641 已构建为 2.8.61-dev.cabaebc；backend/frontend healthy/restart=0；真实文本型 PDF 上传、发布、1 个切片和正式清理通过`
+- next_action: `已完成本地 main 修复与 cici.localhost 验收；UAT/生产未修改。`
 
 ### TASK-296 - DevAutopilot 历史受理记录字段纠正
 

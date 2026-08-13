@@ -1,11 +1,11 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-13T09:54:05Z
+updated_at: 2026-08-13T11:09:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-13T10:55:00Z
-last_run_status: passed_with_integration_fixture_blocker
+last_run_at: 2026-08-13T11:09:00Z
+last_run_status: passed
 ---
 
 # Test Report
@@ -16,7 +16,11 @@ last_run_status: passed_with_integration_fixture_blocker
 - 前端：新增统一上传预检，PDF 与其他允许扩展名一并放行；超限和不支持扩展名仍失败关闭。`npm test -- --run src/admin/pages/AdminKnowledgeUploadPolicy.test.ts` 为 1 文件/3 项通过，`npm run build` 通过，仅保留既有 chunk-size warning。
 - 后端：上传策略改为中文文本型 PDF 说明；`mvn -q -DskipTests package` 与 `git diff --check` 通过。
 - 集成边界：共享测试库在断言前被既有 Flyway V81 checksum 漂移阻断，未 repair。隔离 PostgreSQL 16 已从 V1 成功迁移至 V114，但现有 `shouldExposeUploadPolicyAndIndexTextPdf` fixture 未建立当前 `knowledge-embedding` 所需的平台可用模型，创建知识库时失败，未进入 PDF 断言；不声明该用例通过。
-- 状态：`passed_with_integration_fixture_blocker`；待从本地 `main` 构建并使用已有平台模型配置完成 `cici.localhost` 真实文本型 PDF 上传和索引验收。
+- 本地主线与制品：修复提交 `cabaebc7c641` 已进入本地 `main`；backend/frontend 从该提交构建为 `2.8.61-dev.cabaebc`。后端 `/system/version` 回读 `cabaebc7c641`，前端 JS/CSS 文件名回读相同版本。
+- 运行资源：只替换 AgentCiCi backend/frontend；镜像分别为 `sha256:909f232deef8868f3c089cc8546d2cc88c4fe96f2411048ab0180c6e92d81e7d`、`sha256:597e6702fb6312775da922675f4bc9ec0e472467a18051e3da87403ad1048ef0`，两个容器均 healthy/restart=0，`https://cici.localhost/admin/kb` 路由返回 200。
+- 真实 PDF 链路：生成并渲染检查 1 页文本型 PDF，正式 `/kb/documents/upload` 返回 UPLOADED，正式 publish 进入 MQ 后最终 PUBLISHED、1 个切片、无解析错误。随后通过正式 delete API 清理，返回 `cleanupStatus=COMPLETED`、`deletedChunks=1`，知识库有效文档/有效切片恢复 0/0；临时 PDF 与 PNG 已删除。
+- 身份边界：自动化浏览器没有已登录 HUMAN 会话，访问 `/admin/kb` 正确进入 SSO；验收使用本地短时受控生态 HUMAN token 调用与页面相同的 API，未输出或持久化 Secret，未伪造已登录页面点击证据。
+- 状态：`passed`（代码、制品、运行和真实文本型 PDF 上传/发布/清理通过）；UAT/生产未修改。
 
 ## 2026-08-13 TASK-298 模型能力确认非 JSON 响应修复
 
