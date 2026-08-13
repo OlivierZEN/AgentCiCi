@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-13T13:15:32Z
+updated_at: 2026-08-13T14:00:18Z
 updated_by: codex
 phase: review
 active_task: TASK-302
-next_action: "平台运营人员刷新 AgentCiCi 系统 API 列表，确认可访问公司查询与公司切换的抽屉和调用文档；UAT/生产未修改。"
+next_action: "平台运营人员使用真实登录态确认公司 API 抽屉和完整文档中的 Keycloak 直调结论、现有 OIDC 流程及新应用接入前置；UAT/生产未修改。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-302 / FEAT-183 已把公司 API 鉴权文案改为可执行的接入指南：明确 Keycloak 原始 `access_token` / `id_token` 不能直接调用，现有 AgentCiCi Web 使用 `/auth/oidc/login` 与 `/auth/oidc/complete` 完成登录和一次性票据兑换，同源扩展复用服务端会话，新独立应用须先完成 Keycloak Client、平台激活/信任及应用专用 handoff/受治理交换契约，机器应用继续使用 SERVICE/OACT；当前未虚构通用 HUMAN Token 交换端点。提交 `99ae151` 已进入本地 `main`，backend/frontend 运行 `2.8.61-dev.99ae151`、healthy/restart=0，目标页 200、匿名 API JSON 401、完整 `./stack verify` 通过。浏览器无运营平台登录态，授权态视觉验收待运营人员完成；UAT/生产未修改。
 
 - TASK-302 / FEAT-183 已公布 AgentCiCi 公司上下文 API：系统 API 目录新增可访问公司查询 `GET /auth/companies` 与切换当前公司 `POST /auth/switch-company`，沿用现有 ACTIVE 成员关系校验和新 HUMAN 公司上下文令牌签发逻辑；调用文档区分 HUMAN、SERVICE、OACT 与内部 HMAC。提交 `a206da9a`、门禁兼容修复 `6444bbcf` 已进入本地 `main`；backend/frontend 运行 `2.8.61-dev.6444bbc`、healthy/restart=0，目标页 200、匿名 API JSON 401、运行制品内容与完整 `./stack verify` 均通过。真实平台登录态视觉验收待运营人员完成，UAT/生产未修改。
 

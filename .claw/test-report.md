@@ -1,14 +1,25 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-13T13:15:32Z
+updated_at: 2026-08-13T14:00:18Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-13T13:15:32Z
+last_run_at: 2026-08-13T14:00:18Z
 last_run_status: passed_with_authorized_visual_pending
 ---
 
 # Test Report
+
+## 2026-08-13 TASK-302 HUMAN 鉴权与新应用接入说明
+
+- 文案边界：明确 Keycloak 原始 `access_token` / `id_token` 不能直接调用公司 API；目录使用 `Bearer AgentCiCi Ecosystem HUMAN Token`，并说明账号、ACTIVE 成员关系、当前公司、audience/scope 等受控上下文。
+- 现有调用链：文档给出 `/auth/oidc/login?return_to=${SAME_ORIGIN_RETURN_PATH}`、一次性回调票据和 `/auth/oidc/complete?ticket=${OIDC_COMPLETION_TICKET}` 的服务端兑换方式；公司切换成功后必须用响应中的新 HUMAN Token 替换旧 Token 并清理租户缓存。
+- 新应用边界：同源扩展复用 AgentCiCi 服务端会话；新独立应用必须先登记 Keycloak Client、平台应用激活/信任并建设应用专用 handoff 或受治理交换契约；当前不公布不存在的通用 HUMAN Token 交换地址。机器应用使用 SERVICE/OACT，不得调用 HUMAN 公司 API。
+- 后端：`mvn -q -Dtest=SystemApiCatalogServiceTest test` 与 `mvn -q -DskipTests package` 通过。
+- 前端：定向 1 文件/8 项、全量 49 文件/272 项、`npm run build` 和 `git diff --check` 通过；环境域名门禁通过。
+- 本地开发环境：功能提交 `99ae151b5ce0` 已进入本地 `main`；backend/frontend 为 `2.8.61-dev.99ae151`、revision=`99ae151b5ce0`、healthy/restart=0。目标深链返回 200，匿名目录 API 返回 `401 application/json`，完整 `./stack verify` 通过。
+- 浏览器：受保护深链正确跳转运营平台登录页；当前无可复用登录态，未绕过认证，授权态抽屉与完整文档视觉验收待运营人员完成。
+- 状态：`passed_with_authorized_visual_pending`；UAT/生产未修改。
 
 ## 2026-08-13 TASK-302 公司上下文系统 API 公布
 

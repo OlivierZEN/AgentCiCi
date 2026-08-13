@@ -4,7 +4,7 @@ task_id: TASK-302
 feature_id: FEAT-183
 integration_id: INT-019
 status: review
-updated_at: 2026-08-13T13:51:21Z
+updated_at: 2026-08-13T14:00:18Z
 updated_by: codex
 owner_role: fullstack-agent
 spec_path: docs/specs/FEAT-183-system-api-catalog.md
@@ -64,4 +64,6 @@ spec_path: docs/specs/FEAT-183-system-api-catalog.md
 
 - 后端定向 `SystemApiCatalogServiceTest` 通过，覆盖 Keycloak 原始 Token 不可直调、五步签发链路、新独立应用接入前置和 Semattice 投影兼容。
 - 前端定向 1 文件/8 项、全量 49 文件/272 项和 production build 通过；请求示例使用 `AGENTCICI_ECOSYSTEM_HUMAN_TOKEN`，并覆盖现有 `/auth/oidc/login` 与 `/auth/oidc/complete` 流程。
-- 本地开发环境部署和受权桌面视觉验收结果在完成本地 `main` 构建后补充；UAT/生产未修改。
+- 功能提交 `99ae151b5ce0` 已进入本地 `main`，backend/frontend 从该提交构建并运行 `2.8.61-dev.99ae151`；两个容器均 healthy/restart=0，镜像 revision 一致。
+- `https://cici.localhost/platform/system-apis/agentcici` 返回 200，匿名 `/api/platform/system-apis` 返回 `401 application/json`，完整 `./stack verify` 通过；部署前端制品包含 Keycloak 原始 Token 不可直调的结论。
+- 浏览器访问受保护深链会正确进入运营平台登录页；当前没有可复用的运营平台登录态，因此授权态抽屉和完整文档的视觉/交互验收仍待平台运营人员完成。UAT/生产未修改。
