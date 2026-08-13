@@ -136,7 +136,7 @@ type BatchFeedback = {
 };
 
 type UploadFeedback = {
-  tone: "progress" | "success" | "warning";
+  tone: "progress" | "success" | "danger";
   title: string;
   detail: string;
 };
@@ -788,7 +788,7 @@ export default function AdminKnowledgePage() {
     });
     const validationMessage = validateKnowledgeUpload(file, uploadPolicy);
     if (validationMessage) {
-      setUploadFeedback({ tone: "warning", title: "无法上传", detail: `${file.name}：${validationMessage}` });
+      setUploadFeedback({ tone: "danger", title: "无法上传", detail: `${file.name}：${validationMessage}` });
       flash(validationMessage);
       return;
     }
@@ -848,7 +848,7 @@ export default function AdminKnowledgePage() {
       await listKnowledgeBases();
     } catch (error) {
       const message = uploadFailureMessage(error, "文档上传失败，请稍后重试");
-      setUploadFeedback({ tone: "warning", title: "文档上传失败", detail: `${file.name}：${message}` });
+      setUploadFeedback({ tone: "danger", title: "文档上传失败", detail: `${file.name}：${message}` });
       flash(message);
       await listDocuments(kbId).catch(() => undefined);
     } finally {
@@ -1661,8 +1661,8 @@ export default function AdminKnowledgePage() {
               {uploadFeedback && (
                 <div
                   className={`cici-inline-feedback cici-inline-feedback--${uploadFeedback.tone} cici-upload-feedback`}
-                  role={uploadFeedback.tone === "warning" ? "alert" : "status"}
-                  aria-live={uploadFeedback.tone === "warning" ? "assertive" : "polite"}
+                  role={uploadFeedback.tone === "danger" ? "alert" : "status"}
+                  aria-live={uploadFeedback.tone === "danger" ? "assertive" : "polite"}
                 >
                   <div className="cici-inline-feedback__main">
                     <strong>

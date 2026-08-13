@@ -24,6 +24,11 @@ describe("knowledge upload flow feedback", () => {
       .rejects.toThrow("上传文档失败：服务返回了无法识别的响应（HTTP 502）");
   });
 
+  it("explains how to recover from an upload gateway size rejection", async () => {
+    await expect(readKnowledgeApiResponse(response("<html>request too large</html>", 413), "上传文档"))
+      .rejects.toThrow("上传文档被上传网关拒绝：请确认文件不超过 25 MB；如果文件符合限制，请联系管理员检查网关上传上限（HTTP 413）");
+  });
+
   it("preserves API failure messages", async () => {
     await expect(readKnowledgeApiResponse(response('{"success":false,"message":"文件超过限制"}', 400), "上传文档"))
       .rejects.toThrow("上传文档失败：文件超过限制");

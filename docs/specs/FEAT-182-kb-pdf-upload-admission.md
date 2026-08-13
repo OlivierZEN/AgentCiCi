@@ -7,7 +7,7 @@ owner_role: fullstack-agent
 task_ids: TASK-301
 related_decisions: none
 related_issues: none
-updated_at: 2026-08-13T11:28:00Z
+updated_at: 2026-08-13T11:40:00Z
 updated_by: codex
 ---
 
@@ -26,6 +26,8 @@ updated_by: codex
 - 后端上传策略使用中文说明文本型 PDF 能力与不支持的类型。
 - 页面上传说明和运行状态使用同一策略事实，不再显示“PDF 不进入索引流水线”。
 - 加密、扫描型、损坏或无文本 PDF 继续由后端失败关闭，不引入 OCR。
+- 本地边缘网关必须允许知识库业务上限 25 MB 及 multipart 开销通过；413 必须提供可操作的中文处置提示。
+- 上传失败反馈使用完整深红边框、浅红底和深红文字，标题与原因保持清晰层级，不依赖短时 toast 才能发现。
 
 ## 验收标准
 
@@ -36,6 +38,8 @@ updated_by: codex
 5. 本地开发环境必须从 AgentCiCi 本地 `main` 的提交构建 `:local` 镜像，回读页面、容器健康、重启次数与版本/提交指纹。
 6. 选择文件后立即显示文件名和当前阶段；上传、发布、索引成功或失败都必须在页面内持续可见，网络异常和非 JSON 响应不得静默。
 7. 索引异步执行时持续刷新目标文档，直到 `PUBLISHED` 或 `FAILED`；处理中禁止重复选择文件。
+8. 大于 1 MB 且不超过 25 MB 的文件通过 `cici.localhost` 时不会被边缘 Nginx 返回 413。
+9. 413 明确提示检查 25 MB 业务限制和网关上传上限；错误框使用比普通说明更深的红色，并以 `role=alert` 立即播报。
 
 ## 回滚
 

@@ -11,6 +11,11 @@ export async function readKnowledgeApiResponse<T>(
   actionLabel: string,
 ): Promise<KnowledgeApiEnvelope<T>> {
   const body = await response.text();
+  if (response.status === 413) {
+    throw new Error(
+      `${actionLabel}被上传网关拒绝：请确认文件不超过 25 MB；如果文件符合限制，请联系管理员检查网关上传上限（HTTP 413）`,
+    );
+  }
   let payload: KnowledgeApiEnvelope<T>;
   try {
     payload = JSON.parse(body) as KnowledgeApiEnvelope<T>;
