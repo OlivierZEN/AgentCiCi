@@ -106,7 +106,8 @@ class DevAutopilotIntakeReconciliationServiceTest {
         assertThat(result.updatedFields()).contains("summary", "acceptance", "intake");
         verify(audit).log("org-1", "member-1", "ORG_ADMIN", "devautopilot.intake.reconciled",
                 "dev_requirement", RECORD_ID,
-                "session=" + SESSION_ID + "; revision=2; digest=" + result.contentDigest());
+                "session=" + SESSION_ID + "; original_confirmer=member-1; revision=2; digest="
+                        + result.contentDigest());
         server.verify();
     }
 

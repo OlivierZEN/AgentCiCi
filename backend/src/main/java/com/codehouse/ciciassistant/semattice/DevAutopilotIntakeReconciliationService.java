@@ -82,6 +82,11 @@ public class DevAutopilotIntakeReconciliationService {
     }
 
     public ReconciliationView reconcile(String companyId, String actorMemberId, String sessionId, String recordId) {
+        return reconcile(companyId, actorMemberId, "ORG_ADMIN", sessionId, recordId);
+    }
+
+    public ReconciliationView reconcile(
+            String companyId, String actorMemberId, String actorRole, String sessionId, String recordId) {
         if (baseUrl.isBlank()) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Semattice 服务未配置");
         }
@@ -97,10 +102,11 @@ public class DevAutopilotIntakeReconciliationService {
                         .orElseThrow(() -> new ResponseStatusException(
                                 HttpStatus.UNPROCESSABLE_ENTITY, "无法从已确认草稿恢复结构化受理内容"));
         String objectApiName = objectApiName(intent.operation());
+        String originalConfirmerMemberId = session.getUserId();
         AgentServicePrincipalExecutionService.ExecutionAuthorization authorization =
                 executionPrincipals.authorizeSemattice(
                         companyId,
-                        actorMemberId,
+                        originalConfirmerMemberId,
                         PRODUCT_MANAGER_AGENT_ID,
                         List.of("runtime.record.read", "runtime.record.update"),
                         "devautopilot_intake_reconciliation");
@@ -127,9 +133,10 @@ public class DevAutopilotIntakeReconciliationService {
             throw new ResponseStatusException(
                     HttpStatus.BAD_GATEWAY, "Semattice 纠正后字段回读不一致，不能确认修复成功");
         }
-        audit.log(companyId, actorMemberId, "ORG_ADMIN", "devautopilot.intake.reconciled",
+        audit.log(companyId, actorMemberId, actorRole, "devautopilot.intake.reconciled",
                 objectApiName, recordId,
-                "session=" + sessionId + "; revision=" + updatedRevision + "; digest=" + contentDigest);
+                "session=" + sessionId + "; original_confirmer=" + originalConfirmerMemberId
+                        + "; revision=" + updatedRevision + "; digest=" + contentDigest);
         return new ReconciliationView("UPDATED", objectApiName, recordId,
                 updatedRevision, contentDigest, true, List.copyOf(writePatch.keySet()));
     }

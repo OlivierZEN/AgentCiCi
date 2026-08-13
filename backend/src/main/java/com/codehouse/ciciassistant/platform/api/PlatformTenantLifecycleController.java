@@ -9,6 +9,7 @@ import com.codehouse.ciciassistant.platform.service.PlatformTenantOwnerIdentityS
 import com.codehouse.ciciassistant.platform.service.DevAutopilotTenantApplicationService;
 import com.codehouse.ciciassistant.semattice.SematticeProvisioningClient;
 import com.codehouse.ciciassistant.semattice.SematticeProvisioningService;
+import com.codehouse.ciciassistant.semattice.DevAutopilotIntakeReconciliationService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import jakarta.validation.Valid;
@@ -38,19 +39,22 @@ public class PlatformTenantLifecycleController {
     private final DevAutopilotTenantApplicationService devAutopilotApplications;
     private final PlatformTenantOwnerRecoveryService ownerRecoveryService;
     private final PlatformTenantOwnerIdentityService ownerIdentityService;
+    private final DevAutopilotIntakeReconciliationService intakeReconciliations;
 
     public PlatformTenantLifecycleController(PlatformTenantLifecycleService tenantLifecycleService,
                                              SematticeProvisioningClient sematticeProvisioningClient,
                                              SematticeProvisioningService sematticeProvisioningService,
                                              DevAutopilotTenantApplicationService devAutopilotApplications,
                                              PlatformTenantOwnerRecoveryService ownerRecoveryService,
-                                             PlatformTenantOwnerIdentityService ownerIdentityService) {
+                                             PlatformTenantOwnerIdentityService ownerIdentityService,
+                                             DevAutopilotIntakeReconciliationService intakeReconciliations) {
         this.tenantLifecycleService = tenantLifecycleService;
         this.sematticeProvisioningClient = sematticeProvisioningClient;
         this.sematticeProvisioningService = sematticeProvisioningService;
         this.devAutopilotApplications = devAutopilotApplications;
         this.ownerRecoveryService = ownerRecoveryService;
         this.ownerIdentityService = ownerIdentityService;
+        this.intakeReconciliations = intakeReconciliations;
     }
 
     @GetMapping
@@ -147,6 +151,15 @@ public class PlatformTenantLifecycleController {
     public ApiResponse<DevAutopilotTenantApplicationService.View> reconcileDevAutopilotInitialization(
             @PathVariable @Pattern(regexp = "^org[a-z0-9]{17}$") String companyId) {
         return ApiResponse.ok(devAutopilotApplications.reconcileInitialization(companyId, actorId()));
+    }
+
+    @PostMapping("/{companyId}/applications/devautopilot/intake-reconciliations")
+    @RequirePlatformRole(RoleCodes.PLATFORM_ADMIN)
+    public ApiResponse<DevAutopilotIntakeReconciliationService.ReconciliationView> reconcileDevAutopilotIntake(
+            @PathVariable @Pattern(regexp = "^org[a-z0-9]{17}$") String companyId,
+            @Valid @RequestBody DevAutopilotIntakeReconciliationRequest request) {
+        return ApiResponse.ok(intakeReconciliations.reconcile(
+                companyId, actorId(), actorRole(), request.sessionId(), request.recordId()));
     }
 
     @PostMapping("/{companyId}/applications/devautopilot/suspensions")
@@ -362,6 +375,10 @@ public class PlatformTenantLifecycleController {
 
     public record DevAutopilotActivationRequest(
             @NotBlank @Pattern(regexp = "^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$") String idempotencyKey) { }
+
+    public record DevAutopilotIntakeReconciliationRequest(
+            @NotBlank @Size(max = 64) String sessionId,
+            @NotBlank @Pattern(regexp = "^[0-9a-fA-F-]{36}$") String recordId) { }
 
     public record LifecycleActionRequest(String reason) {
     }
