@@ -37,7 +37,7 @@ spec_path: docs/specs/FEAT-183-system-api-catalog.md
 - 后端生产包：`mvn -q -DskipTests package` 通过。
 - 前端全量测试：49 个测试文件、265 个测试通过；`npm run build` 通过。
 - 完整后端测试已执行，但受共享开发库既有 Flyway V81 checksum mismatch 和模型调用配置缺失阻塞，不计为本任务通过证据。
-- 功能提交 `5c4c7c5` 已进入本地 `main`；本地镜像运行版本 `2.8.61-dev.5c4c7c5`，后端与前端健康且重启次数均为 0。
+- 功能提交 `5c4c7c5` 已进入本地 `main`；最终对齐部署从当时本地 `main` `ea1f6ab` 构建，后端与前端均运行 `2.8.61-dev.ea1f6ab`、健康且重启次数为 0。本条证据产生的后续纯文档提交不改变制品。
 - `https://cici.localhost/platform/system-apis` 返回 200；匿名读取 `/api/platform/system-apis` 返回 401；部署 JS 制品包含系统 API 菜单与权限边界文案。
 - `cc-local-stack ./stack verify` 最终通过，覆盖共享数据库隔离、TLS 边缘、OIDC、应用健康/版本和匿名鉴权边界。
 - 浏览器无运营平台登录态，真实平台账号下的最终视觉/交互验收待人工完成，因此任务保持 `review`。
