@@ -17,7 +17,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-302 - 运营端系统 API 目录
 
-- status: `in_progress`
+- status: `review`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - claimed_by: `codex`
@@ -25,7 +25,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - spec_path: `docs/specs/FEAT-183-system-api-catalog.md`
 - task_status_path: `.claw/tasks/TASK-302.md`
 - blocked_by: `none`
-- next_action: `实现提供方目录聚合、渐进式页面并完成本地 main 全栈验收`
+- next_action: `使用真实运营平台账号完成系统 API 列表、抽屉与文档深链的视觉交互验收`
 
 ### TASK-300 - 机器开发者实例上限控制面
 

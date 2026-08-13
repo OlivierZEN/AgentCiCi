@@ -2,11 +2,11 @@
 kind: feature-spec
 feature_id: FEAT-183
 title: 内部生态系统 API 目录
-status: implementing
+status: implemented
 primary_project: agentcici
 task_ids: TASK-302
 related_integrations: INT-019
-updated_at: 2026-08-13T11:15:21Z
+updated_at: 2026-08-13T12:30:00Z
 updated_by: codex
 ---
 
@@ -49,3 +49,9 @@ updated_by: codex
 
 - 回滚 AgentCiCi 任务提交可移除聚合 API、页面和菜单，不影响目录中任何既有业务 API。
 - 回滚 Semattice 任务提交只移除只读目录投影，不改变 Capability Registry 或 invoke 路径。
+
+## 实现与验收状态
+
+- 代码、定向测试、前端全量测试和前后端生产构建已经完成。
+- AgentCiCi 与 Semattice 本地 `main` 制品已部署到统一开发环境，并完成版本、健康、鉴权边界和提供方投影回读。
+- 当前技术实现进入评审；真实平台登录态下的视觉与交互验收不以匿名路由检查替代。
