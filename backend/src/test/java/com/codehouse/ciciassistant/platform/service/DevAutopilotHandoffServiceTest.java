@@ -37,7 +37,7 @@ class DevAutopilotHandoffServiceTest {
                 .thenReturn(new OidcLoginStateStore.DevAutopilotHandoff("org00000000000000001", "member-1"));
         OfficialAccessTokenService.IssuedToken issued = new OfficialAccessTokenService.IssuedToken(
                 "fresh-runtime-oact", Instant.now().plusSeconds(300), "tenant-1", "org00000000000000001", List.of("runtime.record.read"));
-        when(authService.issueSematticeOfficialAccessForDevAutopilot("org00000000000000001", "member-1", tokens)).thenReturn(issued);
+        when(authService.issueEcosystemAccessForDevAutopilot("org00000000000000001", "member-1", tokens)).thenReturn(issued);
 
         DevAutopilotHandoffService.ExchangedAccess access = service.exchange("single-use");
 

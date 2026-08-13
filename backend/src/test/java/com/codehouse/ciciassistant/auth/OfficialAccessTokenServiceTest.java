@@ -21,6 +21,7 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateCrtKey;
 import java.security.spec.RSAPublicKeySpec;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
@@ -57,7 +58,8 @@ class OfficialAccessTokenServiceTest {
                 Base64.getEncoder().encodeToString(keys.getPrivate().getEncoded()),
                 List.of("metadata.version.read", "record.read"),
                 List.of("metadata.version.read", "record.read", "runtime.record.delete"),
-                600);
+                600,
+                7200);
 
         OfficialAccessTokenService.IssuedToken issued = service.issueForSemattice(member);
         Claims claims = Jwts.parser().verifyWith(KeyFactory.getInstance("RSA").generatePublic(new RSAPublicKeySpec(
@@ -97,6 +99,26 @@ class OfficialAccessTokenServiceTest {
         assertThat(verified.tenantId()).isEqualTo("11111111-1111-4111-8111-111111111111");
         assertThat(verified.principalId()).isEqualTo(account.getId());
         assertThat(verified.principalType()).isEqualTo("HUMAN");
+
+        OfficialAccessTokenService.IssuedToken ecosystem = service.issueEcosystemUserToken(
+                member, List.of("OWNER"), java.util.Map.of("idp_session_id", "session-1"));
+        Claims ecosystemClaims = Jwts.parser().verifyWith(KeyFactory.getInstance("RSA").generatePublic(new RSAPublicKeySpec(
+                        ((RSAPrivateCrtKey) keys.getPrivate()).getModulus(),
+                        ((RSAPrivateCrtKey) keys.getPrivate()).getPublicExponent())))
+                .build().parseSignedClaims(ecosystem.token()).getPayload();
+        assertThat(ecosystemClaims.getAudience()).containsExactlyInAnyOrder(
+                OfficialAccessTokenService.AGENTCICI_AUDIENCE,
+                OfficialAccessTokenService.DEVAUTOPILOT_AUDIENCE,
+                OfficialAccessTokenService.SEMATTICE_AUDIENCE);
+        assertThat(ecosystemClaims.get("typ", String.class)).isEqualTo("ecosystem_user");
+        assertThat(ecosystemClaims.get("member_id", String.class)).isEqualTo(member.getId());
+        assertThat(ecosystemClaims.get("idp_session_id", String.class)).isEqualTo("session-1");
+        assertThat(ecosystem.expiresAt()).isAfter(Instant.now().plusSeconds(7000));
+        OfficialAccessTokenService.EcosystemUserContext ecosystemContext = service.verifyEcosystemUserContext(
+                ecosystem.token(), OfficialAccessTokenService.AGENTCICI_AUDIENCE);
+        assertThat(ecosystemContext.companyId()).isEqualTo(company.getId());
+        assertThat(ecosystemContext.memberId()).isEqualTo(member.getId());
+        assertThat(ecosystemContext.accountId()).isEqualTo(account.getId());
     }
 
     @Test
@@ -123,7 +145,8 @@ class OfficialAccessTokenServiceTest {
                 Base64.getEncoder().encodeToString(keys.getPrivate().getEncoded()),
                 List.of("metadata.version.read", "identity.principal.sync"),
                 List.of("metadata.version.read"),
-                600);
+                600,
+                7200);
 
         assertThatThrownBy(() -> service.issueForSemattice(member))
                 .isInstanceOf(ForbiddenException.class)
@@ -151,7 +174,8 @@ class OfficialAccessTokenServiceTest {
                 Base64.getEncoder().encodeToString(keys.getPrivate().getEncoded()),
                 List.of("metadata.version.read", "record.read"),
                 List.of("metadata.version.read", "record.read", "runtime.record.delete"),
-                600);
+                600,
+                7200);
 
         String principalId = "11111111-1111-4111-8111-111111111111";
         String ownerPrincipalId = "22222222-2222-4222-8222-222222222222";

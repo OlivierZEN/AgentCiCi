@@ -13,9 +13,9 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * One-time browser handoff for the tenant DevAutopilot application.
  *
- * <p>The browser never receives an OACT.  It receives only an opaque, short-lived ticket; the
- * target application's backend redeems that ticket and keeps the newly issued OACT server-side.
- * No bearer token is persisted in the ticket store.</p>
+ * <p>The URL contains only an opaque, short-lived ticket. The target backend redeems it for the
+ * same ecosystem HUMAN token type used by AgentCiCi login and stores it in an HttpOnly cookie.
+ * No bearer token is persisted in the ticket store or exposed to frontend JavaScript.</p>
  */
 @Service
 public class DevAutopilotHandoffService {
@@ -52,7 +52,7 @@ public class DevAutopilotHandoffService {
             throw new UnauthorizedException("DevAutopilot 登录票据已过期或已使用");
         }
         requireActive(handoff.companyId());
-        OfficialAccessTokenService.IssuedToken issued = authService.issueSematticeOfficialAccessForDevAutopilot(
+        OfficialAccessTokenService.IssuedToken issued = authService.issueEcosystemAccessForDevAutopilot(
                 handoff.companyId(), handoff.memberId(), tokenService);
         return new ExchangedAccess(issued.token(), issued.expiresAt(), issued.tenantId(), issued.companyId());
     }

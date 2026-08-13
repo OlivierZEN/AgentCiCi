@@ -18,6 +18,19 @@ app:
       governance-company-id: "demo-org"
     jwt-secret: "change-me-in-prod-change-me-in-prod-2026"
     jwt-expiration-seconds: 7200
+    official-access:
+      enabled: true
+      issuer: "https://identity.example.test"
+      key-id: "test-oact-1"
+      private-key-pkcs8-base64: "MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC93uby/nvb7Qn3D3FHpADM2f1cuaGgrPtrqMN8iTzvOLnw0p59g2mUz+BPnvZ3XzBVsvt7J0JV8ysxDUgrZMQ18m2NgL8GQ5FALG/vF2Q6IxxbAUXh0VsgBrDFiQSi2iEsnYS4AczX77jg+DbLEYs7BsOHYWtA5T3T1Ds9pBbBjjh+Bes2TOwY9RDDD5jC/UGn5dsagW8DcdkTT07nRDaqO+MSdBRYSfZ+QRtM/EQ+fwjbLMn+W7hWYD8x6ZnFcjQGHX/rYavNS+5Euzo+Nlc8PIPijleZTREIfbVHmKvuoQen6cao5URHL05itYdvmvdJ4AhHSdBHAiyBWWFnghxPAgMBAAECggEAUwtDB9S2Z6JtUVm3uhXJI8/UONIYFyaRcK0Hk1iTBi5RZTs5hrwLWcLx4OEt+1fu1AzMYTjykpUgtvuQLSqNhurZb6J36k1zIhZNfs1EUQk6RbNw1Su0J3XFqyAanv+4ssLSYYioB2oZ+ouVq4uo0dBLhNLfDis1t4iDwJocOdsxiEzTZa1sE4C4rwFW1JmnuZzjR4EJ61vZVOifDt6uyMnlg3NWN6q03PSrGT7Ph7ZalMOvSonQCvExszjbleQTmlqnH5wriAr4Ket9IRy6G/m9Fi7WCw0/yLLuSYEUf2YuB6YHzinzsiMyxM39x326k+Atxn/iwVLzByFRbKgcAQKBgQDgDvPjmGEvvWiBdug6hdMcJyReyxHS+IL0CK38COUyloSRfxw1i9ZYTLt9v8jadrFit72pURoVSKss+E1ANzPwvw6PmzsNzodzkgZmGR9JpZdK5kTLI5ThZwWRmQ/bsxgjLiDHFM3o6wxhsL5UKgWREDb8/FERnkta+1JVIvmPwQKBgQDY8EOU/bnZW4GXOw885BBi62MhPuSO215P/kCMCDBPPt1qdp0EfyLXNl3ju43J5FSF9W/OUAGYlGBvSHL95fwo2ws1z/FcJ0rM9ozBK4D7gXZXx88eoGqRUbVhOxRMeivRaxoY573jAQypCI3u/VFcowWytWEerM6ktO4ty46wDwKBgDWkHsucTZgqVny4RPzN0S7qSBDRuSCzElbuRQkT8BteYbqbndtL8TMOm8yNP77dr7YcmzGQExiJX0HS6Fu5W5wFgazr0wWJLnCCwzlqRk1RcZki69FeYWRdT7390QgeJmc1we8nkexzaXFx6P8pWE/Ue/WxSo9XQF810A5F402BAoGAX0lZRe4UXcZ1q2mDjelW0Tw29HldhuoQCO7Shy9pmMUyF/s1iK4XLZRxtP/CjbU+8wAVNfeqW8yAdyDJcYA9O+zKhb5qc2HG1zRMKuTi6JW611+qN/eaF25eTvDWP6lB6eAzPFE99KGXX/+j6B9YR2pLrG1C1Wht86aNH4xThj0CgYAY3lgcEwOlHwCPJG3LtBUpAlM+EVGWX6OgCYQ1xQO0zNDvLR/KYGYwMrQzfj9GMgGSfQwDEWiUbvKB4bzRRkfwdyLjGn0nmX53l/Wjq5lOeA9Yi+/yMkNvQKWXWmnWaopjxjaZPO6b97AXeengTtmJQgGJz8khsu0dggzsUVXhPQ=="
+      ttl-seconds: 600
+      semattice-scopes:
+        - metadata.read
+        - runtime.record.read
+        - runtime.record.create
+        - runtime.record.update
+    ecosystem-access:
+      ttl-seconds: 7200
     bootstrap-admin-mobiles: "13800138111,13800138000,13800138001,13800138002,13800138003,13800138188,13800138006"
     platform-admin-mobiles: "13800138111"
     platform-operator-mobiles: ""

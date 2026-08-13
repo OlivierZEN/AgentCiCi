@@ -5,6 +5,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.codehouse.ciciassistant.auth.service.JwtService;
+import com.codehouse.ciciassistant.auth.service.OfficialAccessTokenService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,7 @@ class TenantContextFilterTest {
 
     private final TenantContextFilter filter = new TenantContextFilter(
             mock(JwtService.class),
+            mock(OfficialAccessTokenService.class),
             new ObjectMapper(),
             false);
 
@@ -87,7 +89,8 @@ class TenantContextFilterTest {
         when(legacyClaims.get("company_id", String.class)).thenReturn(null);
         when(legacyClaims.get("roles")).thenReturn(java.util.List.of("ORG_ADMIN"));
 
-        TenantContextFilter strictFilter = new TenantContextFilter(jwtService, new ObjectMapper(), false);
+        TenantContextFilter strictFilter = new TenantContextFilter(
+                jwtService, mock(OfficialAccessTokenService.class), new ObjectMapper(), false);
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/auth/me");
         request.addHeader("Authorization", "Bearer legacy-token");
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -95,6 +98,25 @@ class TenantContextFilterTest {
         strictFilter.doFilter(request, response, new MockFilterChain());
 
         assertThat(response.getStatus()).isEqualTo(401);
-        assertThat(response.getContentAsString()).contains("Invalid company token");
+        assertThat(response.getContentAsString()).contains("Legacy company token is no longer accepted");
+    }
+
+    @Test
+    void shouldAcceptEcosystemUserTokenForAgentCiCiAudience() throws Exception {
+        JwtService jwtService = mock(JwtService.class);
+        OfficialAccessTokenService official = mock(OfficialAccessTokenService.class);
+        when(official.verifyEcosystemUserContext("ecosystem-token", OfficialAccessTokenService.AGENTCICI_AUDIENCE))
+                .thenReturn(new OfficialAccessTokenService.EcosystemUserContext(
+                        "org00000000000000001", "member-1", "account-1", java.util.List.of("ORG_ADMIN")));
+        TenantContextFilter ecosystemFilter = new TenantContextFilter(jwtService, official, new ObjectMapper(), false);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/auth/me");
+        request.addHeader("Authorization", "Bearer ecosystem-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        ecosystemFilter.doFilter(request, response, chain);
+
+        assertThat(response.getStatus()).isNotEqualTo(401);
+        assertThat(chain.getRequest()).isSameAs(request);
     }
 }

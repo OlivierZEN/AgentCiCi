@@ -66,6 +66,9 @@ app:
       private-key-pkcs8-base64: ""
       ttl-seconds: 600
       semattice-scopes: []
+    ecosystem-access:
+      # Human session lifetime shared by AgentCiCi and activated internal applications.
+      ttl-seconds: 7200
     oidc:
       # Set only after the Keycloak client redirect URI, secret and account mappings are ready.
       enabled: false

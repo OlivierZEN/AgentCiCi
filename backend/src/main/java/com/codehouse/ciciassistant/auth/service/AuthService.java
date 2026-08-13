@@ -42,7 +42,7 @@ public class AuthService {
     private final AccountLoginIdentifierRepository accountLoginIdentifierRepository;
     private final UserRepository userRepository;
     private final AuthPasswordRepository authPasswordRepository;
-    private final JwtService jwtService;
+    private final OfficialAccessTokenService officialAccessTokenService;
     private final CompanyProvisioningService companyProvisioningService;
     private final PasswordHashService passwordHashService;
     private final Set<String> bootstrapAdminMobiles;
@@ -53,7 +53,7 @@ public class AuthService {
                        AccountLoginIdentifierRepository accountLoginIdentifierRepository,
                        UserRepository userRepository,
                        AuthPasswordRepository authPasswordRepository,
-                       JwtService jwtService,
+                       OfficialAccessTokenService officialAccessTokenService,
                        CompanyProvisioningService companyProvisioningService,
                        PasswordHashService passwordHashService,
                        @Value("${app.auth.bootstrap-admin-mobiles:}") String bootstrapAdminMobilesRaw) {
@@ -63,7 +63,7 @@ public class AuthService {
         this.accountLoginIdentifierRepository = accountLoginIdentifierRepository;
         this.userRepository = userRepository;
         this.authPasswordRepository = authPasswordRepository;
-        this.jwtService = jwtService;
+        this.officialAccessTokenService = officialAccessTokenService;
         this.companyProvisioningService = companyProvisioningService;
         this.passwordHashService = passwordHashService;
         this.bootstrapAdminMobiles = parseMobileSet(bootstrapAdminMobilesRaw);
@@ -255,9 +255,10 @@ public class AuthService {
 
     private Map<String, Object> issueLoginForMember(UserEntity user, Map<String, Object> additionalClaims) {
         List<String> roles = resolveRoles(user);
-        String token = jwtService.issueToken(user, roles, additionalClaims);
+        OfficialAccessTokenService.IssuedToken issued = officialAccessTokenService.issueEcosystemUserToken(
+                user, roles, additionalClaims);
         return Map.of(
-                "token", token,
+                "token", issued.token(),
                 "companyId", user.getCompany().getId(),
                 "companyName", user.getCompany().getName(),
                 "userId", user.getId(),
@@ -385,12 +386,12 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
-    public OfficialAccessTokenService.IssuedToken issueSematticeOfficialAccessForDevAutopilot(String companyId,
-                                                                                                 String userId,
-                                                                                                 OfficialAccessTokenService tokenService) {
+    public OfficialAccessTokenService.IssuedToken issueEcosystemAccessForDevAutopilot(String companyId,
+                                                                                       String userId,
+                                                                                       OfficialAccessTokenService tokenService) {
         UserEntity user = userRepository.findByIdAndCompany_Id(userId, companyId)
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
-        return tokenService.issueForDevAutopilot(user);
+        return tokenService.issueEcosystemUserToken(user, resolveRoles(user), Map.of());
     }
 
     @Transactional

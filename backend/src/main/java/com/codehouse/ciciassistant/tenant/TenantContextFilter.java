@@ -1,6 +1,7 @@
 package com.codehouse.ciciassistant.tenant;
 
 import com.codehouse.ciciassistant.auth.service.JwtService;
+import com.codehouse.ciciassistant.auth.service.OfficialAccessTokenService;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
@@ -23,13 +24,16 @@ public class TenantContextFilter extends OncePerRequestFilter {
     private static final String AUTH_HEADER = "Authorization";
 
     private final JwtService jwtService;
+    private final OfficialAccessTokenService officialAccessTokenService;
     private final ObjectMapper objectMapper;
     private final boolean allowHeaderContext;
 
     public TenantContextFilter(JwtService jwtService,
+                               OfficialAccessTokenService officialAccessTokenService,
                                ObjectMapper objectMapper,
                                @Value("${app.auth.allow-header-context:false}") boolean allowHeaderContext) {
         this.jwtService = jwtService;
+        this.officialAccessTokenService = officialAccessTokenService;
         this.objectMapper = objectMapper;
         this.allowHeaderContext = allowHeaderContext;
     }
@@ -50,6 +54,15 @@ public class TenantContextFilter extends OncePerRequestFilter {
                     return;
                 }
                 try {
+                    OfficialAccessTokenService.EcosystemUserContext ecosystem =
+                            tryParseEcosystemUser(bearer);
+                    if (ecosystem != null) {
+                        companyId = ecosystem.companyId();
+                        userId = ecosystem.memberId();
+                        TenantContext.setTokenType(OfficialAccessTokenService.ECOSYSTEM_USER_TOKEN_TYPE);
+                        TenantContext.setRoles(ecosystem.roles());
+                        authenticated = true;
+                    } else {
                     Claims claims = jwtService.parse(bearer);
                     String tokenType = claims.get("typ", String.class);
                     if ("embed_app".equals(tokenType)) {
@@ -60,6 +73,12 @@ public class TenantContextFilter extends OncePerRequestFilter {
                         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                         response.setContentType("application/json");
                         response.getWriter().write(objectMapper.writeValueAsString(ApiResponse.fail("Embed token is not valid for this endpoint")));
+                        return;
+                    }
+                    if (!"platform".equals(tokenType) && !"embed_app".equals(tokenType)) {
+                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                        response.setContentType("application/json");
+                        response.getWriter().write(objectMapper.writeValueAsString(ApiResponse.fail("Legacy company token is no longer accepted")));
                         return;
                     }
                     companyId = claims.get("company_id", String.class);
@@ -81,6 +100,7 @@ public class TenantContextFilter extends OncePerRequestFilter {
                         }
                         String memberId = claims.get("member_id", String.class);
                         userId = memberId == null || memberId.isBlank() ? claims.getSubject() : memberId;
+                    }
                     }
                 } catch (Exception ex) {
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -111,6 +131,15 @@ public class TenantContextFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
         } finally {
             TenantContext.clear();
+        }
+    }
+
+    private OfficialAccessTokenService.EcosystemUserContext tryParseEcosystemUser(String bearer) {
+        try {
+            return officialAccessTokenService.verifyEcosystemUserContext(
+                    bearer, OfficialAccessTokenService.AGENTCICI_AUDIENCE);
+        } catch (Exception ignored) {
+            return null;
         }
     }
 

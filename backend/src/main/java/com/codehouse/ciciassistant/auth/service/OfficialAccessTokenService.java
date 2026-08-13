@@ -38,7 +38,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class OfficialAccessTokenService {
 
+    public static final String AGENTCICI_AUDIENCE = "agentcici-api";
+    public static final String DEVAUTOPILOT_AUDIENCE = "devautopilot-api";
     public static final String SEMATTICE_AUDIENCE = "semattice-api";
+    public static final String ECOSYSTEM_USER_TOKEN_TYPE = "ecosystem_user";
     public static final String IDENTITY_PRINCIPAL_READ_SCOPE = "identity.principal.read";
 
     private final AccountExternalIdentityRepository identityRepository;
@@ -51,6 +54,7 @@ public class OfficialAccessTokenService {
     private final List<String> sematticeScopes;
     private final List<String> sematticeServiceScopes;
     private final long ttlSeconds;
+    private final long ecosystemTtlSeconds;
 
     public OfficialAccessTokenService(AccountExternalIdentityRepository identityRepository,
                                       SematticeProvisioningBindingRepository bindingRepository,
@@ -61,7 +65,8 @@ public class OfficialAccessTokenService {
                                       @Value("${app.auth.official-access.private-key-pkcs8-base64:}") String privateKeyBase64,
                                       @Value("${app.auth.official-access.semattice-scopes:}") List<String> sematticeScopes,
                                       @Value("${app.auth.official-access.semattice-service-scopes:}") List<String> sematticeServiceScopes,
-                                      @Value("${app.auth.official-access.ttl-seconds:600}") long ttlSeconds) {
+                                      @Value("${app.auth.official-access.ttl-seconds:600}") long ttlSeconds,
+                                      @Value("${app.auth.ecosystem-access.ttl-seconds:7200}") long ecosystemTtlSeconds) {
         this.identityRepository = identityRepository;
         this.bindingRepository = bindingRepository;
         this.metadataApprovalService = metadataApprovalService;
@@ -76,6 +81,10 @@ public class OfficialAccessTokenService {
             throw new IllegalArgumentException("Official access token TTL must be between 60 and 600 seconds");
         }
         this.ttlSeconds = ttlSeconds;
+        if (ecosystemTtlSeconds < 900 || ecosystemTtlSeconds > 43200) {
+            throw new IllegalArgumentException("Ecosystem user token TTL must be between 900 and 43200 seconds");
+        }
+        this.ecosystemTtlSeconds = ecosystemTtlSeconds;
         if (enabled && (this.issuer.isBlank() || this.keyId.isBlank() || this.sematticeScopes.isEmpty())) {
             throw new IllegalArgumentException("Official access token issuer, key ID and Semattice scopes are required when enabled");
         }
@@ -92,6 +101,72 @@ public class OfficialAccessTokenService {
             scopes.add(IDENTITY_PRINCIPAL_READ_SCOPE);
         }
         return issueForSemattice(member, List.copyOf(scopes));
+    }
+
+    /**
+     * Signs the shared HUMAN session token used by AgentCiCi and its activated internal apps.
+     * Resource applications still enforce their own audience and authorization policies.
+     */
+    public IssuedToken issueEcosystemUserToken(UserEntity member,
+                                               List<String> roles,
+                                               Map<String, Object> additionalClaims) {
+        requireEnabled();
+        if (!UserEntity.STATUS_ACTIVE.equals(member.getMemberStatus())
+                || !"ACTIVE".equalsIgnoreCase(member.getCompany().getStatus())) {
+            throw new ForbiddenException("当前成员或公司不可登录内部应用");
+        }
+        AccountExternalIdentityEntity identity = identityRepository.findByAccount_Id(member.getAccountId()).orElse(null);
+        SematticeProvisioningBindingEntity binding = bindingRepository.findByCompanyId(member.getCompany().getId())
+                .filter(value -> SematticeProvisioningBindingEntity.PROVISIONED.equals(value.getState()))
+                .filter(value -> hasText(value.getSematticeTenantId()))
+                .orElse(null);
+
+        List<String> issuedScopes = new ArrayList<>();
+        if (binding != null) {
+            issuedScopes.addAll(sematticeScopes);
+            if (!issuedScopes.contains(IDENTITY_PRINCIPAL_READ_SCOPE)) {
+                issuedScopes.add(IDENTITY_PRINCIPAL_READ_SCOPE);
+            }
+        }
+        Instant now = Instant.now();
+        Instant expiresAt = now.plusSeconds(ecosystemTtlSeconds);
+        JwtBuilder builder = Jwts.builder()
+                .header().keyId(keyId).and()
+                .issuer(issuer)
+                .subject(member.getAccountId())
+                .audience().add(AGENTCICI_AUDIENCE).add(DEVAUTOPILOT_AUDIENCE).and()
+                .claim("typ", ECOSYSTEM_USER_TOKEN_TYPE)
+                .claim("company_id", member.getCompany().getId())
+                .claim("principal_id", member.getAccountId())
+                .claim("principal_type", "HUMAN")
+                .claim("member_id", member.getId())
+                .claim("account_id", member.getAccountId())
+                .claim("roles", roles == null || roles.isEmpty() ? List.of(member.getRoleCode()) : List.copyOf(roles))
+                .claim("scope", String.join(" ", issuedScopes))
+                .claim("actor_type", "human")
+                .claim("authorized_party", "agentcici")
+                .claim("membership_version", membershipVersion(member))
+                .id(UUID.randomUUID().toString())
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(expiresAt));
+        if (binding != null) {
+            builder.audience().add(SEMATTICE_AUDIENCE).and()
+                    .claim("tenant_id", binding.getSematticeTenantId());
+        }
+        if (identity != null) {
+            builder.claim("keycloak_subject", identity.getSubject());
+        }
+        if (additionalClaims != null) {
+            additionalClaims.forEach((key, value) -> {
+                if (hasText(key) && value != null && !isReservedEcosystemClaim(key)) {
+                    builder.claim(key, value);
+                }
+            });
+        }
+        String token = builder.signWith(privateKey, Jwts.SIG.RS256).compact();
+        return new IssuedToken(token, expiresAt,
+                binding == null ? "" : binding.getSematticeTenantId(),
+                member.getCompany().getId(), List.copyOf(issuedScopes));
     }
 
     public IssuedToken issueForSematticeConsole(UserEntity member) {
@@ -311,6 +386,39 @@ public class OfficialAccessTokenService {
         }
     }
 
+    public EcosystemUserContext verifyEcosystemUserContext(String token, String requiredAudience) {
+        requireEnabled();
+        if (!hasText(token) || !List.of(AGENTCICI_AUDIENCE, DEVAUTOPILOT_AUDIENCE).contains(requiredAudience)) {
+            throw new ForbiddenException("内部应用用户令牌缺失或 audience 无效");
+        }
+        try {
+            var signed = Jwts.parser().verifyWith(verificationKey()).build().parseSignedClaims(token.trim());
+            Claims claims = signed.getPayload();
+            if (!keyId.equals(signed.getHeader().getKeyId())
+                    || !issuer.equals(claims.getIssuer())
+                    || claims.getAudience() == null
+                    || !claims.getAudience().contains(requiredAudience)
+                    || !ECOSYSTEM_USER_TOKEN_TYPE.equals(claims.get("typ", String.class))
+                    || !"agentcici".equals(claims.get("authorized_party", String.class))
+                    || !"HUMAN".equals(claims.get("principal_type", String.class))) {
+                throw new ForbiddenException("内部应用用户令牌不受信");
+            }
+            String companyId = trim(claims.get("company_id", String.class));
+            String memberId = trim(claims.get("member_id", String.class));
+            String accountId = trim(claims.get("account_id", String.class));
+            String principalId = trim(claims.get("principal_id", String.class));
+            if (!hasText(companyId) || !hasText(memberId) || !hasText(accountId)
+                    || !accountId.equals(principalId) || !accountId.equals(claims.getSubject())) {
+                throw new ForbiddenException("内部应用用户令牌上下文不完整");
+            }
+            return new EcosystemUserContext(companyId, memberId, accountId, extractStringList(claims.get("roles")));
+        } catch (ForbiddenException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new ForbiddenException("内部应用用户令牌无效或已过期");
+        }
+    }
+
     private PublicKey verificationKey() {
         try {
             if (!(privateKey instanceof RSAPrivateCrtKey rsaPrivateKey)) {
@@ -349,6 +457,19 @@ public class OfficialAccessTokenService {
             return List.of();
         }
         return configured.stream().map(OfficialAccessTokenService::trim).filter(value -> !value.isBlank()).distinct().toList();
+    }
+
+    private static boolean isReservedEcosystemClaim(String key) {
+        return List.of("iss", "sub", "aud", "exp", "iat", "jti", "typ", "company_id", "tenant_id",
+                "principal_id", "principal_type", "member_id", "account_id", "roles", "scope",
+                "actor_type", "authorized_party", "membership_version").contains(key);
+    }
+
+    private static List<String> extractStringList(Object raw) {
+        if (!(raw instanceof List<?> values)) {
+            return raw == null ? List.of() : List.of(raw.toString());
+        }
+        return values.stream().filter(java.util.Objects::nonNull).map(Object::toString).toList();
     }
 
     private List<String> sematticeConsoleScopesFor(UserEntity member) {
@@ -400,6 +521,9 @@ public class OfficialAccessTokenService {
     }
 
     public record VerifiedContext(String companyId, String tenantId, String principalId, String principalType) {
+    }
+
+    public record EcosystemUserContext(String companyId, String memberId, String accountId, List<String> roles) {
     }
 
 }
