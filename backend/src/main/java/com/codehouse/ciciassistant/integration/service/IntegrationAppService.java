@@ -282,17 +282,17 @@ public class IntegrationAppService {
         if (APP_CODE_TAVILY.equals(e.getAppCode())) {
             maskSecrets(config, "apiKey", API_KEY_MASK);
         } else if (APP_CODE_IFLYTEK_ASR.equals(e.getAppCode())) {
-            maskSecrets(config, "accessKeySecret", IFLYTEK_SECRET_MASK);
+            config.clear();
         } else if (APP_CODE_CODE_INTERPRETER.equals(e.getAppCode())) {
-            maskSecrets(config, "apiKey", CODE_INTERPRETER_SECRET_MASK);
-            config.putIfAbsent("apiBaseUrl", "");
-            config.putIfAbsent("model", "qwen3.5-plus");
+            config.remove("apiKey");
+            config.remove("apiBaseUrl");
+            config.remove("model");
             config.putIfAbsent("timeoutMs", "120000");
             config.putIfAbsent("maxInputChars", "12000");
         } else if (isManagedWebApp(e.getAppCode())) {
-            maskSecrets(config, "apiKey", MANAGED_WEB_SECRET_MASK);
-            config.putIfAbsent("apiBaseUrl", "");
-            config.putIfAbsent("model", "qwen3.5-plus");
+            config.remove("apiKey");
+            config.remove("apiBaseUrl");
+            config.remove("model");
             config.putIfAbsent("timeoutMs", "120000");
             config.putIfAbsent("maxInputChars", "12000");
         }
@@ -365,9 +365,6 @@ public class IntegrationAppService {
                 }
             }
             if (APP_CODE_CODE_INTERPRETER.equals(def.appCode())) {
-                if ((v == null || String.valueOf(v).isBlank()) && "model".equals(key)) {
-                    v = "qwen3.5-plus";
-                }
                 if ((v == null || String.valueOf(v).isBlank()) && "timeoutMs".equals(key)) {
                     v = "120000";
                 }
@@ -376,9 +373,6 @@ public class IntegrationAppService {
                 }
             }
             if (isManagedWebApp(def.appCode())) {
-                if ((v == null || String.valueOf(v).isBlank()) && "model".equals(key)) {
-                    v = "qwen3.5-plus";
-                }
                 if ((v == null || String.valueOf(v).isBlank()) && "timeoutMs".equals(key)) {
                     v = "120000";
                 }
@@ -395,14 +389,6 @@ public class IntegrationAppService {
             }
             if (APP_CODE_IFLYTEK_ASR.equals(def.appCode()) && "accessKeySecret".equals(key)) {
                 out.put(key, encryptOrPreserveSecret(existing.get(key), v, IFLYTEK_SECRET_MASK));
-                continue;
-            }
-            if (APP_CODE_CODE_INTERPRETER.equals(def.appCode()) && "apiKey".equals(key)) {
-                out.put(key, encryptOrPreserveSecret(existing.get(key), v, CODE_INTERPRETER_SECRET_MASK));
-                continue;
-            }
-            if (isManagedWebApp(def.appCode()) && "apiKey".equals(key)) {
-                out.put(key, encryptOrPreserveSecret(existing.get(key), v, MANAGED_WEB_SECRET_MASK));
                 continue;
             }
             if (APP_CODE_CLOUDCC_CRM.equals(def.appCode()) && "secretKey".equals(key)) {
@@ -482,27 +468,27 @@ public class IntegrationAppService {
                 true));
         apps.put(APP_CODE_IFLYTEK_ASR, new BuiltinAppDef(
                 APP_CODE_IFLYTEK_ASR,
-                "讯飞实时转写",
-                "接入讯飞实时语音转写能力，为会议纪要听记提供 16k PCM 实时识别和说话人分离。",
-                List.of("appId", "accessKeyId", "accessKeySecret", "realtimeUrl", "lang", "domain"),
-                true));
+                "实时转写（已迁移）",
+                "实时转写的厂商、模型和凭据统一在 voice-asr 场景模型路由中配置；此旧配置入口不再接受独立凭据。",
+                List.of(),
+                false));
         apps.put(APP_CODE_CODE_INTERPRETER, new BuiltinAppDef(
                 APP_CODE_CODE_INTERPRETER,
                 "代码解释器",
                 "调用阿里云百炼受管 Python 沙箱完成精确计算、数据分析与代码验证，并生成可治理的内置工具。",
-                List.of("apiKey", "apiBaseUrl", "model", "timeoutMs", "maxInputChars"),
+                List.of("timeoutMs", "maxInputChars"),
                 false));
         apps.put(APP_CODE_MANAGED_WEB_SEARCH, new BuiltinAppDef(
                 APP_CODE_MANAGED_WEB_SEARCH,
                 "联网搜索（百炼）",
                 "调用百炼联网搜索获取时效信息并生成可治理的内置工具；兼容 Responses API 不提供可验证来源列表。",
-                List.of("apiKey", "apiBaseUrl", "model", "timeoutMs", "maxInputChars"),
+                List.of("timeoutMs", "maxInputChars"),
                 false));
         apps.put(APP_CODE_MANAGED_WEB_EXTRACTOR, new BuiltinAppDef(
                 APP_CODE_MANAGED_WEB_EXTRACTOR,
                 "网页抓取（百炼）",
                 "调用百炼网页抓取读取公开 URL 内容并生成可治理的内置工具；单次请求会同时使用搜索与抓取能力。",
-                List.of("apiKey", "apiBaseUrl", "model", "timeoutMs", "maxInputChars"),
+                List.of("timeoutMs", "maxInputChars"),
                 false));
         return Collections.unmodifiableMap(apps);
     }

@@ -17,12 +17,8 @@ public class MemorySemanticRetrievalService {
         if (record == null || record.getId() == null || !Set.of("ACTIVE", "VERIFIED").contains(record.getStatus()) || !"NORMAL".equals(record.getSensitivity())) return;
         String safeText=redaction.redact(record.getContent());
         if (safeText.isBlank()) return;
-        try {
-            String vectorId=vectors.upsert(new VectorUpsertCommand(record.getCompanyId(), COLLECTION_SCOPE, record.getId(), record.getId(), 0, safeText, Integer.toHexString(safeText.hashCode()), embeddings.embed(safeText)));
-            fragments.save(new MemoryVectorFragmentEntity(record.getCompanyId(), record.getId(), vectorId, safeText));
-        } catch (RuntimeException ignored) {
-            // Vector indexing is best-effort and must not interrupt the relational memory path.
-        }
+        String vectorId=vectors.upsert(new VectorUpsertCommand(record.getCompanyId(), COLLECTION_SCOPE, record.getId(), record.getId(), 0, safeText, Integer.toHexString(safeText.hashCode()), embeddings.embedForScene(record.getCompanyId(), "memory-embedding", null, safeText)));
+        fragments.save(new MemoryVectorFragmentEntity(record.getCompanyId(), record.getId(), vectorId, safeText));
     }
     @Transactional public boolean remove(MemoryRecordEntity record) {
         if (record == null || record.getId() == null) return true;
@@ -38,6 +34,6 @@ public class MemorySemanticRetrievalService {
         if (query == null || query.isBlank()) return List.of();
         List<MemoryRecordEntity> allowed=contexts.loadContext(context, agentId, namespaces, null).records();
         Set<Long> allowedIds=new HashSet<>(); for (MemoryRecordEntity record:allowed) allowedIds.add(record.getId());
-        return vectors.search(new VectorSearchQuery(context.companyId(), List.of(COLLECTION_SCOPE), query, embeddings.embed(query), Math.max(1, Math.min(topK, 16)))).stream().map(VectorSearchHit::chunkId).filter(Objects::nonNull).filter(allowedIds::contains).map(records::findById).flatMap(Optional::stream).toList();
+        return vectors.search(new VectorSearchQuery(context.companyId(), List.of(COLLECTION_SCOPE), query, embeddings.embedForScene(context.companyId(), "memory-embedding", null, query), Math.max(1, Math.min(topK, 16)))).stream().map(VectorSearchHit::chunkId).filter(Objects::nonNull).filter(allowedIds::contains).map(records::findById).flatMap(Optional::stream).toList();
     }
 }

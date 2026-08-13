@@ -1,5 +1,6 @@
 package com.codehouse.ciciassistant.tool.codeinterpreter;
 
+import com.codehouse.ciciassistant.ai.service.ModelInvocationResolver;
 import com.codehouse.ciciassistant.integration.service.IntegrationAppService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,17 +19,19 @@ public class SandboxCodeInterpreterService {
 
     public static final String TOOL_NAME = "sandbox_code_interpreter";
     private static final Logger log = LoggerFactory.getLogger(SandboxCodeInterpreterService.class);
-    private static final String DEFAULT_MODEL = "qwen3.5-plus";
 
     private final SandboxCodeInterpreterClient client;
     private final IntegrationAppService integrationAppService;
+    private final ModelInvocationResolver modelInvocationResolver;
     private final ObjectMapper objectMapper;
 
     public SandboxCodeInterpreterService(SandboxCodeInterpreterClient client,
                                          IntegrationAppService integrationAppService,
+                                         ModelInvocationResolver modelInvocationResolver,
                                          ObjectMapper objectMapper) {
         this.client = client;
         this.integrationAppService = integrationAppService;
+        this.modelInvocationResolver = modelInvocationResolver;
         this.objectMapper = objectMapper;
     }
 
@@ -60,7 +63,7 @@ public class SandboxCodeInterpreterService {
             if (task.isBlank()) {
                 return error("CODE_INTERPRETER_BAD_REQUEST", "缺少必需参数 task");
             }
-            Optional<ResolvedConfig> resolved = resolveConfig(null, false);
+            Optional<ResolvedConfig> resolved = resolveConfig(companyId, false);
             if (resolved.isEmpty()) {
                 return error("CODE_INTERPRETER_NOT_CONFIGURED", "运营平台尚未配置并启用代码解释器");
             }
@@ -107,14 +110,14 @@ public class SandboxCodeInterpreterService {
                                               String overrideModel) {
         Optional<ResolvedConfig> resolved;
         try {
-            resolved = resolveConfig(new ConfigOverride(overrideApiKey, overrideApiBaseUrl, overrideModel), true);
+            resolved = resolveConfig("platform-runtime", true);
         } catch (IllegalArgumentException exception) {
             return Map.of("ok", false, "code", "CODE_INTERPRETER_CONFIG_INVALID",
                     "message", exception.getMessage());
         }
         if (resolved.isEmpty()) {
             return Map.of("ok", false, "code", "CODE_INTERPRETER_NOT_CONFIGURED",
-                    "message", "请先填写 API Key 并保存或直接使用当前草稿检测");
+                    "message", "请先启用代码解释器并为场景配置可用模型");
         }
         ResolvedConfig config = resolved.get();
         SandboxCodeInterpreterClient.CallResult result = client.execute(
@@ -133,37 +136,21 @@ public class SandboxCodeInterpreterService {
 
     public void validateConfigurationDraft(Map<String, Object> config) {
         Map<String, Object> safeConfig = config == null ? Map.of() : config;
-        String apiBaseUrl = firstNonBlank(safeConfig.get("apiBaseUrl"));
-        if (apiBaseUrl.isBlank()) {
-            throw new IllegalArgumentException("请填写百炼业务空间对应地域的 API Host");
-        }
-        validateApiBaseUrl(apiBaseUrl);
-        String model = firstNonBlank(safeConfig.get("model"), DEFAULT_MODEL);
-        validateModel(model);
         parseBoundedInt(safeConfig.get("timeoutMs"), 120_000, 10_000, 180_000, "请求超时");
         parseBoundedInt(safeConfig.get("maxInputChars"), 12_000, 1_000, 50_000, "最大输入字符数");
     }
 
-    private Optional<ResolvedConfig> resolveConfig(ConfigOverride override, boolean includeDisabled) {
+    private Optional<ResolvedConfig> resolveConfig(String companyId, boolean includeDisabled) {
         Optional<Map<String, Object>> rawOptional = includeDisabled
                 ? integrationAppService.findStoredRawConfig("platform-runtime", IntegrationAppService.APP_CODE_CODE_INTERPRETER)
                 : integrationAppService.findRawConfig("platform-runtime", IntegrationAppService.APP_CODE_CODE_INTERPRETER);
         Map<String, Object> raw = rawOptional.orElse(Map.of());
-        String storedKey = integrationAppService.decryptCodeInterpreterApiKey(raw).orElse("");
-        String overrideKey = override == null ? "" : safe(override.apiKey());
-        if (IntegrationAppService.CODE_INTERPRETER_SECRET_MASK.equals(overrideKey)) overrideKey = "";
-        String apiKey = overrideKey.isBlank() ? storedKey : overrideKey;
-        if (apiKey.isBlank()) return Optional.empty();
-        String apiBaseUrl = firstNonBlank(override == null ? null : override.apiBaseUrl(), raw.get("apiBaseUrl"));
-        if (apiBaseUrl.isBlank()) {
-            throw new IllegalArgumentException("请填写百炼业务空间对应地域的 API Host");
-        }
-        String model = firstNonBlank(override == null ? null : override.model(), raw.get("model"), DEFAULT_MODEL);
-        validateApiBaseUrl(apiBaseUrl);
-        validateModel(model);
+        if (rawOptional.isEmpty()) return Optional.empty();
+        ModelInvocationResolver.ResolvedModelInvocation invocation =
+                modelInvocationResolver.resolve(companyId, "code-interpreter");
         int timeoutMs = parseBoundedInt(raw.get("timeoutMs"), 120_000, 10_000, 180_000, "请求超时");
         int maxInputChars = parseBoundedInt(raw.get("maxInputChars"), 12_000, 1_000, 50_000, "最大输入字符数");
-        return Optional.of(new ResolvedConfig(apiKey, apiBaseUrl, model, timeoutMs, maxInputChars));
+        return Optional.of(new ResolvedConfig(invocation.apiKey(), invocation.apiBaseUrl(), invocation.modelName(), timeoutMs, maxInputChars));
     }
 
     static void validateApiBaseUrl(String value) {
@@ -227,5 +214,4 @@ public class SandboxCodeInterpreterService {
     }
 
     private record ResolvedConfig(String apiKey, String apiBaseUrl, String model, int timeoutMs, int maxInputChars) { }
-    private record ConfigOverride(String apiKey, String apiBaseUrl, String model) { }
 }

@@ -1,7 +1,7 @@
 package com.codehouse.ciciassistant.skill.service;
 
 import com.codehouse.ciciassistant.ai.service.AliyunBailianClient;
-import com.codehouse.ciciassistant.ai.service.ModelRouterService;
+import com.codehouse.ciciassistant.ai.service.ModelInvocationResolver;
 import com.codehouse.ciciassistant.kb.domain.KnowledgeBaseEntity;
 import com.codehouse.ciciassistant.kb.domain.KnowledgeBaseRepository;
 import com.codehouse.ciciassistant.platform.service.PlatformGovernanceService;
@@ -63,7 +63,7 @@ public class SkillPackageService {
     private final KnowledgeBaseRepository knowledgeBaseRepository;
     private final PlatformGovernanceService platformGovernanceService;
     private final SkillSpecSchemaValidator schemaValidator;
-    private final ModelRouterService modelRouterService;
+    private final ModelInvocationResolver modelInvocationResolver;
     private final AliyunBailianClient aliyunBailianClient;
     private final ObjectMapper objectMapper;
     private final Map<String, ExportArtifact> exportArtifacts = new ConcurrentHashMap<>();
@@ -75,7 +75,7 @@ public class SkillPackageService {
                                KnowledgeBaseRepository knowledgeBaseRepository,
                                PlatformGovernanceService platformGovernanceService,
                                SkillSpecSchemaValidator schemaValidator,
-                               ModelRouterService modelRouterService,
+                               ModelInvocationResolver modelInvocationResolver,
                                AliyunBailianClient aliyunBailianClient,
                                ObjectMapper objectMapper) {
         this.skillDefinitionService = skillDefinitionService;
@@ -84,7 +84,7 @@ public class SkillPackageService {
         this.knowledgeBaseRepository = knowledgeBaseRepository;
         this.platformGovernanceService = platformGovernanceService;
         this.schemaValidator = schemaValidator;
-        this.modelRouterService = modelRouterService;
+        this.modelInvocationResolver = modelInvocationResolver;
         this.aliyunBailianClient = aliyunBailianClient;
         this.objectMapper = objectMapper;
     }
@@ -206,18 +206,14 @@ public class SkillPackageService {
 
     private StandardizedPackage tryStandardizeByModel(String companyId, SkillDefinitionEntity skill, SkillVersionEntity version, String exportedBy) {
         try {
-            Map<String, String> route = modelRouterService.route(companyId, "skill-authoring");
-            String provider = trimToNull(route.get("provider"));
-            String modelName = trimToNull(route.get("modelName"));
-            if (modelName == null || "cici-default".equalsIgnoreCase(modelName) || "mock".equalsIgnoreCase(provider)) {
-                return null;
-            }
+            ModelInvocationResolver.ResolvedModelInvocation invocation = modelInvocationResolver.resolve(companyId, "skill-authoring");
             List<Map<String, Object>> messages = List.of(
                     Map.of("role", "system", "content", buildExportModelSystemPrompt()),
                     Map.of("role", "user", "content", buildExportModelUserPrompt(skill, version, exportedBy))
             );
             AliyunBailianClient.ChatCompletionResult result =
-                    aliyunBailianClient.chatCompletion(modelName, messages, null, true);
+                    aliyunBailianClient.chatCompletionWithCredentials(invocation.modelName(), messages, null, true,
+                            invocation.apiBaseUrl(), invocation.apiKey());
             String content = trimToNull(result.content());
             if (content == null || content.startsWith("Aliyun API key") || content.startsWith("Model call failed")) {
                 return null;

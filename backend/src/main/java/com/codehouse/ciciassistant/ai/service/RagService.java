@@ -37,6 +37,7 @@ public class RagService {
     private final KnowledgeBaseRepository knowledgeBaseRepository;
     private final VectorStoreClient vectorStoreClient;
     private final EmbeddingService embeddingService;
+    private final ModelInvocationResolver modelInvocationResolver;
     private final KbAccessControlService kbAccessControlService;
 
     public RagService(KbChunkRepository kbChunkRepository,
@@ -45,6 +46,7 @@ public class RagService {
                       KnowledgeBaseRepository knowledgeBaseRepository,
                       VectorStoreClient vectorStoreClient,
                       EmbeddingService embeddingService,
+                      ModelInvocationResolver modelInvocationResolver,
                       KbAccessControlService kbAccessControlService) {
         this.kbChunkRepository = kbChunkRepository;
         this.kbDocumentRepository = kbDocumentRepository;
@@ -52,6 +54,7 @@ public class RagService {
         this.knowledgeBaseRepository = knowledgeBaseRepository;
         this.vectorStoreClient = vectorStoreClient;
         this.embeddingService = embeddingService;
+        this.modelInvocationResolver = modelInvocationResolver;
         this.kbAccessControlService = kbAccessControlService;
     }
 
@@ -102,6 +105,7 @@ public class RagService {
         }
         Map<Long, KnowledgeBaseEntity> kbById = knowledgeBaseRepository.findByCompanyIdAndIdIn(companyId, requestedNumericIds).stream()
                 .collect(Collectors.toMap(KnowledgeBaseEntity::getId, item -> item));
+        ModelInvocationResolver.ResolvedModelInvocation embeddingRoute = modelInvocationResolver.resolve(companyId, "knowledge-embedding");
         List<String> allowedKnowledgeBaseIds = new ArrayList<>();
         List<RetrievedKnowledgeBase> retrievedKnowledgeBases = new ArrayList<>();
         for (Long id : requestedNumericIds) {
@@ -114,8 +118,8 @@ public class RagService {
             retrievedKnowledgeBases.add(new RetrievedKnowledgeBase(kbId, kb.getName()));
             scoreThresholdByKb.put(kbId, kb.getScoreThreshold());
             embeddingConfigByKb.put(kbId, new EmbeddingConfig(
-                    kb.getEmbeddingProvider(),
-                    kb.getEmbeddingModel(),
+                    embeddingRoute.providerCode(),
+                    embeddingRoute.modelName(),
                     kb.getEmbeddingDimension()));
             topK = Math.max(topK, kb.getTopK());
         }
@@ -130,7 +134,7 @@ public class RagService {
         for (String kbId : allowedKnowledgeBaseIds) {
             EmbeddingConfig config = embeddingConfigByKb.get(kbId);
             if (config == null) {
-                config = new EmbeddingConfig("local", "local-hash", 1024);
+                throw new IllegalStateException("Knowledge base embedding route is unavailable: " + kbId);
             }
             kbIdsByEmbedding.computeIfAbsent(config, ignored -> new ArrayList<>()).add(kbId);
         }
@@ -139,7 +143,7 @@ public class RagService {
             EmbeddingConfig config = entry.getKey();
             groupEmbeddings.add(new GroupEmbedding(
                     entry.getValue(),
-                    embeddingService.embed(companyId, config.provider(), config.model(), config.dimension(), query)));
+                    embeddingService.embed(companyId, config.dimension(), query)));
         }
         timingsMs.put("embedding", elapsedMs(embeddingStarted));
         long vectorStarted = System.nanoTime();

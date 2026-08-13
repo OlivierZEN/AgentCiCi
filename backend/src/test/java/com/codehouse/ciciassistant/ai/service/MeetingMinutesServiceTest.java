@@ -9,7 +9,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.codehouse.ciciassistant.ai.service.AliyunBailianClient.ChatCompletionResult;
-import com.codehouse.ciciassistant.model.service.ModelProviderService;
 import com.codehouse.ciciassistant.skill.domain.SkillBindingPolicy;
 import com.codehouse.ciciassistant.skill.domain.SkillDefinitionEntity;
 import com.codehouse.ciciassistant.skill.domain.SkillEditPolicy;
@@ -28,14 +27,12 @@ class MeetingMinutesServiceTest {
     @Test
     void shouldExplicitlyApplyAiMeetingNotetakerSkillWhenSummarizing() {
         AliyunBailianClient client = mock(AliyunBailianClient.class);
-        ModelRouterService modelRouterService = mock(ModelRouterService.class);
-        ModelProviderService modelProviderService = mock(ModelProviderService.class);
+        ModelInvocationResolver modelInvocationResolver = mock(ModelInvocationResolver.class);
         SkillDefinitionService skillDefinitionService = mock(SkillDefinitionService.class);
         SkillPromptAssembler skillPromptAssembler = new SkillPromptAssembler();
         MeetingMinutesService service = new MeetingMinutesService(
                 client,
-                modelRouterService,
-                modelProviderService,
+                modelInvocationResolver,
                 skillDefinitionService,
                 skillPromptAssembler);
 
@@ -62,15 +59,10 @@ class MeetingMinutesServiceTest {
                 null
         );
         when(skillDefinitionService.listSkills("demo-org")).thenReturn(List.of(skill));
-        when(modelRouterService.route("demo-org", "chat"))
-                .thenReturn(Map.of("provider", "aliyun-bailian", "modelName", "deepseek-v4-pro"));
-        when(modelProviderService.credentialsForProvider("demo-org", "aliyun-bailian"))
-                .thenReturn(Map.of(
-                        "apiBaseUrl", "https://dashscope.aliyuncs.com/compatible-mode/v1",
-                        "apiKey", "configured-api-key",
-                        "providerCode", "aliyun-bailian",
-                        "enabled", "true"
-                ));
+        when(modelInvocationResolver.resolve("demo-org", "meeting-minutes"))
+                .thenReturn(new ModelInvocationResolver.ResolvedModelInvocation(
+                        "meeting-minutes", "aliyun-bailian", "deepseek-v4-pro",
+                        "https://dashscope.aliyuncs.com/compatible-mode/v1", "configured-api-key", true));
         when(client.chatCompletionWithCredentials(
                 eq("deepseek-v4-pro"),
                 anyList(),
@@ -104,9 +96,8 @@ class MeetingMinutesServiceTest {
 
         assertThat(systemPrompt)
                 .contains("Active skill codes: ai-meeting-notetaker")
-                .contains("Current skill execution context")
                 .contains("AI meeting notetaker skill prompt")
-                .contains("Preferred output contract: 输出中文 Markdown，并包含行动项表格。");
+                .contains("Mandatory selected-skill output contract: 输出中文 Markdown，并包含行动项表格。");
         assertThat(userPrompt)
                 .contains("张三：我们下周发布。")
                 .contains("Topic**: 周会");

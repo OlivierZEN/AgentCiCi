@@ -786,7 +786,7 @@ class ChatOrchestratorServiceModelIdentityTest {
         private final ChatSessionRepository chatSessionRepository = mock(ChatSessionRepository.class);
         private final ChatMessageRepository chatMessageRepository = mock(ChatMessageRepository.class);
         private final ModelRouterService modelRouterService = mock(ModelRouterService.class);
-        private final ModelProviderService modelProviderService = mock(ModelProviderService.class);
+        private final ModelInvocationResolver modelInvocationResolver = mock(ModelInvocationResolver.class);
         private final ToolOrchestratorService toolOrchestratorService = mock(ToolOrchestratorService.class);
         private final RagService ragService = mock(RagService.class);
         private final ChatThinkingConfigService chatThinkingConfigService = mock(ChatThinkingConfigService.class);
@@ -900,7 +900,7 @@ class ChatOrchestratorServiceModelIdentityTest {
                     chatSessionRepository,
                     chatMessageRepository,
                     modelRouterService,
-                    modelProviderService,
+                    modelInvocationResolver,
                     toolOrchestratorService,
                     ragService,
                     chatThinkingConfigService,

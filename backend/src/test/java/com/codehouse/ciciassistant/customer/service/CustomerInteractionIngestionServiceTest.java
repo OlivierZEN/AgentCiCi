@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 
 import com.codehouse.ciciassistant.ai.service.AliyunAsrService;
 import com.codehouse.ciciassistant.ai.service.AliyunBailianClient;
+import com.codehouse.ciciassistant.ai.service.ModelInvocationResolver;
 import com.codehouse.ciciassistant.ai.service.ModelRouterService;
 import com.codehouse.ciciassistant.customer.domain.CustomerInteractionAssetEntity;
 import com.codehouse.ciciassistant.customer.domain.CustomerInteractionAssetRepository;
@@ -43,6 +44,7 @@ class CustomerInteractionIngestionServiceTest {
     private CustomerInteractionBatchRepository batchRepository;
     private CustomerInteractionAssetRepository assetRepository;
     private CustomerWorkbenchService workbenchService;
+    private ModelInvocationResolver modelInvocationResolver;
     private ModelRouterService modelRouterService;
     private ModelProviderService modelProviderService;
     private CustomerInteractionActionService interactionActionService;
@@ -54,6 +56,7 @@ class CustomerInteractionIngestionServiceTest {
         batchRepository = mock(CustomerInteractionBatchRepository.class);
         assetRepository = mock(CustomerInteractionAssetRepository.class);
         workbenchService = mock(CustomerWorkbenchService.class);
+        modelInvocationResolver = mock(ModelInvocationResolver.class);
         modelRouterService = mock(ModelRouterService.class);
         modelProviderService = mock(ModelProviderService.class);
         interactionActionService = mock(CustomerInteractionActionService.class);
@@ -76,8 +79,7 @@ class CustomerInteractionIngestionServiceTest {
                 interactionActionService,
                 mock(AliyunAsrService.class),
                 modelClient,
-                modelRouterService,
-                modelProviderService,
+                modelInvocationResolver,
                 new ObjectMapper(),
                 command -> { },
                 storageRoot.toString());

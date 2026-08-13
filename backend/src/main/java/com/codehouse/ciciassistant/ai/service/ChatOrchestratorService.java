@@ -102,7 +102,7 @@ public class ChatOrchestratorService {
     private final ChatSessionRepository chatSessionRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final ModelRouterService modelRouterService;
-    private final ModelProviderService modelProviderService;
+    private final ModelInvocationResolver modelInvocationResolver;
     private final ToolOrchestratorService toolOrchestratorService;
     private final RagService ragService;
     private final ChatThinkingConfigService chatThinkingConfigService;
@@ -137,7 +137,7 @@ public class ChatOrchestratorService {
     public ChatOrchestratorService(ChatSessionRepository chatSessionRepository,
                                    ChatMessageRepository chatMessageRepository,
                                    ModelRouterService modelRouterService,
-                                   ModelProviderService modelProviderService,
+                                   ModelInvocationResolver modelInvocationResolver,
                                    ToolOrchestratorService toolOrchestratorService,
                                    RagService ragService,
                                    ChatThinkingConfigService chatThinkingConfigService,
@@ -171,7 +171,7 @@ public class ChatOrchestratorService {
         this.chatSessionRepository = chatSessionRepository;
         this.chatMessageRepository = chatMessageRepository;
         this.modelRouterService = modelRouterService;
-        this.modelProviderService = modelProviderService;
+        this.modelInvocationResolver = modelInvocationResolver;
         this.toolOrchestratorService = toolOrchestratorService;
         this.ragService = ragService;
         this.chatThinkingConfigService = chatThinkingConfigService;
@@ -846,27 +846,16 @@ public class ChatOrchestratorService {
                     String finalModelStatus = "SUCCESS";
                     ChatStreamResult streamResult = new ChatStreamResult(0, 0);
                     try {
-                        if (modelCredentials.hasProviderCredentials()) {
-                            streamResult = aliyunBailianClient.chatStreamWithCredentials(
-                                    modelName,
-                                    messages,
-                                    null,
-                                    showThinking,
-                                    piece -> {
-                                        acc.append(piece);
-                                    },
-                                    modelCredentials.apiBaseUrl(),
-                                    modelCredentials.apiKey());
-                        } else {
-                            streamResult = aliyunBailianClient.chatStreamWithMessages(
-                                    modelName,
-                                    messages,
-                                    null,
-                                    showThinking,
-                                    piece -> {
-                                        acc.append(piece);
-                                    });
-                        }
+                        streamResult = aliyunBailianClient.chatStreamWithCredentials(
+                                modelName,
+                                messages,
+                                null,
+                                showThinking,
+                                piece -> {
+                                    acc.append(piece);
+                                },
+                                modelCredentials.apiBaseUrl(),
+                                modelCredentials.apiKey());
                         log.info("chatStream LLM stream done: session={} chars={} elapsedMs={}",
                                 sessionId, acc.length(), System.currentTimeMillis() - streamStart);
                     } catch (Exception ex) {
@@ -2033,36 +2022,28 @@ public class ChatOrchestratorService {
                                                                        List<Map<String, Object>> tools,
                                                                        boolean stripThinkingFromAssistantContent,
                                                                        ModelCallCredentials credentials) {
-        if (credentials != null && credentials.hasProviderCredentials()) {
-            return aliyunBailianClient.chatCompletionWithCredentials(
-                    modelName,
-                    messages,
-                    tools,
-                    stripThinkingFromAssistantContent,
-                    credentials.apiBaseUrl(),
-                    credentials.apiKey());
+        if (credentials == null) {
+            throw new IllegalStateException("聊天场景模型凭据未解析");
         }
-        return aliyunBailianClient.chatCompletion(modelName, messages, tools, stripThinkingFromAssistantContent);
+        return aliyunBailianClient.chatCompletionWithCredentials(
+                modelName,
+                messages,
+                tools,
+                stripThinkingFromAssistantContent,
+                credentials.apiBaseUrl(),
+                credentials.apiKey());
     }
 
     private ModelCallCredentials resolveModelCallCredentials(String companyId, String providerCode) {
-        if (providerCode == null || providerCode.isBlank() || "mock".equalsIgnoreCase(providerCode.trim())) {
-            return ModelCallCredentials.empty(providerCode);
+        if (providerCode == null || providerCode.isBlank()) {
+            throw new IllegalStateException("聊天场景模型厂商未配置");
         }
-        try {
-            Map<String, String> credentials = modelProviderService.credentialsForProvider(companyId, providerCode.trim());
-            if (!Boolean.parseBoolean(credentials.getOrDefault("enabled", "false"))) {
-                throw new IllegalArgumentException("当前模型厂商已停用，请联系平台运营启用模型厂商。");
-            }
-            return new ModelCallCredentials(
-                    providerCode.trim(),
-                    credentials.get("apiBaseUrl"),
-                    credentials.get("apiKey"),
-                    Boolean.parseBoolean(credentials.getOrDefault("apiKeyRequired", "true")));
-        } catch (IllegalArgumentException ex) {
-            log.warn("model provider credentials unavailable: org={} provider={} err={}", companyId, providerCode, ex.getMessage());
-            return ModelCallCredentials.empty(providerCode);
+        ModelInvocationResolver.ResolvedModelInvocation invocation = modelInvocationResolver.resolve(companyId, "chat");
+        if (!providerCode.trim().equals(invocation.providerCode())) {
+            throw new IllegalStateException("聊天场景模型路由在执行期间发生不一致");
         }
+        return new ModelCallCredentials(
+                invocation.providerCode(), invocation.apiBaseUrl(), invocation.apiKey(), invocation.apiKeyRequired());
     }
 
     // ── Helpers ──
@@ -3291,15 +3272,5 @@ public class ChatOrchestratorService {
     }
 
     private record ModelCallCredentials(String providerCode, String apiBaseUrl, String apiKey, boolean apiKeyRequired) {
-        static ModelCallCredentials empty(String providerCode) {
-            return new ModelCallCredentials(providerCode == null ? "" : providerCode, "", "", true);
-        }
-
-        boolean hasProviderCredentials() {
-            if (apiBaseUrl == null || apiBaseUrl.isBlank()) {
-                return false;
-            }
-            return !apiKeyRequired || (apiKey != null && !apiKey.isBlank());
-        }
     }
 }

@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.codehouse.ciciassistant.auth.config.PlatformAccountProperties;
+import com.codehouse.ciciassistant.ai.service.ModelInvocationResolver;
+import static org.mockito.Mockito.mock;
 import com.codehouse.ciciassistant.common.crypto.SecretCipherService;
 import com.codehouse.ciciassistant.feishu.service.FeishuBotClientManager;
 import com.codehouse.ciciassistant.integration.domain.IntegrationAppEntity;
@@ -36,7 +38,7 @@ class ManagedWebToolServiceTest {
     }
 
     @Test
-    void createsTwoDisabledCardsAndEncryptsTheirIndependentSecrets() {
+    void createsTwoDisabledCardsWithoutIndependentSecrets() {
         List<Map<String, Object>> initial = integrationAppService.listPlatformManaged();
         assertThat(initial).filteredOn(item -> List.of(
                         IntegrationAppService.APP_CODE_MANAGED_WEB_SEARCH,
@@ -44,26 +46,22 @@ class ManagedWebToolServiceTest {
                 .hasSize(2).allSatisfy(item -> assertThat(item.get("enabled")).isEqualTo(false));
 
         integrationAppService.updatePlatformManaged(IntegrationAppService.APP_CODE_MANAGED_WEB_SEARCH,
-                true, "search", config("search-secret"));
+                true, "search", config());
         integrationAppService.updatePlatformManaged(IntegrationAppService.APP_CODE_MANAGED_WEB_EXTRACTOR,
-                true, "extract", config("extract-secret"));
+                true, "extract", config());
 
         IntegrationAppEntity search = repository.findByCompanyIdAndAppCode(
                 "demo-org", IntegrationAppService.APP_CODE_MANAGED_WEB_SEARCH).orElseThrow();
         IntegrationAppEntity extract = repository.findByCompanyIdAndAppCode(
                 "demo-org", IntegrationAppService.APP_CODE_MANAGED_WEB_EXTRACTOR).orElseThrow();
-        assertThat(search.getConfigJson()).doesNotContain("search-secret").contains("cipher");
-        assertThat(extract.getConfigJson()).doesNotContain("extract-secret").contains("cipher");
-        assertThat(integrationAppService.decryptManagedWebApiKey(integrationAppService.findRawConfig(
-                "org", IntegrationAppService.APP_CODE_MANAGED_WEB_SEARCH).orElseThrow())).contains("search-secret");
-        assertThat(integrationAppService.decryptManagedWebApiKey(integrationAppService.findRawConfig(
-                "org", IntegrationAppService.APP_CODE_MANAGED_WEB_EXTRACTOR).orElseThrow())).contains("extract-secret");
+        assertThat(search.getConfigJson()).doesNotContain("apiKey").doesNotContain("apiBaseUrl").doesNotContain("model");
+        assertThat(extract.getConfigJson()).doesNotContain("apiKey").doesNotContain("apiBaseUrl").doesNotContain("model");
     }
 
     @Test
     void missingConfigurationFailsClosedAndCatalogHasBothSchemas() throws Exception {
         ManagedWebToolService service = new ManagedWebToolService(
-                new ManagedWebToolClient(objectMapper), integrationAppService, objectMapper);
+                new ManagedWebToolClient(objectMapper), integrationAppService, mock(ModelInvocationResolver.class), objectMapper);
         JsonNode result = objectMapper.readTree(service.dispatch(
                 "org", "user", ManagedWebToolService.TOOL_SEARCH, "{\"query\":\"latest\"}"));
         assertThat(result.path("success").asBoolean()).isFalse();
@@ -89,10 +87,8 @@ class ManagedWebToolServiceTest {
         ManagedWebToolService.validatePublicWebUrl("https://help.aliyun.com/zh/model-studio/web-extractor");
     }
 
-    private Map<String, Object> config(String secret) {
-        return Map.of("apiKey", secret,
-                "apiBaseUrl", "https://workspace.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
-                "model", "qwen3.5-plus");
+    private Map<String, Object> config() {
+        return Map.of("timeoutMs", "120000", "maxInputChars", "12000");
     }
 
     private static final class FakeRepository implements IntegrationAppRepository {

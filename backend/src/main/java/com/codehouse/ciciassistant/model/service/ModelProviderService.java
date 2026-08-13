@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,7 +45,15 @@ public class ModelProviderService {
             new SceneRouteDef("skill-authoring", "技能创作", "Skill 生成、技能包标准化和编排草稿模型。"),
             new SceneRouteDef("ontology-modeling", "本体建模", "业务语义建模、草稿提案与结构化本体生成模型。"),
             new SceneRouteDef("meeting-minutes", "AI 听记", "会议纪要、行动项和拜访记录生成模型。"),
-            new SceneRouteDef("customer-insight", "客户洞察", "客户洞察摘要、一客一策和客户经营分析模型。")
+            new SceneRouteDef("customer-insight", "客户洞察", "客户洞察摘要、一客一策和客户经营分析模型。"),
+            new SceneRouteDef("knowledge-embedding", "知识库向量化", "文档切片与检索查询的 embedding 模型。"),
+            new SceneRouteDef("memory-embedding", "记忆向量化", "长期记忆索引和检索查询的 embedding 模型。"),
+            new SceneRouteDef("image-ocr", "图片 OCR", "客户互动截图及其他图片文字提取模型。"),
+            new SceneRouteDef("voice-asr", "实时语音转写", "短音频语音识别模型。"),
+            new SceneRouteDef("file-asr", "文件语音转写", "音视频文件转写模型。"),
+            new SceneRouteDef("code-interpreter", "代码解释器", "受管代码解释器执行模型。"),
+            new SceneRouteDef("managed-web-search", "联网搜索", "受管联网搜索执行模型。"),
+            new SceneRouteDef("managed-web-extractor", "网页抓取", "受管网页抓取执行模型。")
     );
 
     private final ModelProviderConfigRepository providerRepository;
@@ -54,9 +61,6 @@ public class ModelProviderService {
     private final PlatformAccountProperties platformAccountProperties;
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
-
-    private final String aliyunDefaultBaseUrl;
-    private final String aliyunDefaultApiKey;
 
     private static final Map<String, ProviderDef> PROVIDER_DEFS = Map.ofEntries(
             Map.entry(PROVIDER_ALIYUN,
@@ -134,15 +138,11 @@ public class ModelProviderService {
     public ModelProviderService(ModelProviderConfigRepository providerRepository,
                                 CompanyModelConfigRepository modelConfigRepository,
                                 PlatformAccountProperties platformAccountProperties,
-                                ObjectMapper objectMapper,
-                                @Value("${app.model.aliyun.base-url:https://dashscope.aliyuncs.com/compatible-mode/v1}") String aliyunDefaultBaseUrl,
-                                @Value("${app.model.aliyun.api-key:}") String aliyunDefaultApiKey) {
+                                ObjectMapper objectMapper) {
         this.providerRepository = providerRepository;
         this.modelConfigRepository = modelConfigRepository;
         this.platformAccountProperties = platformAccountProperties;
         this.objectMapper = objectMapper;
-        this.aliyunDefaultBaseUrl = aliyunDefaultBaseUrl;
-        this.aliyunDefaultApiKey = aliyunDefaultApiKey;
         this.httpClient = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .connectTimeout(Duration.ofSeconds(12))
@@ -311,19 +311,14 @@ public class ModelProviderService {
         CompanyModelConfigEntity configured = modelConfigRepository
                 .findByCompanyIdAndSceneCode(platformScopeId(), normalizeSceneCode(sceneCode))
                 .orElse(null);
-        ModelChoice sceneChoice = configured == null
-                ? null
-                : findCandidate(candidates, configured.getProvider(), configured.getModelName());
-        if (sceneChoice != null) {
-            return routePayload(sceneChoice, "platform_scene");
+        if (configured == null) {
+            throw new IllegalStateException("场景模型路由未配置: " + normalizeSceneCode(sceneCode));
         }
-
-        ModelChoice preferred = findPreferredCandidate(candidates, preferredModelName);
-        if (preferred != null) {
-            return routePayload(preferred, "agent_preferred");
+        ModelChoice sceneChoice = findCandidate(candidates, configured.getProvider(), configured.getModelName());
+        if (sceneChoice == null) {
+            throw new IllegalStateException("场景模型路由不可用: " + normalizeSceneCode(sceneCode));
         }
-
-        return routePayload(candidates.getFirst(), "platform_default");
+        return routePayload(sceneChoice, "platform_scene");
     }
 
     @Transactional
@@ -337,9 +332,6 @@ public class ModelProviderService {
             }
             ProviderDef def = requireDef(entity.getProviderCode());
             LinkedHashMap<String, EmbeddingModelDef> candidates = new LinkedHashMap<>();
-            for (EmbeddingModelDef item : defaultEmbeddingModels(entity.getProviderCode())) {
-                candidates.put(item.modelName(), item);
-            }
             for (String modelName : configuredModelsForProvider(entity, scopeId)) {
                 if (!isEmbeddingModelName(modelName)) {
                     continue;
@@ -842,15 +834,13 @@ public class ModelProviderService {
         for (ProviderDef def : sortedDefs()) {
             boolean exists = providerRepository.findByCompanyIdAndProviderCode(companyId, def.providerCode()).isPresent();
             if (!exists) {
-                String defaultKey = PROVIDER_ALIYUN.equals(def.providerCode()) ? nullableToBlank(aliyunDefaultApiKey) : "";
-                String defaultUrl = PROVIDER_ALIYUN.equals(def.providerCode()) ? nullableToBlank(aliyunDefaultBaseUrl) : def.defaultBaseUrl();
                 providerRepository.save(new ModelProviderConfigEntity(
                         companyId,
                         def.providerCode(),
                         def.providerName(),
-                        true,
-                        defaultUrl,
-                        defaultKey,
+                        false,
+                        def.defaultBaseUrl(),
+                        "",
                         "{}"
                 ));
             }

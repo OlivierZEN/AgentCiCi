@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 
 import com.codehouse.ciciassistant.ai.service.AliyunBailianClient;
 import com.codehouse.ciciassistant.ai.service.AliyunBailianClient.ChatCompletionResult;
+import com.codehouse.ciciassistant.ai.service.ModelInvocationResolver;
 import com.codehouse.ciciassistant.ai.service.ModelRouterService;
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.common.error.ConflictException;
@@ -63,6 +64,8 @@ class OntologyAiProposalServiceTest {
     @Mock
     private OntologyValidationService validation;
     @Mock
+    private ModelInvocationResolver modelInvocationResolver;
+    @Mock
     private ModelRouterService modelRouter;
     @Mock
     private ModelProviderService modelProviders;
@@ -96,8 +99,7 @@ class OntologyAiProposalServiceTest {
                 physicalFields,
                 drafts,
                 validation,
-                modelRouter,
-                modelProviders,
+                modelInvocationResolver,
                 modelClient,
                 persistence,
                 proposalState,

@@ -220,8 +220,8 @@ export default function AdminKnowledgePage() {
   const [chunkDelimiter, setChunkDelimiter] = useState("\\n");
   const [topK, setTopK] = useState(5);
   const [scoreThreshold, setScoreThreshold] = useState(0);
-  const [embeddingProvider, setEmbeddingProvider] = useState("local");
-  const [embeddingModel, setEmbeddingModel] = useState("local-hash");
+  const [embeddingProvider, setEmbeddingProvider] = useState("unconfigured");
+  const [embeddingModel, setEmbeddingModel] = useState("unconfigured");
   const [embeddingDimension, setEmbeddingDimension] = useState(1024);
   const [embeddingOptions, setEmbeddingOptions] = useState<EmbeddingModelOption[]>([]);
   const [previewText, setPreviewText] = useState("");
@@ -317,8 +317,8 @@ export default function AdminKnowledgePage() {
       setChunkDelimiter(delimiter === "\n" ? "\\n" : delimiter);
       setTopK(Number(data.topK ?? 5));
       setScoreThreshold(Number(data.scoreThreshold ?? 0));
-      setEmbeddingProvider(String(data.embeddingProvider ?? "local"));
-      setEmbeddingModel(String(data.embeddingModel ?? "local-hash"));
+      setEmbeddingProvider(String(data.embeddingProvider ?? "unconfigured"));
+      setEmbeddingModel(String(data.embeddingModel ?? "unconfigured"));
       setEmbeddingDimension(Number(data.embeddingDimension ?? 1024));
     },
     [headers],
@@ -385,8 +385,6 @@ export default function AdminKnowledgePage() {
         retrievalStrategy: "VECTOR",
         topK,
         scoreThreshold,
-        embeddingProvider,
-        embeddingModel,
         embeddingDimension,
       }),
     });
@@ -1273,27 +1271,6 @@ export default function AdminKnowledgePage() {
   );
   const selectedDocCount = selectedDocIds.size;
   const selectedChunkCount = selectedChunkIds.size;
-  const selectedEmbeddingValue = `${embeddingProvider}:::${embeddingModel}`;
-  const selectedEmbeddingOption = embeddingOptions.find(
-    (option) => option.providerCode === embeddingProvider && option.modelName === embeddingModel,
-  );
-  const visibleEmbeddingOptions = selectedEmbeddingOption || embeddingProvider === "local"
-    ? embeddingOptions
-    : [
-        {
-          providerCode: embeddingProvider,
-          providerName: embeddingProvider,
-          modelName: embeddingModel,
-          displayLabel: `${embeddingModel} · ${embeddingProvider}`,
-          defaultDimension: embeddingDimension,
-          dimensionChoices: [embeddingDimension],
-          supportsCustomDimension: false,
-        },
-        ...embeddingOptions,
-      ];
-  const embeddingDimensionChoices = selectedEmbeddingOption?.dimensionChoices?.length
-    ? selectedEmbeddingOption.dimensionChoices
-    : [embeddingDimension];
   const uploadAccept = uploadPolicy?.allowedExtensions?.length
     ? uploadPolicy.allowedExtensions.map((ext) => `.${ext}`).join(",")
     : ".txt,.md,.markdown,.csv,.json,.docx";
@@ -2246,44 +2223,22 @@ export default function AdminKnowledgePage() {
 
               <h3 className="cici-kb-main__title cici-kb-main__title--section">向量模型</h3>
               <div className="cici-kb-embedding-note">
-                <span>使用已启用模型厂商的 embedding 模型生成文档与问题向量。更换模型或维度后，需要重建已发布文档索引。</span>
+                <span>文档与检索调用由“知识库向量化（knowledge-embedding）”场景模型路由统一决定。请在模型厂商治理中启用厂商、模型和凭据；这里不能覆盖运行模型。</span>
               </div>
               <div className="cici-kb-settings__grid cici-kb-settings__grid--double">
-                <label className="cici-field">
-                  <span className="cici-field__label">embedding 模型</span>
-                  <select
-                    className="cici-field__input"
-                    value={selectedEmbeddingValue}
-                    onChange={(e) => {
-                      const [providerCode, modelName] = e.target.value.split(":::");
-                      const option = embeddingOptions.find((item) => item.providerCode === providerCode && item.modelName === modelName);
-                      setEmbeddingProvider(providerCode);
-                      setEmbeddingModel(modelName);
-                      setEmbeddingDimension(option?.defaultDimension ?? 1024);
-                    }}
-                  >
-                    {embeddingProvider === "local" && (
-                      <option value="local:::local-hash">local-hash · 本地测试向量</option>
-                    )}
-                    {visibleEmbeddingOptions.map((option) => (
-                      <option key={`${option.providerCode}-${option.modelName}`} value={`${option.providerCode}:::${option.modelName}`}>
-                        {option.displayLabel}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="subtle">
-                    {embeddingOptions.length === 0 ? "请联系平台运营启用可提供 embedding 的模型厂商。" : "当前列表来自运营平台统一启用的模型厂商。"}
-                  </span>
-                </label>
+                <div className="cici-field">
+                  <span className="cici-field__label">当前场景模型</span>
+                  <div className="cici-field__input" aria-live="polite">{embeddingModel} · {embeddingProvider}</div>
+                  <span className="subtle">未配置时上传、索引和检索会明确失败，不会改用本地或环境变量默认模型。</span>
+                </div>
                 <label className="cici-field">
                   <span className="cici-field__label">向量维度</span>
                   <select
                     className="cici-field__input"
                     value={embeddingDimension}
                     onChange={(e) => setEmbeddingDimension(Number(e.target.value))}
-                    disabled={embeddingProvider === "local"}
                   >
-                    {embeddingDimensionChoices.map((dimension) => (
+                    {[256, 512, 768, 1024, 1536, 2048, 3072, 4096].map((dimension) => (
                       <option key={dimension} value={dimension}>{dimension}</option>
                     ))}
                   </select>

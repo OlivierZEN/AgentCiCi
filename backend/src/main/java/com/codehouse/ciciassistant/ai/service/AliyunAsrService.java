@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -32,12 +31,9 @@ public class AliyunAsrService {
             "mpeg", "ogg", "opus", "wav", "webm", "wma", "wmv"
     );
 
-    private final RestClient compatibleRestClient;
-    private final RestClient dashscopeRestClient;
+    private final RestClient.Builder restClientBuilder;
     private final ObjectMapper objectMapper;
-    private final String apiKey;
-    private final String asrModel;
-    private final String fileAsrModel;
+    private final ModelInvocationResolver modelInvocationResolver;
     private final int fileAsrPollAttempts;
     private final long fileAsrPollIntervalMillis;
     private static final Duration OSS_CONNECT_TIMEOUT = Duration.ofSeconds(30);
@@ -45,27 +41,18 @@ public class AliyunAsrService {
 
     public AliyunAsrService(RestClient.Builder restClientBuilder,
                             ObjectMapper objectMapper,
-                            @Value("${app.model.aliyun.base-url:https://dashscope.aliyuncs.com/compatible-mode/v1}") String baseUrl,
-                            @Value("${app.voice.aliyun.dashscope-url:https://dashscope.aliyuncs.com}") String dashscopeUrl,
-                            @Value("${app.model.aliyun.api-key:}") String apiKey,
-                            @Value("${app.voice.aliyun.asr-model:qwen3-asr-flash}") String asrModel,
-                            @Value("${app.voice.aliyun.file-asr-model:fun-asr}") String fileAsrModel,
-                            @Value("${app.voice.aliyun.file-asr-poll-attempts:60}") int fileAsrPollAttempts,
-                            @Value("${app.voice.aliyun.file-asr-poll-interval-ms:2000}") long fileAsrPollIntervalMillis) {
-        this.compatibleRestClient = restClientBuilder.baseUrl(baseUrl).build();
-        this.dashscopeRestClient = restClientBuilder.baseUrl(dashscopeUrl).build();
+                            ModelInvocationResolver modelInvocationResolver,
+                            @org.springframework.beans.factory.annotation.Value("${app.voice.aliyun.file-asr-poll-attempts:60}") int fileAsrPollAttempts,
+                            @org.springframework.beans.factory.annotation.Value("${app.voice.aliyun.file-asr-poll-interval-ms:2000}") long fileAsrPollIntervalMillis) {
+        this.restClientBuilder = restClientBuilder;
         this.objectMapper = objectMapper;
-        this.apiKey = apiKey;
-        this.asrModel = asrModel;
-        this.fileAsrModel = fileAsrModel;
+        this.modelInvocationResolver = modelInvocationResolver;
         this.fileAsrPollAttempts = Math.max(1, fileAsrPollAttempts);
         this.fileAsrPollIntervalMillis = Math.max(200, fileAsrPollIntervalMillis);
     }
 
-    public String transcribe(byte[] audioBytes, String contentType) {
-        if (apiKey == null || apiKey.isBlank()) {
-            throw new IllegalArgumentException("Aliyun ASR API key is not configured");
-        }
+    public String transcribe(String companyId, byte[] audioBytes, String contentType) {
+        AsrInvocation invocation = resolveInvocation(companyId, "voice-asr");
         if (audioBytes == null || audioBytes.length == 0) {
             throw new IllegalArgumentException("Audio bytes are empty");
         }
@@ -74,7 +61,7 @@ public class AliyunAsrService {
         String dataUrl = "data:" + mime + ";base64," + Base64.getEncoder().encodeToString(audioBytes);
 
         Map<String, Object> payload = new HashMap<>();
-        payload.put("model", asrModel);
+        payload.put("model", invocation.modelName());
         payload.put("temperature", 0);
         payload.put("messages", List.of(
                 Map.of("role", "system", "content", "You are an ASR engine. Return transcript text only."),
@@ -85,9 +72,9 @@ public class AliyunAsrService {
         ));
 
         @SuppressWarnings("unchecked")
-        Map<String, Object> response = compatibleRestClient.post()
+        Map<String, Object> response = invocation.compatibleRestClient().post()
                 .uri("/chat/completions")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + invocation.apiKey())
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(payload)
                 .retrieve()
@@ -99,25 +86,23 @@ public class AliyunAsrService {
         return parseTranscript(response);
     }
 
-    public FileTranscriptionResult transcribeMeetingFile(byte[] fileBytes, String originalFilename, String contentType) {
-        if (apiKey == null || apiKey.isBlank()) {
-            throw new IllegalArgumentException("Aliyun ASR API key is not configured");
-        }
+    public FileTranscriptionResult transcribeMeetingFile(String companyId, byte[] fileBytes, String originalFilename, String contentType) {
+        AsrInvocation invocation = resolveInvocation(companyId, "file-asr");
         if (fileBytes == null || fileBytes.length == 0) {
             throw new IllegalArgumentException("音频文件不能为空");
         }
         FileType fileType = validateSupportedFile(originalFilename, contentType);
         String safeFilename = safeFilename(originalFilename, fileType.extension());
-        String temporaryUrl = uploadToDashscopeTemporaryStorage(fileBytes, safeFilename, fileType.contentType());
-        String taskId = submitFileTranscriptionTask(temporaryUrl);
-        JsonNode taskOutput = waitForFileTranscription(taskId);
+        String temporaryUrl = uploadToDashscopeTemporaryStorage(invocation, fileBytes, safeFilename, fileType.contentType());
+        String taskId = submitFileTranscriptionTask(invocation, temporaryUrl);
+        JsonNode taskOutput = waitForFileTranscription(invocation, taskId);
         JsonNode resultNode = downloadTranscriptionResult(taskOutput);
         List<MeetingFileTranscriptSegment> segments = parseFileTranscript(resultNode);
         if (segments.isEmpty()) {
             throw new IllegalArgumentException("百炼语音识别未返回可用转写内容");
         }
         return new FileTranscriptionResult(
-                fileAsrModel,
+                invocation.modelName(),
                 taskId,
                 safeFilename,
                 fileType.extension(),
@@ -172,17 +157,17 @@ public class AliyunAsrService {
         return List.of(new MeetingFileTranscriptSegment("1", "发言人 1", text, null, null));
     }
 
-    private String uploadToDashscopeTemporaryStorage(byte[] fileBytes, String filename, String contentType) {
+    private String uploadToDashscopeTemporaryStorage(AsrInvocation invocation, byte[] fileBytes, String filename, String contentType) {
         Map<String, Object> response;
         try {
             @SuppressWarnings("unchecked")
-            Map<String, Object> uploadPolicyResponse = dashscopeRestClient.get()
+            Map<String, Object> uploadPolicyResponse = invocation.dashscopeRestClient().get()
                     .uri(uriBuilder -> uriBuilder
                             .path("/api/v1/uploads")
                             .queryParam("action", "getPolicy")
-                            .queryParam("model", fileAsrModel)
+                            .queryParam("model", invocation.modelName())
                             .build())
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + invocation.apiKey())
                     .accept(MediaType.APPLICATION_JSON)
                     .retrieve()
                     .body(Map.class);
@@ -272,9 +257,9 @@ public class AliyunAsrService {
         }
     }
 
-    private String submitFileTranscriptionTask(String temporaryUrl) {
+    private String submitFileTranscriptionTask(AsrInvocation invocation, String temporaryUrl) {
         Map<String, Object> payload = Map.of(
-                "model", fileAsrModel,
+                "model", invocation.modelName(),
                 "input", Map.of("file_urls", List.of(temporaryUrl)),
                 "parameters", Map.of(
                         "channel_id", List.of(0),
@@ -282,9 +267,9 @@ public class AliyunAsrService {
                 )
         );
         @SuppressWarnings("unchecked")
-        Map<String, Object> response = dashscopeRestClient.post()
+        Map<String, Object> response = invocation.dashscopeRestClient().post()
                 .uri("/api/v1/services/audio/asr/transcription")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + invocation.apiKey())
                 .header("X-DashScope-Async", "enable")
                 .header("X-DashScope-OssResourceResolve", "enable")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -298,15 +283,15 @@ public class AliyunAsrService {
         return taskId;
     }
 
-    private JsonNode waitForFileTranscription(String taskId) {
+    private JsonNode waitForFileTranscription(AsrInvocation invocation, String taskId) {
         for (int attempt = 0; attempt < fileAsrPollAttempts; attempt++) {
             if (attempt > 0) {
                 sleepBeforePolling();
             }
             @SuppressWarnings("unchecked")
-            Map<String, Object> response = dashscopeRestClient.get()
+            Map<String, Object> response = invocation.dashscopeRestClient().get()
                     .uri("/api/v1/tasks/{taskId}", taskId)
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + invocation.apiKey())
                     .accept(MediaType.APPLICATION_JSON)
                     .retrieve()
                     .body(Map.class);
@@ -383,6 +368,29 @@ public class AliyunAsrService {
             return sb.toString().trim();
         }
         return "";
+    }
+
+    private AsrInvocation resolveInvocation(String companyId, String sceneCode) {
+        ModelInvocationResolver.ResolvedModelInvocation invocation = modelInvocationResolver.resolve(companyId, sceneCode);
+        if (!"aliyun-bailian".equals(invocation.providerCode())) {
+            throw new IllegalStateException("场景模型路由不受 ASR 文件协议支持: " + sceneCode
+                    + " -> " + invocation.providerCode());
+        }
+        URI compatibleUri;
+        try {
+            compatibleUri = URI.create(invocation.apiBaseUrl());
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalStateException("ASR 场景模型路由地址无效: " + sceneCode, ex);
+        }
+        if (compatibleUri.getScheme() == null || compatibleUri.getAuthority() == null) {
+            throw new IllegalStateException("ASR 场景模型路由地址无效: " + sceneCode);
+        }
+        String dashscopeBaseUrl = compatibleUri.getScheme() + "://" + compatibleUri.getAuthority();
+        return new AsrInvocation(
+                invocation.modelName(),
+                invocation.apiKey(),
+                restClientBuilder.baseUrl(invocation.apiBaseUrl()).build(),
+                restClientBuilder.baseUrl(dashscopeBaseUrl).build());
     }
 
     private static String normalizeMime(String contentType) {
@@ -527,6 +535,12 @@ public class AliyunAsrService {
     }
 
     public record FileType(String extension, String contentType) {
+    }
+
+    private record AsrInvocation(String modelName,
+                                 String apiKey,
+                                 RestClient compatibleRestClient,
+                                 RestClient dashscopeRestClient) {
     }
 
     public record MeetingFileTranscriptSegment(String speakerId, String speakerName, String text, Long startMs, Long endMs) {

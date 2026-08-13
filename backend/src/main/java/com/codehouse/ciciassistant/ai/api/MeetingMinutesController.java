@@ -54,6 +54,7 @@ public class MeetingMinutesController {
             throw new IllegalArgumentException("音频文件不能为空");
         }
         FileTranscriptionResult result = aliyunAsrService.transcribeMeetingFile(
+                companyId,
                 file.getBytes(),
                 file.getOriginalFilename(),
                 file.getContentType()

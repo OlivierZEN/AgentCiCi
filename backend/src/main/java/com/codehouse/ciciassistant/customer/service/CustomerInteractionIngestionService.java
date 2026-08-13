@@ -2,14 +2,13 @@ package com.codehouse.ciciassistant.customer.service;
 
 import com.codehouse.ciciassistant.ai.service.AliyunAsrService;
 import com.codehouse.ciciassistant.ai.service.AliyunBailianClient;
-import com.codehouse.ciciassistant.ai.service.ModelRouterService;
+import com.codehouse.ciciassistant.ai.service.ModelInvocationResolver;
 import com.codehouse.ciciassistant.customer.domain.CustomerInteractionAssetEntity;
 import com.codehouse.ciciassistant.customer.domain.CustomerInteractionAssetRepository;
 import com.codehouse.ciciassistant.customer.domain.CustomerInteractionBatchEntity;
 import com.codehouse.ciciassistant.customer.domain.CustomerInteractionBatchRepository;
 import com.codehouse.ciciassistant.customer.domain.CustomerInteractionEventEntity;
 import com.codehouse.ciciassistant.customer.domain.CustomerInteractionEventRepository;
-import com.codehouse.ciciassistant.model.service.ModelProviderService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.ByteArrayInputStream;
@@ -73,8 +72,7 @@ public class CustomerInteractionIngestionService {
     private final CustomerInteractionActionService interactionActionService;
     private final AliyunAsrService asrService;
     private final AliyunBailianClient modelClient;
-    private final ModelRouterService modelRouterService;
-    private final ModelProviderService modelProviderService;
+    private final ModelInvocationResolver modelInvocationResolver;
     private final ObjectMapper objectMapper;
     private final Executor executor;
     private final Path storageRoot;
@@ -88,8 +86,7 @@ public class CustomerInteractionIngestionService {
                                                CustomerInteractionActionService interactionActionService,
                                                AliyunAsrService asrService,
                                                AliyunBailianClient modelClient,
-                                               ModelRouterService modelRouterService,
-                                               ModelProviderService modelProviderService,
+                                               ModelInvocationResolver modelInvocationResolver,
                                                ObjectMapper objectMapper,
                                                @Qualifier("agentRuntimeExecutor") Executor executor,
                                                @Value("${app.customer-interaction.storage-dir:./data/kb-files/customer-interactions}") String storageDir) {
@@ -102,8 +99,7 @@ public class CustomerInteractionIngestionService {
         this.interactionActionService = interactionActionService;
         this.asrService = asrService;
         this.modelClient = modelClient;
-        this.modelRouterService = modelRouterService;
-        this.modelProviderService = modelProviderService;
+        this.modelInvocationResolver = modelInvocationResolver;
         this.objectMapper = objectMapper;
         this.executor = executor;
         this.storageRoot = Path.of(storageDir).toAbsolutePath().normalize();
@@ -334,15 +330,15 @@ public class CustomerInteractionIngestionService {
         ensureUnderStorage(path);
         byte[] bytes = Files.readAllBytes(path);
         return switch (asset.getInputType()) {
-            case "AUDIO" -> transcribeAudio(bytes, asset);
+            case "AUDIO" -> transcribeAudio(companyId, bytes, asset);
             case "IMAGE" -> ocrImage(companyId, bytes, asset.getContentType());
             case "DOCUMENT" -> readDocument(bytes, extension(asset.getOriginalName()));
             default -> throw new IllegalArgumentException("不支持的材料类型");
         };
     }
 
-    private String transcribeAudio(byte[] bytes, CustomerInteractionAssetEntity asset) {
-        var result = asrService.transcribeMeetingFile(bytes, asset.getOriginalName(), asset.getContentType());
+    private String transcribeAudio(String companyId, byte[] bytes, CustomerInteractionAssetEntity asset) {
+        var result = asrService.transcribeMeetingFile(companyId, bytes, asset.getOriginalName(), asset.getContentType());
         StringBuilder transcript = new StringBuilder();
         result.transcript().forEach(segment -> {
             String speaker = blank(segment.speakerName());
@@ -354,18 +350,15 @@ public class CustomerInteractionIngestionService {
 
     private String ocrImage(String companyId, byte[] bytes, String contentType) {
         if (bytes.length > MAX_IMAGE_BYTES) throw new IllegalArgumentException("单张截图不能超过 10MB");
-        Map<String, String> credentials = modelProviderService.credentialsForProvider(companyId, ModelProviderService.PROVIDER_ALIYUN);
-        if (!Boolean.parseBoolean(credentials.getOrDefault("enabled", "false"))) {
-            throw new IllegalArgumentException("图片 OCR 所需的阿里云视觉模型未启用");
-        }
+        ModelInvocationResolver.ResolvedModelInvocation invocation = modelInvocationResolver.resolve(companyId, "image-ocr");
         String mime = blank(contentType).startsWith("image/") ? contentType : "image/png";
         String dataUrl = "data:" + mime + ";base64," + Base64.getEncoder().encodeToString(bytes);
         List<Map<String, Object>> content = List.of(
                 Map.of("type", "text", "text", "请逐行提取这张客户沟通截图中的可见文字。保留发送人、时间和消息顺序；不要总结、推断或补造。只输出 OCR 文本。"),
                 Map.of("type", "image_url", "image_url", Map.of("url", dataUrl)));
-        var response = modelClient.chatCompletionWithCredentials("qwen-vl-plus", List.of(
+        var response = modelClient.chatCompletionWithCredentials(invocation.modelName(), List.of(
                 Map.of("role", "user", "content", content)
-        ), null, true, credentials.get("apiBaseUrl"), credentials.get("apiKey"));
+        ), null, true, invocation.apiBaseUrl(), invocation.apiKey());
         String text = blank(response.content());
         if (isModelFailure(text)) throw new IllegalArgumentException(text);
         return text;
@@ -478,17 +471,13 @@ public class CustomerInteractionIngestionService {
                 原始材料：
                 %s
                 """.formatted(clip(crmContext, 12_000), clip(combined, 60_000));
-        Map<String, String> route = modelRouterService.route(companyId, "customer-insight");
-        Map<String, String> credentials = modelProviderService.credentialsForProvider(companyId, route.get("provider"));
-        if (!Boolean.parseBoolean(credentials.getOrDefault("enabled", "false"))) {
-            return fallbackAnalysis(combined, "客户洞察模型未启用，已保留统一草稿");
-        }
-        var response = modelClient.chatCompletionWithCredentials(route.get("modelName"), List.of(
+        ModelInvocationResolver.ResolvedModelInvocation invocation = modelInvocationResolver.resolve(companyId, "customer-insight");
+        var response = modelClient.chatCompletionWithCredentials(invocation.modelName(), List.of(
                 Map.of("role", "system", "content", "你是客户沟通事实整理助手。只返回严格 JSON，不得改写或删除原始材料。"),
                 Map.of("role", "user", "content", prompt)
-        ), null, true, credentials.get("apiBaseUrl"), credentials.get("apiKey"));
+        ), null, true, invocation.apiBaseUrl(), invocation.apiKey());
         String content = stripCodeFence(blank(response.content()));
-        if (isModelFailure(content)) return fallbackAnalysis(combined, clip(content, 500));
+        if (isModelFailure(content)) throw new IllegalStateException("客户洞察场景模型调用失败: " + clip(content, 500));
         try {
             Map<String, Object> parsed = objectMapper.readValue(content, MAP_TYPE);
             Map<String, Object> normalized = normalizeAnalysis(parsed, combined, false);

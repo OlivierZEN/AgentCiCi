@@ -1,6 +1,7 @@
 package com.codehouse.ciciassistant.ai.ws;
 
 import com.codehouse.ciciassistant.auth.service.JwtService;
+import com.codehouse.ciciassistant.ai.service.ModelInvocationResolver;
 import com.codehouse.ciciassistant.integration.service.IntegrationAppService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -44,9 +45,7 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
     private final JwtService jwtService;
     private final ObjectMapper objectMapper;
     private final IntegrationAppService integrationAppService;
-    private final String apiKey;
-    private final String model;
-    private final String url;
+    private final ModelInvocationResolver modelInvocationResolver;
     private final boolean iflytekEnabled;
     private final String iflytekAppId;
     private final String iflytekAccessKeyId;
@@ -62,9 +61,7 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
     public AliyunRealtimeAsrWebSocketHandler(JwtService jwtService,
                                              ObjectMapper objectMapper,
                                              IntegrationAppService integrationAppService,
-                                             @Value("${app.model.aliyun.api-key:}") String apiKey,
-                                             @Value("${app.voice.aliyun.realtime-model:paraformer-realtime-v2}") String model,
-                                             @Value("${app.voice.aliyun.realtime-url:wss://dashscope.aliyuncs.com/api-ws/v1/inference}") String url,
+                                             ModelInvocationResolver modelInvocationResolver,
                                              @Value("${app.voice.iflytek.enabled:false}") boolean iflytekEnabled,
                                              @Value("${app.voice.iflytek.app-id:}") String iflytekAppId,
                                              @Value("${app.voice.iflytek.access-key-id:}") String iflytekAccessKeyId,
@@ -75,9 +72,7 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
         this.jwtService = jwtService;
         this.objectMapper = objectMapper;
         this.integrationAppService = integrationAppService;
-        this.apiKey = apiKey;
-        this.model = model;
-        this.url = url;
+        this.modelInvocationResolver = modelInvocationResolver;
         this.iflytekEnabled = iflytekEnabled;
         this.iflytekAppId = iflytekAppId;
         this.iflytekAccessKeyId = iflytekAccessKeyId;
@@ -121,34 +116,21 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
                 String requestedProvider = firstNonBlank(j.path("provider").asText(""), queryParam(session, "provider"));
                 boolean speakerDiarization = j.path("speakerDiarization").asBoolean(
                         "true".equalsIgnoreCase(queryParam(session, "speakerDiarization")));
-                boolean needsIflytekConfig = "iflytek".equalsIgnoreCase(requestedProvider)
-                        || "xunfei".equalsIgnoreCase(requestedProvider)
-                        || ("auto".equalsIgnoreCase(requestedProvider) && speakerDiarization);
-                IflytekRuntimeConfig iflytekConfig = needsIflytekConfig ? resolveIflytekConfig(ctx.companyId) : null;
-                String provider = selectRealtimeProvider(
-                        requestedProvider,
-                        speakerDiarization,
-                        isIflytekAvailable(iflytekConfig));
-                if ("iflytek".equals(provider)) {
-                    startIflytekTask(ctx, sampleRate, speakerDiarization, iflytekConfig);
-                } else {
-                    if ("auto".equalsIgnoreCase(requestedProvider) && speakerDiarization) {
-                        sendClientEvent(ctx.clientSession, Map.of(
-                                "type", "status",
-                                "message", "speaker-diarization-unavailable",
-                                "provider", "aliyun",
-                                "speakerDiarization", false
-                        ));
-                    }
-                    startAliyunTask(ctx, sampleRate);
+                if ("iflytek".equalsIgnoreCase(requestedProvider) || "xunfei".equalsIgnoreCase(requestedProvider)) {
+                    sendClientEvent(ctx.clientSession, Map.of("type", "error",
+                            "message", "实时 ASR 仅支持通过 voice-asr 场景模型路由配置的厂商"));
+                    return;
                 }
+                if (speakerDiarization) {
+                    sendClientEvent(ctx.clientSession, Map.of("type", "status",
+                            "message", "speaker-diarization-unavailable", "provider", "scene-route",
+                            "speakerDiarization", false));
+                }
+                startAliyunTask(ctx, sampleRate);
             } else if ("stop".equalsIgnoreCase(type)) {
                 ctx.started = false;
                 if (ctx.aliyunClient != null) {
                     ctx.aliyunClient.finishTask();
-                }
-                if (ctx.iflytekClient != null) {
-                    ctx.iflytekClient.finishTask();
                 }
             } else if ("ping".equalsIgnoreCase(type)) {
                 sendClientEvent(session, Map.of("type", "pong"));
@@ -162,10 +144,6 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
     protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) {
         SessionCtx ctx = sessions.get(session.getId());
         if (ctx == null || !ctx.started) return;
-        if (ctx.iflytekClient != null) {
-            ctx.iflytekClient.sendAudio(message.getPayload().asReadOnlyBuffer());
-            return;
-        }
         if (ctx.aliyunClient != null) {
             ctx.aliyunClient.sendAudio(message.getPayload().asReadOnlyBuffer());
         }
@@ -177,14 +155,18 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
         if (ctx != null && ctx.aliyunClient != null) {
             ctx.aliyunClient.close();
         }
-        if (ctx != null && ctx.iflytekClient != null) {
-            ctx.iflytekClient.close();
-        }
     }
 
     private void startAliyunTask(SessionCtx ctx, int sampleRate) throws Exception {
-        if (apiKey == null || apiKey.isBlank()) {
-            sendClientEvent(ctx.clientSession, Map.of("type", "error", "message", "Aliyun API key is missing"));
+        ModelInvocationResolver.ResolvedModelInvocation invocation;
+        try {
+            invocation = modelInvocationResolver.resolve(ctx.companyId, "voice-asr");
+        } catch (RuntimeException ex) {
+            sendClientEvent(ctx.clientSession, Map.of("type", "error", "message", ex.getMessage()));
+            return;
+        }
+        if (!"aliyun-bailian".equals(invocation.providerCode())) {
+            sendClientEvent(ctx.clientSession, Map.of("type", "error", "message", "实时 ASR 场景当前仅支持 aliyun-bailian 路由"));
             return;
         }
         if (ctx.aliyunClient != null) {
@@ -195,7 +177,7 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
             ctx.iflytekClient = null;
         }
         String taskId = UUID.randomUUID().toString();
-        AliyunWsClient client = new AliyunWsClient(ctx, taskId, Math.max(8000, sampleRate));
+        AliyunWsClient client = new AliyunWsClient(ctx, taskId, Math.max(8000, sampleRate), toAliyunWsRuntime(invocation));
         ctx.aliyunClient = client;
         client.connect();
     }
@@ -274,6 +256,16 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
         return a != null && !a.isBlank() ? a : (b == null ? "" : b);
     }
 
+    private static AliyunWsRuntime toAliyunWsRuntime(ModelInvocationResolver.ResolvedModelInvocation invocation) {
+        URI apiBase = URI.create(invocation.apiBaseUrl());
+        if (apiBase.getScheme() == null || apiBase.getAuthority() == null) {
+            throw new IllegalStateException("实时 ASR 场景模型路由地址无效");
+        }
+        String scheme = "https".equalsIgnoreCase(apiBase.getScheme()) ? "wss" : "ws";
+        return new AliyunWsRuntime(invocation.apiKey(), invocation.modelName(),
+                scheme + "://" + apiBase.getAuthority() + "/api-ws/v1/inference");
+    }
+
     private static String encodeQueryValue(String value) {
         return URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8);
     }
@@ -338,6 +330,9 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
                                         String realtimeUrl,
                                         String lang,
                                         String domain) {
+    }
+
+    private record AliyunWsRuntime(String apiKey, String modelName, String url) {
     }
 
     private final class IflytekWsClient implements WebSocket.Listener {
@@ -488,22 +483,24 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
         private final SessionCtx ctx;
         private final String taskId;
         private final int sampleRate;
+        private final AliyunWsRuntime runtime;
         private final StringBuilder textBuffer = new StringBuilder();
         private CompletableFuture<WebSocket> sendChain = CompletableFuture.completedFuture(null);
         private volatile boolean finishing;
         private WebSocket ws;
 
-        private AliyunWsClient(SessionCtx ctx, String taskId, int sampleRate) {
+        private AliyunWsClient(SessionCtx ctx, String taskId, int sampleRate, AliyunWsRuntime runtime) {
             this.ctx = ctx;
             this.taskId = taskId;
             this.sampleRate = sampleRate;
+            this.runtime = runtime;
         }
 
         void connect() {
             ws = httpClient.newWebSocketBuilder()
-                    .header("Authorization", "Bearer " + apiKey)
+                    .header("Authorization", "Bearer " + runtime.apiKey())
                     .header("user-agent", "cc-cici-assistant")
-                    .buildAsync(URI.create(url), this)
+                    .buildAsync(URI.create(runtime.url()), this)
                     .join();
         }
 
@@ -562,7 +559,7 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
                         "task_group", "audio",
                         "task", "asr",
                         "function", "recognition",
-                        "model", model,
+                        "model", runtime.modelName(),
                         "parameters", Map.of(
                                 "format", "pcm",
                                 "sample_rate", sampleRate,

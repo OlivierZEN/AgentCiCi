@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-13T02:00:00Z
+updated_at: 2026-08-13T07:10:00Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-297 - 统一模型调用治理
+
+- status: `review`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-179-unified-model-invocation-governance.md`
+- task_status_path: `.claw/tasks/TASK-297.md`
+- blocked_by: `none`
+- next_action: 按发布 Skill 在 UAT 配置实际启用场景的厂商、模型与凭据，完成真实业务验收后再决定发布。
 
 ### TASK-293 - DevAutopilot 授权初始化编排
 

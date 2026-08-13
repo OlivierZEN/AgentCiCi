@@ -2,11 +2,10 @@ package com.codehouse.ciciassistant.ontology.service;
 
 import com.codehouse.ciciassistant.ai.service.AliyunBailianClient;
 import com.codehouse.ciciassistant.ai.service.AliyunBailianClient.ChatCompletionResult;
-import com.codehouse.ciciassistant.ai.service.ModelRouterService;
+import com.codehouse.ciciassistant.ai.service.ModelInvocationResolver;
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.common.error.ConflictException;
 import com.codehouse.ciciassistant.common.error.ResourceNotFoundException;
-import com.codehouse.ciciassistant.model.service.ModelProviderService;
 import com.codehouse.ciciassistant.ontology.domain.OntologyAiProposalEntity;
 import com.codehouse.ciciassistant.ontology.domain.OntologyAiProposalRepository;
 import com.codehouse.ciciassistant.ontology.domain.OntologyPhysicalFieldRepository;
@@ -74,8 +73,7 @@ public class OntologyAiProposalService {
     private final OntologyPhysicalFieldRepository physicalFields;
     private final OntologyDraftService drafts;
     private final OntologyValidationService validation;
-    private final ModelRouterService modelRouter;
-    private final ModelProviderService modelProviders;
+    private final ModelInvocationResolver modelInvocationResolver;
     private final AliyunBailianClient modelClient;
     private final OntologyTenantPersistence persistence;
     private final OntologyAiProposalStateService proposalState;
@@ -90,8 +88,7 @@ public class OntologyAiProposalService {
             OntologyPhysicalFieldRepository physicalFields,
             OntologyDraftService drafts,
             OntologyValidationService validation,
-            ModelRouterService modelRouter,
-            ModelProviderService modelProviders,
+            ModelInvocationResolver modelInvocationResolver,
             AliyunBailianClient modelClient,
             OntologyTenantPersistence persistence,
             OntologyAiProposalStateService proposalState,
@@ -102,8 +99,7 @@ public class OntologyAiProposalService {
         this.physicalFields = physicalFields;
         this.drafts = drafts;
         this.validation = validation;
-        this.modelRouter = modelRouter;
-        this.modelProviders = modelProviders;
+        this.modelInvocationResolver = modelInvocationResolver;
         this.modelClient = modelClient;
         this.persistence = persistence;
         this.proposalState = proposalState;
@@ -363,24 +359,14 @@ public class OntologyAiProposalService {
     private ChatCompletionResult invokeModel(
             String companyId,
             List<Map<String, Object>> messages) {
-        Map<String, String> route = modelRouter.route(companyId, SCENE_CODE);
-        String provider = requiredRouteValue(route, "provider");
-        String modelName = requiredRouteValue(route, "modelName");
-        Map<String, String> credentials = modelProviders.credentialsForProvider(companyId, provider);
-        if (credentials == null
-                || !Boolean.parseBoolean(credentials.getOrDefault("enabled", "false"))
-                || isBlank(credentials.get("apiBaseUrl"))
-                || (Boolean.parseBoolean(credentials.getOrDefault("apiKeyRequired", "false"))
-                && isBlank(credentials.get("apiKey")))) {
-            throw new IllegalStateException("Model provider is unavailable");
-        }
+        ModelInvocationResolver.ResolvedModelInvocation invocation = modelInvocationResolver.resolve(companyId, SCENE_CODE);
         return modelClient.chatCompletionWithCredentials(
-                modelName,
+                invocation.modelName(),
                 messages,
                 null,
                 true,
-                credentials.get("apiBaseUrl"),
-                credentials.get("apiKey"),
+                invocation.apiBaseUrl(),
+                invocation.apiKey(),
                 MAX_OUTPUT_TOKENS,
                 MAX_RESPONSE_BYTES);
     }

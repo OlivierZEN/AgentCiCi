@@ -35,7 +35,7 @@ class AliyunBailianClientTest {
         try {
             String baseUrl = "http://127.0.0.1:" + server.getAddress().getPort();
             AliyunBailianClient client = new AliyunBailianClient(
-                    RestClient.builder(), objectMapper, baseUrl, "", "default-model");
+                    RestClient.builder(), objectMapper);
 
             AliyunBailianClient.ChatCompletionResult result =
                     client.chatCompletionWithCredentials(

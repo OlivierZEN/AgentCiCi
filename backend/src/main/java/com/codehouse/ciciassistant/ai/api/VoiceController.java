@@ -27,11 +27,10 @@ public class VoiceController {
         if (audio == null || audio.isEmpty()) {
             throw new IllegalArgumentException("音频文件不能为空");
         }
-        String text = aliyunAsrService.transcribe(audio.getBytes(), audio.getContentType());
+        String text = aliyunAsrService.transcribe(companyId, audio.getBytes(), audio.getContentType());
         return ApiResponse.ok(Map.of(
                 "companyId", companyId,
                 "text", text == null ? "" : text
         ));
     }
 }
-

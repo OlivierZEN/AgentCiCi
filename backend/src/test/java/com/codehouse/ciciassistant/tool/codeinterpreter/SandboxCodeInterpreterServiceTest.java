@@ -1,8 +1,10 @@
 package com.codehouse.ciciassistant.tool.codeinterpreter;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 import com.codehouse.ciciassistant.auth.config.PlatformAccountProperties;
+import com.codehouse.ciciassistant.ai.service.ModelInvocationResolver;
 import com.codehouse.ciciassistant.common.crypto.SecretCipherService;
 import com.codehouse.ciciassistant.feishu.service.FeishuBotClientManager;
 import com.codehouse.ciciassistant.integration.domain.IntegrationAppEntity;
@@ -36,41 +38,27 @@ class SandboxCodeInterpreterServiceTest {
     }
 
     @Test
-    void codeInterpreterConfigIsPlatformManagedEncryptedAndMasked() {
+    void codeInterpreterConfigOnlyStoresRuntimeLimits() {
         integrationAppService.updatePlatformManaged(IntegrationAppService.APP_CODE_CODE_INTERPRETER,
                 true, "managed sandbox", Map.of(
-                        "apiKey", "sk-ws-sensitive",
-                        "apiBaseUrl", "https://workspace-id.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
-                        "model", "qwen3.5-plus"));
+                        "timeoutMs", "120000",
+                        "maxInputChars", "12000"));
 
         IntegrationAppEntity entity = repository.findByCompanyIdAndAppCode(
                 "demo-org", IntegrationAppService.APP_CODE_CODE_INTERPRETER).orElseThrow();
-        assertThat(entity.getConfigJson()).doesNotContain("sk-ws-sensitive")
-                .contains("cipher").contains("iv");
-        String encryptedConfig = entity.getConfigJson();
-        integrationAppService.updatePlatformManaged(IntegrationAppService.APP_CODE_CODE_INTERPRETER,
-                true, "managed sandbox", Map.of(
-                        "apiKey", IntegrationAppService.CODE_INTERPRETER_SECRET_MASK,
-                        "apiBaseUrl", "https://workspace-id.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
-                        "model", "qwen3.5-plus"));
-        assertThat(repository.findByCompanyIdAndAppCode(
-                "demo-org", IntegrationAppService.APP_CODE_CODE_INTERPRETER).orElseThrow().getConfigJson())
-                .isEqualTo(encryptedConfig);
-        Map<String, Object> raw = integrationAppService.findRawConfig(
-                "any-org", IntegrationAppService.APP_CODE_CODE_INTERPRETER).orElseThrow();
-        assertThat(integrationAppService.decryptCodeInterpreterApiKey(raw)).contains("sk-ws-sensitive");
+        assertThat(entity.getConfigJson()).doesNotContain("apiKey").doesNotContain("apiBaseUrl").doesNotContain("model");
 
         Map<String, Object> view = integrationAppService.listPlatformManaged().stream()
                 .filter(item -> IntegrationAppService.APP_CODE_CODE_INTERPRETER.equals(item.get("appCode")))
                 .findFirst().orElseThrow();
         @SuppressWarnings("unchecked") Map<String, Object> config = (Map<String, Object>) view.get("config");
-        assertThat(config.get("apiKey")).isEqualTo(IntegrationAppService.CODE_INTERPRETER_SECRET_MASK);
+        assertThat(config).containsOnlyKeys("timeoutMs", "maxInputChars");
     }
 
     @Test
     void missingConfigurationFailsClosed() throws Exception {
         SandboxCodeInterpreterService service = new SandboxCodeInterpreterService(
-                new SandboxCodeInterpreterClient(objectMapper), integrationAppService, objectMapper);
+                new SandboxCodeInterpreterClient(objectMapper), integrationAppService, mock(ModelInvocationResolver.class), objectMapper);
         JsonNode result = objectMapper.readTree(service.dispatch("org-1", "user-1", "{\"task\":\"12**3\"}"));
         assertThat(result.path("success").asBoolean()).isFalse();
         assertThat(result.path("code").asText()).isEqualTo("CODE_INTERPRETER_NOT_CONFIGURED");

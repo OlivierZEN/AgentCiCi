@@ -80,8 +80,8 @@ public class KnowledgeBaseEntity {
         this.retrievalStrategy = "VECTOR";
         this.topK = 5;
         this.scoreThreshold = 0.0;
-        this.embeddingProvider = "local";
-        this.embeddingModel = "local-hash";
+        this.embeddingProvider = "unconfigured";
+        this.embeddingModel = "unconfigured";
         this.embeddingDimension = 1024;
     }
 
@@ -142,11 +142,11 @@ public class KnowledgeBaseEntity {
     }
 
     public String getEmbeddingProvider() {
-        return embeddingProvider == null || embeddingProvider.isBlank() ? "local" : embeddingProvider;
+        return embeddingProvider == null || embeddingProvider.isBlank() ? "unconfigured" : embeddingProvider;
     }
 
     public String getEmbeddingModel() {
-        return embeddingModel == null || embeddingModel.isBlank() ? "local-hash" : embeddingModel;
+        return embeddingModel == null || embeddingModel.isBlank() ? "unconfigured" : embeddingModel;
     }
 
     public Integer getEmbeddingDimension() {

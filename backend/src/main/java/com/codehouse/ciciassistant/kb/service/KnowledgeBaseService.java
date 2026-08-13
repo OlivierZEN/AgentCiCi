@@ -2,6 +2,7 @@ package com.codehouse.ciciassistant.kb.service;
 
 import com.codehouse.ciciassistant.agent.domain.AgentKnowledgeBindingRepository;
 import com.codehouse.ciciassistant.ai.service.RagService;
+import com.codehouse.ciciassistant.ai.service.ModelInvocationResolver;
 import com.codehouse.ciciassistant.billing.service.BillingUsageMeteringService;
 import com.codehouse.ciciassistant.kb.domain.KbChunkEntity;
 import com.codehouse.ciciassistant.kb.domain.KbChunkRepository;
@@ -94,6 +95,7 @@ public class KnowledgeBaseService {
     private final KbSourceDocumentMapRepository sourceDocumentMapRepository;
     private final AgentKnowledgeBindingRepository agentKnowledgeBindingRepository;
     private final ModelProviderService modelProviderService;
+    private final ModelInvocationResolver modelInvocationResolver;
     private final BillingUsageMeteringService billingUsageMeteringService;
     private final VectorStoreClient vectorStoreClient;
     private final EmbeddingService embeddingService;
@@ -102,8 +104,6 @@ public class KnowledgeBaseService {
     private final RabbitTemplate rabbitTemplate;
     private final ObjectMapper objectMapper;
     private final String indexingMode;
-    private final String defaultEmbeddingProvider;
-    private final String defaultEmbeddingModel;
     private final Integer defaultEmbeddingDimension;
     private final long maxUploadFileSizeBytes;
     private final Set<String> allowedUploadExtensions;
@@ -126,6 +126,7 @@ public class KnowledgeBaseService {
                                 KbSourceDocumentMapRepository sourceDocumentMapRepository,
                                 AgentKnowledgeBindingRepository agentKnowledgeBindingRepository,
                                 ModelProviderService modelProviderService,
+                                ModelInvocationResolver modelInvocationResolver,
                                 BillingUsageMeteringService billingUsageMeteringService,
                                 VectorStoreClient vectorStoreClient,
                                 EmbeddingService embeddingService,
@@ -135,8 +136,6 @@ public class KnowledgeBaseService {
                                 ObjectMapper objectMapper,
                                 @Value("${app.kb.storage-dir:./data/kb-files}") String storageDir,
                                 @Value("${app.kb.indexing.mode:local}") String indexingMode,
-                                @Value("${app.kb.embedding.provider:local}") String defaultEmbeddingProvider,
-                                @Value("${app.kb.embedding.model:local-hash}") String defaultEmbeddingModel,
                                 @Value("${app.kb.embedding.dimension:1024}") Integer defaultEmbeddingDimension,
                                 @Value("${app.kb.upload.max-file-size-bytes:26214400}") Long maxUploadFileSizeBytes,
                                 @Value("${app.kb.upload.allowed-extensions:txt,md,markdown,csv,json,docx,pdf}") String allowedUploadExtensions,
@@ -156,6 +155,7 @@ public class KnowledgeBaseService {
         this.sourceDocumentMapRepository = sourceDocumentMapRepository;
         this.agentKnowledgeBindingRepository = agentKnowledgeBindingRepository;
         this.modelProviderService = modelProviderService;
+        this.modelInvocationResolver = modelInvocationResolver;
         this.billingUsageMeteringService = billingUsageMeteringService;
         this.vectorStoreClient = vectorStoreClient;
         this.embeddingService = embeddingService;
@@ -164,8 +164,6 @@ public class KnowledgeBaseService {
         this.rabbitTemplate = rabbitTemplate;
         this.objectMapper = objectMapper;
         this.indexingMode = indexingMode;
-        this.defaultEmbeddingProvider = normalizeEmbeddingProvider(defaultEmbeddingProvider);
-        this.defaultEmbeddingModel = normalizeEmbeddingModel(defaultEmbeddingModel);
         this.defaultEmbeddingDimension = sanitizeEmbeddingDimension(defaultEmbeddingDimension);
         this.maxUploadFileSizeBytes = Math.max(1L, maxUploadFileSizeBytes == null ? 26_214_400L : maxUploadFileSizeBytes);
         this.allowedUploadExtensions = normalizeCsvSet(allowedUploadExtensions);
@@ -175,6 +173,7 @@ public class KnowledgeBaseService {
 
     public Map<String, Object> createKnowledgeBase(String companyId, String name, String description) {
         KnowledgeBaseEntity entity = new KnowledgeBaseEntity(companyId, name, description);
+        EmbeddingConfig embeddingConfig = embeddingConfigForKnowledgeBase(companyId, null);
         entity.updateKnowledgeSettings(
                 entity.getChunkSize(),
                 entity.getChunkOverlap(),
@@ -182,9 +181,9 @@ public class KnowledgeBaseService {
                 entity.getRetrievalStrategy(),
                 entity.getTopK(),
                 entity.getScoreThreshold(),
-                defaultEmbeddingProvider,
-                defaultEmbeddingModel,
-                defaultEmbeddingDimension);
+                embeddingConfig.provider(),
+                embeddingConfig.model(),
+                embeddingConfig.dimension());
         entity = kbRepository.save(entity);
         return kbPayload(entity);
     }
@@ -215,9 +214,8 @@ public class KnowledgeBaseService {
         int topK = sanitizeTopK(command.topK());
         double scoreThreshold = sanitizeScoreThreshold(command.scoreThreshold());
         String retrievalStrategy = normalizeRetrievalStrategy(command.retrievalStrategy());
-        String embeddingProvider = normalizeEmbeddingProvider(command.embeddingProvider());
-        String embeddingModel = normalizeEmbeddingModel(command.embeddingModel());
         int embeddingDimension = sanitizeEmbeddingDimension(command.embeddingDimension());
+        EmbeddingConfig embeddingConfig = embeddingConfigForKnowledgeBase(companyId, String.valueOf(kbId));
         kb.updateKnowledgeSettings(
                 chunkSize,
                 chunkOverlap,
@@ -225,8 +223,8 @@ public class KnowledgeBaseService {
                 retrievalStrategy,
                 topK,
                 scoreThreshold,
-                embeddingProvider,
-                embeddingModel,
+                embeddingConfig.provider(),
+                embeddingConfig.model(),
                 embeddingDimension);
         kbRepository.save(kb);
         return kbSettingsPayload(kb);
@@ -451,8 +449,6 @@ public class KnowledgeBaseService {
                 contentHash,
                 embeddingService.embed(
                         companyId,
-                        embeddingConfig.provider(),
-                        embeddingConfig.model(),
                         embeddingConfig.dimension(),
                         normalized)));
         chunk.updateContent(normalized, contentHash);
@@ -483,8 +479,6 @@ public class KnowledgeBaseService {
                         chunk.getContentHash(),
                         embeddingService.embed(
                                 companyId,
-                                embeddingConfig.provider(),
-                                embeddingConfig.model(),
                                 embeddingConfig.dimension(),
                                 chunk.getContent())));
                 chunk.setVectorId(vectorId);
@@ -684,8 +678,6 @@ public class KnowledgeBaseService {
                 query,
                 embeddingService.embed(
                         companyId,
-                        kb.getEmbeddingProvider(),
-                        kb.getEmbeddingModel(),
                         kb.getEmbeddingDimension(),
                         query),
                 Math.max(topK, 1)));
@@ -1192,8 +1184,6 @@ public class KnowledgeBaseService {
                 contentHash,
                 embeddingService.embed(
                         companyId,
-                        embeddingConfig.provider(),
-                        embeddingConfig.model(),
                         embeddingConfig.dimension(),
                         normalizedContent)));
         chunk.setVectorId(vectorId);
@@ -1230,9 +1220,10 @@ public class KnowledgeBaseService {
             int chunkSize = kbEntity == null ? DEFAULT_CHUNK_SIZE : sanitizeChunkSize(kbEntity.getChunkSize());
             int chunkOverlap = kbEntity == null ? DEFAULT_CHUNK_OVERLAP : sanitizeChunkOverlap(chunkSize, kbEntity.getChunkOverlap());
             String chunkDelimiter = kbEntity == null ? "\n" : normalizeDelimiter(kbEntity.getChunkDelimiter());
-            String embeddingProvider = kbEntity == null ? defaultEmbeddingProvider : kbEntity.getEmbeddingProvider();
-            String embeddingModel = kbEntity == null ? defaultEmbeddingModel : kbEntity.getEmbeddingModel();
-            Integer embeddingDimension = kbEntity == null ? defaultEmbeddingDimension : kbEntity.getEmbeddingDimension();
+            EmbeddingConfig embeddingConfig = embeddingConfigForKnowledgeBase(companyId, String.valueOf(doc.getKnowledgeBaseId()));
+            String embeddingProvider = embeddingConfig.provider();
+            String embeddingModel = embeddingConfig.model();
+            Integer embeddingDimension = embeddingConfig.dimension();
             int chunkIndex = 0;
             for (String chunkText : splitToChunks(text, chunkSize, chunkOverlap, chunkDelimiter)) {
                 if (chunkText.isBlank()) {
@@ -1259,8 +1250,6 @@ public class KnowledgeBaseService {
                         contentHash,
                         embeddingService.embed(
                                 doc.getCompanyId(),
-                                embeddingProvider,
-                                embeddingModel,
                                 embeddingDimension,
                                 chunkText)));
                 chunk.setVectorId(vectorId);
@@ -2068,8 +2057,6 @@ public class KnowledgeBaseService {
                 contentHash,
                 embeddingService.embed(
                         companyId,
-                        kb.getEmbeddingProvider(),
-                        kb.getEmbeddingModel(),
                         kb.getEmbeddingDimension(),
                         chunk.getContent())));
         chunk.setVectorId(vectorId);
@@ -2230,14 +2217,14 @@ public class KnowledgeBaseService {
 
     private String normalizeEmbeddingProvider(String value) {
         if (value == null || value.isBlank()) {
-            return "local";
+            return "unconfigured";
         }
         return value.trim();
     }
 
     private String normalizeEmbeddingModel(String value) {
         if (value == null || value.isBlank()) {
-            return "local-hash";
+            return "unconfigured";
         }
         return value.trim();
     }
@@ -2250,16 +2237,13 @@ public class KnowledgeBaseService {
     }
 
     private EmbeddingConfig embeddingConfigForKnowledgeBase(String companyId, String knowledgeBaseId) {
-        return parseLong(knowledgeBaseId)
+        int dimension = parseLong(knowledgeBaseId)
                 .flatMap(id -> kbRepository.findByIdAndCompanyId(id, companyId))
-                .map(kb -> new EmbeddingConfig(
-                        kb.getEmbeddingProvider(),
-                        kb.getEmbeddingModel(),
-                        kb.getEmbeddingDimension()))
-                .orElse(new EmbeddingConfig(
-                        defaultEmbeddingProvider,
-                        defaultEmbeddingModel,
-                        defaultEmbeddingDimension));
+                .map(KnowledgeBaseEntity::getEmbeddingDimension)
+                .map(this::sanitizeEmbeddingDimension)
+                .orElse(defaultEmbeddingDimension);
+        ModelInvocationResolver.ResolvedModelInvocation invocation = modelInvocationResolver.resolve(companyId, "knowledge-embedding");
+        return new EmbeddingConfig(invocation.providerCode(), invocation.modelName(), dimension);
     }
 
     private String normalizeRetrievalStrategy(String value) {

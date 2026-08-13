@@ -124,8 +124,6 @@ app:
       mode: local
     vector-store: memory
     embedding:
-      provider: local
-      model: local-hash
       dimension: 1024
     qdrant:
       base-url: http://localhost:6333

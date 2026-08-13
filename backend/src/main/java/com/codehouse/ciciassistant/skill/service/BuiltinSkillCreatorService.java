@@ -1,7 +1,7 @@
 package com.codehouse.ciciassistant.skill.service;
 
 import com.codehouse.ciciassistant.ai.service.AliyunBailianClient;
-import com.codehouse.ciciassistant.ai.service.ModelRouterService;
+import com.codehouse.ciciassistant.ai.service.ModelInvocationResolver;
 import com.codehouse.ciciassistant.kb.domain.KnowledgeBaseEntity;
 import com.codehouse.ciciassistant.kb.domain.KnowledgeBaseRepository;
 import com.codehouse.ciciassistant.skill.domain.SkillDefinitionRepository;
@@ -35,7 +35,7 @@ public class BuiltinSkillCreatorService {
     private final KnowledgeBaseRepository knowledgeBaseRepository;
     private final SkillDefinitionRepository skillDefinitionRepository;
     private final SkillSpecSchemaValidator schemaValidator;
-    private final ModelRouterService modelRouterService;
+    private final ModelInvocationResolver modelInvocationResolver;
     private final AliyunBailianClient aliyunBailianClient;
     private final ObjectMapper objectMapper;
 
@@ -43,14 +43,14 @@ public class BuiltinSkillCreatorService {
                                       KnowledgeBaseRepository knowledgeBaseRepository,
                                       SkillDefinitionRepository skillDefinitionRepository,
                                       SkillSpecSchemaValidator schemaValidator,
-                                      ModelRouterService modelRouterService,
+                                      ModelInvocationResolver modelInvocationResolver,
                                       AliyunBailianClient aliyunBailianClient,
                                       ObjectMapper objectMapper) {
         this.toolDefinitionRepository = toolDefinitionRepository;
         this.knowledgeBaseRepository = knowledgeBaseRepository;
         this.skillDefinitionRepository = skillDefinitionRepository;
         this.schemaValidator = schemaValidator;
-        this.modelRouterService = modelRouterService;
+        this.modelInvocationResolver = modelInvocationResolver;
         this.aliyunBailianClient = aliyunBailianClient;
         this.objectMapper = objectMapper;
     }
@@ -146,25 +146,15 @@ public class BuiltinSkillCreatorService {
                                                    Set<String> availableToolNames,
                                                    Set<String> availableKbIds) {
         try {
-            Map<String, String> route = modelRouterService.route(companyId, "skill-authoring");
-            String provider = trimToNull(command.preferredProvider());
-            if (provider == null) {
-                provider = route.get("provider");
-            }
-            String modelName = trimToNull(command.preferredModel());
-            if (modelName == null) {
-                modelName = route.get("modelName");
-            }
-            if ("mock".equals(provider) || "cici-default".equals(modelName)) {
-                modelName = null;
-            }
+            ModelInvocationResolver.ResolvedModelInvocation invocation = modelInvocationResolver.resolve(companyId, "skill-authoring");
             List<Map<String, Object>> messages = List.of(
                     Map.of("role", "system", "content", buildModelSystemPrompt()),
                     Map.of("role", "user", "content", buildModelUserPrompt(command, tools, knowledgeBases))
             );
-            log.info("Skill authoring: calling model [{}] from provider [{}] for org [{}]", modelName, provider, companyId);
+            log.info("Skill authoring: calling model [{}] from provider [{}] for org [{}]", invocation.modelName(), invocation.providerCode(), companyId);
             AliyunBailianClient.ChatCompletionResult result =
-                    aliyunBailianClient.chatCompletion(modelName, messages, null, true);
+                    aliyunBailianClient.chatCompletionWithCredentials(invocation.modelName(), messages, null, true,
+                            invocation.apiBaseUrl(), invocation.apiKey());
             String content = trimToNull(result.content());
             if (content == null) {
                 log.warn("Skill authoring: model returned empty content");

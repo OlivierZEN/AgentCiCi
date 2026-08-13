@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-13T02:00:00Z
+updated_at: 2026-08-13T07:10:00Z
 updated_by: codex
-phase: completed
-active_task: null
-next_action: "租户业务用户可刷新 DevAutopilot 详情抽屉完成视觉确认；本地数据、消费制品与契约验证已通过，UAT/生产不在本轮范围。"
+phase: review
+active_task: TASK-297
+next_action: "评审 TASK-297；UAT 发布前必须为实际启用能力配置对应场景路由并完成真实业务验收。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-297 / FEAT-179 已进入 review：新增统一 `ModelInvocationResolver`，聊天、会议纪要、Skill、本体、客户洞察、知识库/记忆 embedding、图片 OCR、实时/文件 ASR、代码解释器、联网搜索/网页抓取均从场景路由取得 provider、model 与 credential。无路由/厂商/模型/凭据一律失败关闭；删除环境百炼回退、知识库 local 默认及工具独立 Key/模型。V112/V113 清理遗留配置，知识库管理页只读显示 `knowledge-embedding` 路由。后端干净编译、10 项定向测试、前端 production build 与 diff check 通过；UAT/生产未修改。下一步是按发布 Skill 在 UAT 配置每个实际启用的场景并完成真实业务验收。
 
 - TASK-296 / FEAT-178 / INT-015 已完成：平台管理员只能提交受信会话 ID 与记录 UUID，服务端沿用原确认人的产品经理 SERVICE 委托链，从已确认草稿恢复字段并通过 Semattice 官方 update/get、乐观锁、摘要和审计完成纠正。真实 `REQ-6F34ECF3` 已为 revision 3，分类理由独立、产品经理分析/验收/开发者验证精确为 4/5/4 条；重复校准返回一致且 revision 不增长。AgentCiCi 本地运行 `2.8.61-dev.78ebeae`，DevAutopilot 运行 `1.0.4-dev.32e95a9` 并展示独立“分类理由”；容器 healthy/restart=0，定向测试、package、37/37 Node 测试和完整 stack verify 通过。UAT/生产未修改。
 

@@ -1,71 +1,53 @@
 package com.codehouse.ciciassistant.kb.service;
 
-import com.codehouse.ciciassistant.model.service.ModelProviderService;
+import com.codehouse.ciciassistant.ai.service.ModelInvocationResolver;
+import com.codehouse.ciciassistant.ai.service.ModelInvocationResolver.ResolvedModelInvocation;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.MediaType;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 @Service
 public class EmbeddingService {
 
-    private final int dimension;
-    private final String defaultProvider;
-    private final String defaultModel;
-    private final ModelProviderService modelProviderService;
+    private final ModelInvocationResolver modelInvocationResolver;
 
-    public EmbeddingService(@Value("${app.kb.embedding.dimension:1024}") int dimension,
-                            @Value("${app.kb.embedding.provider:local}") String defaultProvider,
-                            @Value("${app.kb.embedding.model:local-hash}") String defaultModel,
-                            ModelProviderService modelProviderService) {
-        this.dimension = Math.max(4, dimension);
-        this.defaultProvider = defaultProvider == null || defaultProvider.isBlank() ? "local" : defaultProvider.trim();
-        this.defaultModel = defaultModel == null || defaultModel.isBlank() ? "local-hash" : defaultModel.trim();
-        this.modelProviderService = modelProviderService;
+    public EmbeddingService(ModelInvocationResolver modelInvocationResolver) {
+        this.modelInvocationResolver = modelInvocationResolver;
     }
 
-    public List<Float> embed(String text) {
-        return localHashEmbedding(text, dimension);
+    /**
+     * Embeddings are always resolved from the tenant's published knowledge-embedding scene route.
+     * Callers may select vector dimensions for storage compatibility, but cannot select a provider,
+     * model, endpoint, or credential.
+     */
+    public List<Float> embed(String companyId, Integer requestedDimension, String text) {
+        return embedForScene(companyId, "knowledge-embedding", requestedDimension, text);
     }
 
-    public List<Float> embed(String companyId, String providerCode, String modelName, Integer requestedDimension, String text) {
-        String provider = normalize(providerCode, defaultProvider);
-        String model = normalize(modelName, defaultModel);
-        int targetDimension = Math.max(4, requestedDimension == null ? dimension : requestedDimension);
-        if ("local".equals(provider) || "local-hash".equals(model)) {
-            return localHashEmbedding(text, targetDimension);
+    public List<Float> embedForScene(String companyId, String sceneCode, Integer requestedDimension, String text) {
+        int targetDimension = Math.max(4, requestedDimension == null ? 1024 : requestedDimension);
+        ResolvedModelInvocation invocation = modelInvocationResolver.resolve(companyId, sceneCode);
+        if ("ollama".equals(invocation.providerCode())) {
+            return embedWithOllama(invocation, text);
         }
-        if (ModelProviderService.PROVIDER_OLLAMA.equals(provider)) {
-            return embedWithOllama(companyId, model, text);
-        }
-        return embedWithOpenAiCompatible(companyId, provider, model, targetDimension, text);
+        return embedWithOpenAiCompatible(invocation, targetDimension, text);
     }
 
-    private List<Float> embedWithOpenAiCompatible(String companyId,
-                                                  String providerCode,
-                                                  String modelName,
+    private List<Float> embedWithOpenAiCompatible(ResolvedModelInvocation invocation,
                                                   int targetDimension,
                                                   String text) {
-        Map<String, String> credentials = modelProviderService.credentialsForProvider(companyId, providerCode);
-        if (!Boolean.parseBoolean(credentials.getOrDefault("enabled", "false"))) {
-            throw new IllegalStateException("Embedding provider is disabled: " + providerCode);
-        }
-        String apiKey = credentials.getOrDefault("apiKey", "");
-        if (apiKey.isBlank()) {
-            throw new IllegalStateException("Embedding provider API Key is empty: " + providerCode);
-        }
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("model", modelName);
+        body.put("model", invocation.modelName());
         body.put("input", text == null ? "" : text);
         body.put("dimensions", targetDimension);
         JsonNode root = RestClient.builder()
-                .baseUrl(trimSlash(credentials.get("apiBaseUrl")))
-                .defaultHeader("Authorization", "Bearer " + apiKey)
+                .baseUrl(trimSlash(invocation.apiBaseUrl()))
+                .defaultHeader("Authorization", "Bearer " + invocation.apiKey())
                 .build()
                 .post()
                 .uri("/embeddings")
@@ -74,19 +56,15 @@ public class EmbeddingService {
                 .retrieve()
                 .body(JsonNode.class);
         JsonNode vector = root == null ? null : root.path("data").path(0).path("embedding");
-        return parseEmbeddingVector(vector, targetDimension, providerCode + "/" + modelName);
+        return parseEmbeddingVector(vector, targetDimension, invocation.providerCode() + "/" + invocation.modelName());
     }
 
-    private List<Float> embedWithOllama(String companyId, String modelName, String text) {
-        Map<String, String> credentials = modelProviderService.credentialsForProvider(companyId, ModelProviderService.PROVIDER_OLLAMA);
-        if (!Boolean.parseBoolean(credentials.getOrDefault("enabled", "false"))) {
-            throw new IllegalStateException("Embedding provider is disabled: " + ModelProviderService.PROVIDER_OLLAMA);
-        }
+    private List<Float> embedWithOllama(ResolvedModelInvocation invocation, String text) {
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("model", modelName);
+        body.put("model", invocation.modelName());
         body.put("input", text == null ? "" : text);
         JsonNode root = RestClient.builder()
-                .baseUrl(trimSlash(credentials.get("apiBaseUrl")))
+                .baseUrl(trimSlash(invocation.apiBaseUrl()))
                 .build()
                 .post()
                 .uri("/api/embed")
@@ -98,7 +76,7 @@ public class EmbeddingService {
         if (vector == null || !vector.isArray()) {
             vector = root == null ? null : root.path("embedding");
         }
-        return parseEmbeddingVector(vector, null, "ollama/" + modelName);
+        return parseEmbeddingVector(vector, null, invocation.providerCode() + "/" + invocation.modelName());
     }
 
     private List<Float> parseEmbeddingVector(JsonNode vector, Integer expectedDimension, String source) {
@@ -114,24 +92,6 @@ public class EmbeddingService {
                     + ": expected " + expectedDimension + ", got " + out.size());
         }
         return out;
-    }
-
-    private List<Float> localHashEmbedding(String text, int targetDimension) {
-        String input = text == null ? "" : text;
-        float[] values = new float[Math.max(4, targetDimension)];
-        for (int i = 0; i < input.length(); i++) {
-            int slot = i % values.length;
-            values[slot] += ((input.charAt(i) % 31) / 31.0f);
-        }
-        ArrayList<Float> out = new ArrayList<>(values.length);
-        for (float v : values) {
-            out.add(v);
-        }
-        return out;
-    }
-
-    private String normalize(String value, String fallback) {
-        return value == null || value.isBlank() ? fallback : value.trim();
     }
 
     private String trimSlash(String input) {

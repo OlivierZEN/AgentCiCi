@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.ClientHttpRequestFactories;
 import org.springframework.boot.web.client.ClientHttpRequestFactorySettings;
 import org.springframework.http.HttpHeaders;
@@ -59,32 +58,15 @@ public class AliyunBailianClient {
     private static final Duration STREAM_CONNECT_TIMEOUT = Duration.ofSeconds(30);
     private static final Duration STREAM_REQUEST_TIMEOUT = Duration.ofSeconds(120);
 
-    private final RestClient restClient;
     private final ObjectMapper objectMapper;
-    private final String baseUrl;
-    private final String apiKey;
-    private final String defaultModel;
     private final HttpClient httpClient = HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1)
             .connectTimeout(STREAM_CONNECT_TIMEOUT)
             .build();
 
     public AliyunBailianClient(RestClient.Builder restClientBuilder,
-                               ObjectMapper objectMapper,
-                               @Value("${app.model.aliyun.base-url:https://dashscope.aliyuncs.com/compatible-mode/v1}") String baseUrl,
-                               @Value("${app.model.aliyun.api-key:}") String apiKey,
-                               @Value("${app.model.aliyun.default-model:qwen3.5-plus}") String defaultModel) {
-        var factorySettings = ClientHttpRequestFactorySettings.DEFAULTS
-                .withConnectTimeout(Duration.ofSeconds(30))
-                .withReadTimeout(NON_STREAM_TIMEOUT);
-        this.restClient = restClientBuilder
-                .baseUrl(baseUrl)
-                .requestFactory(ClientHttpRequestFactories.get(factorySettings))
-                .build();
+                               ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
-        this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
-        this.apiKey = apiKey;
-        this.defaultModel = defaultModel;
     }
 
     // ── Legacy simple chat (backward compat) ──
@@ -126,13 +108,7 @@ public class AliyunBailianClient {
     public ChatCompletionResult chatCompletion(String modelName, List<Map<String, Object>> messages,
                                                List<Map<String, Object>> tools,
                                                boolean stripThinkingFromAssistantContent) {
-        return chatCompletionWithCredentials(
-                modelName,
-                messages,
-                tools,
-                stripThinkingFromAssistantContent,
-                baseUrl,
-                apiKey);
+        throw new IllegalStateException("Model invocation requires a resolved provider credential");
     }
 
     public ChatCompletionResult chatCompletionWithCredentials(String modelName,
@@ -141,11 +117,9 @@ public class AliyunBailianClient {
                                                               boolean stripThinkingFromAssistantContent,
                                                               String apiBaseUrl,
                                                               String apiKey) {
-        String normalizedBaseUrl = normalizeBaseUrl(apiBaseUrl);
-        if ((apiKey == null || apiKey.isBlank()) && normalizedBaseUrl.equals(baseUrl)) {
-            return new ChatCompletionResult("assistant", "Aliyun API key is not configured.", null, "stop", 0, 0);
-        }
-        String targetModel = modelName == null || modelName.isBlank() ? defaultModel : modelName;
+        String normalizedBaseUrl = requireBaseUrl(apiBaseUrl);
+        requireInvocation(modelName, apiKey);
+        String targetModel = modelName.trim();
         Map<String, Object> payload = new HashMap<>();
         payload.put("model", targetModel);
         payload.put("messages", messages);
@@ -159,7 +133,7 @@ public class AliyunBailianClient {
         try {
             @SuppressWarnings("unchecked")
             Map<String, Object> response = RestClient.builder()
-                    .baseUrl(normalizeBaseUrl(apiBaseUrl))
+                    .baseUrl(requireBaseUrl(apiBaseUrl))
                     .requestFactory(ClientHttpRequestFactories.get(ClientHttpRequestFactorySettings.DEFAULTS
                             .withConnectTimeout(Duration.ofSeconds(30))
                             .withReadTimeout(NON_STREAM_TIMEOUT)))
@@ -195,12 +169,9 @@ public class AliyunBailianClient {
         if (maxOutputTokens <= 0 || maxResponseBytes <= 0) {
             throw new IllegalArgumentException("Completion budgets must be positive");
         }
-        String normalizedBaseUrl = normalizeBaseUrl(apiBaseUrl);
-        if ((apiKey == null || apiKey.isBlank()) && normalizedBaseUrl.equals(baseUrl)) {
-            return new ChatCompletionResult(
-                    "assistant", "Aliyun API key is not configured.", null, "stop", 0, 0);
-        }
-        String targetModel = modelName == null || modelName.isBlank() ? defaultModel : modelName;
+        String normalizedBaseUrl = requireBaseUrl(apiBaseUrl);
+        requireInvocation(modelName, apiKey);
+        String targetModel = modelName.trim();
         Map<String, Object> payload = new HashMap<>();
         payload.put("model", targetModel);
         payload.put("messages", messages);
@@ -259,9 +230,21 @@ public class AliyunBailianClient {
                 null, "length", 0, 0);
     }
 
-    private String normalizeBaseUrl(String value) {
-        String safe = value == null || value.isBlank() ? baseUrl : value.trim();
+    private String requireBaseUrl(String value) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException("Model invocation API base URL is missing");
+        }
+        String safe = value.trim();
         return safe.endsWith("/") ? safe.substring(0, safe.length() - 1) : safe;
+    }
+
+    private void requireInvocation(String modelName, String apiKey) {
+        if (modelName == null || modelName.isBlank()) {
+            throw new IllegalStateException("Model invocation model is missing");
+        }
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new IllegalStateException("Model invocation API key is missing");
+        }
     }
 
     private void addOptionalBearer(HttpHeaders headers, String apiKey) {
@@ -278,7 +261,7 @@ public class AliyunBailianClient {
                                                    List<Map<String, Object>> tools,
                                                    boolean showThinking,
                                                    Consumer<String> onDelta) throws Exception {
-        return chatStreamWithCredentials(modelName, messages, tools, showThinking, onDelta, baseUrl, apiKey);
+        throw new IllegalStateException("Model invocation requires a resolved provider credential");
     }
 
     public ChatStreamResult chatStreamWithCredentials(String modelName,
@@ -288,12 +271,9 @@ public class AliyunBailianClient {
                                                       Consumer<String> onDelta,
                                                       String apiBaseUrl,
                                                       String apiKey) throws Exception {
-        String normalizedBaseUrl = normalizeBaseUrl(apiBaseUrl);
-        if ((apiKey == null || apiKey.isBlank()) && normalizedBaseUrl.equals(baseUrl)) {
-            onDelta.accept("Aliyun API key is not configured.");
-            return new ChatStreamResult(0, 0);
-        }
-        String targetModel = modelName == null || modelName.isBlank() ? defaultModel : modelName;
+        String normalizedBaseUrl = requireBaseUrl(apiBaseUrl);
+        requireInvocation(modelName, apiKey);
+        String targetModel = modelName.trim();
         Map<String, Object> payload = new HashMap<>();
         payload.put("model", targetModel);
         payload.put("stream", true);
