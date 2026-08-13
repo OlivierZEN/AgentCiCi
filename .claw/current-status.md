@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-13T12:10:00Z
+updated_at: 2026-08-13T13:15:32Z
 updated_by: codex
 phase: review
 active_task: TASK-302
-next_action: "平台运营人员刷新系统 API 页面，确认 AgentCiCi 与 Semattice 提供方目录、列表、抽屉和文档深链；UAT/生产未修改。"
+next_action: "平台运营人员刷新 AgentCiCi 系统 API 列表，确认可访问公司查询与公司切换的抽屉和调用文档；UAT/生产未修改。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-302 / FEAT-183 已公布 AgentCiCi 公司上下文 API：系统 API 目录新增可访问公司查询 `GET /auth/companies` 与切换当前公司 `POST /auth/switch-company`，沿用现有 ACTIVE 成员关系校验和新 HUMAN 公司上下文令牌签发逻辑；调用文档区分 HUMAN、SERVICE、OACT 与内部 HMAC。提交 `a206da9a`、门禁兼容修复 `6444bbcf` 已进入本地 `main`；backend/frontend 运行 `2.8.61-dev.6444bbc`、healthy/restart=0，目标页 200、匿名 API JSON 401、运行制品内容与完整 `./stack verify` 均通过。真实平台登录态视觉验收待运营人员完成，UAT/生产未修改。
 
 - TASK-302 系统 API 目录加载错误已修复：页面曾把 SPA 路由 `/platform/system-apis` 当作浏览器 API，收到 `text/html` 后直接 JSON 解析，出现 `Unexpected token '<'`。提交 `b5d189a1` 改用 `/api/platform/system-apis`、显式接受 JSON 并安全处理非 JSON 回应；前端 49 文件/269 项、生产构建、完整 `./stack verify` 通过。backend/frontend 已从本地 `main@b5d189a1` 构建为 `2.8.61-dev.b5d189a`，均 healthy/restart=0；匿名目录接口回读 `401 application/json`。受权页面刷新验收待运营人员完成，UAT/生产未修改。
 

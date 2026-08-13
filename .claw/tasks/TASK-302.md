@@ -4,7 +4,7 @@ task_id: TASK-302
 feature_id: FEAT-183
 integration_id: INT-019
 status: review
-updated_at: 2026-08-13T12:59:30Z
+updated_at: 2026-08-13T13:15:32Z
 updated_by: codex
 owner_role: fullstack-agent
 spec_path: docs/specs/FEAT-183-system-api-catalog.md
@@ -55,3 +55,4 @@ spec_path: docs/specs/FEAT-183-system-api-catalog.md
 - 目录新增 `GET /auth/companies` 与 `POST /auth/switch-company`，分别说明可访问公司查询、ACTIVE 成员关系校验、新公司上下文令牌替换和租户缓存清理要求。
 - 调用文档根据契约显示 HUMAN session token、SERVICE token、OACT 或 Internal HMAC，不再为所有 API 固定展示 OACT。
 - 后端 `SystemApiCatalogServiceTest` 通过；前端定向 1 文件/7 项、全量 49 文件/271 项及 production build 通过；后端 production package 通过。
+- 功能提交 `a206da9a` 与门禁兼容修复 `6444bbcf` 均已进入本地 `main`。backend/frontend 从 `6444bbcf` 构建为 `2.8.61-dev.6444bbc`，均 healthy/restart=0；运行制品回读包含两个新契约 ID、真实路径和 HUMAN 令牌类型，完整 `./stack verify` 通过。

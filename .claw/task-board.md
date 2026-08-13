@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-13T11:15:21Z
+updated_at: 2026-08-13T13:15:32Z
 updated_by: codex
 board_status: active
 ---
@@ -25,7 +25,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - spec_path: `docs/specs/FEAT-183-system-api-catalog.md`
 - task_status_path: `.claw/tasks/TASK-302.md`
 - blocked_by: `none`
-- next_action: `使用真实运营平台账号完成系统 API 列表、抽屉与文档深链的视觉交互验收`
+- next_action: `使用真实运营平台账号确认公司查询与公司切换 API 的列表、抽屉及调用文档`
 
 ### TASK-300 - 机器开发者实例上限控制面
 

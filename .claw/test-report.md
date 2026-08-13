@@ -1,14 +1,24 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-13T12:10:00Z
+updated_at: 2026-08-13T13:15:32Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-13T12:10:00Z
+last_run_at: 2026-08-13T13:15:32Z
 last_run_status: passed_with_authorized_visual_pending
 ---
 
 # Test Report
+
+## 2026-08-13 TASK-302 公司上下文系统 API 公布
+
+- 实现：AgentCiCi 目录从 6 项增至 8 项，新增 `agentcici.organization.list` 与 `agentcici.organization.switch`；对应现有 `GET /auth/companies`、`POST /auth/switch-company`，未改变 Controller、鉴权或切换逻辑。
+- 契约：公司列表从已验证 HUMAN token 推导账号和当前公司；切换必须重新校验目标公司的 ACTIVE 成员关系，成功后返回新的公司上下文令牌，调用方需替换旧令牌并清理租户缓存。
+- 后端：`mvn -q -Dtest=SystemApiCatalogServiceTest test` 与 `mvn -q -DskipTests package` 通过。
+- 前端：目录定向 1 文件/7 项、全量 49 文件/271 项与 production build 通过；请求说明会按 HUMAN、SERVICE、OACT、HMAC 分别显示鉴权示例。
+- 门禁：首个 API ID `agentcici.company.*` 在纯文本上命中 `agentcici.com` 域名扫描，已改为 `agentcici.organization.*`；未放宽扫描规则，`check-no-environment-domains.sh` 与完整 `./stack verify` 均通过。
+- 本地开发环境：backend/frontend 从本地 `main@6444bbcf` 构建为 `2.8.61-dev.6444bbc`，镜像 revision 均为 `6444bbcfd256`、healthy/restart=0；页面 200、匿名目录 API `401 application/json`，运行 backend 制品回读包含两个新 ID、路径与 HUMAN 令牌类型。
+- 状态：`passed_with_authorized_visual_pending`；UAT/生产未修改。
 
 ## 2026-08-13 TASK-302 系统 API 目录加载修复
 
