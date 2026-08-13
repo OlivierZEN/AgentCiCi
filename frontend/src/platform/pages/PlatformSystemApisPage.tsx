@@ -32,6 +32,16 @@ export type SystemApi = {
   compatibility: string;
   sourceContract: string;
   callNotes: string[];
+  authGuide?: SystemApiAuthGuide | null;
+};
+
+export type SystemApiAuthGuide = {
+  acceptedToken: string;
+  directKeycloakTokenAccepted: boolean;
+  directKeycloakTokenReason: string;
+  currentFlow: Array<{ code: string; title: string; description: string }>;
+  scenarios: Array<{ code: string; title: string; status: string; instruction: string }>;
+  tokenRequirements: string[];
 };
 
 export type SystemApiProvider = {
@@ -72,8 +82,8 @@ export function filterSystemApis(apis: SystemApi[], query: string, category: str
 
 export function systemApiRequestPrelude(api: SystemApi): string {
   const lines = [`${api.method} \${SYSTEM_API_ORIGIN}${api.path}`];
-  if (api.authType === "Bearer AgentCiCi HUMAN token") {
-    lines.push("Authorization: Bearer ${AGENTCICI_USER_TOKEN}");
+  if (api.authType === "Bearer AgentCiCi Ecosystem HUMAN Token") {
+    lines.push("Authorization: Bearer ${AGENTCICI_ECOSYSTEM_HUMAN_TOKEN}");
   } else if (api.authType === "Keycloak SERVICE Bearer") {
     lines.push("Authorization: Bearer ${KEYCLOAK_SERVICE_TOKEN}");
   } else if (api.authType === "Bearer OACT") {
@@ -83,6 +93,25 @@ export function systemApiRequestPrelude(api: SystemApi): string {
   }
   if (!["GET", "HEAD"].includes(api.method.toUpperCase())) lines.push("Content-Type: application/json");
   return lines.join("\n");
+}
+
+export function systemApiKeycloakVerdict(api: SystemApi): string {
+  if (!api.authGuide || api.authGuide.directKeycloakTokenAccepted) return "";
+  return "Keycloak access_token / id_token 不能直接调用";
+}
+
+export function agentCiCiHumanTokenAcquisitionExample(): string {
+  return [
+    "# 1. 由 AgentCiCi 发起 OIDC 授权码 + PKCE 登录",
+    "GET ${AGENTCICI_ORIGIN}/auth/oidc/login?return_to=${SAME_ORIGIN_RETURN_PATH}",
+    "",
+    "# 2. Keycloak 回调由 AgentCiCi 后端处理，浏览器获得单次完成票据",
+    "# 3. 用单次票据完成登录并取得 AgentCiCi 生态 HUMAN Token",
+    "GET ${AGENTCICI_ORIGIN}/auth/oidc/complete?ticket=${OIDC_COMPLETION_TICKET}",
+    "Accept: application/json",
+    "",
+    "# 响应 data.token -> ${AGENTCICI_ECOSYSTEM_HUMAN_TOKEN}",
+  ].join("\n");
 }
 
 function json(value: unknown) {
@@ -169,10 +198,27 @@ export default function PlatformSystemApisPage() {
         <div className="system-api-docs__layout">
           <aside className="system-api-docs__toc" aria-label="本文目录">
             <strong>调用说明</strong>
-            <a href="#contract">契约摘要</a><a href="#request">请求</a><a href="#response">响应</a><a href="#errors">错误与约束</a><a href="#compatibility">兼容策略</a>
+            <a href="#contract">契约摘要</a>{selectedApi.authGuide ? <a href="#authentication">鉴权与 Token 交换</a> : null}<a href="#request">请求</a><a href="#response">响应</a><a href="#errors">错误与约束</a><a href="#compatibility">兼容策略</a>
           </aside>
           <article className="system-api-docs__article">
             <section id="contract"><h2>契约摘要</h2><p>{selectedApi.description}</p><dl className="system-api-definition-list"><div><dt>鉴权</dt><dd>{selectedApi.authType}</dd></div><div><dt>Audience</dt><dd>{selectedApi.audience}</dd></div><div><dt>所需 Scope</dt><dd><code>{selectedApi.requiredScope}</code></dd></div><div><dt>协议投影</dt><dd>{selectedApi.protocols.join(" / ")}</dd></div><div><dt>风险与执行</dt><dd>{riskLabel(selectedApi.riskLevel)} · {selectedApi.executionMode}{selectedApi.approvalRequired ? " · 需要审批" : ""}</dd></div><div><dt>契约事实源</dt><dd>{selectedApi.sourceContract}</dd></div></dl></section>
+            {selectedApi.authGuide ? <section id="authentication" className="system-api-auth-docs">
+              <h2>鉴权与 Token 交换</h2>
+              <div className="system-api-auth-verdict">
+                <strong>{systemApiKeycloakVerdict(selectedApi)}</strong>
+                <span>{selectedApi.authGuide.directKeycloakTokenReason}</span>
+                <dl><div><dt>接口接受</dt><dd>{selectedApi.authGuide.acceptedToken}</dd></div><div><dt>Keycloak 原始 Token</dt><dd>不接受</dd></div></dl>
+              </div>
+              <h3>当前签发链路</h3>
+              <ol className="system-api-auth-flow">{selectedApi.authGuide.currentFlow.map((step, index) => <li key={step.code}><span>{String(index + 1).padStart(2, "0")}</span><div><strong>{step.title}</strong><p>{step.description}</p></div></li>)}</ol>
+              <h3>AgentCiCi 当前可用调用方式</h3>
+              <p>`return_to` 必须是同源相对路径。Keycloak 回调、授权码交换和令牌校验均由 AgentCiCi 后端完成，业务应用不得在前端自行交换 Client Secret。</p>
+              <pre><code>{agentCiCiHumanTokenAcquisitionExample()}</code></pre>
+              <h3>不同应用的接入方式</h3>
+              <div className="system-api-auth-scenarios">{selectedApi.authGuide.scenarios.map((scenario) => <div key={scenario.code}><header><strong>{scenario.title}</strong><span className={`is-${scenario.status === "已支持" ? "ready" : scenario.status === "接入前置" ? "onboarding" : "not-applicable"}`}>{scenario.status}</span></header><p>{scenario.instruction}</p></div>)}</div>
+              <h3>生态 HUMAN Token 必须满足</h3>
+              <ul>{selectedApi.authGuide.tokenRequirements.map((requirement) => <li key={requirement}>{requirement}</li>)}</ul>
+            </section> : null}
             <section id="request"><h2>请求</h2><p>调用地址由部署环境注入，请勿在应用代码中固化环境域名。</p><pre><code>{systemApiRequestPrelude(selectedApi)}</code></pre><h3>请求示例</h3><pre><code>{json(selectedApi.requestExample)}</code></pre><h3>输入 Schema</h3><pre><code>{json(selectedApi.inputSchema)}</code></pre></section>
             <section id="response"><h2>响应</h2><h3>成功示例</h3><pre><code>{json(selectedApi.responseExample)}</code></pre><h3>输出 Schema</h3><pre><code>{json(selectedApi.outputSchema)}</code></pre></section>
             <section id="errors"><h2>错误与调用约束</h2><ul>{selectedApi.callNotes.map((note) => <li key={note}>{note}</li>)}</ul><div className="system-api-error-codes">{selectedApi.errorCodes.map((code) => <code key={code}>{code}</code>)}</div></section>
@@ -227,6 +273,7 @@ export default function PlatformSystemApisPage() {
             <header className="system-api-drawer__head"><div><span>{provider.name} · API 速览</span><h2 id="system-api-drawer-title">{selectedApi.title}</h2><code>{selectedApi.id}</code><p>{selectedApi.summary}</p></div><button type="button" className="system-api-icon-button" aria-label="关闭 API 详情" onClick={() => navigate(providerPath(provider.code))}><X size={20} /></button></header>
             <div className="system-api-drawer__body">
               <div className="system-api-drawer__route"><code className={`system-api-method is-${selectedApi.method.toLowerCase()}`}>{selectedApi.method}</code><code>{selectedApi.path}</code></div>
+              {selectedApi.authGuide ? <section className="system-api-auth-summary"><span>鉴权结论</span><strong>{systemApiKeycloakVerdict(selectedApi)}</strong><p>请使用 {selectedApi.authGuide.acceptedToken}。新应用和扩展应用的接入前置与 Token 签发链路见完整调用文档。</p></section> : null}
               <section><h3>调用约束</h3><dl className="system-api-definition-list"><div><dt>鉴权方式</dt><dd>{selectedApi.authType}</dd></div><div><dt>Audience</dt><dd>{selectedApi.audience}</dd></div><div><dt>所需 Scope</dt><dd><code>{selectedApi.requiredScope}</code></dd></div><div><dt>风险等级</dt><dd>{riskLabel(selectedApi.riskLevel)}</dd></div><div><dt>幂等</dt><dd>{selectedApi.idempotencyRequired ? "支持 / 需要稳定幂等键" : "不要求"}</dd></div><div><dt>协议投影</dt><dd>{selectedApi.protocols.join(" / ")}</dd></div></dl></section>
               <section><h3>典型消费者</h3><div className="system-api-consumers">{selectedApi.consumers.map((consumer) => <span key={consumer}>{consumer}</span>)}</div></section>
               <section><h3>关键说明</h3><ul>{selectedApi.callNotes.map((note) => <li key={note}>{note}</li>)}</ul></section>

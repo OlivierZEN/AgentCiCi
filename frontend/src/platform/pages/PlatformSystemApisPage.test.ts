@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  agentCiCiHumanTokenAcquisitionExample,
   filterSystemApis,
   SYSTEM_API_CATALOG_ENDPOINT,
   systemApiCatalogFailureMessage,
+  systemApiKeycloakVerdict,
   systemApiRequestPrelude,
   type SystemApi,
 } from "./PlatformSystemApisPage";
@@ -57,19 +59,35 @@ describe("system API invocation documentation", () => {
     const companyList = api("agentcici.organization.list", "可访问公司列表", "身份与公司", "low", "authenticated HUMAN member");
     companyList.method = "GET";
     companyList.path = "/auth/companies";
-    companyList.authType = "Bearer AgentCiCi HUMAN token";
+    companyList.authType = "Bearer AgentCiCi Ecosystem HUMAN Token";
+    companyList.authGuide = {
+      acceptedToken: "AgentCiCi Ecosystem HUMAN Token",
+      directKeycloakTokenAccepted: false,
+      directKeycloakTokenReason: "Keycloak token 不能证明公司成员关系",
+      currentFlow: [], scenarios: [], tokenRequirements: [],
+    };
 
     expect(systemApiRequestPrelude(companyList)).toBe([
       "GET ${SYSTEM_API_ORIGIN}/auth/companies",
-      "Authorization: Bearer ${AGENTCICI_USER_TOKEN}",
+      "Authorization: Bearer ${AGENTCICI_ECOSYSTEM_HUMAN_TOKEN}",
     ].join("\n"));
+    expect(systemApiKeycloakVerdict(companyList)).toBe("Keycloak access_token / id_token 不能直接调用");
   });
 
   it("keeps content type for the company switch request", () => {
     const companySwitch = api("agentcici.organization.switch", "切换当前公司", "身份与公司", "medium", "authenticated HUMAN member");
     companySwitch.path = "/auth/switch-company";
-    companySwitch.authType = "Bearer AgentCiCi HUMAN token";
+    companySwitch.authType = "Bearer AgentCiCi Ecosystem HUMAN Token";
 
     expect(systemApiRequestPrelude(companySwitch)).toContain("Content-Type: application/json");
+  });
+
+  it("documents the existing OIDC completion flow without inventing a generic HUMAN exchange endpoint", () => {
+    const guide = agentCiCiHumanTokenAcquisitionExample();
+
+    expect(guide).toContain("/auth/oidc/login?return_to=${SAME_ORIGIN_RETURN_PATH}");
+    expect(guide).toContain("/auth/oidc/complete?ticket=${OIDC_COMPLETION_TICKET}");
+    expect(guide).toContain("data.token -> ${AGENTCICI_ECOSYSTEM_HUMAN_TOKEN}");
+    expect(guide).not.toContain("/openapi/v1/human-token");
   });
 });

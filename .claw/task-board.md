@@ -25,7 +25,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - spec_path: `docs/specs/FEAT-183-system-api-catalog.md`
 - task_status_path: `.claw/tasks/TASK-302.md`
 - blocked_by: `none`
-- next_action: `使用真实运营平台账号确认公司查询与公司切换 API 的列表、抽屉及调用文档`
+- next_action: `使用真实运营平台账号确认公司 API 抽屉中的 Keycloak 直调结论，以及完整文档的新应用、扩展应用与 Token 签发流程`
 
 ### TASK-300 - 机器开发者实例上限控制面
 

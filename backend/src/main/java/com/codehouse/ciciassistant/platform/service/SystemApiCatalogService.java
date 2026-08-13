@@ -65,7 +65,8 @@ public class SystemApiCatalogService {
                 strings(item.path("error_codes")),
                 item.path("compatibility").asText(),
                 item.path("source_contract").asText(),
-                List.of("Bearer OACT 中的租户与主体上下文由服务端绑定。", "HTTP、MCP 与 CLI 投影使用同一 Capability Contract。")
+                List.of("Bearer OACT 中的租户与主体上下文由服务端绑定。", "HTTP、MCP 与 CLI 投影使用同一 Capability Contract。"),
+                null
         )));
         return new ProviderView(
                 textOr(source, "code", "semattice"), textOr(source, "name", "Semattice"),
@@ -77,7 +78,7 @@ public class SystemApiCatalogService {
         return List.of(
                 entry("agentcici.organization.list", "可访问公司列表",
                         "查询当前登录账号拥有有效成员关系的公司，并标识当前公司上下文。",
-                        "身份与公司", "GET", "/auth/companies", "Bearer AgentCiCi HUMAN token", "AgentCiCi",
+                        "身份与公司", "GET", "/auth/companies", "Bearer AgentCiCi Ecosystem HUMAN Token", "AgentCiCi",
                         "authenticated HUMAN member", "low", false,
                         schema("{\"type\":\"object\",\"description\":\"No request body. The current account and company are derived from the verified token.\"}"),
                         schema("{\"type\":\"object\",\"required\":[\"success\",\"data\",\"message\"],\"properties\":{\"success\":{\"type\":\"boolean\"},\"data\":{\"type\":\"object\",\"required\":[\"accountId\",\"currentCompanyId\",\"companies\"],\"properties\":{\"accountId\":{\"type\":\"string\"},\"currentCompanyId\":{\"type\":\"string\"},\"companies\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"companyId\",\"companyName\",\"memberId\",\"roleCode\",\"current\"]}}}},\"message\":{\"type\":\"string\"}}}"),
@@ -96,17 +97,18 @@ public class SystemApiCatalogService {
                         List.of("AgentCiCi 前端", "内部生态应用"), "FEAT-024 Account Tenant Lifecycle Contract",
                         List.of("只返回当前全局账号下公司与成员状态均有效的公司，不接受客户端传入 accountId。",
                                 "companyId 与 memberId 只用于选择和展示；调用方不得据此绕过后端成员关系校验。",
-                                "切换公司后必须重新加载所有公司隔离的数据，不能复用上一公司的业务缓存。")),
+                                "切换公司后必须重新加载所有公司隔离的数据，不能复用上一公司的业务缓存。"),
+                        companyHumanAuthGuide()),
                 entry("agentcici.organization.switch", "切换当前公司",
                         "把当前登录账号切换到其拥有有效成员关系的目标公司，并签发新的公司上下文访问令牌。",
-                        "身份与公司", "POST", "/auth/switch-company", "Bearer AgentCiCi HUMAN token", "AgentCiCi",
+                        "身份与公司", "POST", "/auth/switch-company", "Bearer AgentCiCi Ecosystem HUMAN Token", "AgentCiCi",
                         "authenticated HUMAN member", "medium", false,
                         schema("{\"type\":\"object\",\"required\":[\"companyId\"],\"properties\":{\"companyId\":{\"type\":\"string\"}},\"additionalProperties\":false}"),
                         schema("{\"type\":\"object\",\"required\":[\"success\",\"data\",\"message\"],\"properties\":{\"success\":{\"type\":\"boolean\"},\"data\":{\"type\":\"object\",\"required\":[\"token\",\"companyId\",\"companyName\",\"userId\",\"memberId\",\"accountId\",\"roles\",\"issuedAt\"]},\"message\":{\"type\":\"string\"}}}"),
                         Map.of("companyId", "${TARGET_COMPANY_ID}"), Map.of(
                                 "success", true,
                                 "data", Map.of(
-                                        "token", "${NEW_AGENTCICI_USER_TOKEN}",
+                                        "token", "${NEW_AGENTCICI_ECOSYSTEM_HUMAN_TOKEN}",
                                         "companyId", "${TARGET_COMPANY_ID}",
                                         "companyName", "${COMPANY_NAME}",
                                         "userId", "${TARGET_MEMBER_ID}",
@@ -119,7 +121,8 @@ public class SystemApiCatalogService {
                         List.of("目标 companyId 必须来自受信的公司列表，并由当前 HUMAN 用户主动选择。",
                                 "服务端按当前账号重新校验目标公司的 ACTIVE 成员关系；不属于目标公司时返回 403。",
                                 "成功响应会签发新的公司上下文令牌；调用方必须原子替换旧令牌，并清空上一公司的租户级缓存。",
-                                "不得仅修改客户端 companyId 或继续使用旧令牌模拟切换。")),
+                                "不得仅修改客户端 companyId 或继续使用旧令牌模拟切换。"),
+                        companyHumanAuthGuide()),
                 entry("agentcici.service-token.exchange", "SERVICE Token 交换",
                         "把已验证的 Keycloak SERVICE Bearer Token 交换为面向 Semattice 的短时 OACT。",
                         "服务身份", "POST", "/openapi/v1/official/service-token", "Keycloak SERVICE Bearer", "Semattice",
@@ -182,11 +185,46 @@ public class SystemApiCatalogService {
                           JsonNode inputSchema, JsonNode outputSchema, Map<String, Object> requestExample,
                           Map<String, Object> responseExample, List<String> consumers, String sourceContract,
                           List<String> callNotes) {
+        return entry(id, title, summary, category, method, path, authType, audience, scope, risk, idempotent,
+                inputSchema, outputSchema, requestExample, responseExample, consumers, sourceContract, callNotes, null);
+    }
+
+    private ApiView entry(String id, String title, String summary, String category, String method, String path,
+                          String authType, String audience, String scope, String risk, boolean idempotent,
+                          JsonNode inputSchema, JsonNode outputSchema, Map<String, Object> requestExample,
+                          Map<String, Object> responseExample, List<String> consumers, String sourceContract,
+                          List<String> callNotes, AuthGuideView authGuide) {
         return new ApiView(id, title, summary, summary, category, method, path, List.of("HTTP"), authType, audience,
                 scope, risk, "v1", "published", idempotent, "synchronous", false, consumers,
                 inputSchema, outputSchema, objectMapper.valueToTree(requestExample), objectMapper.valueToTree(responseExample),
                 List.of("UNAUTHENTICATED", "UNAUTHORIZED", "VALIDATION_FAILED", "FAILED_PRECONDITION", "CONFLICT", "INTERNAL"),
-                "v1 新增可选字段向后兼容；破坏性变更需发布新契约版本。", sourceContract, callNotes);
+                "v1 新增可选字段向后兼容；破坏性变更需发布新契约版本。", sourceContract, callNotes, authGuide);
+    }
+
+    private static AuthGuideView companyHumanAuthGuide() {
+        return new AuthGuideView(
+                "AgentCiCi Ecosystem HUMAN Token",
+                false,
+                "Keycloak access_token / id_token 只证明统一登录身份，不包含 AgentCiCi 当前公司成员关系，也不是 agentcici-api 的受信业务令牌，因此不能直接调用本接口。",
+                List.of(
+                        new AuthFlowStepView("keycloak-login", "Keycloak 完成统一认证", "用户在应用登记的 Keycloak Client 中登录；浏览器只获得授权码流程所需的短时状态。"),
+                        new AuthFlowStepView("agentcici-callback", "AgentCiCi 后端交换并校验", "AgentCiCi 后端使用授权码和 PKCE 完成交换，校验 issuer、签名、时效、nonce 与客户端绑定。"),
+                        new AuthFlowStepView("identity-membership", "映射 HUMAN 身份与公司成员", "按 (issuer, sub) 定位全局账号，并校验账号、公司和成员关系均为 ACTIVE。"),
+                        new AuthFlowStepView("ecosystem-token", "签发 AgentCiCi 生态令牌", "AgentCiCi 签发 aud=agentcici-api、typ=ecosystem_user 的短时 HUMAN Token，并绑定 account、principal、company 与 member 上下文。"),
+                        new AuthFlowStepView("company-api", "携带生态令牌调用", "调用公司 API；切换成功后原子替换响应中的新令牌，并清理旧公司的租户级缓存。")
+                ),
+                List.of(
+                        new AuthScenarioView("agentcici-web", "AgentCiCi 自身前端", "已支持", "沿用 /auth/oidc/login → Keycloak callback → 单次完成票据 → /auth/oidc/complete；使用响应 data.token 调用本接口。"),
+                        new AuthScenarioView("same-origin-extension", "AgentCiCi 同源扩展应用", "已支持", "由已认证宿主或受管会话传递 AgentCiCi HUMAN 上下文；不得读取、转发或持久化 Keycloak 原始令牌。"),
+                        new AuthScenarioView("new-standalone-app", "新加入的独立应用", "接入前置", "先登记独立 Keycloak Client、平台应用激活与信任关系，再建设应用专用单次 handoff 或受治理 HUMAN Token 交换。当前未发布通用 HUMAN Token 交换端点，完成接入前不能直调本接口。"),
+                        new AuthScenarioView("service-app", "机器或服务应用", "不适用", "使用 SERVICE Principal、Keycloak SERVICE Token 交换与 OACT 契约；不得调用面向 HUMAN 会话的公司列表和切换接口。")
+                ),
+                List.of(
+                        "aud 必须包含 agentcici-api",
+                        "typ 必须为 ecosystem_user，principal_type 必须为 HUMAN",
+                        "authorized_party 必须为 agentcici",
+                        "account_id、principal_id、sub、company_id 与 member_id 必须一致且由 AgentCiCi 签发")
+        );
     }
 
     private JsonNode schema(String source) {
@@ -221,5 +259,14 @@ public class SystemApiCatalogService {
                           boolean idempotencyRequired, String executionMode, boolean approvalRequired,
                           List<String> consumers, JsonNode inputSchema, JsonNode outputSchema,
                           JsonNode requestExample, JsonNode responseExample, List<String> errorCodes,
-                          String compatibility, String sourceContract, List<String> callNotes) { }
+                          String compatibility, String sourceContract, List<String> callNotes,
+                          AuthGuideView authGuide) { }
+
+    public record AuthGuideView(String acceptedToken, boolean directKeycloakTokenAccepted,
+                                String directKeycloakTokenReason, List<AuthFlowStepView> currentFlow,
+                                List<AuthScenarioView> scenarios, List<String> tokenRequirements) { }
+
+    public record AuthFlowStepView(String code, String title, String description) { }
+
+    public record AuthScenarioView(String code, String title, String status, String instruction) { }
 }

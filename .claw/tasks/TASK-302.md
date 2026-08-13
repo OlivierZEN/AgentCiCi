@@ -4,7 +4,7 @@ task_id: TASK-302
 feature_id: FEAT-183
 integration_id: INT-019
 status: review
-updated_at: 2026-08-13T13:15:32Z
+updated_at: 2026-08-13T13:51:21Z
 updated_by: codex
 owner_role: fullstack-agent
 spec_path: docs/specs/FEAT-183-system-api-catalog.md
@@ -18,6 +18,7 @@ spec_path: docs/specs/FEAT-183-system-api-catalog.md
 - 聚合 Semattice 受治理目录投影，并在不可用时显式降级。
 - 在能力治理中新增“系统 API”及 AgentCiCi、Semattice 子菜单。
 - 实现概览、提供方列表、宽抽屉速览和独立调用文档页。
+- 明确公司 API 的 HUMAN 鉴权边界，并按 AgentCiCi 前端、同源扩展、新独立应用和机器应用说明 Token 取得或接入流程。
 
 ## 完成条件
 
@@ -31,6 +32,8 @@ spec_path: docs/specs/FEAT-183-system-api-catalog.md
 - 公司切换沿用现有 `/auth/switch-company` 逻辑：服务端校验同一全局账号的 ACTIVE 成员关系并签发新令牌；目录文档区分 HUMAN 会话令牌、SERVICE Token、OACT 与内部 HMAC，不改变原接口逻辑。
 - 运营端已实现提供方首页、可搜索/筛选列表、宽抽屉速览和独立文档页；URL 支持列表、抽屉与文档深链。
 - 目录读取继续受平台角色保护，页面不提供在线执行入口，目录可见性不授予业务 API 调用权限。
+- 公司 API 现使用结构化鉴权指南：抽屉直接说明 Keycloak 原始 Token 不可调用；完整文档展示 OIDC 授权码/PKCE、身份与 ACTIVE 成员映射、生态 HUMAN Token 签发、API 调用和切换后令牌替换链路。
+- 新独立应用被明确标记为“接入前置”：须先登记 Keycloak Client、平台应用激活/信任与应用专用 handoff 或受治理交换契约。当前没有对外公布通用 HUMAN Token 交换端点，文档未虚构可调用地址；机器应用继续使用 SERVICE/OACT，不得调用 HUMAN 公司 API。
 
 ## 验证证据
 
@@ -56,3 +59,9 @@ spec_path: docs/specs/FEAT-183-system-api-catalog.md
 - 调用文档根据契约显示 HUMAN session token、SERVICE token、OACT 或 Internal HMAC，不再为所有 API 固定展示 OACT。
 - 后端 `SystemApiCatalogServiceTest` 通过；前端定向 1 文件/7 项、全量 49 文件/271 项及 production build 通过；后端 production package 通过。
 - 功能提交 `a206da9a` 与门禁兼容修复 `6444bbcf` 均已进入本地 `main`。backend/frontend 从 `6444bbcf` 构建为 `2.8.61-dev.6444bbc`，均 healthy/restart=0；运行制品回读包含两个新契约 ID、真实路径和 HUMAN 令牌类型，完整 `./stack verify` 通过。
+
+## HUMAN 鉴权与新应用接入文档
+
+- 后端定向 `SystemApiCatalogServiceTest` 通过，覆盖 Keycloak 原始 Token 不可直调、五步签发链路、新独立应用接入前置和 Semattice 投影兼容。
+- 前端定向 1 文件/8 项、全量 49 文件/272 项和 production build 通过；请求示例使用 `AGENTCICI_ECOSYSTEM_HUMAN_TOKEN`，并覆盖现有 `/auth/oidc/login` 与 `/auth/oidc/complete` 流程。
+- 本地开发环境部署和受权桌面视觉验收结果在完成本地 `main` 构建后补充；UAT/生产未修改。

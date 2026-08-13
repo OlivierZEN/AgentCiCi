@@ -43,15 +43,25 @@ class SystemApiCatalogServiceTest {
         });
         assertThat(agentCiCi.apis().getFirst()).satisfies(api -> {
             assertThat(api.path()).isEqualTo("/auth/companies");
-            assertThat(api.authType()).isEqualTo("Bearer AgentCiCi HUMAN token");
+            assertThat(api.authType()).isEqualTo("Bearer AgentCiCi Ecosystem HUMAN Token");
             assertThat(api.outputSchema().path("properties").path("data").path("properties")
                     .path("companies").path("type").asText()).isEqualTo("array");
+            assertThat(api.authGuide()).isNotNull();
+            assertThat(api.authGuide().directKeycloakTokenAccepted()).isFalse();
+            assertThat(api.authGuide().directKeycloakTokenReason()).contains("不能直接调用");
+            assertThat(api.authGuide().currentFlow()).extracting(SystemApiCatalogService.AuthFlowStepView::code)
+                    .containsExactly("keycloak-login", "agentcici-callback", "identity-membership", "ecosystem-token", "company-api");
+            assertThat(api.authGuide().scenarios()).anySatisfy(scenario -> {
+                assertThat(scenario.code()).isEqualTo("new-standalone-app");
+                assertThat(scenario.status()).isEqualTo("接入前置");
+                assertThat(scenario.instruction()).contains("当前未发布通用 HUMAN Token 交换端点");
+            });
         });
         assertThat(agentCiCi.apis().get(1)).satisfies(api -> {
             assertThat(api.path()).isEqualTo("/auth/switch-company");
             assertThat(api.requestExample().path("companyId").asText()).isEqualTo("${TARGET_COMPANY_ID}");
             assertThat(api.responseExample().path("data").path("token").asText())
-                    .isEqualTo("${NEW_AGENTCICI_USER_TOKEN}");
+                    .isEqualTo("${NEW_AGENTCICI_ECOSYSTEM_HUMAN_TOKEN}");
             assertThat(api.callNotes()).anyMatch(note -> note.contains("返回 403"));
         });
         assertThat(catalog.providers().get(1).status()).isEqualTo("unavailable");
@@ -86,6 +96,7 @@ class SystemApiCatalogServiceTest {
             assertThat(api.protocols()).containsExactly("HTTP", "MCP", "CLI");
             assertThat(api.requiredScope()).isEqualTo("runtime.record.read");
             assertThat(api.inputSchema().path("required").get(0).asText()).isEqualTo("object_api_name");
+            assertThat(api.authGuide()).isNull();
         });
     }
 }
