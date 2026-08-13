@@ -15,6 +15,7 @@ claimed_by: codex
 - 从同租户持久化会话恢复已确认草稿，禁止调用方自带纠正字段。
 - 使用产品经理 SERVICE 和 Semattice `runtime.record.update/get` 完成乐观锁纠正与逐字段回读。
 - 提供租户 `ORG_ADMIN` 与平台 `PLATFORM_ADMIN` 两个受控触发入口，二者均沿用原确认人的 SERVICE 委托链。
+- 在平台租户应用页以独立弹窗触发维护，避免读取浏览器 Token 或使用同页混合编辑方式。
 - 为 `REQ-6F34ECF3` 执行正式纠正，并在 DevAutopilot 页面复核。
 
 ## 验收

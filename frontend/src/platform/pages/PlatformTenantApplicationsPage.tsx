@@ -58,6 +58,12 @@ export function devAutopilotInitializationReady(application: DevAutopilotApplica
     && resources.some((resource) => resource.logicalRole === "product_manager" && resource.resourceType === "SERVICE_PRINCIPAL" && resource.primary && resource.lifecycleState === "ACTIVE");
 }
 
+export function isValidIntakeReconciliationInput(sessionId: string, recordId: string): boolean {
+  return sessionId.trim().length > 0
+    && sessionId.trim().length <= 64
+    && /^[0-9a-fA-F-]{36}$/.test(recordId.trim());
+}
+
 function sematticeStateLabel(state: SematticeProvisioningState): string {
   switch (state) {
     case "PROVISIONING":
@@ -87,6 +93,12 @@ export default function PlatformTenantApplicationsPage() {
   const [ownerBusy, setOwnerBusy] = useState(false);
   const ownerTriggerRef = useRef<HTMLButtonElement | null>(null);
   const ownerConfirmationRef = useRef<HTMLInputElement | null>(null);
+  const [intakeModalOpen, setIntakeModalOpen] = useState(false);
+  const [intakeSessionId, setIntakeSessionId] = useState("");
+  const [intakeRecordId, setIntakeRecordId] = useState("");
+  const [intakeBusy, setIntakeBusy] = useState(false);
+  const intakeTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const intakeSessionRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!isPlatformCompanyId(companyId)) {
@@ -111,6 +123,12 @@ export default function PlatformTenantApplicationsPage() {
   }, [ownerModalOpen]);
 
   useEffect(() => {
+    if (intakeModalOpen) {
+      globalThis.requestAnimationFrame(() => intakeSessionRef.current?.focus());
+    }
+  }, [intakeModalOpen]);
+
+  useEffect(() => {
     if (!ownerModalOpen) return undefined;
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !ownerBusy) closeOwnerModal();
@@ -119,10 +137,26 @@ export default function PlatformTenantApplicationsPage() {
     return () => globalThis.removeEventListener("keydown", closeOnEscape);
   }, [ownerModalOpen, ownerBusy]);
 
+  useEffect(() => {
+    if (!intakeModalOpen) return undefined;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !intakeBusy) closeIntakeModal();
+    };
+    globalThis.addEventListener("keydown", closeOnEscape);
+    return () => globalThis.removeEventListener("keydown", closeOnEscape);
+  }, [intakeModalOpen, intakeBusy]);
+
   function closeOwnerModal() {
     setOwnerModalOpen(false);
     setOwnerConfirmation("");
     globalThis.requestAnimationFrame(() => ownerTriggerRef.current?.focus());
+  }
+
+  function closeIntakeModal() {
+    setIntakeModalOpen(false);
+    setIntakeSessionId("");
+    setIntakeRecordId("");
+    globalThis.requestAnimationFrame(() => intakeTriggerRef.current?.focus());
   }
 
   async function reconcileOwnerIdentity() {
@@ -226,6 +260,28 @@ export default function PlatformTenantApplicationsPage() {
       setDevAutopilot(body.data as DevAutopilotApplication);
       setMessage("DevAutopilot 标准模板已同步：Semattice 业务对象、产品经理智能体及其受控机器主体已就绪。");
     } catch (err) { setError(err instanceof Error ? err.message : "DevAutopilot 初始化补齐失败"); } finally { setBusy(false); }
+  }
+
+  async function reconcileDevAutopilotIntake() {
+    if (!companyId || !isValidIntakeReconciliationInput(intakeSessionId, intakeRecordId)) return;
+    setIntakeBusy(true); setError(""); setMessage("");
+    try {
+      const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(companyId)}/applications/devautopilot/intake-reconciliations`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: intakeSessionId.trim(), recordId: intakeRecordId.trim() }),
+      });
+      const { body } = await safeFetchJson(response);
+      if (!response.ok || !body?.success) throw new Error(body?.message ?? `HTTP ${response.status}`);
+      const result = body.data as { status: string; revision: number; contentDigest: string; readbackVerified: boolean };
+      if (!result.readbackVerified) throw new Error("Semattice 字段回读未通过");
+      setMessage(`历史受理记录已${result.status === "UNCHANGED" ? "核验一致" : "完成校准"}：revision ${result.revision}，内容摘要 ${result.contentDigest.slice(0, 12)}。`);
+      closeIntakeModal();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "历史受理记录校准失败");
+    } finally {
+      setIntakeBusy(false);
+    }
   }
 
   const ownerStatus = ownerIdentityStatus(ownerIdentity);
@@ -406,6 +462,7 @@ export default function PlatformTenantApplicationsPage() {
                       <div className="tenant-application-card__foot tenant-application-card__foot--action">
                         <span><ShieldCheck size={14} aria-hidden="true" />{devAutopilotInitializationReady(devAutopilot) ? "关闭仅暂停本租户运行入口，不删除数据" : "历史开通记录缺少标准资源，需要补齐初始化"}</span>
                         <div className="tenant-application-card__actions">
+                          <button ref={intakeTriggerRef} type="button" className="platform-button platform-button--secondary" disabled={busy} onClick={() => setIntakeModalOpen(true)}>校准历史受理</button>
                           {devAutopilotInitializationReady(devAutopilot) ? <button type="button" className="platform-button platform-button--secondary" disabled={busy} onClick={() => void reconcileDevAutopilotInitialization()}>同步标准模板</button> : null}
                           <button type="button" className="platform-button platform-button--primary tenant-application-card__primary-action" disabled={busy} onClick={() => void (devAutopilotInitializationReady(devAutopilot) ? changeDevAutopilotState(devAutopilot.actualState === "SUSPENDED" ? "resumptions" : "suspensions") : reconcileDevAutopilotInitialization())}>{devAutopilotInitializationReady(devAutopilot) ? (devAutopilot.actualState === "SUSPENDED" ? "恢复运行" : "暂停应用") : "补齐初始化"}</button>
                         </div>
@@ -470,6 +527,47 @@ export default function PlatformTenantApplicationsPage() {
                 disabled={ownerBusy || ownerConfirmation !== ownerIdentity.publicId}
               >
                 {ownerBusy ? "正在协调身份…" : "确认协调"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ), document.body) : null}
+
+      {intakeModalOpen && detail ? createPortal((
+        <div className="tenant-lifecycle__modal-backdrop platform-modal-scope" role="presentation" onMouseDown={(event) => {
+          if (event.currentTarget === event.target && !intakeBusy) closeIntakeModal();
+        }}>
+          <div className="tenant-lifecycle__modal tenant-owner-identity__modal" role="dialog" aria-modal="true" aria-labelledby="devautopilot-intake-reconcile-title">
+            <div className="tenant-lifecycle__modal-head">
+              <div className="tenant-owner-identity__modal-title">
+                <span className="tenant-owner-identity__warning" aria-hidden="true"><ShieldCheck size={18} /></span>
+                <div>
+                  <p className="platform-section-label">DevAutopilot 数据维护</p>
+                  <h2 id="devautopilot-intake-reconcile-title" className="platform-console__heading">校准历史受理记录</h2>
+                </div>
+              </div>
+              <button type="button" className="tenant-lifecycle__modal-close" onClick={closeIntakeModal} disabled={intakeBusy} aria-label="关闭">×</button>
+            </div>
+            <div className="tenant-lifecycle__modal-body">
+              <p className="skills-data-table__summary">系统只会从该租户原会话中的产品经理草稿、用户确认和成功回执恢复字段，不能在此填写或修改业务内容。</p>
+              <div className="tenant-owner-identity__subject">
+                <span>{detail.tenant.name}</span>
+                <strong>{detail.tenant.companyId}</strong>
+              </div>
+              <label>
+                <span>原确认会话 ID</span>
+                <input ref={intakeSessionRef} value={intakeSessionId} onChange={(event) => setIntakeSessionId(event.target.value)} placeholder="例如：workbench:devautopilot-pm" autoComplete="off" disabled={intakeBusy} />
+              </label>
+              <label>
+                <span>Semattice 记录 ID</span>
+                <input value={intakeRecordId} onChange={(event) => setIntakeRecordId(event.target.value)} placeholder="UUID" autoComplete="off" disabled={intakeBusy} />
+                <small className="tenant-lifecycle__field-help">写入使用原确认人的产品经理 SERVICE 委托链；逐字段回读一致后才会返回成功。</small>
+              </label>
+            </div>
+            <div className="tenant-lifecycle__modal-foot">
+              <button type="button" className="platform-button platform-button--secondary" onClick={closeIntakeModal} disabled={intakeBusy}>取消</button>
+              <button type="button" className="platform-button platform-button--primary" onClick={() => void reconcileDevAutopilotIntake()} disabled={intakeBusy || !isValidIntakeReconciliationInput(intakeSessionId, intakeRecordId)}>
+                {intakeBusy ? "正在校准并回读…" : "开始校准"}
               </button>
             </div>
           </div>

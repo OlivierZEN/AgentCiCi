@@ -34,6 +34,7 @@ integration_id: INT-015
 - 原确认人、确认时间和 correlation ID 保持不变；只以已确认草稿恢复专业摘要、验收/影响/复现字段与 `intake` 语义字段，并追加纠正时间、纠正人和来源审计。
 - 写后必须再次调用 `runtime.record.get`，逐字段比对 patch；回执除 `record_id/revision` 外还必须返回内容摘要 `content_digest`，只有逐字段一致才允许标记 `readback_verified=true`。
 - 重复纠正必须幂等：字段已经一致时不增加 revision，返回 `UNCHANGED`。
+- 平台租户应用页通过独立弹窗提供维护入口，只接受会话 ID 和记录 UUID；页面必须明确说明不能填写业务内容，并展示 revision、回读状态和内容摘要结果。
 
 ## 本次故障验收样本
 

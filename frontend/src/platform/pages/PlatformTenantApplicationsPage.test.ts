@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   devAutopilotInitializationReady,
   fetchOwnerIdentity,
+  isValidIntakeReconciliationInput,
   ownerIdentityStatus,
   type DevAutopilotApplication,
   type TenantOwnerIdentity,
@@ -39,6 +40,14 @@ describe("DevAutopilot initialization readiness", () => {
     ];
 
     expect(devAutopilotInitializationReady(application({ resources }))).toBe(true);
+  });
+});
+
+describe("DevAutopilot historical intake reconciliation input", () => {
+  it("accepts only a bounded session id and UUID record id", () => {
+    expect(isValidIntakeReconciliationInput("workbench:devautopilot-pm", "019ff668-6874-7348-ab3c-6d1c2635ad0a")).toBe(true);
+    expect(isValidIntakeReconciliationInput("", "019ff668-6874-7348-ab3c-6d1c2635ad0a")).toBe(false);
+    expect(isValidIntakeReconciliationInput("workbench:devautopilot-pm", "REQ-6F34ECF3")).toBe(false);
   });
 });
 
