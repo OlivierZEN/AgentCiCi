@@ -16,8 +16,8 @@ last_run_status: partial
 - 前端：`npm test -- --run src/platform/pages/PlatformModelsPage.test.tsx` 为 1 文件/4 项通过；`npm run build` 通过，仅保留既有 chunk-size warning。
 - 集成边界：`ModelProviderServiceIntegrationTest,PlatformModelProviderIntegrationTest` 在执行断言前被共享 `agentcici_test` 的 Flyway V81 checksum 漂移阻断（已应用 `2112500543`，本地解析 `379982424`）。未执行 repair、未修改历史迁移；本任务新增的可信能力过滤用例已编译，但待测试库基线恢复后执行。
 - 覆盖：模型能力只接受远程目录或受控检测持久化结果；场景读取仅返回能力/协议兼容候选，路由写入及运行时二次拒绝未知或不兼容模型；路由页显示必需能力、推荐原则、候选数量与空状态引导。
-- 待验收：提交后从本地 `main` 构建 backend/frontend，更新 `https://cici.localhost/` 并执行完整 `./stack verify`；UAT/生产不修改。
-- 状态：`partial`（静态、package、前端测试和生产构建通过；Spring 集成被既有测试库 Flyway 基线阻断）。
+- 本地开发环境：backend/frontend 已从本地 `main@1df52acc8860` 构建为 `2.8.61-dev.1df52ac`；两个目标容器 `healthy/restart=0`，镜像 label、容器环境和部署 JS/CSS 指纹均回读同一版本/提交。完整 `./stack verify` 通过；匿名桌面深链进入平台登录边界，console 0 error/warn。
+- 状态：`passed_with_integration_environment_blocker`（静态、package、前端测试、生产构建和本地栈部署通过；Spring 集成被既有测试库 Flyway 基线阻断）。UAT/生产未修改。
 
 ## 2026-08-13 TASK-297 统一模型调用治理本地开发环境发布
 

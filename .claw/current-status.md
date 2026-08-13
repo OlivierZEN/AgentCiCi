@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-13T07:03:49Z
+updated_at: 2026-08-13T07:31:00Z
 updated_by: codex
 phase: review
 active_task: TASK-298
-next_action: "完成 TASK-298 的场景能力过滤、推荐说明和本地开发环境验收；UAT 发布前仍须为实际启用能力配置对应路由。"
+next_action: "评审 TASK-298，并在 UAT 为实际启用能力刷新可信目录、配置每个场景路由后完成真实业务验收。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-298 / FEAT-179 进行中：用户确认无法获得可信能力元数据的模型一律视为不支持。将持久化厂商受控目录能力，按场景过滤候选并在服务端拒绝不兼容写入；路由页同步展示适用能力、推荐原则、候选数量和配置引导。当前未修改 UAT/生产。
+- TASK-298 / FEAT-179 已进入 review：模型能力只接受厂商远程目录或受控检测所确认并持久化的元数据；无法确认的模型不会进入场景候选。路由读取按必需能力和协议限制过滤候选，写入与运行时再次拒绝未知或不兼容模型；路由页显示必需能力、推荐原则、候选数量及空状态处置。提交 `1df52ac` 已从本地 `main` 构建为 `2.8.61-dev.1df52ac`，backend/frontend 均 healthy/restart=0，页面制品、镜像 label、运行环境和完整 `./stack verify` 一致；匿名桌面路由进入平台登录边界且 console 无 error/warn。后端 package、前端定向 4 项与生产构建通过；Spring 集成在断言前仍被既有 `agentcici_test` Flyway V81 checksum 漂移阻断，未 repair。UAT/生产未修改。
 
 - TASK-297 / FEAT-179 已进入 review：新增统一 `ModelInvocationResolver`，聊天、会议纪要、Skill、本体、客户洞察、知识库/记忆 embedding、图片 OCR、实时/文件 ASR、代码解释器、联网搜索/网页抓取均从场景路由取得 provider、model 与 credential。无路由/厂商/模型/凭据一律失败关闭；删除环境百炼回退、知识库 local 默认及工具独立 Key/模型。V112/V113 清理遗留配置，知识库管理页只读显示 `knowledge-embedding` 路由。后端干净编译、10 项定向测试、前端 production build 与 diff check 通过；backend/frontend 已从本地 `main@7be07dd2a4d8` 发布为本地开发版本 `2.8.61-dev.7be07dd`，容器 healthy/restart=0，页面制品指纹和完整 `./stack verify` 均通过。UAT/生产未修改；下一步是按发布 Skill 在 UAT 配置每个实际启用的场景并完成真实业务验收。
 
