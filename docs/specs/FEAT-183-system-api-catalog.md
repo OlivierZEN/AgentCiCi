@@ -6,7 +6,7 @@ status: in_implementation
 primary_project: agentcici
 task_ids: TASK-302
 related_integrations: INT-019
-updated_at: 2026-08-13T15:50:30Z
+updated_at: 2026-08-13T16:22:24Z
 updated_by: codex
 ---
 
@@ -68,6 +68,6 @@ updated_by: codex
 
 ## 实现与验收状态
 
-- 代码、定向测试、前端全量测试和前后端生产构建已经完成。
-- AgentCiCi 与 Semattice 本地 `main` 制品已部署到统一开发环境，并完成版本、健康、鉴权边界和提供方投影回读。
-- 目录首版已发布 UAT，但面向独立应用的通用 HUMAN 调用链路被确认是核心缺口，当前重新进入实现阶段；完成 Keycloak 直调、受信 Client 治理和公司上下文 API 后再进入评审。
+- Keycloak HUMAN 直调、受信 Client 治理、公司目录/上下文 API、系统 API 调用文档和运营端管理 UI 已完成，任务进入 review。
+- 功能提交 `e90a2d2b` 与 HTTP 方法错误修复 `9f58d972` 已进入 AgentCiCi 本地 `main`；统一开发环境运行 `2.8.61-dev.9f58d97`，V115、健康、版本、匿名 401、错误方法 405、页面路由和完整 `./stack verify` 均已回读通过。
+- 现有目录首版 UAT 仍是 `2.8.61-beta.19`，本次 Keycloak 直调增量未发布 UAT/生产。进入 done 前仍需使用一个真实新登记 Keycloak Client 完成登录、公司列表、公司上下文及后续 `X-Company-Id` 业务调用验收。

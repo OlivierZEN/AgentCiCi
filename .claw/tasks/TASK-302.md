@@ -3,8 +3,8 @@ kind: task-status
 task_id: TASK-302
 feature_id: FEAT-183
 integration_id: INT-019
-status: in_progress
-updated_at: 2026-08-13T15:50:30Z
+status: review
+updated_at: 2026-08-13T16:22:24Z
 updated_by: codex
 owner_role: fullstack-agent
 spec_path: docs/specs/FEAT-183-system-api-catalog.md
@@ -40,10 +40,11 @@ spec_path: docs/specs/FEAT-183-system-api-catalog.md
 
 ## Keycloak HUMAN 直调实现
 
-- 后端定向 13 项通过：Keycloak HUMAN Token 验签与错误 Audience、受信 Client 未登记/停用/Scope 缺失、HUMAN 映射、公司目录、公司上下文和非成员 403 均有断言。
+- 后端定向 14 项通过：Keycloak HUMAN Token 验签与错误 Audience、受信 Client 未登记/停用/Scope 缺失、HUMAN 映射、公司目录、公司上下文、非成员 403 和错误 HTTP 方法 405 均有断言。
 - 后端 production package 通过；前端 49 文件/272 项与 production build 通过。
 - OpenAPI CORS 已允许 `X-Company-Id`，具体 Origin 继续由环境配置注入，不在业务源码维护环境域名。
-- 本地 `main` 提交与 `cici.localhost` 部署证据在完成部署后补充；UAT/生产未修改。
+- 功能提交 `e90a2d2b` 与协议错误修复 `9f58d972` 已进入本地 `main`；`cici.localhost` 从最终 `main@9f58d972` 构建并运行 `2.8.61-dev.9f58d97`。backend/frontend 均 healthy，V115 为成功状态，系统 API 页面路由 200，匿名业务调用为 JSON 401，错误方法为 JSON 405，完整 `./stack verify` 通过。UAT/生产未修改。
+- 当前没有可用于验收的“新登记独立 Keycloak Client + HUMAN 用户”凭据，未虚构真实登录和业务成功响应；该端到端业务验收是进入 done 前的剩余项。
 
 ## 验证证据
 

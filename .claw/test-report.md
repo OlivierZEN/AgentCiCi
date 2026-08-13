@@ -2795,3 +2795,12 @@ last_run_status: passed_with_local_deployment_pending
 - 运行验收：backend/frontend healthy，health=`UP`，Flyway 104 项校验成功且无需迁移，Nginx 配置有效，启动 ERROR/FATAL/Exception/Flyway failed 计数 0；公网首页 200，匿名 `/auth/me`、Owner 状态和协调接口均为 401。
 - 受权页面验收：页脚为 `2.8.60-beta.1`；目标租户 Owner 显示 `OWNER/ACTIVE`、身份正常及统一身份可登录，Semattice 与 DevAutopilot 均运行中；浏览器 0 error / 0 warning。
 - 非阻塞风险：启动日志存在 `SecretCipherService` 开发回退密钥 WARN，已登记独立 issue；不影响本次 Owner 功能，但不作为生产安全配置通过证据。
+
+## 2026-08-14 TASK-302 Keycloak HUMAN 跨应用直调本地验收
+
+- 后端定向：`KeycloakOidcLoginServiceTest`、`EcosystemHumanApiServiceTest`、`EcosystemApplicationTrustServiceTest`、`SystemApiCatalogServiceTest` 与 `GlobalExceptionHandlerTest` 共 14 项通过；`mvn -q -DskipTests package` 通过。
+- 前端：`npm test -- --run` 共 49 个测试文件、272 项通过；`npm run build` 通过，仅保留既有大 chunk warning。
+- 本地主线：功能提交 `e90a2d2b`、错误方法 405 修复 `9f58d972` 均已进入本地 `main`；最终开发环境版本为 `2.8.61-dev.9f58d97`。
+- 运行态：backend、frontend 及依赖服务健康，V115 `ecosystem trusted application` 迁移成功；`/platform/system-apis` 和 `/platform/system-apis/applications` 为 200，匿名公司目录/上下文为 JSON 401，误用 GET 调用公司上下文为 JSON 405。
+- 全栈门禁：环境域名源码扫描与 `./stack verify` 均通过，覆盖共享数据库隔离、TLS 边缘、OIDC、应用健康/版本和匿名鉴权边界。
+- 未验证边界：当前没有可用于验收的独立 Keycloak Client 与 HUMAN 用户凭据，未执行真实成功登录、公司列表/上下文和后续 `X-Company-Id` 调用；授权态运营 UI 视觉验收亦待平台运营账号完成。本次未修改 UAT/生产。
