@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-13T02:00:00Z
+updated_at: 2026-08-13T06:44:46Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-13T02:00:00Z
+last_run_at: 2026-08-13T06:44:46Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## 2026-08-13 TASK-297 统一模型调用治理本地开发环境发布
+
+- 制品来源：backend/frontend 均由本地 `main@7be07dd2a4d8` 构建，OCI revision=`7be07dd2a4d8`、version=`2.8.61-dev.7be07dd`。
+- 发布范围：仅强制重建 AgentCiCi `backend` 与 `cici-frontend`；Semattice、DevAutopilot、Keycloak、PostgreSQL、Redis、RabbitMQ、Qdrant 与 Nginx 未重建。
+- 运行回读：两个目标容器均为 `healthy`、restart=0；`https://cici.localhost/` 返回包含 `2.8.61-dev.7be07dd` 的 JS/CSS 制品指纹。
+- 全栈技术验收：`./stack verify` 通过，覆盖部署域名门禁、共享数据库隔离、TLS、OIDC discovery、应用健康/版本与匿名授权边界。
+- 边界：本地开发环境已更新；未发布 UAT 或生产，真实厂商凭据及场景业务验收仍待在 UAT 按发布流程完成。
+- 状态：`passed`；UAT 业务验收未进行。
 
 ## 2026-08-13 TASK-296 DevAutopilot 历史受理字段纠正
 
