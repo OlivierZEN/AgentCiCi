@@ -230,7 +230,7 @@ class KnowledgeBaseLifecycleIntegrationTest {
         assertThat(allowedExtensions)
                 .contains("txt", "md", "csv", "json", "docx", "pdf");
         assertThat(unsupportedParserLabels).isEmpty();
-        assertThat((String) policy.get("pdfPolicy")).contains("Text-based PDF parsing is enabled");
+        assertThat((String) policy.get("pdfPolicy")).contains("支持文本型 PDF");
         assertThat(serviceApi).containsEntry("apiAccessEnabled", false);
 
         Map<String, Object> kb = knowledgeBaseService.createKnowledgeBase(companyId, "Policy KB", "test");

@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useAdminToken } from "../useAdminToken";
+import { validateKnowledgeUpload } from "./AdminKnowledgeUploadPolicy";
 
 type KnowledgeBase = {
   id: number;
@@ -766,20 +767,10 @@ export default function AdminKnowledgePage() {
 
   const uploadDocument = async (file: File) => {
     if (!selectedKb) return;
-    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
-    if (uploadPolicy) {
-      if (file.size > uploadPolicy.maxFileSizeBytes) {
-        flash(`上传失败：文件超过 ${Math.round(uploadPolicy.maxFileSizeBytes / 1024 / 1024)} MB 限制`);
-        return;
-      }
-      if (ext === "pdf") {
-        flash(uploadPolicy.pdfPolicy || "PDF 暂不支持索引，请先提取文本后上传。");
-        return;
-      }
-      if (!uploadPolicy.allowedExtensions.includes(ext)) {
-        flash(`上传失败：仅支持 ${uploadPolicy.allowedExtensions.join(" / ")}`);
-        return;
-      }
+    const validationMessage = validateKnowledgeUpload(file, uploadPolicy);
+    if (validationMessage) {
+      flash(validationMessage);
+      return;
     }
     const form = new FormData();
     form.append("knowledgeBaseId", String(selectedKb.id));
@@ -2176,7 +2167,7 @@ export default function AdminKnowledgePage() {
                 <div className="cici-kb-ops-panel__item">
                   <span className="cici-kb-ops-panel__label">上传策略</span>
                   <strong>{uploadPolicy?.supportedParserLabels?.join(" / ") ?? "TXT / Markdown / CSV / JSON / DOCX"}</strong>
-                  <span className="subtle">单文件 {uploadLimitLabel}，PDF 不进入索引流水线。</span>
+                  <span className="subtle">{uploadPolicy?.pdfPolicy ?? "支持文本型 PDF；扫描件需先完成 OCR。"}</span>
                 </div>
                 <div className="cici-kb-ops-panel__item">
                   <span className="cici-kb-ops-panel__label">向量库审计</span>

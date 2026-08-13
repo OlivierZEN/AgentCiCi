@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-13T09:54:05Z
+updated_at: 2026-08-13T10:35:00Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-301 - 知识库 PDF 上传门禁修复
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-182-kb-pdf-upload-admission.md`
+- task_status_path: `.claw/tasks/TASK-301.md`
+- blocked_by: `none`
+- next_action: `移除前端 PDF 误拦截，完成定向测试、提交、本地 main 构建与 cici.localhost 验收`
 
 ### TASK-300 - 机器开发者实例上限控制面
 

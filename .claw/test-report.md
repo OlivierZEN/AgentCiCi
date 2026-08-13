@@ -4,11 +4,19 @@ version: 3
 updated_at: 2026-08-13T09:54:05Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-13T09:54:05Z
-last_run_status: passed_with_authorized_business_acceptance_pending
+last_run_at: 2026-08-13T10:55:00Z
+last_run_status: passed_with_integration_fixture_blocker
 ---
 
 # Test Report
+
+## 2026-08-13 TASK-301 知识库 PDF 上传门禁修复
+
+- 根因：管理端在扩展名为 `pdf` 时把后端 `pdfPolicy` 能力说明作为 toast 并直接返回，未发起 `/kb/documents/upload`；后端已实现文本型 PDFBox 解析和明确失败路径。
+- 前端：新增统一上传预检，PDF 与其他允许扩展名一并放行；超限和不支持扩展名仍失败关闭。`npm test -- --run src/admin/pages/AdminKnowledgeUploadPolicy.test.ts` 为 1 文件/3 项通过，`npm run build` 通过，仅保留既有 chunk-size warning。
+- 后端：上传策略改为中文文本型 PDF 说明；`mvn -q -DskipTests package` 与 `git diff --check` 通过。
+- 集成边界：共享测试库在断言前被既有 Flyway V81 checksum 漂移阻断，未 repair。隔离 PostgreSQL 16 已从 V1 成功迁移至 V114，但现有 `shouldExposeUploadPolicyAndIndexTextPdf` fixture 未建立当前 `knowledge-embedding` 所需的平台可用模型，创建知识库时失败，未进入 PDF 断言；不声明该用例通过。
+- 状态：`passed_with_integration_fixture_blocker`；待从本地 `main` 构建并使用已有平台模型配置完成 `cici.localhost` 真实文本型 PDF 上传和索引验收。
 
 ## 2026-08-13 TASK-298 模型能力确认非 JSON 响应修复
 

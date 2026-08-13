@@ -243,7 +243,7 @@ public class KnowledgeBaseService {
         payload.put("allowedContentTypes", allowedUploadContentTypes.stream().sorted().toList());
         payload.put("supportedParserLabels", List.of("TXT", "Markdown", "CSV", "JSON", "DOCX", "PDF"));
         payload.put("unsupportedParserLabels", List.of());
-        payload.put("pdfPolicy", "Text-based PDF parsing is enabled. Encrypted, scanned, malformed, or empty-text PDFs fail with a clear parser error.");
+        payload.put("pdfPolicy", "支持文本型 PDF；加密、扫描型、损坏或无文本 PDF 会返回明确的解析错误。");
         payload.put("sourceTypes", List.of(
                 Map.of("code", "LOCAL_FILE", "status", "available"),
                 Map.of("code", "EMPTY", "status", "available_via_manual_chunks"),
