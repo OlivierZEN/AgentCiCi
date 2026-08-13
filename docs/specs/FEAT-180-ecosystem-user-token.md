@@ -2,11 +2,11 @@
 kind: feature-spec
 feature_id: FEAT-180
 title: 内部应用统一用户令牌
-status: in_progress
+status: review
 primary_project: agentcici
 task_ids: TASK-299
 related_integrations: INT-017
-updated_at: 2026-08-13T08:30:00Z
+updated_at: 2026-08-13T15:30:00+08:00
 updated_by: codex
 ---
 
