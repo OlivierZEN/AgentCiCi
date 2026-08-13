@@ -49,3 +49,30 @@ describe("platform skill governance navigation", () => {
     expect(isPlatformNavigationItemActive(skillItems[0], pathname)).toBe(true);
   });
 });
+
+describe("platform system API navigation", () => {
+  const capabilityItems = PLATFORM_NAVIGATION_GROUPS.find((group) => group.id === "capability")?.items ?? [];
+  const systemApiItems = capabilityItems.filter((item) => item.to === "/platform/system-apis");
+
+  it("exposes one governed catalog with two provider children", () => {
+    expect(systemApiItems).toEqual([
+      {
+        to: "/platform/system-apis",
+        label: "系统 API",
+        activePrefixes: ["/platform/system-apis"],
+        children: [
+          { to: "/platform/system-apis/agentcici", label: "AgentCiCi" },
+          { to: "/platform/system-apis/semattice", label: "Semattice" },
+        ],
+      },
+    ]);
+  });
+
+  it.each([
+    "/platform/system-apis",
+    "/platform/system-apis/agentcici",
+    "/platform/system-apis/semattice/runtime.record.query/docs",
+  ])("keeps the parent active for %s", (pathname) => {
+    expect(isPlatformNavigationItemActive(systemApiItems[0], pathname)).toBe(true);
+  });
+});

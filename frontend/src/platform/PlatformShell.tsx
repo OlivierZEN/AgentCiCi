@@ -21,6 +21,7 @@ export type PlatformNavigationItem = {
   label: string;
   end?: boolean;
   activePrefixes?: string[];
+  children?: PlatformNavigationItem[];
 };
 
 type PlatformNavigationGroup = {
@@ -38,6 +39,15 @@ export const PLATFORM_NAVIGATION_GROUPS: PlatformNavigationGroup[] = [
       { to: "/platform/models/providers", label: "模型配置", activePrefixes: ["/platform/models"] },
       { to: "/platform/integrations", label: "平台集成" },
       { to: "/platform/tools", label: "工具目录" },
+      {
+        to: "/platform/system-apis",
+        label: "系统 API",
+        activePrefixes: ["/platform/system-apis"],
+        children: [
+          { to: "/platform/system-apis/agentcici", label: "AgentCiCi" },
+          { to: "/platform/system-apis/semattice", label: "Semattice" },
+        ],
+      },
     ],
   },
   {
@@ -162,14 +172,29 @@ export default function PlatformShell() {
                 {expanded ? (
                   <div className="platform-nav__subnav">
                     {group.items.map((item) => (
-                      <NavLink
-                        key={item.to}
-                        to={item.to}
-                        end={item.end}
-                        className={() => (isPlatformNavigationItemActive(item, location.pathname) ? "active" : "")}
-                      >
-                        <span>{item.label}</span>
-                      </NavLink>
+                      <div key={item.to} className={`platform-nav__item${item.children ? " has-children" : ""}`}>
+                        <NavLink
+                          to={item.to}
+                          end={item.end}
+                          className={() => (isPlatformNavigationItemActive(item, location.pathname) ? "active" : "")}
+                        >
+                          <span>{item.label}</span>
+                        </NavLink>
+                        {item.children && isPlatformNavigationItemActive(item, location.pathname) ? (
+                          <div className="platform-nav__nested" aria-label={`${item.label}子菜单`}>
+                            {item.children.map((child) => (
+                              <NavLink
+                                key={child.to}
+                                to={child.to}
+                                end={child.end}
+                                className={() => (isPlatformNavigationItemActive(child, location.pathname) ? "active" : "")}
+                              >
+                                <span>{child.label}</span>
+                              </NavLink>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
                     ))}
                   </div>
                 ) : null}

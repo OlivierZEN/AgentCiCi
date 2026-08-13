@@ -45,6 +45,7 @@ import PlatformTenantDetailPage from "./platform/pages/PlatformTenantDetailPage"
 import PlatformTenantsPage from "./platform/pages/PlatformTenantsPage";
 import PlatformToolsPage from "./platform/pages/PlatformToolsPage";
 import PlatformEvaluationPage from "./platform/pages/PlatformEvaluationPage";
+import PlatformSystemApisPage from "./platform/pages/PlatformSystemApisPage";
 
 const router = createBrowserRouter(createRoutesFromElements(
   <>
@@ -116,6 +117,10 @@ const router = createBrowserRouter(createRoutesFromElements(
             <Route path="skills/:skillId" element={<PlatformSkillsPage />} />
             <Route path="tools" element={<PlatformToolsPage />} />
             <Route path="tools/:toolName" element={<PlatformToolsPage />} />
+            <Route path="system-apis" element={<PlatformSystemApisPage />} />
+            <Route path="system-apis/:providerCode" element={<PlatformSystemApisPage />} />
+            <Route path="system-apis/:providerCode/:apiId" element={<PlatformSystemApisPage />} />
+            <Route path="system-apis/:providerCode/:apiId/docs" element={<PlatformSystemApisPage />} />
             <Route path="evaluation" element={<PlatformEvaluationPage />} />
             <Route path="evaluation/suites" element={<PlatformEvaluationPage />} />
             <Route path="evaluation/runs" element={<PlatformEvaluationPage />} />

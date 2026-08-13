@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-13T11:09:00Z
+updated_at: 2026-08-13T11:15:21Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,18 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-302 - 运营端系统 API 目录
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- claimed_by: `codex`
+- integration_id: `INT-019`
+- spec_path: `docs/specs/FEAT-183-system-api-catalog.md`
+- task_status_path: `.claw/tasks/TASK-302.md`
+- blocked_by: `none`
+- next_action: `实现提供方目录聚合、渐进式页面并完成本地 main 全栈验收`
 
 ### TASK-300 - 机器开发者实例上限控制面
 
