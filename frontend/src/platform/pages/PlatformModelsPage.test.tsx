@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildProviderCheckRequest, catalogEmptyMessage, readResolvedModel, readValidatedModel } from "./PlatformModelsPage";
+import {
+  buildProviderCheckRequest,
+  capabilityConfirmationError,
+  catalogEmptyMessage,
+  readResolvedModel,
+  readValidatedModel,
+} from "./PlatformModelsPage";
 
 describe("OneKeyToken provider check request", () => {
   it("sends the current unsaved form draft without preserving surrounding whitespace", () => {
@@ -25,5 +31,14 @@ describe("provider catalog capability", () => {
   it("keeps the gateway-resolved model as diagnostic information", () => {
     expect(readResolvedModel({ resolvedModel: " qwen3.5-flash " })).toBe("qwen3.5-flash");
     expect(readResolvedModel({ resolvedModel: 42 })).toBe("");
+  });
+});
+
+describe("manual capability confirmation", () => {
+  it("requires selected capabilities and verifiable vendor HTTPS documentation", () => {
+    expect(capabilityConfirmationError([], "https://docs.vendor.example/model", "v1 §2")).toBe("请至少选择一项模型能力。");
+    expect(capabilityConfirmationError(["text"], "http://docs.vendor.example/model", "v1 §2")).toBe("厂商文档必须使用 HTTPS 地址。");
+    expect(capabilityConfirmationError(["text"], "https://docs.vendor.example/model", "")).toBe("请填写文档版本、章节或可核验引用。");
+    expect(capabilityConfirmationError(["text", "reasoning"], "https://docs.vendor.example/model", "v1 §2")).toBe("");
   });
 });

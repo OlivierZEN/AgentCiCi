@@ -9,6 +9,7 @@ import com.codehouse.ciciassistant.platform.service.PlatformAuditService;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import java.util.List;
 import java.util.Map;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -95,6 +97,37 @@ public class PlatformModelProviderController {
         return ApiResponse.ok(payload);
     }
 
+    @PutMapping("/providers/{providerCode}/model-capabilities")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
+    public ApiResponse<Map<String, Object>> confirmModelCapabilities(@PathVariable String providerCode,
+                                                                      @Valid @RequestBody ConfirmModelCapabilitiesRequest request) {
+        Map<String, Object> payload = modelProviderService.confirmPlatformModelCapabilities(
+                providerCode,
+                request.modelName(),
+                request.capabilities(),
+                request.documentationUrl(),
+                request.evidenceReference(),
+                TenantContext.getUserId().orElse("platform-operator"));
+        writeAudit("platform.model.capability.confirm",
+                "model_capability",
+                providerCode + "::" + request.modelName().trim(),
+                "source=operator_documentation, capabilityCount=" + request.capabilities().size()
+                        + ", evidenceReference=" + request.evidenceReference().trim());
+        return ApiResponse.ok(payload);
+    }
+
+    @DeleteMapping("/providers/{providerCode}/model-capabilities")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
+    public ApiResponse<Map<String, Object>> revokeModelCapabilityConfirmation(@PathVariable String providerCode,
+                                                                                @RequestParam @NotBlank String modelName) {
+        Map<String, Object> payload = modelProviderService.revokePlatformModelCapabilityConfirmation(providerCode, modelName);
+        writeAudit("platform.model.capability.revoke",
+                "model_capability",
+                providerCode + "::" + modelName.trim(),
+                "source=operator_documentation");
+        return ApiResponse.ok(payload);
+    }
+
     @GetMapping("/routes")
     public ApiResponse<Map<String, Object>> modelRoutes() {
         return ApiResponse.ok(modelProviderService.platformModelRouteSettings());
@@ -152,6 +185,14 @@ public class PlatformModelProviderController {
     }
 
     public record UpdateSelectedModelsRequest(List<String> selectedModels) {
+    }
+
+    public record ConfirmModelCapabilitiesRequest(
+            @NotBlank String modelName,
+            @NotEmpty List<@NotBlank String> capabilities,
+            @NotBlank String documentationUrl,
+            @NotBlank String evidenceReference
+    ) {
     }
 
     public record UpdateModelRouteRequest(@NotBlank String providerCode, @NotBlank String modelName) {

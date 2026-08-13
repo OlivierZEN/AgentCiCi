@@ -309,6 +309,66 @@ class PlatformModelProviderIntegrationTest {
         }
     }
 
+    @Test
+    void platformOperatorCanConfirmAndRevokeSelectedModelCapabilitiesWithDocumentationEvidence() throws Exception {
+        String platformToken = platformToken();
+        String providerCode = ModelProviderService.PROVIDER_ANTHROPIC;
+        String modelName = "claude-document-confirmed";
+        modelProviderService.deletePlatformModelRoute("skill-authoring");
+        modelProviderService.updatePlatformProvider(providerCode, true, "https://api.example.invalid", "platform-secret");
+        markSelectedModelWithoutCapabilityEvidence(providerCode, modelName);
+
+        mockMvc.perform(put("/platform/models/providers/{providerCode}/model-capabilities", providerCode)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "modelName": "%s",
+                                  "capabilities": ["text", "reasoning"],
+                                  "documentationUrl": "https://docs.example.invalid/models/claude-document-confirmed",
+                                  "evidenceReference": "模型能力说明 v2026-08，第 2 节"
+                                }
+                                """.formatted(modelName)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.capabilities[0]").value("text"))
+                .andExpect(jsonPath("$.data.evidence.source").value("operator_documentation"))
+                .andExpect(jsonPath("$.data.evidence.revocable").value(true));
+
+        mockMvc.perform(put("/platform/models/routes/{sceneCode}", "skill-authoring")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"providerCode":"%s","modelName":"%s"}
+                                """.formatted(providerCode, modelName)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.available").value(true));
+
+        mockMvc.perform(delete("/platform/models/providers/{providerCode}/model-capabilities", providerCode)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
+                        .param("modelName", modelName))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.revoked").value(true));
+
+        mockMvc.perform(get("/platform/models/routes")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.routes[?(@.sceneCode == 'skill-authoring')].candidateCount")
+                        .value(org.hamcrest.Matchers.contains(0)))
+                .andExpect(jsonPath("$.data.routes[?(@.sceneCode == 'skill-authoring')].available")
+                        .value(org.hamcrest.Matchers.contains(false)));
+
+        MvcResult auditResult = mockMvc.perform(get("/platform/audit/logs")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
+                        .param("q", "claude-document-confirmed")
+                        .param("limit", "20"))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode auditItems = objectMapper.readTree(auditResult.getResponse().getContentAsString()).path("data").path("items");
+        assertThat(auditItems).extracting(node -> node.path("eventType").asText())
+                .contains("platform.model.capability.confirm", "platform.model.capability.revoke");
+        modelProviderService.deletePlatformModelRoute("skill-authoring");
+    }
+
     private String platformToken() throws Exception {
         MvcResult result = mockMvc.perform(post("/auth/platform/password/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -347,8 +407,29 @@ class PlatformModelProviderIntegrationTest {
                 .findByCompanyIdAndProviderCode(scopeId, ModelProviderService.PROVIDER_DEEPSEEK)
                 .orElseThrow();
         provider.setConfigJson("""
-                {"modelCapabilities":{"deepseek-chat":["text"],"deepseek-reasoner":["text","reasoning"]}}
+                {
+                  "modelCapabilities":{"deepseek-chat":["text"],"deepseek-reasoner":["text","reasoning"]},
+                  "modelCapabilityEvidence":{
+                    "deepseek-chat":{"source":"provider_catalog","confirmedAt":"2026-08-13T00:00:00Z"},
+                    "deepseek-reasoner":{"source":"provider_catalog","confirmedAt":"2026-08-13T00:00:00Z"}
+                  }
+                }
                 """);
+        provider.touch();
+        providerRepository.save(provider);
+    }
+
+    private void markSelectedModelWithoutCapabilityEvidence(String providerCode, String modelName) {
+        String scopeId = platformAccountProperties.getGovernanceCompanyId();
+        if (scopeId == null || scopeId.isBlank()) {
+            scopeId = PlatformAccountProperties.LEGACY_DEFAULT_GOVERNANCE_COMPANY_ID;
+        }
+        ModelProviderConfigEntity provider = providerRepository
+                .findByCompanyIdAndProviderCode(scopeId, providerCode)
+                .orElseThrow();
+        provider.setConfigJson("""
+                {"selectedModels":["%s"]}
+                """.formatted(modelName));
         provider.touch();
         providerRepository.save(provider);
     }

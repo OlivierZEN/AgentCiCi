@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-13T07:31:00Z
+updated_at: 2026-08-13T07:47:39Z
 updated_by: codex
-phase: review
+phase: implementation
 active_task: TASK-298
-next_action: "评审 TASK-298，并在 UAT 为实际启用能力刷新可信目录、配置每个场景路由后完成真实业务验收。"
+next_action: "完成 TASK-298 的人工文档能力确认、撤销与审计实现，提交后发布本地开发环境并回读。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-298 已恢复 implementation：在既有厂商目录/受控检测证据之外，补充平台运营人员基于厂商 HTTPS 文档的显式能力确认、可核验证据引用、操作者/时间、审计与可撤销闭环；不通过模型名称推断能力，撤销后候选与已配置路由保持失败关闭。正在进行编译、测试与本地开发环境发布；UAT/生产不修改。
 
 - TASK-298 / FEAT-179 已进入 review：模型能力只接受厂商远程目录或受控检测所确认并持久化的元数据；无法确认的模型不会进入场景候选。路由读取按必需能力和协议限制过滤候选，写入与运行时再次拒绝未知或不兼容模型；路由页显示必需能力、推荐原则、候选数量及空状态处置。提交 `1df52ac` 已从本地 `main` 构建为 `2.8.61-dev.1df52ac`，backend/frontend 均 healthy/restart=0，页面制品、镜像 label、运行环境和完整 `./stack verify` 一致；匿名桌面路由进入平台登录边界且 console 无 error/warn。后端 package、前端定向 4 项与生产构建通过；Spring 集成在断言前仍被既有 `agentcici_test` Flyway V81 checksum 漂移阻断，未 repair。UAT/生产未修改。
 

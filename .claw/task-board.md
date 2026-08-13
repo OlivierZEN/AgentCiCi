@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-13T07:31:00Z
+updated_at: 2026-08-13T07:47:39Z
 updated_by: codex
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-298 - 场景模型能力过滤与推荐说明
 
-- status: `review`
+- status: `in_progress`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - claimed_by: `codex`
 - spec_path: `docs/specs/FEAT-179-unified-model-invocation-governance.md`
 - task_status_path: `.claw/tasks/TASK-298.md`
 - blocked_by: `none`
-- next_action: 在 UAT 刷新实际厂商目录、补齐场景路由并完成真实业务验收；先恢复测试库 Flyway V81 基线后补跑 Spring 集成。
+- next_action: 完成厂商 HTTPS 文档能力确认、撤销与审计闭环；提交后从本地 main 发布开发环境并回读。
 
 ### TASK-297 - 统一模型调用治理
 

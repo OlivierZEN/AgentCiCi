@@ -8395,6 +8395,14 @@ h1,
   margin: 0;
 }
 
+.model-capability-guidance {
+  max-width: 620px;
+  margin: 4px 0 0;
+  color: #786a52;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .model-count-badge {
   font-size: 12px;
   color: var(--muted);
@@ -8466,6 +8474,18 @@ h1,
   color: #a54c1a;
   font-size: 11px;
   font-weight: 700;
+}
+
+.model-capability-evidence {
+  color: #786a52;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.model-capability-evidence a {
+  color: #876223;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .model-route-row__warning {
@@ -8654,6 +8674,94 @@ h1,
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+.model-capability-modal {
+  width: min(620px, 92vw);
+}
+
+.model-capability-modal__body {
+  display: grid;
+  gap: 14px;
+}
+
+.model-capability-context {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 10px 0;
+  border-top: 1px solid var(--admin-line, #e3d5b9);
+  border-bottom: 1px solid var(--admin-line, #e3d5b9);
+}
+
+.model-capability-context div {
+  min-width: 0;
+}
+
+.model-capability-context dt {
+  color: #786a52;
+  font-size: 11px;
+}
+
+.model-capability-context dd {
+  margin: 3px 0 0;
+  overflow-wrap: anywhere;
+  color: #2a2418;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.model-capability-fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.model-capability-fieldset legend {
+  margin-bottom: 8px;
+  color: #2a2418;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.model-capability-choice-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.model-capability-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid #dfd4bc;
+  border-radius: 7px;
+  background: #fffdf8;
+  color: #554a37;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.model-capability-choice.is-selected {
+  border-color: #c8a45d;
+  background: #fbf4e3;
+  color: #876223;
+  font-weight: 650;
+}
+
+.model-capability-choice input {
+  accent-color: #876223;
+}
+
+.model-capability-form-error,
+.model-capability-revoke-note {
+  margin: 0;
+  color: #a54c1a;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .model-row-icon-btn {
