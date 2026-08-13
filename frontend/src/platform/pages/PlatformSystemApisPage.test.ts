@@ -54,7 +54,7 @@ describe("system API catalog transport", () => {
 
 describe("system API invocation documentation", () => {
   it("uses a HUMAN session token for company context APIs", () => {
-    const companyList = api("agentcici.company.list", "可访问公司列表", "身份与公司", "low", "authenticated HUMAN member");
+    const companyList = api("agentcici.organization.list", "可访问公司列表", "身份与公司", "low", "authenticated HUMAN member");
     companyList.method = "GET";
     companyList.path = "/auth/companies";
     companyList.authType = "Bearer AgentCiCi HUMAN token";
@@ -66,7 +66,7 @@ describe("system API invocation documentation", () => {
   });
 
   it("keeps content type for the company switch request", () => {
-    const companySwitch = api("agentcici.company.switch", "切换当前公司", "身份与公司", "medium", "authenticated HUMAN member");
+    const companySwitch = api("agentcici.organization.switch", "切换当前公司", "身份与公司", "medium", "authenticated HUMAN member");
     companySwitch.path = "/auth/switch-company";
     companySwitch.authType = "Bearer AgentCiCi HUMAN token";
 

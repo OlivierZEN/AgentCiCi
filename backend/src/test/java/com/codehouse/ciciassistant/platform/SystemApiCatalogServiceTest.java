@@ -28,8 +28,8 @@ class SystemApiCatalogServiceTest {
         assertThat(agentCiCi.code()).isEqualTo("agentcici");
         assertThat(agentCiCi.apis()).extracting(SystemApiCatalogService.ApiView::id)
                 .containsExactly(
-                        "agentcici.company.list",
-                        "agentcici.company.switch",
+                        "agentcici.organization.list",
+                        "agentcici.organization.switch",
                         "agentcici.service-token.exchange",
                         "agentcici.devautopilot.activation.resolve",
                         "agentcici.devautopilot.handoff.exchange",

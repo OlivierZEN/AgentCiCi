@@ -75,7 +75,7 @@ public class SystemApiCatalogService {
 
     private List<ApiView> agentCiCiEntries() {
         return List.of(
-                entry("agentcici.company.list", "可访问公司列表",
+                entry("agentcici.organization.list", "可访问公司列表",
                         "查询当前登录账号拥有有效成员关系的公司，并标识当前公司上下文。",
                         "身份与公司", "GET", "/auth/companies", "Bearer AgentCiCi HUMAN token", "AgentCiCi",
                         "authenticated HUMAN member", "low", false,
@@ -97,7 +97,7 @@ public class SystemApiCatalogService {
                         List.of("只返回当前全局账号下公司与成员状态均有效的公司，不接受客户端传入 accountId。",
                                 "companyId 与 memberId 只用于选择和展示；调用方不得据此绕过后端成员关系校验。",
                                 "切换公司后必须重新加载所有公司隔离的数据，不能复用上一公司的业务缓存。")),
-                entry("agentcici.company.switch", "切换当前公司",
+                entry("agentcici.organization.switch", "切换当前公司",
                         "把当前登录账号切换到其拥有有效成员关系的目标公司，并签发新的公司上下文访问令牌。",
                         "身份与公司", "POST", "/auth/switch-company", "Bearer AgentCiCi HUMAN token", "AgentCiCi",
                         "authenticated HUMAN member", "medium", false,
