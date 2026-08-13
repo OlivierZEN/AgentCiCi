@@ -4,7 +4,7 @@ task_id: TASK-302
 feature_id: FEAT-183
 integration_id: INT-019
 status: review
-updated_at: 2026-08-13T14:00:18Z
+updated_at: 2026-08-13T15:34:50Z
 updated_by: codex
 owner_role: fullstack-agent
 spec_path: docs/specs/FEAT-183-system-api-catalog.md
@@ -67,3 +67,10 @@ spec_path: docs/specs/FEAT-183-system-api-catalog.md
 - 功能提交 `99ae151b5ce0` 已进入本地 `main`，backend/frontend 从该提交构建并运行 `2.8.61-dev.99ae151`；两个容器均 healthy/restart=0，镜像 revision 一致。
 - `https://cici.localhost/platform/system-apis/agentcici` 返回 200，匿名 `/api/platform/system-apis` 返回 `401 application/json`，完整 `./stack verify` 通过；部署前端制品包含 Keycloak 原始 Token 不可直调的结论。
 - 浏览器访问受保护深链会正确进入运营平台登录页；当前没有可复用的运营平台登录态，因此授权态抽屉和完整文档的视觉/交互验收仍待平台运营人员完成。UAT/生产未修改。
+
+## UAT 发布
+
+- 冻结提交 `2343b9bbafd6` 已推送远程 `main` 并发布不可变候选 `2.8.61-beta.19`；backend/frontend ACR index digest 分别为 `sha256:36f9591b78b9f2c22f2dd5c435f0e2d1dbd693978c195dbe6f241c958184bda7` 与 `sha256:0958cbe7b5614c16548895c233afa828545c1be6775bfd160aefbb0bfb4de0a7`。
+- 发布前完整备份 `/data/apps/agentcici/backups/20260813T153050Z-before-2.8.61-beta.19` 已通过 PostgreSQL 容器内 `pg_restore`、KB/Qdrant tar 和 beta.18 旧镜像 gzip 校验，全部工件权限为 `0600`；即时应用回滚目标为 `2.8.61-beta.18`。
+- UAT 仅 force-recreate backend/frontend；database、Redis、RabbitMQ、Qdrant 容器 ID 未改变。六容器 healthy/restart=0，运行版本/commit/digest、health、Flyway V114、Nginx、公开 smoke、系统 API 路由 200、匿名目录 JSON 401 和稳定窗口均通过。
+- UAT 当前未提供可复用的平台管理员登录态，因此抽屉与完整调用文档的授权态视觉/交互验收仍待平台运营人员完成；生产未修改。

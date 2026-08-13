@@ -1,12 +1,20 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-12T14:00:02Z
+updated_at: 2026-08-13T15:34:50Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-13 TASK-302 UAT `2.8.61-beta.19`
+
+- Git tag/commit 为 `2.8.61-beta.19 / 2343b9bbafd6`；backend/frontend ACR index digest 为 `sha256:36f9591b78b9f2c22f2dd5c435f0e2d1dbd693978c195dbe6f241c958184bda7` / `sha256:0958cbe7b5614c16548895c233afa828545c1be6775bfd160aefbb0bfb4de0a7`，均为 linux/amd64 且 image label 与 tag 对齐；未更新 `latest`。
+- 完整备份 `/data/apps/agentcici/backups/20260813T153050Z-before-2.8.61-beta.19` 包含 Compose、受管环境、PostgreSQL、KB、Qdrant、beta.18 旧镜像、发布前容器状态和 SHA-256 清单；数据库归档、两个 tar 与旧镜像 gzip 均校验可读，全部工件非空且 `0600`。即时应用回滚目标为 `2.8.61-beta.18`。
+- 仅 force-recreate backend/frontend；database、Redis、RabbitMQ、Qdrant 容器 ID 保持 `d14ef...`、`db094...`、`4166...`、`26aec...`，均 healthy/restart=0。
+- backend/frontend healthy/restart=0；`/system/version=2.8.61-beta.19 / 2343b9bbafd6`、health=`UP`、Flyway V114 成功、Nginx 有效。六项 UAT 公网 smoke、系统 API 路由 200、匿名目录 API JSON 401 和稳定窗口通过，backend severe error=0、frontend upstream/HTTP 5xx=0。
+- 运行前端制品已核验包含 Keycloak 原始 Token 不可直调、通用 HUMAN 交换端点未发布和新独立应用接入前置文案。没有可复用的平台管理员登录态，授权态视觉/交互验收待运营人员完成；生产未修改。
 
 ## 2026-08-12 TASK-291 / TASK-292 UAT `2.8.61-beta.17`
 

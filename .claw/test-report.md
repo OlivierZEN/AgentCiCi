@@ -1,14 +1,24 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-13T14:00:18Z
+updated_at: 2026-08-13T15:34:50Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-13T14:00:18Z
+last_run_at: 2026-08-13T15:34:50Z
 last_run_status: passed_with_authorized_visual_pending
 ---
 
 # Test Report
+
+## 2026-08-13 TASK-302 UAT `2.8.61-beta.19`
+
+- Git/制品：远程 `main` 与本地同步；annotated tag `2.8.61-beta.19` 指向 `2343b9bbafd6`。backend/frontend linux/amd64 ACR index digest 为 `sha256:36f9591b78b9f2c22f2dd5c435f0e2d1dbd693978c195dbe6f241c958184bda7` / `sha256:0958cbe7b5614c16548895c233afa828545c1be6775bfd160aefbb0bfb4de0a7`，镜像 label 与运行 `/system/version` 一致；未更新 `latest`。
+- 备份：`/data/apps/agentcici/backups/20260813T153050Z-before-2.8.61-beta.19` 的 Compose、受管环境、PostgreSQL、KB、Qdrant、beta.18 旧镜像和校验清单均非空且为 `0600`；数据库归档、两个 tar 和旧镜像 gzip 均通过读取校验。
+- 部署边界：只 force-recreate backend/frontend；database、Redis、RabbitMQ、Qdrant 容器 ID 保持 `d14ef...`、`db094...`、`4166...`、`26aec...`，六容器均 healthy/restart=0。
+- 运行门禁：backend health=`UP`，Flyway 最新至 V114 且 success，frontend Nginx 配置有效；UAT 首页、匿名 auth、Keycloak discovery、Semattice health/version、DevAutopilot integrated health 均通过。
+- 功能边界：`/platform/system-apis/agentcici` 返回 200，匿名 `/api/platform/system-apis` 返回 `401 application/json`；部署 JS 包含 Keycloak 原始 Token 不可直调、通用 HUMAN 交换端点未发布和新独立应用接入前置文案。
+- 稳定窗口：backend severe error=0、frontend upstream error=0、HTTP 5xx=0；即时应用回滚目标为 `2.8.61-beta.18`。
+- 状态：`passed_with_authorized_visual_pending`；未使用平台管理员会话执行授权态视觉/交互验收，生产未修改。
 
 ## 2026-08-13 TASK-302 HUMAN 鉴权与新应用接入说明
 

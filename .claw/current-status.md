@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-13T14:00:18Z
+updated_at: 2026-08-13T15:34:50Z
 updated_by: codex
 phase: review
 active_task: TASK-302
-next_action: "平台运营人员使用真实登录态确认公司 API 抽屉和完整文档中的 Keycloak 直调结论、现有 OIDC 流程及新应用接入前置；UAT/生产未修改。"
+next_action: "平台运营人员在 UAT 使用真实登录态确认公司 API 抽屉和完整文档中的 Keycloak 直调结论、现有 OIDC 流程及新应用接入前置；生产未修改。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-302 / FEAT-183 已发布 UAT `2.8.61-beta.19 / 2343b9bbafd6`。backend/frontend ACR index digest 为 `sha256:36f9591b78b9f2c22f2dd5c435f0e2d1dbd693978c195dbe6f241c958184bda7` / `sha256:0958cbe7b5614c16548895c233afa828545c1be6775bfd160aefbb0bfb4de0a7`；完整备份 `/data/apps/agentcici/backups/20260813T153050Z-before-2.8.61-beta.19` 已校验，回滚目标 beta.18。仅重建 backend/frontend，四个状态服务 ID 不变；六容器 healthy/restart=0，版本、health、Flyway V114、Nginx、公开 smoke、系统 API 路由 200、匿名 JSON 401 和稳定窗口通过。远程 `main`、tag 与制品 commit 一致；授权态视觉验收待运营人员完成，生产未修改。
 
 - TASK-302 / FEAT-183 已把公司 API 鉴权文案改为可执行的接入指南：明确 Keycloak 原始 `access_token` / `id_token` 不能直接调用，现有 AgentCiCi Web 使用 `/auth/oidc/login` 与 `/auth/oidc/complete` 完成登录和一次性票据兑换，同源扩展复用服务端会话，新独立应用须先完成 Keycloak Client、平台激活/信任及应用专用 handoff/受治理交换契约，机器应用继续使用 SERVICE/OACT；当前未虚构通用 HUMAN Token 交换端点。提交 `99ae151` 已进入本地 `main`，backend/frontend 运行 `2.8.61-dev.99ae151`、healthy/restart=0，目标页 200、匿名 API JSON 401、完整 `./stack verify` 通过。浏览器无运营平台登录态，授权态视觉验收待运营人员完成；UAT/生产未修改。
 
