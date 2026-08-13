@@ -28,6 +28,8 @@ class SystemApiCatalogServiceTest {
         assertThat(agentCiCi.code()).isEqualTo("agentcici");
         assertThat(agentCiCi.apis()).extracting(SystemApiCatalogService.ApiView::id)
                 .containsExactly(
+                        "agentcici.company.list",
+                        "agentcici.company.switch",
                         "agentcici.service-token.exchange",
                         "agentcici.devautopilot.activation.resolve",
                         "agentcici.devautopilot.handoff.exchange",
@@ -38,6 +40,19 @@ class SystemApiCatalogServiceTest {
             assertThat(api.path()).startsWith("/");
             assertThat(api.path()).doesNotContain("localhost", "uat.", "http://", "https://");
             assertThat(api.requestExample().toString()).doesNotContain("secret", "eyJ");
+        });
+        assertThat(agentCiCi.apis().getFirst()).satisfies(api -> {
+            assertThat(api.path()).isEqualTo("/auth/companies");
+            assertThat(api.authType()).isEqualTo("Bearer AgentCiCi HUMAN token");
+            assertThat(api.outputSchema().path("properties").path("data").path("properties")
+                    .path("companies").path("type").asText()).isEqualTo("array");
+        });
+        assertThat(agentCiCi.apis().get(1)).satisfies(api -> {
+            assertThat(api.path()).isEqualTo("/auth/switch-company");
+            assertThat(api.requestExample().path("companyId").asText()).isEqualTo("${TARGET_COMPANY_ID}");
+            assertThat(api.responseExample().path("data").path("token").asText())
+                    .isEqualTo("${NEW_AGENTCICI_USER_TOKEN}");
+            assertThat(api.callNotes()).anyMatch(note -> note.contains("返回 403"));
         });
         assertThat(catalog.providers().get(1).status()).isEqualTo("unavailable");
     }

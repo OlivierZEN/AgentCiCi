@@ -4,7 +4,7 @@ task_id: TASK-302
 feature_id: FEAT-183
 integration_id: INT-019
 status: review
-updated_at: 2026-08-13T12:10:00Z
+updated_at: 2026-08-13T12:59:30Z
 updated_by: codex
 owner_role: fullstack-agent
 spec_path: docs/specs/FEAT-183-system-api-catalog.md
@@ -27,7 +27,8 @@ spec_path: docs/specs/FEAT-183-system-api-catalog.md
 
 ## 实现结果
 
-- AgentCiCi 提供方首批收录 6 个核心契约；Semattice 通过提供方持有的 HMAC 投影聚合 11 个核心 Capability。
+- AgentCiCi 提供方收录 8 个核心契约，其中新增可访问公司查询和公司上下文切换；Semattice 通过提供方持有的 HMAC 投影聚合 11 个核心 Capability。
+- 公司切换沿用现有 `/auth/switch-company` 逻辑：服务端校验同一全局账号的 ACTIVE 成员关系并签发新令牌；目录文档区分 HUMAN 会话令牌、SERVICE Token、OACT 与内部 HMAC，不改变原接口逻辑。
 - 运营端已实现提供方首页、可搜索/筛选列表、宽抽屉速览和独立文档页；URL 支持列表、抽屉与文档深链。
 - 目录读取继续受平台角色保护，页面不提供在线执行入口，目录可见性不授予业务 API 调用权限。
 
@@ -48,3 +49,9 @@ spec_path: docs/specs/FEAT-183-system-api-catalog.md
 - 修复：浏览器请求改为 `/api/platform/system-apis`，显式声明 `Accept: application/json`，并使用共享安全解析器处理非 JSON 回应；业务后端映射和鉴权逻辑未改变。
 - 回归：新增 API namespace、HTML fallback 和结构化错误信息测试；前端全量 49 文件/269 项与生产构建通过。
 - 本地环境：修复提交 `b5d189a1` 已进入本地 `main`；backend/frontend 均运行 `2.8.61-dev.b5d189a`、healthy/restart=0，匿名接口为 `401 application/json`，完整 `./stack verify` 通过。
+
+## 公司上下文 API 公布
+
+- 目录新增 `GET /auth/companies` 与 `POST /auth/switch-company`，分别说明可访问公司查询、ACTIVE 成员关系校验、新公司上下文令牌替换和租户缓存清理要求。
+- 调用文档根据契约显示 HUMAN session token、SERVICE token、OACT 或 Internal HMAC，不再为所有 API 固定展示 OACT。
+- 后端 `SystemApiCatalogServiceTest` 通过；前端定向 1 文件/7 项、全量 49 文件/271 项及 production build 通过；后端 production package 通过。

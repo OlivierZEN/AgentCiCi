@@ -6,7 +6,7 @@ status: implemented
 primary_project: agentcici
 task_ids: TASK-302
 related_integrations: INT-019
-updated_at: 2026-08-13T12:30:00Z
+updated_at: 2026-08-13T12:59:30Z
 updated_by: codex
 ---
 
@@ -14,7 +14,7 @@ updated_by: codex
 
 ## 产品目标
 
-运营平台向内部生态应用开发者提供“可被依赖的系统契约”目录，而不是把所有 Controller 自动生成文档。首版只收录身份与 OACT、租户应用激活与交接、Semattice 能力发现、主体同步、元数据读取和记录运行时等跨应用高频核心 API。
+运营平台向内部生态应用开发者提供“可被依赖的系统契约”目录，而不是把所有 Controller 自动生成文档。首版只收录账号可访问公司查询与公司上下文切换、身份与 OACT、租户应用激活与交接、Semattice 能力发现、主体同步、元数据读取和记录运行时等跨应用高频核心 API。
 
 ## 信息架构与交互
 
@@ -33,7 +33,7 @@ updated_by: codex
 
 ## 首批范围
 
-- AgentCiCi：SERVICE Token 交换、DevAutopilot activation 查询、handoff 兑换、Semattice 开通预留、Semattice 控制台 handoff 兑换、OACT JWKS。
+- AgentCiCi：当前账号可访问公司查询、公司上下文切换、SERVICE Token 交换、DevAutopilot activation 查询、handoff 兑换、Semattice 开通预留、Semattice 控制台 handoff 兑换、OACT JWKS。
 - Semattice：能力发现、租户状态、主体同步/目录、当前元数据版本、对象列表、记录查询/读取/创建/更新和授权解释。
 
 ## 验收标准
@@ -44,6 +44,7 @@ updated_by: codex
 4. Semattice 暂时不可用时 AgentCiCi 目录仍显示，并明确标记远端不可用。
 5. 页面明确说明“出现在目录中不代表自动获得调用权限”。
 6. 本地开发环境从 AgentCiCi 与 Semattice 各自本地 `main` 构建并通过跨项目契约与全栈验证。
+7. 公司查询不接受客户端指定账号；公司切换重新校验 ACTIVE 成员关系并返回新的公司上下文令牌，调用文档不得把 HUMAN 令牌误写成 SERVICE OACT。
 
 ## 回滚
 

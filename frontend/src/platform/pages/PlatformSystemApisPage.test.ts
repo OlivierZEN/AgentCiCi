@@ -3,6 +3,7 @@ import {
   filterSystemApis,
   SYSTEM_API_CATALOG_ENDPOINT,
   systemApiCatalogFailureMessage,
+  systemApiRequestPrelude,
   type SystemApi,
 } from "./PlatformSystemApisPage";
 
@@ -48,5 +49,27 @@ describe("system API catalog transport", () => {
   it("preserves a structured backend error message", () => {
     expect(systemApiCatalogFailureMessage(503, "Semattice 目录暂不可用", "{}"))
       .toBe("Semattice 目录暂不可用");
+  });
+});
+
+describe("system API invocation documentation", () => {
+  it("uses a HUMAN session token for company context APIs", () => {
+    const companyList = api("agentcici.company.list", "可访问公司列表", "身份与公司", "low", "authenticated HUMAN member");
+    companyList.method = "GET";
+    companyList.path = "/auth/companies";
+    companyList.authType = "Bearer AgentCiCi HUMAN token";
+
+    expect(systemApiRequestPrelude(companyList)).toBe([
+      "GET ${SYSTEM_API_ORIGIN}/auth/companies",
+      "Authorization: Bearer ${AGENTCICI_USER_TOKEN}",
+    ].join("\n"));
+  });
+
+  it("keeps content type for the company switch request", () => {
+    const companySwitch = api("agentcici.company.switch", "切换当前公司", "身份与公司", "medium", "authenticated HUMAN member");
+    companySwitch.path = "/auth/switch-company";
+    companySwitch.authType = "Bearer AgentCiCi HUMAN token";
+
+    expect(systemApiRequestPrelude(companySwitch)).toContain("Content-Type: application/json");
   });
 });

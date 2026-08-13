@@ -70,6 +70,21 @@ export function filterSystemApis(apis: SystemApi[], query: string, category: str
   });
 }
 
+export function systemApiRequestPrelude(api: SystemApi): string {
+  const lines = [`${api.method} \${SYSTEM_API_ORIGIN}${api.path}`];
+  if (api.authType === "Bearer AgentCiCi HUMAN token") {
+    lines.push("Authorization: Bearer ${AGENTCICI_USER_TOKEN}");
+  } else if (api.authType === "Keycloak SERVICE Bearer") {
+    lines.push("Authorization: Bearer ${KEYCLOAK_SERVICE_TOKEN}");
+  } else if (api.authType === "Bearer OACT") {
+    lines.push("Authorization: Bearer ${OACT}");
+  } else if (api.authType.includes("Internal HMAC")) {
+    lines.push("# 按契约生成 Internal HMAC 请求头");
+  }
+  if (!["GET", "HEAD"].includes(api.method.toUpperCase())) lines.push("Content-Type: application/json");
+  return lines.join("\n");
+}
+
 function json(value: unknown) {
   return JSON.stringify(value ?? {}, null, 2);
 }
@@ -158,7 +173,7 @@ export default function PlatformSystemApisPage() {
           </aside>
           <article className="system-api-docs__article">
             <section id="contract"><h2>契约摘要</h2><p>{selectedApi.description}</p><dl className="system-api-definition-list"><div><dt>鉴权</dt><dd>{selectedApi.authType}</dd></div><div><dt>Audience</dt><dd>{selectedApi.audience}</dd></div><div><dt>所需 Scope</dt><dd><code>{selectedApi.requiredScope}</code></dd></div><div><dt>协议投影</dt><dd>{selectedApi.protocols.join(" / ")}</dd></div><div><dt>风险与执行</dt><dd>{riskLabel(selectedApi.riskLevel)} · {selectedApi.executionMode}{selectedApi.approvalRequired ? " · 需要审批" : ""}</dd></div><div><dt>契约事实源</dt><dd>{selectedApi.sourceContract}</dd></div></dl></section>
-            <section id="request"><h2>请求</h2><p>调用地址由部署环境注入，请勿在应用代码中固化环境域名。</p><pre><code>{`${selectedApi.method} \${SYSTEM_API_ORIGIN}${selectedApi.path}\nAuthorization: Bearer \${OACT}\nContent-Type: application/json`}</code></pre><h3>请求示例</h3><pre><code>{json(selectedApi.requestExample)}</code></pre><h3>输入 Schema</h3><pre><code>{json(selectedApi.inputSchema)}</code></pre></section>
+            <section id="request"><h2>请求</h2><p>调用地址由部署环境注入，请勿在应用代码中固化环境域名。</p><pre><code>{systemApiRequestPrelude(selectedApi)}</code></pre><h3>请求示例</h3><pre><code>{json(selectedApi.requestExample)}</code></pre><h3>输入 Schema</h3><pre><code>{json(selectedApi.inputSchema)}</code></pre></section>
             <section id="response"><h2>响应</h2><h3>成功示例</h3><pre><code>{json(selectedApi.responseExample)}</code></pre><h3>输出 Schema</h3><pre><code>{json(selectedApi.outputSchema)}</code></pre></section>
             <section id="errors"><h2>错误与调用约束</h2><ul>{selectedApi.callNotes.map((note) => <li key={note}>{note}</li>)}</ul><div className="system-api-error-codes">{selectedApi.errorCodes.map((code) => <code key={code}>{code}</code>)}</div></section>
             <section id="compatibility"><h2>兼容策略</h2><p>{selectedApi.compatibility}</p><p className="system-api-docs__permission-note">出现在系统 API 目录中不代表调用方自动获得权限。调用方仍需完成应用激活、主体绑定、scope 和提供方授权门禁。</p></section>
