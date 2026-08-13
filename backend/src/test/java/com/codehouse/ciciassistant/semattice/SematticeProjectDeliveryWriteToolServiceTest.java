@@ -315,6 +315,8 @@ class SematticeProjectDeliveryWriteToolServiceTest {
                         - 提供已上传图片的管理（删除/替换）
                         - 后台完成实际上传并关联到对话记录
 
+                        ---
+
                         ### 待开发者验证项
                         | 问题 | 说明 |
                         |------|------|
@@ -334,9 +336,9 @@ class SematticeProjectDeliveryWriteToolServiceTest {
             assertThat(intent.parentReference()).isEqualTo("DAS-A2AFD106");
             assertThat(intent.title()).isEqualTo("对话框支持截图粘贴上传（多张连续）");
             assertThat(intent.description())
-                    .contains("新增当前系统不支持的能力")
                     .contains("剪贴板图片捕获事件监听")
-                    .contains("不同格式图片的兼容");
+                    .contains("不同格式图片的兼容")
+                    .doesNotContain("新增当前系统不支持的能力");
             assertThat(intent.acceptanceCriteria()).containsExactly(
                     "用户在对话框内 Ctrl+V 或 Command+V 可插入本地截图",
                     "支持连续多次粘贴操作（无次数限制）",
@@ -344,6 +346,9 @@ class SematticeProjectDeliveryWriteToolServiceTest {
                     "提供已上传图片的管理（删除/替换）",
                     "后台完成实际上传并关联到对话记录");
             assertThat(intent.intake()).containsEntry("original_report", original);
+            assertThat(intent.intake()).containsEntry(
+                    "classification_reason", "新增当前系统不支持的能力，属于功能增强");
+            assertThat(intent.intake()).containsEntry("pm_assessment", intent.description());
             assertThat((List<String>) intent.intake().get("assumptions")).containsExactly(
                     "技术可行性：浏览器剪贴板 API 对图片访问权限范围",
                     "性能影响：大尺寸图片或高频连续粘贴的资源占用",

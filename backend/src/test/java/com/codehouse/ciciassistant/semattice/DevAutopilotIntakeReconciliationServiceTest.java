@@ -86,8 +86,11 @@ class DevAutopilotIntakeReconciliationServiceTest {
                 .andExpect(jsonPath("$.input.expected_revision").value(1))
                 .andExpect(jsonPath("$.input.patch.acceptance.length()").value(5))
                 .andExpect(jsonPath("$.input.patch.intake.assumptions.length()").value(4))
-                .andExpect(jsonPath("$.input.patch.intake.pm_assessment").value(org.hamcrest.Matchers.containsString(
-                        "剪贴板图片捕获事件监听")))
+                .andExpect(jsonPath("$.input.patch.intake.classification_reason")
+                        .value("新增当前系统不支持的能力，属于功能增强"))
+                .andExpect(jsonPath("$.input.patch.intake.pm_assessment")
+                        .value("需要前端实现剪贴板图片捕获事件监听；需要后端支持图片接收与存储；"
+                                + "需要考虑连续粘贴的队列管理与上传状态提示；需处理不同格式（PNG/JPG/BMP）的图片兼容"))
                 .andRespond(withSuccess("{\"status\":\"succeeded\",\"result\":{\"revision\":2}}",
                         MediaType.APPLICATION_JSON));
         server.expect(requestTo("https://semattice.example.test/v1/capabilities/runtime.record.get/invoke"))
@@ -227,6 +230,8 @@ class DevAutopilotIntakeReconciliationServiceTest {
                 - 粘贴后即时显示缩略图预览
                 - 提供已上传图片的管理（删除/替换）
                 - 后台完成实际上传并关联到对话记录
+
+                ---
 
                 #### 待开发者验证项
                 | 问题 | 说明 |

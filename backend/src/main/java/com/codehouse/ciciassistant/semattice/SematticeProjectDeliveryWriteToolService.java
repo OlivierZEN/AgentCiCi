@@ -214,7 +214,7 @@ public class SematticeProjectDeliveryWriteToolService {
                 5. 只有分类、父项目/父需求或用户真正期望无法判断时，才问一个业务语言的聚焦问题。不要一次列多个问题。
                 6. 信息充分时展示分类依据、专业整理和待开发者验证项，请用户只回复“确认提交需求”“确认提交缺陷”“确认提交变更”或“确认提交”。
                 7. 用户取消时明确回复已取消；不得保留可确认状态。
-                8. 可见草稿与最后的 JSON 注释必须使用同一份结构化事实：可见的分析要点必须完整进入 `pm_assessment`，可见的验收标准必须逐条完整进入 `acceptance_criteria`，可见的影响分析必须逐条完整进入 `impact_analysis`，待开发者验证项必须完整进入 `assumptions`。不得用“后续细化”“待进一步评估”等通用占位句替换已经生成的具体内容。
+                8. 可见草稿与最后的 JSON 注释必须使用同一份结构化事实：分类理由单独进入 `classification_reason`；可见的分析要点必须逐条完整进入 `pm_assessment`，不得混入分类理由；可见的验收标准必须逐条完整进入 `acceptance_criteria`，可见的影响分析必须逐条完整进入 `impact_analysis`，待开发者验证项必须完整进入 `assumptions`。不得用“后续细化”“待进一步评估”等通用占位句替换已经生成的具体内容。
 
                 如果是创建项目，严格按以下中文结构输出，其中占位符必须替换为你理解出的完整项目名称：
                 我理解你要创建一个研发项目。
@@ -225,7 +225,7 @@ public class SematticeProjectDeliveryWriteToolService {
                 如果是创建任务，先识别父需求和完整任务标题；信息完整时给出草案，并以 `确认创建任务：需求=<父需求编号或标题>；标题=<完整任务标题>` 作为唯一确认文本。
 
                 需求、缺陷或变更草案必须在回复最后附加一条 HTML 注释，页面不会向用户展示，但服务端会验证。不要使用 Markdown 代码块。JSON 必须是单个合法对象：
-                <!-- DEV_AUTOPILOT_INTAKE_V1 {"classification":"requirement|defect|change","project":"父项目编号或名称","requirement":"变更的父需求编号或标题，其他类型为空","title":"专业标题","original_report":"首次用户消息逐字原文","pm_assessment":"产品经理分析与分类依据","priority":"P0|P1|P2|P3","severity":"critical|high|medium|low，非缺陷用空字符串","environment":"缺陷环境或待开发者验证","reproduction_steps":["缺陷复现线索"],"expected_result":"缺陷预期或空字符串","actual_result":"缺陷实际或空字符串","acceptance_criteria":["需求验收标准"],"impact_analysis":["变更影响"],"user_supplements":["后续用户消息逐字原文"],"assumptions":["待开发者验证的假设"],"clarification_question":"仍需用户回答的唯一问题，无则空字符串","ready_for_confirmation":true,"cancelled":false} -->
+                <!-- DEV_AUTOPILOT_INTAKE_V1 {"classification":"requirement|defect|change","classification_reason":"事项分类理由","project":"父项目编号或名称","requirement":"变更的父需求编号或标题，其他类型为空","title":"专业标题","original_report":"首次用户消息逐字原文","pm_assessment":"仅包含产品经理分析要点，不重复分类理由","priority":"P0|P1|P2|P3","severity":"critical|high|medium|low，非缺陷用空字符串","environment":"缺陷环境或待开发者验证","reproduction_steps":["缺陷复现线索"],"expected_result":"缺陷预期或空字符串","actual_result":"缺陷实际或空字符串","acceptance_criteria":["需求验收标准"],"impact_analysis":["变更影响"],"user_supplements":["后续用户消息逐字原文"],"assumptions":["待开发者验证的假设"],"clarification_question":"仍需用户回答的唯一问题，无则空字符串","ready_for_confirmation":true,"cancelled":false} -->
 
                 类型特定要求：
                 - requirement 必须有 project、title、pm_assessment、priority 和至少一条 acceptance_criteria。
@@ -820,12 +820,9 @@ public class SematticeProjectDeliveryWriteToolService {
             case "change" -> "产品经理根据用户原始描述识别为对已确认范围或规则的调整，分类为变更";
             default -> "产品经理根据用户原始描述识别为新增能力或业务结果，分类为需求";
         };
-        List<String> assessmentParts = new ArrayList<>();
-        if (!classificationReason.isBlank()) {
-            assessmentParts.add(classificationReason);
-        }
-        assessmentParts.addAll(analysisPoints);
-        String assessment = assessmentParts.isEmpty() ? defaultAssessment : String.join("；", assessmentParts);
+        String assessment = analysisPoints.isEmpty()
+                ? (classificationReason.isBlank() ? defaultAssessment : classificationReason)
+                : String.join("；", analysisPoints);
         List<String> parsedReproduction = sectionBulletItems(draft, "复现步骤", "复现线索");
         List<String> reproduction = "defect".equals(classification)
                 ? (parsedReproduction.isEmpty()
@@ -855,6 +852,8 @@ public class SematticeProjectDeliveryWriteToolService {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("version", "DEV_AUTOPILOT_INTAKE_V1");
         payload.put("classification", classification);
+        payload.put("classification_reason",
+                classificationReason.isBlank() ? defaultAssessment : classificationReason);
         payload.put("project", project);
         payload.put("requirement", requirement);
         payload.put("title", title);
@@ -906,7 +905,7 @@ public class SematticeProjectDeliveryWriteToolService {
             Matcher bullet = Pattern.compile("^(?:[-*•]|\\d+[.)、])\\s*(.+)$").matcher(line);
             if (bullet.matches()) {
                 String item = normalizeText(bullet.group(1));
-                if (!item.isBlank()) {
+                if (isSemanticText(item)) {
                     items.add(item);
                 }
             }
@@ -944,8 +943,8 @@ public class SematticeProjectDeliveryWriteToolService {
             }
             String label = normalizeText(cells[0]);
             String detail = normalizeText(cells[1]);
-            if (label.isBlank() || detail.isBlank() || "问题".equals(label) || "说明".equals(detail)
-                    || label.matches("-+") || detail.matches("-+")) {
+            if (!isSemanticText(label) || !isSemanticText(detail)
+                    || "问题".equals(label) || "说明".equals(detail)) {
                 continue;
             }
             items.add(label + "：" + detail);
@@ -955,6 +954,12 @@ public class SematticeProjectDeliveryWriteToolService {
 
     private static String stripMarkdown(String value) {
         return value == null ? "" : value.replace("**", "").replace("`", "").trim();
+    }
+
+    /** Rejects Markdown separators and punctuation-only pseudo values from semantic business arrays. */
+    private static boolean isSemanticText(String value) {
+        String normalized = normalizeText(value);
+        return !normalized.isBlank() && Pattern.compile("[\\p{L}\\p{N}]").matcher(normalized).find();
     }
 
     /** Reads either a prose label (`标题：...`) or a Markdown table row (`| 标题 | ... |`). */
@@ -1084,7 +1089,7 @@ public class SematticeProjectDeliveryWriteToolService {
         List<String> result = new ArrayList<>();
         node.forEach(item -> {
             String value = normalizeText(item.asText());
-            if (!value.isBlank()) {
+            if (isSemanticText(value)) {
                 result.add(value);
             }
         });
