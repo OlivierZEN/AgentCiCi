@@ -1,7 +1,7 @@
 ---
 task_id: TASK-298
 feature_id: FEAT-179
-status: in_progress
+status: review
 priority: critical
 owner_role: fullstack-agent
 claimed_by: codex
@@ -26,11 +26,11 @@ claimed_by: codex
 
 ## 验证结果
 
-- 正在按用户确认移除厂商文档、HTTPS 校验、证据引用和对应页面展示，并允许目录阶段先选择未确认能力的模型。
+- 已移除厂商文档、HTTPS 校验、证据引用和对应页面展示；目录阶段允许直接选择未确认能力的模型，人工确认只提交模型与能力。
 - 后端 `mvn -q -DskipTests compile` 与 `mvn -q -DskipTests package`、前端定向 5 项与 production build 通过。
 - Spring 集成仍在应用上下文创建前被既有 `agentcici_test` Flyway V81 checksum 漂移阻断；未执行 repair 或修改历史迁移。
-- backend/frontend 已从本地 `main@f96efaffa9c0` 构建并发布为 `2.8.61-dev.f96efaf`；两容器 healthy/restart=0，页面制品含确认/撤销入口，`/platform/models` 返回 200、匿名模型 API 返回 401，完整 `./stack verify` 通过。
+- backend/frontend 已从本地 `main@1979c6291dbf` 构建并发布为 `2.8.61-dev.1979c62`；两容器 healthy/restart=0，页面制品含“可直接加入平台目录，能力在后续确认”，`/platform/models` 返回 200、匿名模型 API 返回 401，完整 `./stack verify` 通过。
 
 ## 下一步
 
-- 完成简化后的确认/撤销、目录先选模型和场景候选失效验证后，发布本地开发环境；UAT 仍需确认实际启用模型能力并配置每个场景后验收。
+- 使用受权平台会话完成目录先选模型、人工确认/撤销和场景候选失效的业务验收；UAT 仍需确认实际启用模型能力并配置每个场景后验收。

@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-13T07:22:00Z
+updated_at: 2026-08-13T08:53:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-13T07:22:00Z
+last_run_at: 2026-08-13T08:53:00Z
 last_run_status: partial
 ---
 
 # Test Report
+
+## 2026-08-13 TASK-298 人工确认简化与目录先选模型
+
+- 代码：提交 `1979c62` 将确认请求收敛为模型与能力，移除文档 URL、证据引用及其校验/展示；全部模型目录允许直接选择，场景候选仍只接受已确认且能力/协议兼容的模型。
+- 后端：`mvn -q -DskipTests compile`、`mvn -q -DskipTests package` 和 `git diff --check` 通过。
+- 前端：`npm test -- --run src/platform/pages/PlatformModelsPage.test.tsx` 为 1 文件/5 项通过；`npm run build` 通过，仅保留既有 chunk-size warning。
+- 集成边界：`ModelProviderServiceIntegrationTest,PlatformModelProviderIntegrationTest` 在执行断言前被共享 `agentcici_test` 的 Flyway V81 checksum 漂移阻断（已应用 `2112500543`，本地解析 `379982424`）。未执行 repair、未修改历史迁移；本轮用例已完成编译。
+- 本地开发环境：backend/frontend 从本地 `main@1979c6291dbf` 构建为 `2.8.61-dev.1979c62`；目标容器均为 `healthy/restart=0`，镜像 revision/version 一致。`/platform/models`=200，匿名 `/api/platform/models/providers`=401，部署前端制品包含“可直接加入平台目录，能力在后续确认”，完整 `./stack verify` 通过。
+- 状态：`passed_with_integration_environment_blocker`；UAT/生产未修改，受权业务交互待验收。
 
 ## 2026-08-13 TASK-298 场景模型能力过滤与推荐说明
 

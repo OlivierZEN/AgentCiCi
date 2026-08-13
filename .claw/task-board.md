@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-13T08:39:15Z
+updated_at: 2026-08-13T08:53:00Z
 updated_by: codex
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-298 - 场景模型能力过滤与推荐说明
 
-- status: `in_progress`
+- status: `review`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - claimed_by: `codex`
 - spec_path: `docs/specs/FEAT-179-unified-model-invocation-governance.md`
 - task_status_path: `.claw/tasks/TASK-298.md`
 - blocked_by: `none`
-- next_action: 移除文档/证据输入与校验，允许目录先选模型；提交后从本地 main 发布开发环境并回读。
+- next_action: 使用受权平台会话验证目录先选模型、人工确认与撤销、场景候选过滤；UAT/生产仍按独立发布流程处理。
 
 ### TASK-297 - 统一模型调用治理
 
