@@ -29,8 +29,8 @@ integration_id: INT-015
 ## 历史数据纠正与字段级回执
 
 - 已确认草稿、用户确认指令和 Semattice 成功回执必须继续保存在同一租户会话中；历史纠正只能从这组受信消息恢复，不能接受调用方提交任意业务字段。
-- 租户 `ORG_ADMIN` 可针对明确的 `session_id + record_id` 发起纠正。服务端必须确认：会话属于当前租户、会话中存在该记录 ID 的成功回执、草稿在回执之前、目标记录的 `intake.conversation_id` 与会话一致、标题与分类一致。
-- 纠正通过产品经理 SERVICE 身份调用 Semattice 官方 `runtime.record.update`，使用 `expected_revision` 乐观锁；禁止 AgentCiCi 直接写 Semattice 数据库。
+- 租户 `ORG_ADMIN` 可针对明确的 `session_id + record_id` 发起纠正；平台 `PLATFORM_ADMIN` 可在租户生命周期维护入口发起同一受控动作。两类调用都不能提交业务字段。服务端必须确认：会话属于目标租户、会话中存在该记录 ID 的成功回执、草稿在回执之前、目标记录的 `intake.conversation_id` 与会话一致、标题与分类一致。
+- 纠正通过产品经理 SERVICE 身份调用 Semattice 官方 `runtime.record.update`，使用 `expected_revision` 乐观锁；SERVICE 委托人固定为原确认会话的人类成员，平台维护人员不替代原确认人、不能获得其业务数据权限。禁止 AgentCiCi 直接写 Semattice 数据库。
 - 原确认人、确认时间和 correlation ID 保持不变；只以已确认草稿恢复专业摘要、验收/影响/复现字段与 `intake` 语义字段，并追加纠正时间、纠正人和来源审计。
 - 写后必须再次调用 `runtime.record.get`，逐字段比对 patch；回执除 `record_id/revision` 外还必须返回内容摘要 `content_digest`，只有逐字段一致才允许标记 `readback_verified=true`。
 - 重复纠正必须幂等：字段已经一致时不增加 revision，返回 `UNCHANGED`。
