@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-13T11:49:00Z
+updated_at: 2026-08-13T12:10:00Z
 updated_by: codex
 phase: review
-active_task: TASK-298
-next_action: "使用受权平台会话完成 TASK-298 的模型目录、能力确认与撤销业务验收；TASK-301 已完成。"
+active_task: TASK-302
+next_action: "平台运营人员刷新系统 API 页面，确认 AgentCiCi 与 Semattice 提供方目录、列表、抽屉和文档深链；UAT/生产未修改。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-302 系统 API 目录加载错误已修复：页面曾把 SPA 路由 `/platform/system-apis` 当作浏览器 API，收到 `text/html` 后直接 JSON 解析，出现 `Unexpected token '<'`。提交 `b5d189a1` 改用 `/api/platform/system-apis`、显式接受 JSON 并安全处理非 JSON 回应；前端 49 文件/269 项、生产构建、完整 `./stack verify` 通过。backend/frontend 已从本地 `main@b5d189a1` 构建为 `2.8.61-dev.b5d189a`，均 healthy/restart=0；匿名目录接口回读 `401 application/json`。受权页面刷新验收待运营人员完成，UAT/生产未修改。
 
 - TASK-301 / FEAT-182 已完成：第三次故障根因是 `cc-local-stack` 最外层 Nginx 沿用约 1 MB 默认请求体上限，2,199,033 字节请求在进入 AgentCiCi 前被 413 拒绝。`cc-local-stack@5c1f8a7` 已设置 100 MB 并加入 verify 门禁；AgentCiCi `5fa2ee3` 增加 413 专属处置文案和深红高对比错误态。截图中的 2,198,684 字节 PDF 经 `cici.localhost` 正式上传/发布均 HTTP 200，最终 PUBLISHED、25 个切片并保留；2 MiB 边缘探针、前端 8/8、production build 和完整 stack verify 通过。运行前端 `2.8.61-dev.ea1f6ab` 包含修复，当前 main 后续仅有 TASK-302 文档提交；UAT/生产未修改。
 

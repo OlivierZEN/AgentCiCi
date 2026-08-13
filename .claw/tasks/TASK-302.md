@@ -4,7 +4,7 @@ task_id: TASK-302
 feature_id: FEAT-183
 integration_id: INT-019
 status: review
-updated_at: 2026-08-13T12:30:00Z
+updated_at: 2026-08-13T12:10:00Z
 updated_by: codex
 owner_role: fullstack-agent
 spec_path: docs/specs/FEAT-183-system-api-catalog.md
@@ -41,3 +41,10 @@ spec_path: docs/specs/FEAT-183-system-api-catalog.md
 - `https://cici.localhost/platform/system-apis` 返回 200；匿名读取 `/api/platform/system-apis` 返回 401；部署 JS 制品包含系统 API 菜单与权限边界文案。
 - `cc-local-stack ./stack verify` 最终通过，覆盖共享数据库隔离、TLS 边缘、OIDC、应用健康/版本和匿名鉴权边界。
 - 浏览器无运营平台登录态，真实平台账号下的最终视觉/交互验收待人工完成，因此任务保持 `review`。
+
+## 目录加载缺陷修复
+
+- 根因：前端请求 `/platform/system-apis` 命中 SPA fallback，返回 `text/html`；页面直接执行 JSON 解析，向用户暴露 `Unexpected token '<'`。
+- 修复：浏览器请求改为 `/api/platform/system-apis`，显式声明 `Accept: application/json`，并使用共享安全解析器处理非 JSON 回应；业务后端映射和鉴权逻辑未改变。
+- 回归：新增 API namespace、HTML fallback 和结构化错误信息测试；前端全量 49 文件/269 项与生产构建通过。
+- 本地环境：修复提交 `b5d189a1` 已进入本地 `main`；backend/frontend 均运行 `2.8.61-dev.b5d189a`、healthy/restart=0，匿名接口为 `401 application/json`，完整 `./stack verify` 通过。

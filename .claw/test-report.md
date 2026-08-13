@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-13T11:49:00Z
+updated_at: 2026-08-13T12:10:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-13T11:49:00Z
-last_run_status: passed
+last_run_at: 2026-08-13T12:10:00Z
+last_run_status: passed_with_authorized_visual_pending
 ---
 
 # Test Report
+
+## 2026-08-13 TASK-302 系统 API 目录加载修复
+
+- 根因复现：`GET /platform/system-apis` 返回 `200 text/html` SPA 页面；真正的浏览器 API `GET /api/platform/system-apis` 匿名返回 `401 application/json`。
+- 代码：提交 `b5d189a1` 使用统一 `PLATFORM_API_BASE`，显式 `Accept: application/json`，并把 HTML/非 JSON 回应转换为可操作的版本一致性提示。
+- 前端：定向 1 文件/5 项、全量 49 文件/269 项通过；`npm run build` 与 `git diff --check` 通过，仅保留既有 chunk-size warning。
+- 本地开发环境：backend/frontend 从本地 `main@b5d189a1` 构建为 `2.8.61-dev.b5d189a`，均 healthy/restart=0；目标页面 200、匿名目录 API 为 `401 application/json`，完整 `./stack verify` 通过。
+- 启动说明：首次全栈启动被无关 DevAutopilot 容器一次性退出 143 中断；该容器随后自行恢复为 healthy/restart=0，启动前端后完整门禁通过，未修改或提交 DevAutopilot 源码。
+- 状态：`passed_with_authorized_visual_pending`；UAT/生产未修改。
 
 ## 2026-08-13 TASK-301 知识库 PDF 上传门禁修复
 
