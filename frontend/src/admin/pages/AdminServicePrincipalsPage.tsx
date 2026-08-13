@@ -41,7 +41,17 @@ type RotateSecretResult = {
 type DevAutopilotTeam = {
   enabled: boolean;
   actualState: string;
-  resources: Array<{ logicalRole: string; resourceType: string; displayName: string; externalId: string; primary: boolean }>;
+  resources: DevAutopilotResource[];
+};
+
+type DevAutopilotResource = {
+  logicalRole: string;
+  resourceType: string;
+  displayName: string;
+  externalId: string;
+  primary: boolean;
+  maxInstances: number;
+  runtimePolicyRevision: number;
 };
 
 type TeamResourceResult = RotateSecretResult & {
@@ -154,11 +164,14 @@ export default function AdminServicePrincipalsPage() {
   const [devAutopilotTeam, setDevAutopilotTeam] = useState<DevAutopilotTeam | null>(null);
   const [members, setMembers] = useState<HumanMember[]>([]);
   const [teamMemberDialogOpen, setTeamMemberDialogOpen] = useState(false);
-  const [teamMemberForm, setTeamMemberForm] = useState<{ role: "product-managers" | "developers"; displayName: string; ownerMemberId: string }>({
+  const [teamMemberForm, setTeamMemberForm] = useState<{ role: "product-managers" | "developers"; displayName: string; ownerMemberId: string; maxInstances: number }>({
     role: "developers",
     displayName: "",
     ownerMemberId: "",
+    maxInstances: 1,
   });
+  const [runtimePolicyResource, setRuntimePolicyResource] = useState<DevAutopilotResource | null>(null);
+  const [runtimePolicyMax, setRuntimePolicyMax] = useState(1);
   const [editingPrincipal, setEditingPrincipal] = useState<ServicePrincipal | null>(null);
   const [profileForm, setProfileForm] = useState({ displayName: "", ownerMemberId: "" });
   const [accessMembers, setAccessMembers] = useState<DevAutopilotAccessMember[]>([]);
@@ -170,6 +183,9 @@ export default function AdminServicePrincipalsPage() {
     [items, selectedId],
   );
   const hasProductManager = devAutopilotTeam?.resources.some((item) => item.logicalRole === "product_manager" && item.resourceType === "SERVICE_PRINCIPAL" && item.primary) ?? false;
+  const selectedDeveloperResource = useMemo(() => devAutopilotTeam?.resources.find((item) =>
+    item.externalId === selected?.principalId && item.logicalRole === "developer" && item.resourceType === "SERVICE_PRINCIPAL") ?? null,
+  [devAutopilotTeam, selected?.principalId]);
   const ownerCandidates = useMemo(() => servicePrincipalPresentation.activeOwnerCandidates(members), [members]);
 
   const load = async (options?: { quiet?: boolean }) => {
@@ -349,7 +365,7 @@ export default function AdminServicePrincipalsPage() {
 
   const openTeamMemberDialog = () => {
     const defaultOwnerId = ownerCandidates[0]?.id ?? "";
-    setTeamMemberForm({ role: "developers", displayName: "", ownerMemberId: defaultOwnerId });
+    setTeamMemberForm({ role: "developers", displayName: "", ownerMemberId: defaultOwnerId, maxInstances: 1 });
     setTeamMemberDialogOpen(true);
   };
 
@@ -361,7 +377,11 @@ export default function AdminServicePrincipalsPage() {
       const res = await fetch(adminApi.devAutopilotTeam(`/${teamMemberForm.role}`), {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ displayName: teamMemberForm.displayName.trim(), ownerMemberId: teamMemberForm.ownerMemberId }),
+        body: JSON.stringify({
+          displayName: teamMemberForm.displayName.trim(),
+          ownerMemberId: teamMemberForm.ownerMemberId,
+          maxInstances: teamMemberForm.role === "developers" ? teamMemberForm.maxInstances : undefined,
+        }),
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
@@ -376,6 +396,37 @@ export default function AdminServicePrincipalsPage() {
       setNotice(`“${result.resource.displayName}”已创建。Client Secret 仅本次显示，请立即写入受管密钥库。`);
     } catch {
       setNotice("研发团队机器主体创建失败，请稍后重试");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openRuntimePolicyEditor = () => {
+    if (!selectedDeveloperResource) return;
+    setRuntimePolicyResource(selectedDeveloperResource);
+    setRuntimePolicyMax(selectedDeveloperResource.maxInstances);
+  };
+
+  const updateRuntimePolicy = async () => {
+    if (!runtimePolicyResource || runtimePolicyMax < 1 || runtimePolicyMax > 64) return;
+    setSubmitting(true);
+    setNotice("");
+    try {
+      const res = await fetch(adminApi.devAutopilotTeam(`/developers/${encodeURIComponent(runtimePolicyResource.externalId)}/runtime-policy`), {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ maxInstances: runtimePolicyMax, expectedRevision: runtimePolicyResource.runtimePolicyRevision }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        setNotice(json.message ?? "机器开发者实例上限更新失败；请刷新后重试");
+        return;
+      }
+      setRuntimePolicyResource(null);
+      setNotice(`“${runtimePolicyResource.displayName}”最多可并行运行 ${runtimePolicyMax} 个智能体实例。新 OACT 与后续租约将使用该上限。`);
+      await load({ quiet: true });
+    } catch {
+      setNotice("机器开发者实例上限更新失败，请稍后重试");
     } finally {
       setSubmitting(false);
     }
@@ -532,6 +583,11 @@ export default function AdminServicePrincipalsPage() {
                     调整授权范围
                   </button>
                 )}
+                {selectedDeveloperResource && selected.lifecycleStatus !== "REVOKED" && (
+                  <button type="button" className="secondary" onClick={openRuntimePolicyEditor} disabled={submitting}>
+                    设置实例上限
+                  </button>
+                )}
                 {selected.lifecycleStatus === "ACTIVE" && (
                   <button type="button" className="secondary" onClick={() => setConfirmAction("suspend")} disabled={submitting}>
                     暂停主体
@@ -554,6 +610,8 @@ export default function AdminServicePrincipalsPage() {
                     <div><dt>人类负责人</dt><dd>{servicePrincipalPresentation.ownerLabel(selected)}</dd></div>
                     <div><dt>创建时间</dt><dd>{formatDateTime(selected.createdAt)}</dd></div>
                     <div><dt>上次轮换</dt><dd>{formatDateTime(selected.lastRotatedAt)}</dd></div>
+                    {selectedDeveloperResource && <div><dt>并行实例上限</dt><dd>{selectedDeveloperResource.maxInstances} 个</dd></div>}
+                    {selectedDeveloperResource && <div><dt>策略版本</dt><dd>r{selectedDeveloperResource.runtimePolicyRevision}</dd></div>}
                   </dl>
                 </div>
 
@@ -686,11 +744,42 @@ export default function AdminServicePrincipalsPage() {
                 </select>
                 <small>负责人必须是当前租户的有效人类成员，并承担该主体的日常治理责任。</small>
               </label>
+              {teamMemberForm.role === "developers" && (
+                <label className="service-principal-dialog__field">
+                  <span>并行实例上限</span>
+                  <input type="number" min={1} max={64} value={teamMemberForm.maxInstances}
+                    onChange={(event) => setTeamMemberForm((current) => ({ ...current, maxInstances: Number(event.target.value) }))}
+                    disabled={submitting} />
+                  <small>同一机器开发者可同时持有的执行租约数。排队和确认中的任务不占用实例。</small>
+                </label>
+              )}
             </div>
             <div className="service-principal-dialog__actions">
               <button type="button" className="secondary" onClick={() => setTeamMemberDialogOpen(false)} disabled={submitting}>取消</button>
-              <button type="button" className="service-principal-button--primary" onClick={() => void createDevAutopilotTeamMember()} disabled={submitting || !teamMemberForm.displayName.trim() || !teamMemberForm.ownerMemberId || (teamMemberForm.role === "product-managers" && hasProductManager)}>
+              <button type="button" className="service-principal-button--primary" onClick={() => void createDevAutopilotTeamMember()} disabled={submitting || !teamMemberForm.displayName.trim() || !teamMemberForm.ownerMemberId || teamMemberForm.maxInstances < 1 || teamMemberForm.maxInstances > 64 || (teamMemberForm.role === "product-managers" && hasProductManager)}>
                 {submitting ? "创建中…" : "创建主体"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {runtimePolicyResource && (
+        <div className="service-principal-dialog-backdrop" role="presentation">
+          <section className="service-principal-dialog" role="dialog" aria-modal="true" aria-labelledby="runtime-policy-title">
+            <button type="button" className="service-principal-dialog__close" aria-label="关闭实例上限设置" onClick={() => setRuntimePolicyResource(null)} disabled={submitting}>×</button>
+            <p className="service-principals-page__eyebrow">EXECUTION POLICY</p>
+            <h2 id="runtime-policy-title">设置并行实例上限</h2>
+            <p>限制“{runtimePolicyResource.displayName}”同时受理的开发任务。变更不终止已运行实例；Semattice 在后续原子租约中执行新上限。</p>
+            <label className="service-principal-dialog__field">
+              <span>并行实例上限</span>
+              <input type="number" min={1} max={64} value={runtimePolicyMax} onChange={(event) => setRuntimePolicyMax(Number(event.target.value))} autoFocus disabled={submitting} />
+              <small>允许 1–64。当前策略版本 r{runtimePolicyResource.runtimePolicyRevision}，并发更新会失败并要求刷新。</small>
+            </label>
+            <div className="service-principal-dialog__actions">
+              <button type="button" className="secondary" onClick={() => setRuntimePolicyResource(null)} disabled={submitting}>取消</button>
+              <button type="button" className="service-principal-button--primary" onClick={() => void updateRuntimePolicy()} disabled={submitting || runtimePolicyMax < 1 || runtimePolicyMax > 64 || runtimePolicyMax === runtimePolicyResource.maxInstances}>
+                {submitting ? "保存中…" : "保存上限"}
               </button>
             </div>
           </section>

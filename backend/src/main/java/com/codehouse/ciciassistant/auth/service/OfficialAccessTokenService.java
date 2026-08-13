@@ -199,10 +199,21 @@ public class OfficialAccessTokenService {
                                                 String tenantId,
                                                 String companyId,
                                                 List<String> requestedScopes,
+                                                Integer maxInstances) {
+        return issueForSematticeServiceInternal(principalId, ownerPrincipalId, clientId, tenantId, companyId,
+                requestedScopes, null, null, "ACTIVE", maxInstances);
+    }
+
+    public IssuedToken issueForSematticeService(String principalId,
+                                                String ownerPrincipalId,
+                                                String clientId,
+                                                String tenantId,
+                                                String companyId,
+                                                List<String> requestedScopes,
                                                 String delegatedByPrincipalId,
                                                 String delegationPolicy) {
         return issueForSematticeServiceInternal(principalId, ownerPrincipalId, clientId, tenantId, companyId,
-                requestedScopes, delegatedByPrincipalId, delegationPolicy, "ACTIVE");
+                requestedScopes, delegatedByPrincipalId, delegationPolicy, "ACTIVE", null);
     }
 
     public IssuedToken issueForSematticeServiceProjection(String principalId,
@@ -212,7 +223,7 @@ public class OfficialAccessTokenService {
                                                           String companyId,
                                                           String lifecycleStatus) {
         return issueForSematticeServiceInternal(principalId, ownerPrincipalId, clientId, tenantId, companyId,
-                List.of("identity.principal.sync"), null, null, lifecycleStatus);
+                List.of("identity.principal.sync"), null, null, lifecycleStatus, null);
     }
 
     private IssuedToken issueForSematticeServiceInternal(String principalId,
@@ -223,7 +234,8 @@ public class OfficialAccessTokenService {
                                                           List<String> requestedScopes,
                                                           String delegatedByPrincipalId,
                                                           String delegationPolicy,
-                                                          String lifecycleStatus) {
+                                                          String lifecycleStatus,
+                                                          Integer maxInstances) {
         requireEnabled();
         requireUuid(principalId, "service principal");
         requireUuid(ownerPrincipalId, "service owner");
@@ -241,6 +253,9 @@ public class OfficialAccessTokenService {
         if ("REVOKED".equals(lifecycle)) lifecycle = "DISABLED";
         if (!List.of("ACTIVE", "SUSPENDED", "DISABLED").contains(lifecycle)) {
             throw new ForbiddenException("机器账户生命周期状态无效");
+        }
+        if (maxInstances != null && (maxInstances < 1 || maxInstances > 64)) {
+            throw new ForbiddenException("机器开发者实例上限无效");
         }
 
         Instant now = Instant.now();
@@ -260,6 +275,9 @@ public class OfficialAccessTokenService {
                 .claim("scope", String.join(" ", issuedScopes))
                 .claim("actor_type", "service")
                 .claim("authorized_party", "agentcici");
+        if (maxInstances != null) {
+            builder.claim("max_instances", maxInstances);
+        }
         if (hasText(delegatedByPrincipalId)) {
             requireUuid(delegatedByPrincipalId, "delegating principal");
             builder.claim("delegated_by_principal_id", delegatedByPrincipalId);

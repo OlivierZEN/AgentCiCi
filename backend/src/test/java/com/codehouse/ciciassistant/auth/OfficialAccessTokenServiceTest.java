@@ -202,6 +202,22 @@ class OfficialAccessTokenServiceTest {
                 "33333333-3333-4333-8333-333333333333", "orgaaaaaaaaaaaaaaaaa",
                 List.of("runtime.record.delete"));
         assertThat(deleteToken.scopes()).containsExactly("runtime.record.delete");
+
+        OfficialAccessTokenService.IssuedToken developerToken = service.issueForSematticeService(
+                principalId, ownerPrincipalId, "agentcici-data-sync",
+                "33333333-3333-4333-8333-333333333333", "orgaaaaaaaaaaaaaaaaa",
+                List.of("record.read"), 7);
+        Claims developerClaims = Jwts.parser().verifyWith(KeyFactory.getInstance("RSA").generatePublic(new RSAPublicKeySpec(
+                        ((RSAPrivateCrtKey) keys.getPrivate()).getModulus(),
+                        ((RSAPrivateCrtKey) keys.getPrivate()).getPublicExponent())))
+                .build().parseSignedClaims(developerToken.token()).getPayload();
+        assertThat(developerClaims.get("max_instances", Integer.class)).isEqualTo(7);
+        assertThatThrownBy(() -> service.issueForSematticeService(
+                principalId, ownerPrincipalId, "agentcici-data-sync",
+                "33333333-3333-4333-8333-333333333333", "orgaaaaaaaaaaaaaaaaa",
+                List.of("record.read"), 65))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessageContaining("实例上限");
         assertThatThrownBy(() -> service.issueForSematticeService(
                 principalId, ownerPrincipalId, "agentcici-data-sync", "tenant", "company", List.of("audit.read")))
                 .isInstanceOf(ForbiddenException.class)

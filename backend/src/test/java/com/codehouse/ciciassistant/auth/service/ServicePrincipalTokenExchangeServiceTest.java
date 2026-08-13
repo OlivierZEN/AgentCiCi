@@ -39,6 +39,7 @@ class ServicePrincipalTokenExchangeServiceTest {
                 eq("https://sso.example/realms/agentcici"), eq("service-subject"),
                 eq("service-client"), eq("service-client"), eq(OfficialAccessTokenService.SEMATTICE_AUDIENCE));
         assertThat(sql.getValue()).contains("binding.semattice_tenant_id")
+                .contains("resource.max_instances", "activation.actual_state='ACTIVE'")
                 .doesNotContain("sematrice_tenant_id");
     }
 }

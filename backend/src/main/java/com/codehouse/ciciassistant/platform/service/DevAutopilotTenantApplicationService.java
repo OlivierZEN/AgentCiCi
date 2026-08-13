@@ -267,18 +267,49 @@ public class DevAutopilotTenantApplicationService {
     }
 
     @Transactional
-    public TeamResourceView addDeveloper(String companyId, String displayName, String actorMemberId, String ownerMemberId) {
+    public TeamResourceView addDeveloper(String companyId, String displayName, String actorMemberId,
+                                         String ownerMemberId, int maxInstances) {
         Row activation = requireExisting(companyId);
         if (!"ACTIVE".equals(activation.actualState()) || developerScopes.isEmpty()) throw new ForbiddenException("DevAutopilot is not ready to create a developer identity");
         require(displayName, "displayName");
+        requireMaxInstances(maxInstances);
         Map<String, Object> principal = principals.create(companyId, actorMemberId, ownerMemberId, displayName, "THIRD_PARTY",
                 OfficialAccessTokenService.SEMATTICE_AUDIENCE, null, developerScopes);
         String principalId = (String) principal.get("principalId");
-        resource(activation.id(), "developer", "SERVICE_PRINCIPAL", generatedAlias("developer"), displayName, principalId, false);
+        resource(activation.id(), "developer", "SERVICE_PRINCIPAL", generatedAlias("developer"), displayName,
+                principalId, false, maxInstances);
         principals.synchronizeProjection(companyId, principalId, actorMemberId);
         reconcileAuthorizationTemplate(companyId, activation.id());
         audit.log(companyId, actorMemberId, "ORG_ADMIN", "tenant_application.developer_added", "tenant_application", activation.id(), "DevAutopilot developer resource added");
         return teamResource(activation.id(), principal);
+    }
+
+    @Transactional
+    public ResourceView updateDeveloperRuntimePolicy(String companyId, String principalId, int maxInstances,
+                                                     long expectedRevision, String actorMemberId) {
+        Row activation = requireExisting(companyId);
+        if (!"ACTIVE".equals(activation.actualState())) {
+            throw new ForbiddenException("DevAutopilot 应用未运行，不能调整机器开发者实例上限");
+        }
+        require(principalId, "principalId");
+        requireMaxInstances(maxInstances);
+        if (expectedRevision < 1) throw new IllegalArgumentException("expectedRevision must be at least 1");
+        ResourceView before = developerResource(activation.id(), principalId);
+        int updated = jdbc.update("""
+                UPDATE tenant_application_resource
+                SET max_instances=?,runtime_policy_revision=runtime_policy_revision+1,updated_at=CURRENT_TIMESTAMP
+                WHERE activation_id=? AND external_id=? AND logical_role='developer'
+                  AND resource_type='SERVICE_PRINCIPAL' AND runtime_policy_revision=?
+                """, maxInstances, activation.id(), principalId, expectedRevision);
+        if (updated != 1) {
+            throw new ConflictException("机器开发者运行策略已变化，请刷新后重试");
+        }
+        ResourceView after = developerResource(activation.id(), principalId);
+        audit.log(companyId, actorMemberId, "ORG_ADMIN", "tenant_application.developer_runtime_policy_updated",
+                "service_principal", principalId,
+                "max_instances=" + before.maxInstances() + "->" + after.maxInstances()
+                        + "; revision=" + before.runtimePolicyRevision() + "->" + after.runtimePolicyRevision());
+        return after;
     }
 
     private View transition(String companyId, String target, String platformActor) {
@@ -289,7 +320,7 @@ public class DevAutopilotTenantApplicationService {
     }
 
     private void initializeProductManager(String companyId, String activationId, String ownerMemberId) {
-        List<ResourceView> resources = jdbc.query("SELECT logical_role,resource_type,resource_alias,display_name,external_id,lifecycle_state,is_primary FROM tenant_application_resource WHERE activation_id=? ORDER BY logical_role,resource_type", (rs,n) -> new ResourceView(rs.getString(1),rs.getString(2),rs.getString(3),rs.getString(4),rs.getString(5),rs.getString(6),rs.getBoolean(7)), activationId);
+        List<ResourceView> resources = jdbc.query("SELECT logical_role,resource_type,resource_alias,display_name,external_id,lifecycle_state,is_primary,max_instances,runtime_policy_revision FROM tenant_application_resource WHERE activation_id=? ORDER BY logical_role,resource_type", (rs,n) -> resourceView(rs), activationId);
         boolean hasPrimaryAgent = resources.stream().anyMatch(resource -> "product_manager".equals(resource.logicalRole()) && "AGENT".equals(resource.resourceType()) && resource.primary());
         boolean hasPrimaryPrincipal = resources.stream().anyMatch(resource -> "product_manager".equals(resource.logicalRole()) && "SERVICE_PRINCIPAL".equals(resource.resourceType()) && resource.primary());
         if (hasPrimaryAgent && hasPrimaryPrincipal) {
@@ -329,8 +360,8 @@ public class DevAutopilotTenantApplicationService {
         // Register the application-owned resources before configuring execution.  The binding
         // service derives TENANT_APP_ROLE from this ownership record; reversing this order would
         // silently leave newly activated tenants on the legacy PRIMARY_OWNER-only policy.
-        resource(activationId, "product_manager", "SERVICE_PRINCIPAL", generatedAlias("product-manager"), displayName, principalId, true);
-        resource(activationId, "product_manager", "AGENT", generatedAlias("product-manager-agent"), displayName, agentId, true);
+        resource(activationId, "product_manager", "SERVICE_PRINCIPAL", generatedAlias("product-manager"), displayName, principalId, true, 1);
+        resource(activationId, "product_manager", "AGENT", generatedAlias("product-manager-agent"), displayName, agentId, true, 1);
         execution.configure(companyId, agentId, principalId, true, ownerMemberId);
         return principal;
     }
@@ -423,11 +454,12 @@ public class DevAutopilotTenantApplicationService {
         execution.configure(companyId, target.agentId(), target.servicePrincipalId(), enabled,
                 ownerMemberId(companyId, target.servicePrincipalId()));
     }
-    private void resource(String activationId, String role, String type, String alias, String name, String externalId, boolean primary) {
+    private void resource(String activationId, String role, String type, String alias, String name, String externalId,
+                          boolean primary, int maxInstances) {
         jdbc.update("""
-                INSERT INTO tenant_application_resource(id,activation_id,logical_role,resource_type,resource_alias,display_name,external_id,lifecycle_state,is_primary)
-                VALUES (?,?,?,?,?,?,?,'ACTIVE',?)
-                """, UUID.randomUUID().toString(), activationId, role, type, alias, name, externalId, primary);
+                INSERT INTO tenant_application_resource(id,activation_id,logical_role,resource_type,resource_alias,display_name,external_id,lifecycle_state,is_primary,max_instances)
+                VALUES (?,?,?,?,?,?,?,'ACTIVE',?,?)
+                """, UUID.randomUUID().toString(), activationId, role, type, alias, name, externalId, primary, maxInstances);
     }
 
     SematticeDevAutopilotAuthorizationClient.AuthorizationView reconcileAuthorizationTemplate(String companyId,
@@ -506,12 +538,13 @@ public class DevAutopilotTenantApplicationService {
         ResourceView resource = jdbc.queryForObject("""
                 SELECT resource.logical_role,resource.resource_type,resource.resource_alias,
                        COALESCE(authority.display_name,resource.display_name),resource.external_id,
-                       COALESCE(authority.lifecycle_status,'DISABLED'),resource.is_primary
+                       COALESCE(authority.lifecycle_status,'DISABLED'),resource.is_primary,
+                       resource.max_instances,resource.runtime_policy_revision
                 FROM tenant_application_resource resource
                 LEFT JOIN principal authority ON authority.id=resource.external_id
                 WHERE resource.activation_id=? AND resource.external_id=?
                 """,
-                (rs, n) -> new ResourceView(rs.getString(1), rs.getString(2), rs.getString(3), rs.getString(4), rs.getString(5), rs.getString(6), rs.getBoolean(7)), activationId, principalId);
+                (rs, n) -> resourceView(rs), activationId, principalId);
         return new TeamResourceView(resource, principalId, (String) principal.get("clientId"), (String) principal.get("clientSecret"),
                 (String) principal.get("credentialNotice"));
     }
@@ -559,12 +592,12 @@ public class DevAutopilotTenantApplicationService {
                        CASE WHEN resource.resource_type='SERVICE_PRINCIPAL'
                             THEN COALESCE(authority.lifecycle_status,'DISABLED')
                             ELSE resource.lifecycle_state END,
-                       resource.is_primary
+                       resource.is_primary,resource.max_instances,resource.runtime_policy_revision
                 FROM tenant_application_resource resource
                 LEFT JOIN principal authority ON authority.id=resource.external_id
                 WHERE resource.activation_id=?
                 ORDER BY resource.logical_role,resource.resource_type
-                """, (rs,n)->new ResourceView(rs.getString(1),rs.getString(2),rs.getString(3),rs.getString(4),rs.getString(5),rs.getString(6),rs.getBoolean(7)), row.id());
+                """, (rs,n)->resourceView(rs), row.id());
         return new View(row.companyId(), true, row.templateVersion(), row.desiredState(), row.actualState(), row.sematticeTenantId(), row.metadataVersionId(), row.metadataDigest(),
                 initializationReady(row.companyId(), row.id()), row.lastError(), resources);
     }
@@ -635,11 +668,33 @@ public class DevAutopilotTenantApplicationService {
         return Boolean.TRUE.equals(ready);
     }
     private static void require(String v,String name) { if (v==null||v.isBlank()) throw new IllegalArgumentException(name+" is required"); }
+    private static void requireMaxInstances(int value) {
+        if (value < 1 || value > 64) throw new IllegalArgumentException("maxInstances must be between 1 and 64");
+    }
+    private ResourceView developerResource(String activationId, String principalId) {
+        List<ResourceView> resources = jdbc.query("""
+                SELECT resource.logical_role,resource.resource_type,resource.resource_alias,
+                       COALESCE(authority.display_name,resource.display_name),resource.external_id,
+                       COALESCE(authority.lifecycle_status,'DISABLED'),resource.is_primary,
+                       resource.max_instances,resource.runtime_policy_revision
+                FROM tenant_application_resource resource
+                LEFT JOIN principal authority ON authority.id=resource.external_id
+                WHERE resource.activation_id=? AND resource.external_id=?
+                  AND resource.logical_role='developer' AND resource.resource_type='SERVICE_PRINCIPAL'
+                """, (rs, n) -> resourceView(rs), activationId, principalId);
+        if (resources.size() != 1) throw new ResourceNotFoundException("DevAutopilot machine developer not found");
+        return resources.getFirst();
+    }
+    private static ResourceView resourceView(java.sql.ResultSet rs) throws java.sql.SQLException {
+        return new ResourceView(rs.getString(1), rs.getString(2), rs.getString(3), rs.getString(4),
+                rs.getString(5), rs.getString(6), rs.getBoolean(7), rs.getInt(8), rs.getLong(9));
+    }
     private record Row(String id,String companyId,String templateVersion,String idempotencyKey,String desiredState,String actualState,String sematticeTenantId,String metadataVersionId,String metadataDigest,String lastError) { }
     private record ServiceResource(String id, String externalId, String lifecycleState) { }
     private record BindingTarget(String agentId, String servicePrincipalId) { }
     public record ActivationCommand(String idempotencyKey) { }
-    public record ResourceView(String logicalRole,String resourceType,String resourceAlias,String displayName,String externalId,String lifecycleState,boolean primary) { }
+    public record ResourceView(String logicalRole,String resourceType,String resourceAlias,String displayName,String externalId,
+                               String lifecycleState,boolean primary,int maxInstances,long runtimePolicyRevision) { }
     public record TeamResourceView(ResourceView resource, String principalId, String clientId, String clientSecret, String credentialNotice) { }
     public record ApplicationMemberRoleInput(String memberId, String roleCode) { }
     public record ApplicationMemberAccessView(String memberId,

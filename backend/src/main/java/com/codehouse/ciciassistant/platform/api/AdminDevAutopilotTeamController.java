@@ -6,6 +6,8 @@ import com.codehouse.ciciassistant.platform.service.DevAutopilotTenantApplicatio
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -41,7 +43,16 @@ public class AdminDevAutopilotTeamController {
     @PostMapping("/developers")
     public ApiResponse<DevAutopilotTenantApplicationService.TeamResourceView> createDeveloper(
             @Valid @RequestBody CreateTeamMemberRequest request) {
-        return ApiResponse.ok(applications.addDeveloper(companyId(), request.displayName(), actorMemberId(), request.ownerMemberId()));
+        return ApiResponse.ok(applications.addDeveloper(companyId(), request.displayName(), actorMemberId(),
+                request.ownerMemberId(), request.maxInstances() == null ? 1 : request.maxInstances()));
+    }
+
+    @PutMapping("/developers/{principalId}/runtime-policy")
+    public ApiResponse<DevAutopilotTenantApplicationService.ResourceView> updateDeveloperRuntimePolicy(
+            @org.springframework.web.bind.annotation.PathVariable String principalId,
+            @Valid @RequestBody UpdateDeveloperRuntimePolicyRequest request) {
+        return ApiResponse.ok(applications.updateDeveloperRuntimePolicy(companyId(), principalId,
+                request.maxInstances(), request.expectedRevision(), actorMemberId()));
     }
 
     @GetMapping("/access-members")
@@ -65,7 +76,13 @@ public class AdminDevAutopilotTeamController {
 
     public record CreateTeamMemberRequest(
             @NotBlank @Size(max = 128) String displayName,
-            @NotBlank String ownerMemberId) {
+            @NotBlank String ownerMemberId,
+            @Min(1) @Max(64) Integer maxInstances) {
+    }
+
+    public record UpdateDeveloperRuntimePolicyRequest(
+            @Min(1) @Max(64) int maxInstances,
+            @Min(1) long expectedRevision) {
     }
 
     public record ReplaceAccessMembersRequest(

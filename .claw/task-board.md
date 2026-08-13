@@ -15,6 +15,18 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-300 - 机器开发者实例上限控制面
+
+- status: `review`
+- priority: `critical`
+- owner_role: `integration-agent`
+- claimed_by: `codex`
+- integration_id: `INT-018`
+- spec_path: `docs/specs/FEAT-181-devautopilot-developer-runtime-policy.md`
+- task_status_path: `.claw/tasks/TASK-300.md`
+- blocked_by: `none`
+- next_action: `完成三仓本地 main 镜像和真实租约端到端验收`
+
 ### TASK-298 - 场景模型能力过滤与推荐说明
 
 - status: `review`

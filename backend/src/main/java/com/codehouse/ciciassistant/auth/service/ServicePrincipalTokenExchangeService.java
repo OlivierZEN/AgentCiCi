@@ -42,13 +42,23 @@ public class ServicePrincipalTokenExchangeService {
                 """, String.class, context.principalId());
         return officialAccessTokens.issueForSematticeService(
                 context.principalId(), context.ownerPrincipalId(), context.clientId(),
-                context.tenantId(), context.companyId(), scopes);
+                context.tenantId(), context.companyId(), scopes, context.maxInstances());
     }
 
     private ServiceContext resolveActiveContext(KeycloakOidcLoginService.ServiceAccessToken source) {
         List<ServiceContext> matches = jdbcTemplate.query("""
                 SELECT sp.principal_id, owner.owner_principal_id, sp.client_id,
-                       binding.semattice_tenant_id, member.company_id
+                       binding.semattice_tenant_id, member.company_id,
+                       (SELECT resource.max_instances
+                        FROM tenant_application_resource resource
+                        JOIN tenant_application_activation activation ON activation.id=resource.activation_id
+                        WHERE resource.external_id=sp.principal_id
+                          AND resource.resource_type='SERVICE_PRINCIPAL'
+                          AND resource.logical_role='developer'
+                          AND resource.lifecycle_state='ACTIVE'
+                          AND activation.company_id=member.company_id
+                          AND activation.app_code='devautopilot'
+                          AND activation.actual_state='ACTIVE') AS max_instances
                 FROM service_principal sp
                 JOIN principal p ON p.id = sp.principal_id
                 JOIN principal_identity identity_record ON identity_record.principal_id = sp.principal_id
@@ -75,7 +85,7 @@ public class ServicePrincipalTokenExchangeService {
                 """, (rs, rowNum) -> new ServiceContext(
                         rs.getString("principal_id"), rs.getString("owner_principal_id"),
                         rs.getString("client_id"), rs.getString("semattice_tenant_id"),
-                        rs.getString("company_id")),
+                        rs.getString("company_id"), (Integer) rs.getObject("max_instances")),
                 keycloak.issuer(), source.subject(), source.clientId(), source.clientId(), OfficialAccessTokenService.SEMATTICE_AUDIENCE);
         if (matches.size() != 1) {
             throw new ForbiddenException("机器账户未绑定可用的数据平台组织，或责任人已失效");
@@ -84,6 +94,6 @@ public class ServicePrincipalTokenExchangeService {
     }
 
     private record ServiceContext(String principalId, String ownerPrincipalId, String clientId,
-                                  String tenantId, String companyId) {
+                                  String tenantId, String companyId, Integer maxInstances) {
     }
 }
