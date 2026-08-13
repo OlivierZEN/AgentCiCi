@@ -28,6 +28,9 @@ export function DeliveryWriteReceiptView({ receipt }: { receipt: DeliveryWriteRe
           <div><dt>记录 ID</dt><dd className="is-mono">{receipt.recordId}</dd></div>
           <div><dt>revision</dt><dd className="is-mono">{receipt.revision}</dd></div>
           <div className="is-wide"><dt>关联号</dt><dd className="is-mono">{receipt.correlationId}</dd></div>
+          {receipt.contentDigest ? (
+            <div className="is-wide"><dt>内容摘要</dt><dd className="is-mono">{receipt.contentDigest}</dd></div>
+          ) : null}
         </dl>
       ) : (
         <p className="cici-delivery-receipt__message">{receipt.message}</p>

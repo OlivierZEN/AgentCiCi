@@ -15,6 +15,18 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-296 - DevAutopilot 历史受理记录字段纠正
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `backend-agent`
+- claimed_by: `codex`
+- integration_id: `INT-015`
+- spec_path: `docs/specs/FEAT-178-devautopilot-intake-field-fidelity.md`
+- task_status_path: `.claw/tasks/TASK-296.md`
+- blocked_by: `none`
+- next_action: 实现受信会话重放、Semattice 乐观锁纠正和逐字段回读，并修复本地 `REQ-6F34ECF3`。
+
 ### TASK-293 - DevAutopilot 授权初始化编排
 
 - status: `done`

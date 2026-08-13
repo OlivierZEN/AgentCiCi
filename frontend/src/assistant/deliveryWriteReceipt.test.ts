@@ -13,6 +13,7 @@ describe("delivery write receipt", () => {
         record_id: "record-1",
         revision: 2,
         correlation_id: "corr-1",
+        content_digest: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         readback_verified: true,
       }),
     })).toMatchObject({
@@ -21,6 +22,7 @@ describe("delivery write receipt", () => {
       recordId: "record-1",
       revision: 2,
       correlationId: "corr-1",
+      contentDigest: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     });
 
     expect(parseDeliveryWriteReceiptEvent({
@@ -43,6 +45,7 @@ describe("delivery write receipt", () => {
       recordId: "record-1",
       revision: 2,
       correlationId: "corr-1",
+      contentDigest: undefined,
     });
   });
 

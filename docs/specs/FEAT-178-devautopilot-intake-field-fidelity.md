@@ -1,6 +1,6 @@
 ---
 feature_id: FEAT-178
-status: completed
+status: implementation
 primary_project: agentcici
 integration_id: INT-015
 ---
@@ -25,6 +25,20 @@ integration_id: INT-015
 - `create_requirement` 的 `summary` 与 `acceptance` 与可见草稿一致。
 - 既有缺陷/变更/隐藏标记路径回归通过。
 - 不改变 Semattice 对象 API 或跨仓编译依赖。
+
+## 历史数据纠正与字段级回执
+
+- 已确认草稿、用户确认指令和 Semattice 成功回执必须继续保存在同一租户会话中；历史纠正只能从这组受信消息恢复，不能接受调用方提交任意业务字段。
+- 租户 `ORG_ADMIN` 可针对明确的 `session_id + record_id` 发起纠正。服务端必须确认：会话属于当前租户、会话中存在该记录 ID 的成功回执、草稿在回执之前、目标记录的 `intake.conversation_id` 与会话一致、标题与分类一致。
+- 纠正通过产品经理 SERVICE 身份调用 Semattice 官方 `runtime.record.update`，使用 `expected_revision` 乐观锁；禁止 AgentCiCi 直接写 Semattice 数据库。
+- 原确认人、确认时间和 correlation ID 保持不变；只以已确认草稿恢复专业摘要、验收/影响/复现字段与 `intake` 语义字段，并追加纠正时间、纠正人和来源审计。
+- 写后必须再次调用 `runtime.record.get`，逐字段比对 patch；回执除 `record_id/revision` 外还必须返回内容摘要 `content_digest`，只有逐字段一致才允许标记 `readback_verified=true`。
+- 重复纠正必须幂等：字段已经一致时不增加 revision，返回 `UNCHANGED`。
+
+## 本次故障验收样本
+
+- 历史记录 `REQ-6F34ECF3` 必须从其会话草稿恢复 4 条产品经理分析、5 条验收标准和 4 条开发者验证项。
+- DevAutopilot 详情抽屉回读恢复后的 Semattice 记录时，专业摘要、验收标准、产品经理分析和待开发者验证内容必须与确认前草稿一致。
 
 ## 发布边界
 

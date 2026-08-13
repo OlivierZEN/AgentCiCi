@@ -71,13 +71,16 @@ final class DeliveryWriteReceiptGuard {
             }
             try {
                 JsonNode result = OBJECT_MAPPER.readTree(trace.result());
+                boolean fieldDigestRequired = "semattice_project_delivery_create".equals(trace.name());
+                String contentDigest = result.path("content_digest").asText();
                 if ("SUCCESS".equals(result.path("status").asText())
                         && "SEMATTICE_LIVE".equals(result.path("source").asText())
                         && !result.path("object_api_name").asText().isBlank()
                         && !result.path("record_id").asText().isBlank()
                         && result.path("revision").asLong() > 0
                         && !result.path("correlation_id").asText().isBlank()
-                        && result.path("readback_verified").asBoolean(false)) {
+                        && result.path("readback_verified").asBoolean(false)
+                        && (!fieldDigestRequired || contentDigest.matches("^[0-9a-f]{64}$"))) {
                     return true;
                 }
             } catch (Exception ignored) {

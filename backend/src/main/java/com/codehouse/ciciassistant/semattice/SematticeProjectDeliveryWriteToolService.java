@@ -5,8 +5,10 @@ import com.codehouse.ciciassistant.auth.service.OfficialAccessTokenService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -387,6 +389,8 @@ public class SematticeProjectDeliveryWriteToolService {
         result.put("revision", verified.path("revision").asLong());
         result.put("correlation_id", correlationId);
         result.put("readback_verified", true);
+        result.put("content_digest", contentDigest(data));
+        result.put("verified_fields", List.copyOf(data.keySet()));
         result.put("created_at", Instant.now().toString());
         result.put("execution_principal_type", "SERVICE");
         result.put("execution_principal", actor);
@@ -405,6 +409,15 @@ public class SematticeProjectDeliveryWriteToolService {
             result.put("parent_record_id", parent.get("record_id"));
         }
         return result;
+    }
+
+    private String contentDigest(Map<String, Object> data) {
+        try {
+            return HexFormat.of().formatHex(
+                    MessageDigest.getInstance("SHA-256").digest(objectMapper.writeValueAsBytes(data)));
+        } catch (Exception exception) {
+            throw new IllegalStateException("Cannot digest verified Semattice write", exception);
+        }
     }
 
     private String correlationId(CreateIntent intent) {

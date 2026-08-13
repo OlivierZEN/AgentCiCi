@@ -8,6 +8,14 @@ status: active
 
 # Issue List
 
+## ISSUE-2026-08-13-devautopilot-intake-history-mismatch
+
+- Symptom: DevAutopilot 详情抽屉中的 `REQ-6F34ECF3` 只有通用产品经理摘要、1 条通用验收和 1 条通用开发者验证项，与确认前可见草稿的 4/5/4 条具体内容不一致。
+- Verified root cause: 记录创建于 2026-08-12 22:37 CST，字段保真修复版 backend 于 23:28 CST 才部署；Semattice 忠实保存了旧解析器生成的占位字段。新页面读取的是同一条旧记录，现有功能没有受治理的历史草稿纠正路径。
+- Evidence: AgentCiCi `chat_message` 22 保存完整草稿、23 保存确认、24 保存该 record ID 回执；Semattice 记录 revision=1 的 `summary/acceptance/intake.assumptions` 均为旧占位内容。
+- Resolution: TASK-296 增加同租户会话约束、产品经理 SERVICE `runtime.record.update`、乐观锁、逐字段回读、内容摘要和幂等纠正，并修复当前本地记录。
+- Status: in progress.
+
 ## Open Issues
 
 - ISSUE-2026-08-12-admin-member-public-id-stale:

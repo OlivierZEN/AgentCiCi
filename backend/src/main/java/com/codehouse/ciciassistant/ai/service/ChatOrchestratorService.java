@@ -1637,7 +1637,9 @@ public class ChatOrchestratorService {
             String recordId = result.path("record_id").asText("");
             long revision = result.path("revision").asLong();
             String correlationId = result.path("correlation_id").asText("");
+            String contentDigest = result.path("content_digest").asText("");
             if (recordId.isBlank() || revision < 1 || correlationId.isBlank()
+                    || !contentDigest.matches("^[0-9a-f]{64}$")
                     || !result.path("readback_verified").asBoolean(false)) {
                 return "未创建研发交付记录：Semattice 成功回执不完整，不能确认创建成功。请稍后重试。";
             }
@@ -1645,7 +1647,7 @@ public class ChatOrchestratorService {
             return "已在 Semattice 创建" + label + "：" + subject
                     + (code.isBlank() ? "" : "（" + code + "）")
                     + "。记录 ID：" + recordId + "；revision：" + revision
-                    + "；关联号：" + correlationId
+                    + "；关联号：" + correlationId + "；内容摘要：" + contentDigest
                     + (assignment.isBlank() ? "。" : "；已交由全栈开发者“" + assignment + "”验证与处理。");
         } catch (Exception exception) {
             return "未创建研发交付记录：Semattice 回执解析失败，不能确认创建成功。请稍后重试。";

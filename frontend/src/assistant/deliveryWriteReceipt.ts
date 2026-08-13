@@ -8,6 +8,7 @@ export type DeliveryWriteReceipt = {
   recordId?: string;
   revision?: number;
   correlationId?: string;
+  contentDigest?: string;
   message?: string;
 };
 
@@ -22,8 +23,10 @@ export function parseDeliveryWriteReceiptEvent(event: StreamToolResultEvent): De
     if (payload.status === "SUCCESS") {
       const recordId = stringValue(payload.record_id);
       const correlationId = stringValue(payload.correlation_id);
+      const contentDigest = stringValue(payload.content_digest);
       const revision = numberValue(payload.revision);
-      if (!recordId || !correlationId || !revision || payload.readback_verified !== true) {
+      if (!recordId || !correlationId || !revision || !contentDigest?.match(/^[0-9a-f]{64}$/)
+        || payload.readback_verified !== true) {
         return {
           status: "FAILED",
           message: "Semattice 成功回执不完整，不能确认创建成功。",
@@ -37,6 +40,7 @@ export function parseDeliveryWriteReceiptEvent(event: StreamToolResultEvent): De
         recordId,
         revision,
         correlationId,
+        contentDigest,
       };
     }
     return {
@@ -53,7 +57,7 @@ export function parseDeliveryWriteReceiptEvent(event: StreamToolResultEvent): De
 
 export function extractDeliveryWriteReceipt(content: string): DeliveryWriteReceipt | null {
   const match = content.match(
-    /已在 Semattice 创建(项目|需求|任务|缺陷)：(.+?)(?:（([^）]+)）)?。记录 ID：([^；。]+)；revision：(\d+)；关联号：([^。]+)。/,
+    /已在 Semattice 创建(项目|需求|任务|缺陷)：(.+?)(?:（([^）]+)）)?。记录 ID：([^；。]+)；revision：(\d+)；关联号：([^；。]+)(?:；内容摘要：([0-9a-f]{64}))?。/,
   );
   if (!match) {
     return null;
@@ -66,6 +70,7 @@ export function extractDeliveryWriteReceipt(content: string): DeliveryWriteRecei
     recordId: match[4]?.trim(),
     revision: Number(match[5]),
     correlationId: match[6]?.trim(),
+    contentDigest: match[7]?.trim(),
   };
 }
 
