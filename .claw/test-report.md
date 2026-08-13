@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-13T08:53:00Z
+updated_at: 2026-08-13T09:54:05Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-13T08:53:00Z
-last_run_status: partial
+last_run_at: 2026-08-13T09:54:05Z
+last_run_status: passed_with_authorized_business_acceptance_pending
 ---
 
 # Test Report
+
+## 2026-08-13 TASK-298 模型能力确认非 JSON 响应修复
+
+- 根因：截图中的 `Unexpected token '<'` 表明网关或未同步后端返回了 HTML，页面直接执行 `res.json()`，将协议异常暴露给平台运营人员。
+- 修复：确认和撤销调用显式声明 `Accept: application/json`，使用共享安全解析器处理响应；非 JSON 回应显示 HTTP 状态与“刷新并确认前后端版本一致”的处置提示，不泄露 HTML 内容。
+- 前端：`npm test -- --run src/platform/pages/PlatformModelsPage.test.tsx` 为 1 文件/6 项通过，覆盖 HTML 405 错误文案；`npm run build` 通过，仅保留既有 chunk-size warning；`git diff --check` 通过。
+- 本地开发环境：仅重建 `cici-frontend`，版本 `2.8.61-dev.4da7a3b`；backend 为 `2.8.61-dev.b8bf4d3`。两个目标容器均为 `healthy/restart=0`，`/platform/models`=200，能力确认 API 匿名请求回读 `401 application/json`，完整 `./stack verify` 通过。
+- 状态：`passed_with_authorized_business_acceptance_pending`；UAT/生产未修改。
 
 ## 2026-08-13 TASK-298 人工确认简化与目录先选模型
 

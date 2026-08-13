@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-179
 title: 统一模型调用治理
-status: review
+status: implemented
 primary_project: agentcici
 task_ids: TASK-297, TASK-298
 related_decisions: ADR-010
 related_issues: ISSUE-2026-08-13-model-provider-bypass
-updated_at: 2026-08-13T08:53:00Z
+updated_at: 2026-08-13T09:54:05Z
 updated_by: codex
 ---
 
@@ -100,6 +100,7 @@ updated_by: codex
 - 2026-08-13：TASK-298 已提交 `f96efaf` 并发布本地开发环境 `2.8.61-dev.f96efaf`。模型目录回读证据来源，人工确认与撤销都受平台角色保护并写平台审计；撤销后服务端候选立即失效。后端 compile/package、前端定向 5 项、production build 与完整 `./stack verify` 通过；Spring 集成仍被既有 `agentcici_test` Flyway V81 checksum 漂移阻断，未 repair。受权交互和 UAT 业务验收待完成，UAT/生产未修改。
 - 2026-08-13：用户要求将人工确认收敛为“选择能力并保存”，不再采集、校验或展示厂商文档与证据引用；全部模型阶段可直接加入平台目录，能力确认只影响后续场景路由。TASK-298 正在实现并回归本地开发环境，UAT/生产不修改。
 - 2026-08-13：TASK-298 已提交 `1979c62` 并发布本地开发环境 `2.8.61-dev.1979c62`。人工确认 API 只接收模型和能力，审计不再记录外部证据；目录选择不再受能力确认阻塞，而场景候选仍只接受已确认的兼容能力。backend/frontend healthy/restart=0，路由 200、匿名 API 401、完整 `./stack verify` 通过；Spring 集成仍被既有 `agentcici_test` Flyway V81 checksum 漂移阻断，未 repair。UAT/生产未修改。
+- 2026-08-13：截图暴露确认页把网关 HTML 直接解析为 JSON。提交 `4da7a3b` 将确认与撤销调用改为显式 JSON 协商和安全解析，非 JSON 响应返回可操作的 HTTP/版本一致性提示；本地只重建 frontend `2.8.61-dev.4da7a3b`，能力 API 保持 JSON 鉴权边界，完整 `./stack verify` 通过。UAT/生产未修改。
 
 ## 交接说明
 

@@ -27,9 +27,11 @@ claimed_by: codex
 ## 验证结果
 
 - 已移除厂商文档、HTTPS 校验、证据引用和对应页面展示；目录阶段允许直接选择未确认能力的模型，人工确认只提交模型与能力。
-- 后端 `mvn -q -DskipTests compile` 与 `mvn -q -DskipTests package`、前端定向 5 项与 production build 通过。
+- 截图暴露网关 HTML 被前端直接解析为 JSON；确认和撤销现在显式请求 JSON，并把非 JSON 响应转成版本一致性提示，不再展示 `Unexpected token`。
+- 后端 `mvn -q -DskipTests compile` 与 `mvn -q -DskipTests package`、前端定向 6 项与 production build 通过。
 - Spring 集成仍在应用上下文创建前被既有 `agentcici_test` Flyway V81 checksum 漂移阻断；未执行 repair 或修改历史迁移。
 - backend/frontend 已从本地 `main@1979c6291dbf` 构建并发布为 `2.8.61-dev.1979c62`；两容器 healthy/restart=0，页面制品含“可直接加入平台目录，能力在后续确认”，`/platform/models` 返回 200、匿名模型 API 返回 401，完整 `./stack verify` 通过。
+- 本轮仅重建 frontend：`main@4da7a3b0c3f7`，版本 `2.8.61-dev.4da7a3b`；backend 为同一主线已有 `2.8.61-dev.b8bf4d3`，能力 API 匿名回读为 `401 application/json`，两容器 healthy/restart=0，完整 `./stack verify` 通过。
 
 ## 下一步
 

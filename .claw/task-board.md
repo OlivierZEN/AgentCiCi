@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-13T08:53:00Z
+updated_at: 2026-08-13T09:54:05Z
 updated_by: codex
 board_status: active
 ---
@@ -36,7 +36,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - spec_path: `docs/specs/FEAT-179-unified-model-invocation-governance.md`
 - task_status_path: `.claw/tasks/TASK-298.md`
 - blocked_by: `none`
-- next_action: 使用受权平台会话验证目录先选模型、人工确认与撤销、场景候选过滤；UAT/生产仍按独立发布流程处理。
+- next_action: 使用受权平台会话验证目录先选模型、人工确认与撤销、场景候选过滤及异常提示；UAT/生产仍按独立发布流程处理。
 
 ### TASK-297 - 统一模型调用治理
 
