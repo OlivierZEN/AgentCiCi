@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-301
-status: in_progress
-updated_at: 2026-08-13T11:40:00Z
+status: done
+updated_at: 2026-08-13T11:49:00Z
 updated_by: codex
 owner_role: fullstack-agent
 spec_path: docs/specs/FEAT-182-kb-pdf-upload-admission.md
@@ -40,3 +40,6 @@ spec_path: docs/specs/FEAT-182-kb-pdf-upload-admission.md
 - 复开修复提交 `d3cf1b7` 已进入本地 `main`：页面持久显示文件检查、上传、发布、索引及最终成功/失败，网络和非 JSON 响应返回可操作中文错误，处理中禁止重复选择文件。
 - 本地前端已从该提交重建为 `2.8.61-dev.d3cf1b7`。已登录 Chrome 真实选择文本型 PDF 后依次回读“处理中”“正在解析并建立索引”“文档上传成功”，最终 `PUBLISHED`、1 个切片、状态“可用”；测试文档随后通过正式删除 API 清理。
 - 用户随后上传约 2.1 MB PDF 得到 `HTTP 413`；本地边缘 Nginx 日志回读请求体 `2199033` 字节并显示 `client intended to send too large body`，证明请求被 `cc-local-stack` 默认约 1 MB 上限拦截，未进入 AgentCiCi。
+- AgentCiCi 修复提交 `5fa2ee3` 增加 413 专属恢复文案和深红高对比 `role=alert` 错误态；前端定向测试 8/8 与 production build 通过。
+- `cc-local-stack@5c1f8a7` 将 AgentCiCi TLS 边缘上限设为 100 MB；2 MiB 匿名 multipart 请求已到达鉴权层并返回 JSON 401 而非 413，完整 stack verify 通过。
+- 用户截图中的 `AgentCiCi企业级智能体生产与协作平台-产品介绍v5.pdf`（2,198,684 字节）经 `cici.localhost` 正式上传与发布均为 HTTP 200，最终 `PUBLISHED`、25 个切片并保留在知识库。

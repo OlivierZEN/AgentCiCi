@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-13T11:28:00Z
+updated_at: 2026-08-13T11:49:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-13T11:28:00Z
+last_run_at: 2026-08-13T11:49:00Z
 last_run_status: passed
 ---
 
@@ -12,6 +12,12 @@ last_run_status: passed
 
 ## 2026-08-13 TASK-301 知识库 PDF 上传门禁修复
 
+- 413 根因：最外层本地 Nginx 日志回读 `client intended to send too large body: 2199033 bytes`；AgentCiCi 产品 Nginx 100 MB、Spring 256 MB 和知识库 25 MB 均未获得处理机会。
+- 边缘修复：`cc-local-stack@5c1f8a7` 在 AgentCiCi TLS server 设置 100 MB，并将有效配置回读加入 `./stack verify`。2 MiB multipart 探针经 `cici.localhost` 返回 AgentCiCi JSON 401 而非 413；完整 verify 通过。
+- 错误体验：AgentCiCi `5fa2ee3` 对 413 显示“确认不超过 25 MB；符合限制时检查网关上限”的中文处置建议；错误框使用完整 2px 深红边、浅红底、深红标题/正文和 `role=alert`。部署 CSS 已回读 `cici-inline-feedback--danger` 与对应 OKLCH 深红色。
+- 前端验证：上传策略与反馈测试 2 文件/8 项通过；production build 与 diff check 通过。
+- 真实业务文件：`AgentCiCi企业级智能体生产与协作平台-产品介绍v5.pdf` 为 2,198,684 字节，经 `cici.localhost` 正式 upload/publish 均 HTTP 200，最终 PUBLISHED、25 个切片并保留在知识库。
+- 本地运行：前端 `2.8.61-dev.ea1f6ab` 包含 `5fa2ee3` 修复，frontend/edge/backend 均 healthy、restart=0，目标路由 200；当前 `main@3548a92` 比制品仅多 TASK-302 文档记录。UAT/生产未修改。
 - 复开根因：允许 PDF 后，页面仍只依赖 3 秒 toast；上传、发布、响应解析和异步索引缺少完整异常捕获及稳定最终态。用户选择的 PDF 未产生上传请求时，页面会表现为“无任何反馈”。
 - 反馈修复：提交 `d3cf1b7` 增加持久上传状态和安全响应解析，覆盖文件检查、上传、提交索引、解析/索引、成功与失败；处理中禁用文件选择，成功仅在目标文档实际 `PUBLISHED` 后显示并包含切片数。
 - 前端验证：`AdminKnowledgeUploadPolicy.test.ts` 与 `AdminKnowledgeUploadFlow.test.ts` 共 2 文件/7 项通过；`npm run build` 与 `git diff --check` 通过，仅保留既有 chunk-size warning。

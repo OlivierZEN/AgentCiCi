@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-13T11:28:00Z
+updated_at: 2026-08-13T11:49:00Z
 updated_by: codex
 phase: review
 active_task: TASK-298
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-301 / FEAT-182 已完成：`cabaebc` 放行文本型 PDF 后，复开修复 `d3cf1b7` 补齐持久上传阶段、异常捕获与异步索引最终态。本地前端已从 `main@d3cf1b7` 重建为 `2.8.61-dev.d3cf1b7`，frontend/backend healthy、restart=0，目标路由和制品指纹一致。已登录 Chrome 真实选择文本型 PDF，页面依次显示处理中、解析/索引中和成功，最终 PUBLISHED、1 个切片、状态可用；测试文档经正式 DELETE API 清理并刷新确认只保留原有文档。前端定向 7/7 与 production build 通过；UAT/生产未修改。
+- TASK-301 / FEAT-182 已完成：第三次故障根因是 `cc-local-stack` 最外层 Nginx 沿用约 1 MB 默认请求体上限，2,199,033 字节请求在进入 AgentCiCi 前被 413 拒绝。`cc-local-stack@5c1f8a7` 已设置 100 MB 并加入 verify 门禁；AgentCiCi `5fa2ee3` 增加 413 专属处置文案和深红高对比错误态。截图中的 2,198,684 字节 PDF 经 `cici.localhost` 正式上传/发布均 HTTP 200，最终 PUBLISHED、25 个切片并保留；2 MiB 边缘探针、前端 8/8、production build 和完整 stack verify 通过。运行前端 `2.8.61-dev.ea1f6ab` 包含修复，当前 main 后续仅有 TASK-302 文档提交；UAT/生产未修改。
 
 - TASK-298 / FEAT-179 已回到 review：人工确认弹窗只保留能力选择，已移除厂商文档、HTTPS 校验、证据引用及其展示；“全部模型”可先加入平台目录，能力确认只决定后续场景路由候选。截图发现网关 HTML 被直接解析为 JSON 的错误，已由 `4da7a3b` 修复为显式 JSON 协商及可操作的版本一致性提示；操作者/时间、平台审计和撤销仍保留，未确认模型仍失败关闭。本地 frontend 已从本地 `main@4da7a3b` 重建为 `2.8.61-dev.4da7a3b`，backend 保持含能力 API 的 `2.8.61-dev.b8bf4d3`；两容器 healthy/restart=0，`/platform/models`=200、能力 API 匿名返回 401 JSON，完整 `./stack verify` 通过。前端定向 6 项与 production build 通过；Spring 集成仍在断言前被既有 `agentcici_test` Flyway V81 checksum 漂移阻断，未 repair。UAT/生产未修改，受权业务交互仍待验收。
 
