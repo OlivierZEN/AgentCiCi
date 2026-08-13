@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-13T07:10:00Z
+updated_at: 2026-08-13T07:03:49Z
 updated_by: codex
 phase: review
-active_task: TASK-297
-next_action: "评审 TASK-297；UAT 发布前必须为实际启用能力配置对应场景路由并完成真实业务验收。"
+active_task: TASK-298
+next_action: "完成 TASK-298 的场景能力过滤、推荐说明和本地开发环境验收；UAT 发布前仍须为实际启用能力配置对应路由。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-298 / FEAT-179 进行中：用户确认无法获得可信能力元数据的模型一律视为不支持。将持久化厂商受控目录能力，按场景过滤候选并在服务端拒绝不兼容写入；路由页同步展示适用能力、推荐原则、候选数量和配置引导。当前未修改 UAT/生产。
 
 - TASK-297 / FEAT-179 已进入 review：新增统一 `ModelInvocationResolver`，聊天、会议纪要、Skill、本体、客户洞察、知识库/记忆 embedding、图片 OCR、实时/文件 ASR、代码解释器、联网搜索/网页抓取均从场景路由取得 provider、model 与 credential。无路由/厂商/模型/凭据一律失败关闭；删除环境百炼回退、知识库 local 默认及工具独立 Key/模型。V112/V113 清理遗留配置，知识库管理页只读显示 `knowledge-embedding` 路由。后端干净编译、10 项定向测试、前端 production build 与 diff check 通过；backend/frontend 已从本地 `main@7be07dd2a4d8` 发布为本地开发版本 `2.8.61-dev.7be07dd`，容器 healthy/restart=0，页面制品指纹和完整 `./stack verify` 均通过。UAT/生产未修改；下一步是按发布 Skill 在 UAT 配置每个实际启用的场景并完成真实业务验收。
 

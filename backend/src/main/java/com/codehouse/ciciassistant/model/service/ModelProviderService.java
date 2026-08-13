@@ -40,20 +40,25 @@ public class ModelProviderService {
     private static final String FETCH_OLLAMA = "ollama";
     private static final String FETCH_ANTHROPIC = "anthropic";
     private static final String FETCH_REMOTE_UNAVAILABLE = "remote-unavailable";
+    private static final String CONFIG_SELECTED_MODELS = "selectedModels";
+    private static final String CONFIG_MODEL_CAPABILITIES = "modelCapabilities";
+    private static final Set<String> TRUSTED_CAPABILITIES = Set.of(
+            "text", "vision", "embedding", "realtime-asr", "file-asr",
+            "code-interpreter", "web-search", "web-extractor", "tool", "reasoning");
     private static final List<SceneRouteDef> SCENE_ROUTES = List.of(
-            new SceneRouteDef("chat", "智能体对话", "员工工作台、渠道消息和 OpenAPI chat 默认模型。"),
-            new SceneRouteDef("skill-authoring", "技能创作", "Skill 生成、技能包标准化和编排草稿模型。"),
-            new SceneRouteDef("ontology-modeling", "本体建模", "业务语义建模、草稿提案与结构化本体生成模型。"),
-            new SceneRouteDef("meeting-minutes", "AI 听记", "会议纪要、行动项和拜访记录生成模型。"),
-            new SceneRouteDef("customer-insight", "客户洞察", "客户洞察摘要、一客一策和客户经营分析模型。"),
-            new SceneRouteDef("knowledge-embedding", "知识库向量化", "文档切片与检索查询的 embedding 模型。"),
-            new SceneRouteDef("memory-embedding", "记忆向量化", "长期记忆索引和检索查询的 embedding 模型。"),
-            new SceneRouteDef("image-ocr", "图片 OCR", "客户互动截图及其他图片文字提取模型。"),
-            new SceneRouteDef("voice-asr", "实时语音转写", "短音频语音识别模型。"),
-            new SceneRouteDef("file-asr", "文件语音转写", "音视频文件转写模型。"),
-            new SceneRouteDef("code-interpreter", "代码解释器", "受管代码解释器执行模型。"),
-            new SceneRouteDef("managed-web-search", "联网搜索", "受管联网搜索执行模型。"),
-            new SceneRouteDef("managed-web-extractor", "网页抓取", "受管网页抓取执行模型。")
+            new SceneRouteDef("chat", "智能体对话", "员工工作台、渠道消息和 OpenAPI chat 默认模型。", List.of("text"), List.of(), "选择厂商已确认文本能力的模型；需要工具调用时另行确认工具能力。"),
+            new SceneRouteDef("skill-authoring", "技能创作", "Skill 生成、技能包标准化和编排草稿模型。", List.of("text"), List.of(), "选择已确认文本能力且上下文能力满足业务复杂度的模型。"),
+            new SceneRouteDef("ontology-modeling", "本体建模", "业务语义建模、草稿提案与结构化本体生成模型。", List.of("text"), List.of(), "选择已确认文本能力、适合结构化生成的模型。"),
+            new SceneRouteDef("meeting-minutes", "AI 听记", "会议纪要、行动项和拜访记录生成模型。", List.of("text"), List.of(), "选择已确认文本能力、适合长文本归纳的模型。"),
+            new SceneRouteDef("customer-insight", "客户洞察", "客户洞察摘要、一客一策和客户经营分析模型。", List.of("text"), List.of(), "选择已确认文本能力、适合分析与总结的模型。"),
+            new SceneRouteDef("knowledge-embedding", "知识库向量化", "文档切片与检索查询的 embedding 模型。", List.of("embedding"), List.of(), "仅显示已确认 embedding 能力的模型；变更后需要重建已有向量索引。"),
+            new SceneRouteDef("memory-embedding", "记忆向量化", "长期记忆索引和检索查询的 embedding 模型。", List.of("embedding"), List.of(), "仅显示已确认 embedding 能力的模型；优先选择与记忆向量维度兼容的模型。"),
+            new SceneRouteDef("image-ocr", "图片 OCR", "客户互动截图及其他图片文字提取模型。", List.of("vision"), List.of(), "仅显示已确认视觉输入能力的模型；纯文本模型不会出现。"),
+            new SceneRouteDef("voice-asr", "实时语音转写", "短音频语音识别模型。", List.of("realtime-asr"), List.of(PROVIDER_ALIYUN), "仅显示已确认实时 ASR 且与当前协议兼容的模型。"),
+            new SceneRouteDef("file-asr", "文件语音转写", "音视频文件转写模型。", List.of("file-asr"), List.of(PROVIDER_ALIYUN), "仅显示已确认文件 ASR 且与当前协议兼容的模型。"),
+            new SceneRouteDef("code-interpreter", "代码解释器", "受管代码解释器执行模型。", List.of("code-interpreter"), List.of(PROVIDER_ALIYUN), "仅显示已确认代码解释器能力且与受管 Responses 协议兼容的模型。"),
+            new SceneRouteDef("managed-web-search", "联网搜索", "受管联网搜索执行模型。", List.of("web-search"), List.of(PROVIDER_ALIYUN), "仅显示已确认联网搜索能力且与受管协议兼容的模型。"),
+            new SceneRouteDef("managed-web-extractor", "网页抓取", "受管网页抓取执行模型。", List.of("web-extractor"), List.of(PROVIDER_ALIYUN), "仅显示已确认网页抓取能力且与受管协议兼容的模型。")
     );
 
     private final ModelProviderConfigRepository providerRepository;
@@ -199,6 +204,7 @@ public class ModelProviderService {
                 .toList();
 
         List<String> selected = configuredModelsForProvider(entity, companyId);
+        Map<String, List<String>> capabilities = trustedModelCapabilities(entity);
 
         return Map.of(
                 "providerCode", providerCode,
@@ -206,6 +212,7 @@ public class ModelProviderService {
                 "configuredModels", configured,
                 "recommendedModels", def.defaultModels(),
                 "selectedModels", selected,
+                "modelCapabilities", capabilities,
                 "apiBaseUrl", entity.getApiBaseUrl(),
                 "enabled", entity.isEnabled()
         );
@@ -234,14 +241,7 @@ public class ModelProviderService {
 
     @Transactional
     public Map<String, Object> checkPlatformProvider(String providerCode) {
-        ensureBuiltinRows(platformScopeId());
-        return checkProvider(platformScopeId(), providerCode);
-    }
-
-    @Transactional
-    public Map<String, Object> fetchPlatformProviderModels(String providerCode) {
-        ensureBuiltinRows(platformScopeId());
-        return fetchProviderModels(platformScopeId(), providerCode);
+        return checkPlatformProvider(providerCode, null, null, null);
     }
 
     @Transactional
@@ -255,6 +255,7 @@ public class ModelProviderService {
             }
             ProviderDef def = requireDef(entity.getProviderCode());
             List<String> selected = configuredModelsForProvider(entity, scopeId);
+            Map<String, List<String>> capabilities = trustedModelCapabilities(entity);
             for (String modelName : selected) {
                 if (modelName == null || modelName.isBlank()) {
                     continue;
@@ -264,6 +265,8 @@ public class ModelProviderService {
                 row.put("providerName", def.providerName());
                 row.put("modelName", modelName);
                 row.put("displayLabel", modelName + " · " + def.providerName());
+                row.put("capabilities", capabilities.getOrDefault(modelName, List.of()));
+                row.put("capabilitiesTrusted", capabilities.containsKey(modelName));
                 out.add(row);
             }
         }
@@ -282,7 +285,7 @@ public class ModelProviderService {
     @Transactional
     public Map<String, Object> updatePlatformModelRoute(String sceneCode, String providerCode, String modelName) {
         SceneRouteDef scene = requireSceneRoute(sceneCode);
-        ModelChoice choice = requirePlatformModelChoice(providerCode, modelName);
+        ModelChoice choice = requirePlatformModelChoice(scene, providerCode, modelName);
         String scopeId = platformScopeId();
         CompanyModelConfigEntity entity = modelConfigRepository.findByCompanyIdAndSceneCode(scopeId, scene.sceneCode())
                 .orElse(new CompanyModelConfigEntity(scopeId, scene.sceneCode(), choice.providerCode(), choice.modelName()));
@@ -300,6 +303,7 @@ public class ModelProviderService {
 
     @Transactional
     public Map<String, String> resolveRuntimeModelRoute(String companyId, String sceneCode, String preferredModelName) {
+        SceneRouteDef scene = requireSceneRoute(sceneCode);
         List<ModelChoice> candidates = agentBaseModels(companyId).stream()
                 .map(this::toModelChoice)
                 .filter(choice -> choice != null)
@@ -309,14 +313,14 @@ public class ModelProviderService {
         }
 
         CompanyModelConfigEntity configured = modelConfigRepository
-                .findByCompanyIdAndSceneCode(platformScopeId(), normalizeSceneCode(sceneCode))
+                .findByCompanyIdAndSceneCode(platformScopeId(), scene.sceneCode())
                 .orElse(null);
         if (configured == null) {
-            throw new IllegalStateException("场景模型路由未配置: " + normalizeSceneCode(sceneCode));
+            throw new IllegalStateException("场景模型路由未配置: " + scene.sceneCode());
         }
         ModelChoice sceneChoice = findCandidate(candidates, configured.getProvider(), configured.getModelName());
-        if (sceneChoice == null) {
-            throw new IllegalStateException("场景模型路由不可用: " + normalizeSceneCode(sceneCode));
+        if (sceneChoice == null || !scene.supports(sceneChoice)) {
+            throw new IllegalStateException("场景模型路由不可用或能力不兼容: " + scene.sceneCode());
         }
         return routePayload(sceneChoice, "platform_scene");
     }
@@ -332,8 +336,9 @@ public class ModelProviderService {
             }
             ProviderDef def = requireDef(entity.getProviderCode());
             LinkedHashMap<String, EmbeddingModelDef> candidates = new LinkedHashMap<>();
+            Map<String, List<String>> capabilities = trustedModelCapabilities(entity);
             for (String modelName : configuredModelsForProvider(entity, scopeId)) {
-                if (!isEmbeddingModelName(modelName)) {
+                if (!capabilities.getOrDefault(modelName, List.of()).contains("embedding")) {
                     continue;
                 }
                 candidates.putIfAbsent(modelName, inferEmbeddingModelDef(entity.getProviderCode(), modelName));
@@ -364,7 +369,14 @@ public class ModelProviderService {
                 .map(String::trim)
                 .distinct()
                 .toList();
-        config.put("selectedModels", normalized);
+        List<String> existing = configuredModelsForProvider(entity, companyId);
+        Map<String, List<String>> capabilities = trustedModelCapabilities(entity);
+        for (String modelName : normalized) {
+            if (!existing.contains(modelName) && !capabilities.containsKey(modelName)) {
+                throw new IllegalArgumentException("模型能力未确认，不能加入平台运行目录：" + modelName + "。请先刷新厂商模型目录或完成受控连通性检测。");
+            }
+        }
+        config.put(CONFIG_SELECTED_MODELS, normalized);
         entity.setConfigJson(writeJson(config));
         entity.touch();
         providerRepository.save(entity);
@@ -392,20 +404,32 @@ public class ModelProviderService {
         );
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public Map<String, Object> checkPlatformProvider(String providerCode,
                                                       Boolean enabledOverride,
                                                       String apiBaseUrlOverride,
                                                       String apiKeyOverride) {
         ensureBuiltinRows(platformScopeId());
+        ModelProviderConfigEntity entity = requireProviderEntity(platformScopeId(), providerCode);
         if (!PROVIDER_ONEKEYTOKEN.equals(providerCode)) {
-            return checkProvider(platformScopeId(), providerCode);
+            ProviderDef def = requireDef(providerCode);
+            List<ModelDetail> details = fetchRemoteModelDetails(platformScopeId(), providerCode);
+            persistTrustedCapabilities(entity, details);
+            List<String> models = details.stream().map(ModelDetail::modelName).toList();
+            return Map.of(
+                    "providerCode", providerCode,
+                    "ok", true,
+                    "modelCount", models.size(),
+                    "sampleModels", models.stream().limit(8).toList(),
+                    "catalogSource", catalogSource(def),
+                    "remoteFetchSupported", supportsRemoteModelFetch(def));
         }
-        return checkOneKeyTokenProvider(
-                requireProviderEntity(platformScopeId(), providerCode),
+        Map<String, Object> result = checkOneKeyTokenProvider(entity,
                 enabledOverride,
                 apiBaseUrlOverride,
                 apiKeyOverride);
+        persistTrustedCapabilities(entity, List.of(new ModelDetail(ONEKEYTOKEN_AUTO_MODEL, List.of("text"))));
+        return result;
     }
 
     @Transactional(readOnly = true)
@@ -417,6 +441,24 @@ public class ModelProviderService {
                 "providerCode", providerCode,
                 "count", models.size(),
                 "models", models,
+                "modelDetails", details,
+                "catalogSource", catalogSource(def),
+                "remoteFetchSupported", supportsRemoteModelFetch(def)
+        );
+    }
+
+    @Transactional
+    public Map<String, Object> fetchPlatformProviderModels(String providerCode) {
+        String scopeId = platformScopeId();
+        ensureBuiltinRows(scopeId);
+        ModelProviderConfigEntity entity = requireProviderEntity(scopeId, providerCode);
+        ProviderDef def = requireDef(providerCode);
+        List<ModelDetail> details = fetchRemoteModelDetails(scopeId, providerCode);
+        persistTrustedCapabilities(entity, details);
+        return Map.of(
+                "providerCode", providerCode,
+                "count", details.size(),
+                "models", details.stream().map(ModelDetail::modelName).toList(),
                 "modelDetails", details,
                 "catalogSource", catalogSource(def),
                 "remoteFetchSupported", supportsRemoteModelFetch(def)
@@ -614,7 +656,6 @@ public class ModelProviderService {
 
     private List<String> extractCapabilities(JsonNode item, String modelName) {
         LinkedHashSet<String> caps = new LinkedHashSet<>();
-        caps.add("text");
 
         JsonNode capsNode = item.path("capabilities");
         if (capsNode.isArray()) {
@@ -655,7 +696,7 @@ public class ModelProviderService {
         if (item.path("supports_search").asBoolean(false)
                 || item.path("web_search").asBoolean(false)
                 || item.path("internet").asBoolean(false)) {
-            caps.add("search");
+            caps.add("web-search");
         }
         if (item.path("supports_reasoning").asBoolean(false)
                 || item.path("reasoning").asBoolean(false)
@@ -668,37 +709,27 @@ public class ModelProviderService {
             caps.add("vision");
         }
 
-        caps.addAll(inferCapabilitiesByName(modelName));
         return new ArrayList<>(caps);
     }
 
     private List<String> inferCapabilitiesByName(String modelName) {
-        String lower = modelName.toLowerCase();
-        LinkedHashSet<String> inferred = new LinkedHashSet<>();
-        inferred.add("text");
-        inferred.add("tool");
-
-        if (lower.contains("reason") || lower.contains("r1") || lower.contains("o1") || lower.contains("thinking")) {
-            inferred.add("reasoning");
-        }
-        if (lower.contains("vision") || lower.contains("vl") || lower.contains("4o") || lower.contains("omni")) {
-            inferred.add("vision");
-        }
-        if (lower.contains("search") || lower.contains("web")) {
-            inferred.add("search");
-        }
-        return new ArrayList<>(inferred);
+        return List.of();
     }
 
     private String normalizeCapabilityToken(String raw) {
         if (raw == null || raw.isBlank()) return null;
         String v = raw.trim().toLowerCase();
 
+        if (v.contains("embedding") || v.contains("embed")) return "embedding";
+        if (v.contains("realtime") && (v.contains("asr") || v.contains("transcri"))) return "realtime-asr";
+        if ((v.contains("file") || v.contains("batch")) && (v.contains("asr") || v.contains("transcri"))) return "file-asr";
+        if (v.contains("asr") || v.contains("transcri")) return "file-asr";
+        if (v.contains("code") && v.contains("interpreter")) return "code-interpreter";
+        if (v.contains("extract") || v.contains("crawler")) return "web-extractor";
+        if (v.contains("search") || v.contains("web") || v.contains("internet")) return "web-search";
         if (v.contains("tool") || v.contains("function")) return "tool";
-        if (v.contains("search") || v.contains("web") || v.contains("internet")) return "search";
         if (v.contains("reason") || v.contains("thinking") || v.contains("logic")) return "reasoning";
-        if (v.contains("vision") || v.contains("image") || v.contains("multimodal")
-                || v.contains("video") || v.contains("audio")) return "vision";
+        if (v.contains("vision") || v.contains("image") || v.contains("multimodal") || v.contains("video")) return "vision";
         if (v.contains("text") || v.contains("chat")) return "text";
         return null;
     }
@@ -744,7 +775,7 @@ public class ModelProviderService {
 
     private List<String> configuredModelsForProvider(ModelProviderConfigEntity entity, String companyId) {
         Map<String, Object> config = readJsonToMap(entity.getConfigJson());
-        Object raw = config.get("selectedModels");
+        Object raw = config.get(CONFIG_SELECTED_MODELS);
         List<String> fromConfig = new ArrayList<>();
         if (raw instanceof List<?> list) {
             for (Object item : list) {
@@ -769,6 +800,52 @@ public class ModelProviderService {
             return configured;
         }
         return List.of();
+    }
+
+    private Map<String, List<String>> trustedModelCapabilities(ModelProviderConfigEntity entity) {
+        Object raw = readJsonToMap(entity.getConfigJson()).get(CONFIG_MODEL_CAPABILITIES);
+        if (!(raw instanceof Map<?, ?> rawMap)) {
+            return Map.of();
+        }
+        Map<String, List<String>> out = new LinkedHashMap<>();
+        rawMap.forEach((rawName, rawCapabilities) -> {
+            String modelName = rawName == null ? "" : String.valueOf(rawName).trim();
+            List<String> capabilities = normalizeCapabilities(rawCapabilities);
+            if (!modelName.isBlank() && !capabilities.isEmpty()) {
+                out.put(modelName, capabilities);
+            }
+        });
+        return out;
+    }
+
+    private List<String> normalizeCapabilities(Object raw) {
+        if (!(raw instanceof List<?> items)) {
+            return List.of();
+        }
+        LinkedHashSet<String> out = new LinkedHashSet<>();
+        for (Object item : items) {
+            String normalized = normalizeCapabilityToken(item == null ? "" : String.valueOf(item));
+            if (normalized != null && TRUSTED_CAPABILITIES.contains(normalized)) {
+                out.add(normalized);
+            }
+        }
+        return List.copyOf(out);
+    }
+
+    private void persistTrustedCapabilities(ModelProviderConfigEntity entity, List<ModelDetail> details) {
+        Map<String, Object> config = new LinkedHashMap<>(readJsonToMap(entity.getConfigJson()));
+        Map<String, List<String>> catalog = new LinkedHashMap<>();
+        for (ModelDetail detail : details == null ? List.<ModelDetail>of() : details) {
+            String modelName = detail.modelName() == null ? "" : detail.modelName().trim();
+            List<String> capabilities = normalizeCapabilities(detail.capabilities());
+            if (!modelName.isBlank() && !capabilities.isEmpty()) {
+                catalog.put(modelName, capabilities);
+            }
+        }
+        config.put(CONFIG_MODEL_CAPABILITIES, catalog);
+        entity.setConfigJson(writeJson(config));
+        entity.touch();
+        providerRepository.save(entity);
     }
 
     private List<EmbeddingModelDef> defaultEmbeddingModels(String providerCode) {
@@ -868,12 +945,14 @@ public class ModelProviderService {
 
     private Map<String, Object> routeView(SceneRouteDef scene, List<Map<String, Object>> candidates) {
         List<ModelChoice> choices = candidates.stream().map(this::toModelChoice).filter(choice -> choice != null).toList();
+        List<ModelChoice> compatibleChoices = choices.stream().filter(scene::supports).toList();
         CompanyModelConfigEntity configured = modelConfigRepository
                 .findByCompanyIdAndSceneCode(platformScopeId(), scene.sceneCode())
                 .orElse(null);
-        ModelChoice choice = configured == null
+        ModelChoice configuredChoice = configured == null
                 ? null
                 : findCandidate(choices, configured.getProvider(), configured.getModelName());
+        ModelChoice choice = configuredChoice != null && scene.supports(configuredChoice) ? configuredChoice : null;
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("sceneCode", scene.sceneCode());
         out.put("displayName", scene.displayName());
@@ -882,7 +961,15 @@ public class ModelProviderService {
         out.put("modelName", configured == null ? "" : configured.getModelName());
         out.put("configured", configured != null);
         out.put("available", choice != null);
-        out.put("providerName", choice == null ? "" : choice.providerName());
+        out.put("providerName", configuredChoice == null ? "" : configuredChoice.providerName());
+        out.put("requiredCapabilities", scene.requiredCapabilities());
+        out.put("recommendation", scene.recommendation());
+        out.put("candidates", compatibleChoices.stream().map(this::routeCandidateView).toList());
+        out.put("recommendedCandidates", compatibleChoices.stream().map(this::routeCandidateView).toList());
+        out.put("candidateCount", compatibleChoices.size());
+        out.put("unavailableReason", compatibleChoices.isEmpty()
+                ? "暂无能力已确认且协议兼容的已选模型。请刷新厂商目录或完成受控检测后再选择。"
+                : "");
         return out;
     }
 
@@ -898,13 +985,16 @@ public class ModelProviderService {
         return sceneCode == null ? "" : sceneCode.trim().toLowerCase(java.util.Locale.ROOT);
     }
 
-    private ModelChoice requirePlatformModelChoice(String providerCode, String modelName) {
+    private ModelChoice requirePlatformModelChoice(SceneRouteDef scene, String providerCode, String modelName) {
         ModelChoice choice = findCandidate(
                 agentBaseModels(platformScopeId()).stream().map(this::toModelChoice).filter(item -> item != null).toList(),
                 providerCode,
                 modelName);
         if (choice == null) {
             throw new IllegalArgumentException("模型必须先加入平台已选模型目录。");
+        }
+        if (!scene.supports(choice)) {
+            throw new IllegalArgumentException("模型能力或协议不支持场景：" + scene.displayName() + "。请从该场景的可选模型中选择。");
         }
         return choice;
     }
@@ -948,9 +1038,20 @@ public class ModelProviderService {
         String providerCode = nullableToBlank(String.valueOf(row.getOrDefault("providerCode", ""))).trim();
         String providerName = nullableToBlank(String.valueOf(row.getOrDefault("providerName", ""))).trim();
         String modelName = nullableToBlank(String.valueOf(row.getOrDefault("modelName", ""))).trim();
+        List<String> capabilities = normalizeCapabilities(row.get("capabilities"));
         return providerCode.isBlank() || modelName.isBlank()
                 ? null
-                : new ModelChoice(providerCode, providerName, modelName);
+                : new ModelChoice(providerCode, providerName, modelName, capabilities);
+    }
+
+    private Map<String, Object> routeCandidateView(ModelChoice choice) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("providerCode", choice.providerCode());
+        out.put("providerName", choice.providerName());
+        out.put("modelName", choice.modelName());
+        out.put("displayLabel", choice.modelName() + " · " + choice.providerName());
+        out.put("capabilities", choice.capabilities());
+        return out;
     }
 
     private Map<String, String> routePayload(ModelChoice choice, String source) {
@@ -1049,10 +1150,24 @@ public class ModelProviderService {
     ) {
     }
 
-    private record SceneRouteDef(String sceneCode, String displayName, String description) {
+    private record SceneRouteDef(String sceneCode,
+                                 String displayName,
+                                 String description,
+                                 List<String> requiredCapabilities,
+                                 List<String> supportedProviders,
+                                 String recommendation) {
+        private boolean supports(ModelChoice choice) {
+            if (choice == null || choice.capabilities().isEmpty()) {
+                return false;
+            }
+            if (!supportedProviders.isEmpty() && !supportedProviders.contains(choice.providerCode())) {
+                return false;
+            }
+            return choice.capabilities().containsAll(requiredCapabilities);
+        }
     }
 
-    private record ModelChoice(String providerCode, String providerName, String modelName) {
+    private record ModelChoice(String providerCode, String providerName, String modelName, List<String> capabilities) {
     }
 
     private record ModelDetail(

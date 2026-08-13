@@ -8,6 +8,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.codehouse.ciciassistant.auth.config.PlatformAccountProperties;
+import com.codehouse.ciciassistant.model.domain.ModelProviderConfigEntity;
+import com.codehouse.ciciassistant.model.domain.ModelProviderConfigRepository;
 import com.codehouse.ciciassistant.model.service.ModelProviderService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -15,6 +18,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +41,12 @@ class PlatformModelProviderIntegrationTest {
 
     @Autowired
     private ModelProviderService modelProviderService;
+
+    @Autowired
+    private ModelProviderConfigRepository providerRepository;
+
+    @Autowired
+    private PlatformAccountProperties platformAccountProperties;
 
     @Test
     void onekeyTokenCheckUsesUnsavedDraftCredentialsForLiveChatCompletionsValidation() throws Exception {
@@ -161,6 +171,8 @@ class PlatformModelProviderIntegrationTest {
                 .andExpect(jsonPath("$.data.apiBaseUrl").value("https://platform.deepseek.example/v1"))
                 .andExpect(jsonPath("$.data.apiKeySet").value(true));
 
+        markDeepseekModelsTrusted();
+
         mockMvc.perform(put("/platform/models/providers/{providerCode}/selected-models", "deepseek")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -241,6 +253,62 @@ class PlatformModelProviderIntegrationTest {
                 .andExpect(jsonPath("$.message").value("模型厂商和模型路由由运营平台统一配置，组织后台只开放计费用量查看。"));
     }
 
+    @Test
+    void sceneRoutesOnlyReturnTrustedCompatibleModelsAndRejectBypassWrites() throws Exception {
+        AtomicReference<String> authorization = new AtomicReference<>();
+        AtomicReference<String> requestId = new AtomicReference<>();
+        AtomicReference<String> requestBody = new AtomicReference<>();
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/chat/completions", exchange -> respondToOneKeyTokenValidation(
+                exchange, authorization, requestId, requestBody));
+        server.start();
+        try {
+            String platformToken = platformToken();
+            String baseUrl = "http://127.0.0.1:" + server.getAddress().getPort() + "/v1";
+            modelProviderService.updatePlatformProvider(
+                    ModelProviderService.PROVIDER_ONEKEYTOKEN,
+                    true,
+                    baseUrl,
+                    "stored-key");
+
+            mockMvc.perform(post("/platform/models/providers/{providerCode}/check", "onekeytoken")
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "enabled": true,
+                                      "apiBaseUrl": "%s",
+                                      "apiKey": "draft-live-key"
+                                    }
+                                    """.formatted(baseUrl)))
+                    .andExpect(status().isOk());
+            modelProviderService.updatePlatformSelectedModels(
+                    ModelProviderService.PROVIDER_ONEKEYTOKEN,
+                    List.of("onekeytoken/auto"));
+
+            mockMvc.perform(get("/platform/models/routes")
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.routes[?(@.sceneCode == 'chat')].candidateCount").value(org.hamcrest.Matchers.contains(1)))
+                    .andExpect(jsonPath("$.data.routes[?(@.sceneCode == 'knowledge-embedding')].candidateCount").value(org.hamcrest.Matchers.contains(0)))
+                    .andExpect(jsonPath("$.data.routes[?(@.sceneCode == 'knowledge-embedding')].requiredCapabilities[0]").value(org.hamcrest.Matchers.contains("embedding")));
+
+            mockMvc.perform(put("/platform/models/routes/{sceneCode}", "knowledge-embedding")
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "providerCode": "onekeytoken",
+                                      "modelName": "onekeytoken/auto"
+                                    }
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("不支持场景")));
+        } finally {
+            server.stop(0);
+        }
+    }
+
     private String platformToken() throws Exception {
         MvcResult result = mockMvc.perform(post("/auth/platform/password/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -268,5 +336,20 @@ class PlatformModelProviderIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString()).path("data").path("token").asText();
+    }
+
+    private void markDeepseekModelsTrusted() {
+        String scopeId = platformAccountProperties.getGovernanceCompanyId();
+        if (scopeId == null || scopeId.isBlank()) {
+            scopeId = PlatformAccountProperties.LEGACY_DEFAULT_GOVERNANCE_COMPANY_ID;
+        }
+        ModelProviderConfigEntity provider = providerRepository
+                .findByCompanyIdAndProviderCode(scopeId, ModelProviderService.PROVIDER_DEEPSEEK)
+                .orElseThrow();
+        provider.setConfigJson("""
+                {"modelCapabilities":{"deepseek-chat":["text"],"deepseek-reasoner":["text","reasoning"]}}
+                """);
+        provider.touch();
+        providerRepository.save(provider);
     }
 }

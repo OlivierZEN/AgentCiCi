@@ -19,6 +19,7 @@ type ProviderModelsPayload = {
   providerName: string;
   recommendedModels: string[];
   selectedModels?: string[];
+  modelCapabilities?: Record<string, string[]>;
 };
 
 type FetchModelDetailPayload = {
@@ -38,6 +39,7 @@ type ModelCandidate = {
   providerName: string;
   modelName: string;
   displayLabel?: string;
+  capabilities?: string[];
 };
 
 type ModelRoute = {
@@ -49,11 +51,17 @@ type ModelRoute = {
   modelName: string;
   configured: boolean;
   available: boolean;
+  requiredCapabilities?: string[];
+  recommendation?: string;
+  candidates?: ModelCandidate[];
+  recommendedCandidates?: ModelCandidate[];
+  candidateCount?: number;
+  unavailableReason?: string;
 };
 
 type CatalogSource = "remote" | "unavailable";
 
-type CapabilityKey = "text" | "tool" | "search" | "reasoning" | "vision";
+type CapabilityKey = "text" | "tool" | "reasoning" | "vision" | "embedding" | "realtime-asr" | "file-asr" | "code-interpreter" | "web-search" | "web-extractor";
 type ModelConfigTab = "providers" | "routes";
 
 const PROVIDER_ORDER = ["aliyun-bailian", "deepseek", "ollama-local", "lmstudio-local", "onekeytoken", "anthropic", "openai"];
@@ -74,9 +82,14 @@ const DEFAULT_PROVIDER_ICON_URL = "/provider-logos/aliyun-bailian.svg";
 const CAPABILITY_META: Record<CapabilityKey, { label: string; icon: string; tone: string }> = {
   text: { label: "文本", icon: "T", tone: "text" },
   tool: { label: "工具", icon: "W", tone: "tool" },
-  search: { label: "搜索", icon: "S", tone: "search" },
   reasoning: { label: "推理", icon: "R", tone: "reasoning" },
   vision: { label: "视觉", icon: "V", tone: "vision" },
+  embedding: { label: "向量", icon: "E", tone: "embedding" },
+  "realtime-asr": { label: "实时 ASR", icon: "A", tone: "asr" },
+  "file-asr": { label: "文件 ASR", icon: "A", tone: "asr" },
+  "code-interpreter": { label: "代码解释器", icon: "C", tone: "code" },
+  "web-search": { label: "联网搜索", icon: "S", tone: "search" },
+  "web-extractor": { label: "网页抓取", icon: "X", tone: "extract" },
 };
 
 function readToken(): string {
@@ -97,20 +110,17 @@ function normalizeCapability(cap: string): CapabilityKey | null {
   const v = cap.trim().toLowerCase();
   if (!v) return null;
   if (v.includes("tool") || v.includes("function")) return "tool";
-  if (v.includes("search") || v.includes("web") || v.includes("internet")) return "search";
+  if (v.includes("embedding") || v.includes("embed")) return "embedding";
+  if (v.includes("realtime") && (v.includes("asr") || v.includes("transcri"))) return "realtime-asr";
+  if ((v.includes("file") || v.includes("batch")) && (v.includes("asr") || v.includes("transcri"))) return "file-asr";
+  if (v.includes("asr") || v.includes("transcri")) return "file-asr";
+  if (v.includes("code") && v.includes("interpreter")) return "code-interpreter";
+  if (v.includes("extract") || v.includes("crawler")) return "web-extractor";
+  if (v.includes("search") || v.includes("web") || v.includes("internet")) return "web-search";
   if (v.includes("reason") || v.includes("thinking") || v.includes("logic")) return "reasoning";
-  if (v.includes("vision") || v.includes("image") || v.includes("multimodal") || v.includes("video") || v.includes("audio")) return "vision";
+  if (v.includes("vision") || v.includes("image") || v.includes("multimodal") || v.includes("video")) return "vision";
   if (v.includes("text") || v.includes("chat")) return "text";
   return null;
-}
-
-function inferCapabilities(modelName: string): CapabilityKey[] {
-  const lower = modelName.toLowerCase();
-  const caps: CapabilityKey[] = ["text", "tool"];
-  if (lower.includes("reason") || lower.includes("r1") || lower.includes("o1") || lower.includes("thinking")) caps.push("reasoning");
-  if (lower.includes("vision") || lower.includes("vl") || lower.includes("4o") || lower.includes("omni")) caps.push("vision");
-  if (lower.includes("search") || lower.includes("web")) caps.push("search");
-  return [...new Set(caps)];
 }
 
 function selectedModelKey(providerCode: string, modelName: string) {
@@ -156,7 +166,6 @@ export default function PlatformModelsPage() {
   const [providerModels, setProviderModels] = useState<string[]>([]);
   const [modelRoutes, setModelRoutes] = useState<ModelRoute[]>([]);
   const [activeConfigTab, setActiveConfigTab] = useState<ModelConfigTab>("providers");
-  const [modelCandidates, setModelCandidates] = useState<ModelCandidate[]>([]);
   const [capabilityMap, setCapabilityMap] = useState<Record<string, CapabilityKey[]>>({});
   const [allModelsOpen, setAllModelsOpen] = useState(false);
   const [allModelsLoading, setAllModelsLoading] = useState(false);
@@ -241,9 +250,10 @@ export default function PlatformModelsPage() {
       setSelectedModelsForProvider(providerCode, data.selectedModels ?? []);
       setCapabilityMap((prev) => {
         const next = { ...prev };
-        merged.forEach((name) => {
-          const key = selectedModelKey(providerCode, name);
-          if (!next[key]) next[key] = inferCapabilities(name);
+        Object.entries(data.modelCapabilities ?? {}).forEach(([name, capabilities]) => {
+          next[selectedModelKey(providerCode, name)] = capabilities
+            .map((capability) => normalizeCapability(capability))
+            .filter((capability): capability is CapabilityKey => capability !== null);
         });
         return next;
       });
@@ -259,7 +269,6 @@ export default function PlatformModelsPage() {
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "加载场景模型路由失败");
       setModelRoutes((json.data?.routes ?? []) as ModelRoute[]);
-      setModelCandidates((json.data?.modelCandidates ?? []) as ModelCandidate[]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "加载场景模型路由失败");
     }
@@ -349,14 +358,14 @@ export default function PlatformModelsPage() {
         const caps = (item.capabilities ?? [])
           .map((cap) => normalizeCapability(cap))
           .filter((cap): cap is CapabilityKey => cap !== null);
-        detailsMap.set(item.modelName, caps.length > 0 ? [...new Set(caps)] : inferCapabilities(item.modelName));
+        detailsMap.set(item.modelName, [...new Set(caps)]);
       });
       setProviderModels(models);
       setAllModelsCatalogSource(remoteUnavailable ? "unavailable" : "remote");
       setCapabilityMap((prev) => {
         const next = { ...prev };
         models.forEach((name) => {
-          next[selectedModelKey(selected.providerCode, name)] = detailsMap.get(name) ?? inferCapabilities(name);
+          next[selectedModelKey(selected.providerCode, name)] = detailsMap.get(name) ?? [];
         });
         return next;
       });
@@ -646,7 +655,7 @@ export default function PlatformModelsPage() {
                     ) : (
                       <div className="provider-model-board">
                         {selectedModelsForCurrentProvider.map((name) => {
-                          const caps = capabilityMap[selectedModelKey(selected.providerCode, name)] ?? inferCapabilities(name);
+                          const caps = capabilityMap[selectedModelKey(selected.providerCode, name)] ?? [];
                           return (
                             <div className="provider-model-row" key={`${selected.providerCode}-${name}`}>
                               <div className="provider-model-row__left">
@@ -673,6 +682,7 @@ export default function PlatformModelsPage() {
                                       </span>
                                     );
                                   })}
+                                  {caps.length === 0 ? <span className="model-capability-unknown">能力未确认，不可用于场景路由</span> : null}
                                 </div>
                                 <button
                                   type="button"
@@ -702,51 +712,58 @@ export default function PlatformModelsPage() {
             <h4>场景模型路由</h4>
             <span className="model-count-badge">已配置 {configuredRouteCount} 个</span>
           </div>
-          {modelCandidates.length === 0 ? (
-            <p className="subtle">暂无可用于路由的模型。先把模型加入平台已选模型目录。</p>
-          ) : (
-            <div className="model-route-board">
-              {modelRoutes.map((route) => {
-                const value = route.providerCode && route.modelName
-                  ? selectedModelKey(route.providerCode, route.modelName)
-                  : "";
-                return (
-                  <div className="model-route-row" key={route.sceneCode}>
-                    <div className="model-route-row__main">
-                      <div className="model-route-row__title">{route.displayName}</div>
-                      <div className="model-route-row__desc">{route.description}</div>
-                      {route.configured && !route.available ? (
-                        <div className="model-route-row__warning">当前配置的模型已不在平台已选模型目录中。</div>
-                      ) : null}
+          <div className="model-route-board">
+            {modelRoutes.map((route) => {
+              const candidates = route.candidates ?? [];
+              const value = route.providerCode && route.modelName
+                ? selectedModelKey(route.providerCode, route.modelName)
+                : "";
+              return (
+                <div className="model-route-row" key={route.sceneCode}>
+                  <div className="model-route-row__main">
+                    <div className="model-route-row__title">{route.displayName}</div>
+                    <div className="model-route-row__desc">{route.description}</div>
+                    <div className="model-route-row__guidance">
+                      <span>适用能力：{(route.requiredCapabilities ?? []).join("、") || "未声明"}</span>
+                      <span>{route.recommendation || "请仅选择厂商已确认能力的模型。"}</span>
+                      <span>已验证候选：{candidates.length} 个</span>
                     </div>
-                    <div className="model-route-row__controls">
-                      <select
-                        className="cici-field__input model-route-select"
-                        value={route.available ? value : ""}
-                        disabled={busy}
-                        onChange={(event) => void saveModelRoute(route.sceneCode, event.target.value)}
-                      >
-                        <option value="">使用平台默认模型</option>
-                        {modelCandidates.map((candidate) => (
+                    {route.configured && !route.available ? (
+                      <div className="model-route-row__warning">当前配置的模型已失去能力或协议兼容性，请重新选择。</div>
+                    ) : null}
+                    {candidates.length === 0 ? <div className="model-route-row__warning">{route.unavailableReason || "暂无可选模型。"}</div> : null}
+                  </div>
+                  <div className="model-route-row__controls">
+                    <select
+                      className="cici-field__input model-route-select"
+                      value={route.available ? value : ""}
+                      disabled={busy || candidates.length === 0}
+                      aria-label={`${route.displayName}模型`}
+                      onChange={(event) => void saveModelRoute(route.sceneCode, event.target.value)}
+                    >
+                      <option value="">请选择已验证模型</option>
+                      {candidates.map((candidate) => {
+                        const key = selectedModelKey(candidate.providerCode, candidate.modelName);
+                        return (
                           <option
-                            key={`${route.sceneCode}-${candidate.providerCode}-${candidate.modelName}`}
-                            value={selectedModelKey(candidate.providerCode, candidate.modelName)}
+                            key={`${route.sceneCode}-${key}`}
+                            value={key}
                           >
                             {candidate.displayLabel || `${candidate.modelName} · ${candidate.providerName}`}
                           </option>
-                        ))}
-                      </select>
-                      {route.configured ? (
-                        <button type="button" className="cici-btn cici-btn--ghost" disabled={busy} onClick={() => void clearModelRoute(route.sceneCode)}>
-                          清除
-                        </button>
-                      ) : null}
-                    </div>
+                        );
+                      })}
+                    </select>
+                    {route.configured ? (
+                      <button type="button" className="cici-btn cici-btn--ghost" disabled={busy} onClick={() => void clearModelRoute(route.sceneCode)}>
+                        清除
+                      </button>
+                    ) : null}
                   </div>
-                );
-              })}
-            </div>
-          )}
+                </div>
+              );
+            })}
+          </div>
         </section>
       )}
 
@@ -779,7 +796,7 @@ export default function PlatformModelsPage() {
                 <div className="all-models-list">
                   {filteredModels.map((name) => {
                     const selectedNow = selectedModels.has(selectedModelKey(selected.providerCode, name));
-                    const caps = capabilityMap[selectedModelKey(selected.providerCode, name)] ?? inferCapabilities(name);
+                    const caps = capabilityMap[selectedModelKey(selected.providerCode, name)] ?? [];
                     return (
                       <div key={name} className="all-models-item">
                         <div className="all-models-item__name">{name}</div>
@@ -793,11 +810,13 @@ export default function PlatformModelsPage() {
                               </span>
                             );
                           })}
+                          {caps.length === 0 ? <span className="model-capability-unknown">能力未确认</span> : null}
                         </div>
                         <button
                           type="button"
                           className="all-models-item__action"
                           title={selectedNow ? "移出已选模型" : "加入已选模型"}
+                          disabled={!selectedNow && caps.length === 0}
                           onClick={() => void toggleSelectedModel(name)}
                         >
                           {selectedNow ? "-" : "+"}

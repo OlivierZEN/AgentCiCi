@@ -8448,6 +8448,26 @@ h1,
   line-height: 1.45;
 }
 
+.model-route-row__guidance {
+  display: grid;
+  gap: 2px;
+  margin-top: 5px;
+  color: #786a52;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.model-route-row__guidance span:first-child {
+  color: #876223;
+  font-weight: 700;
+}
+
+.model-capability-unknown {
+  color: #a54c1a;
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .model-route-row__warning {
   margin-top: 4px;
   font-size: 12px;
@@ -17636,6 +17656,18 @@ td.skills-data-table__actions > * {
 }
 
 .platform-main .platform-page .model-route-row__warning {
+  color: var(--platform-danger);
+}
+
+.platform-main .platform-page .model-route-row__guidance {
+  color: var(--platform-muted);
+}
+
+.platform-main .platform-page .model-route-row__guidance span:first-child {
+  color: var(--platform-accent-strong);
+}
+
+.platform-main .platform-page .model-capability-unknown {
   color: var(--platform-danger);
 }
 

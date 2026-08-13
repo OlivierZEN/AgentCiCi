@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-13T06:44:46Z
+updated_at: 2026-08-13T07:22:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-13T06:44:46Z
-last_run_status: passed
+last_run_at: 2026-08-13T07:22:00Z
+last_run_status: partial
 ---
 
 # Test Report
+
+## 2026-08-13 TASK-298 场景模型能力过滤与推荐说明
+
+- 后端：`mvn -q -DskipTests package` 通过；`git diff --check` 通过。
+- 前端：`npm test -- --run src/platform/pages/PlatformModelsPage.test.tsx` 为 1 文件/4 项通过；`npm run build` 通过，仅保留既有 chunk-size warning。
+- 集成边界：`ModelProviderServiceIntegrationTest,PlatformModelProviderIntegrationTest` 在执行断言前被共享 `agentcici_test` 的 Flyway V81 checksum 漂移阻断（已应用 `2112500543`，本地解析 `379982424`）。未执行 repair、未修改历史迁移；本任务新增的可信能力过滤用例已编译，但待测试库基线恢复后执行。
+- 覆盖：模型能力只接受远程目录或受控检测持久化结果；场景读取仅返回能力/协议兼容候选，路由写入及运行时二次拒绝未知或不兼容模型；路由页显示必需能力、推荐原则、候选数量与空状态引导。
+- 待验收：提交后从本地 `main` 构建 backend/frontend，更新 `https://cici.localhost/` 并执行完整 `./stack verify`；UAT/生产不修改。
+- 状态：`partial`（静态、package、前端测试和生产构建通过；Spring 集成被既有测试库 Flyway 基线阻断）。
 
 ## 2026-08-13 TASK-297 统一模型调用治理本地开发环境发布
 
