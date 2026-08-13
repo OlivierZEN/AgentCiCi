@@ -2,7 +2,8 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ChevronRight, ExternalLink, Search, X } from "lucide-react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { authFetch } from "../../auth/authStorage";
-import { LS_PLATFORM_TOKEN } from "../../constants";
+import { LS_PLATFORM_TOKEN, PLATFORM_API_BASE } from "../../constants";
+import { safeFetchJson } from "../../utils/http";
 
 export type SystemApi = {
   id: string;
@@ -49,9 +50,16 @@ type Catalog = {
   providers: SystemApiProvider[];
 };
 
-type ApiEnvelope<T> = { success: boolean; data?: T; message?: string };
-
 const EMPTY_CATALOG: Catalog = { contractVersion: "v1", notice: "", providers: [] };
+export const SYSTEM_API_CATALOG_ENDPOINT = `${PLATFORM_API_BASE}/system-apis`;
+
+export function systemApiCatalogFailureMessage(status: number, message: string | undefined, rawText: string): string {
+  if (message?.trim()) return message.trim();
+  if (rawText.trimStart().startsWith("<")) {
+    return `系统 API 目录加载失败：服务未返回预期数据（HTTP ${status}）。请刷新页面并确认前后端版本一致后重试。`;
+  }
+  return `系统 API 目录加载失败（HTTP ${status}）。请稍后重试。`;
+}
 
 export function filterSystemApis(apis: SystemApi[], query: string, category: string, risk: string) {
   const needle = query.trim().toLocaleLowerCase("zh-CN");
@@ -101,9 +109,13 @@ export default function PlatformSystemApisPage() {
     setLoading(true);
     setNotice("");
     try {
-      const response = await authFetch(LS_PLATFORM_TOKEN, "/platform/system-apis");
-      const body = await response.json() as ApiEnvelope<Catalog>;
-      if (!response.ok || !body.success || !body.data) throw new Error(body.message || `HTTP ${response.status}`);
+      const response = await authFetch(LS_PLATFORM_TOKEN, SYSTEM_API_CATALOG_ENDPOINT, {
+        headers: { Accept: "application/json" },
+      });
+      const { body, rawText } = await safeFetchJson<Catalog>(response);
+      if (!response.ok || !body?.success || !body.data) {
+        throw new Error(systemApiCatalogFailureMessage(response.status, body?.message, rawText));
+      }
       setCatalog(body.data);
     } catch (error) {
       setCatalog(EMPTY_CATALOG);

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { filterSystemApis, type SystemApi } from "./PlatformSystemApisPage";
+import {
+  filterSystemApis,
+  SYSTEM_API_CATALOG_ENDPOINT,
+  systemApiCatalogFailureMessage,
+  type SystemApi,
+} from "./PlatformSystemApisPage";
 
 function api(id: string, title: string, category: string, riskLevel: string, scope: string): SystemApi {
   return {
@@ -27,5 +32,21 @@ describe("system API catalog filters", () => {
   it("combines category and risk filters", () => {
     expect(filterSystemApis(apis, "", "身份与授权", "medium")).toEqual([apis[1]]);
     expect(filterSystemApis(apis, "", "业务数据", "medium")).toEqual([]);
+  });
+});
+
+describe("system API catalog transport", () => {
+  it("uses the governed browser API namespace rather than the SPA route", () => {
+    expect(SYSTEM_API_CATALOG_ENDPOINT).toBe("/api/platform/system-apis");
+  });
+
+  it("turns an HTML SPA fallback into an actionable error", () => {
+    expect(systemApiCatalogFailureMessage(200, undefined, "<!doctype html><html></html>"))
+      .toBe("系统 API 目录加载失败：服务未返回预期数据（HTTP 200）。请刷新页面并确认前后端版本一致后重试。");
+  });
+
+  it("preserves a structured backend error message", () => {
+    expect(systemApiCatalogFailureMessage(503, "Semattice 目录暂不可用", "{}"))
+      .toBe("Semattice 目录暂不可用");
   });
 });
