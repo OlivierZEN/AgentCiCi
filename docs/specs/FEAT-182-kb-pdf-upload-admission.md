@@ -7,7 +7,7 @@ owner_role: fullstack-agent
 task_ids: TASK-301
 related_decisions: none
 related_issues: none
-updated_at: 2026-08-13T11:09:00Z
+updated_at: 2026-08-13T11:20:00Z
 updated_by: codex
 ---
 
@@ -34,6 +34,8 @@ updated_by: codex
 3. 文本型 PDF 上传后自动发布并进入文档列表；后端既有 PDF 索引集成测试保持通过。
 4. 页面不再出现英文策略 toast 或“PDF 不进入索引流水线”的矛盾文案。
 5. 本地开发环境必须从 AgentCiCi 本地 `main` 的提交构建 `:local` 镜像，回读页面、容器健康、重启次数与版本/提交指纹。
+6. 选择文件后立即显示文件名和当前阶段；上传、发布、索引成功或失败都必须在页面内持续可见，网络异常和非 JSON 响应不得静默。
+7. 索引异步执行时持续刷新目标文档，直到 `PUBLISHED` 或 `FAILED`；处理中禁止重复选择文件。
 
 ## 回滚
 

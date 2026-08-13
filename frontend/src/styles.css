@@ -4786,6 +4786,20 @@ select {
   border-color: #fed7aa;
   background: #fff7ed;
 }
+.cici-inline-feedback--progress {
+  border-color: var(--border-strong, var(--border));
+  background: var(--surface-2);
+}
+.cici-upload-feedback .cici-inline-feedback__main strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.cici-upload-feedback .cici-spinner {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 13px;
+}
 .cici-modal--kb-chunks {
   max-width: 980px;
 }

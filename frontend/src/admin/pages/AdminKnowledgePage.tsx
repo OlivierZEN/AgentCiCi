@@ -1,6 +1,11 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useAdminToken } from "../useAdminToken";
 import { validateKnowledgeUpload } from "./AdminKnowledgeUploadPolicy";
+import {
+  isUploadTerminalStatus,
+  readKnowledgeApiResponse,
+  uploadFailureMessage,
+} from "./AdminKnowledgeUploadFlow";
 
 type KnowledgeBase = {
   id: number;
@@ -130,6 +135,12 @@ type BatchFeedback = {
   detail: string;
 };
 
+type UploadFeedback = {
+  tone: "progress" | "success" | "warning";
+  title: string;
+  detail: string;
+};
+
 type UploadPolicy = {
   maxFileSizeBytes: number;
   maxFilesPerUpload: number;
@@ -245,6 +256,8 @@ export default function AdminKnowledgePage() {
   const [chunkBatchFeedback, setChunkBatchFeedback] = useState<BatchFeedback | null>(null);
   const [openDocActionMenuId, setOpenDocActionMenuId] = useState<number | null>(null);
   const [uploadPolicy, setUploadPolicy] = useState<UploadPolicy | null>(null);
+  const [uploadFeedback, setUploadFeedback] = useState<UploadFeedback | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [vectorAudit, setVectorAudit] = useState<VectorAudit | null>(null);
   const [kbDialog, setKbDialog] = useState<KbDialog | null>(null);
   const [dialogValue, setDialogValue] = useState("");
@@ -766,30 +779,80 @@ export default function AdminKnowledgePage() {
   };
 
   const uploadDocument = async (file: File) => {
-    if (!selectedKb) return;
+    if (!selectedKb || isUploading) return;
+    const kbId = selectedKb.id;
+    setUploadFeedback({
+      tone: "progress",
+      title: "正在检查文件",
+      detail: file.name,
+    });
     const validationMessage = validateKnowledgeUpload(file, uploadPolicy);
     if (validationMessage) {
+      setUploadFeedback({ tone: "warning", title: "无法上传", detail: `${file.name}：${validationMessage}` });
       flash(validationMessage);
       return;
     }
-    const form = new FormData();
-    form.append("knowledgeBaseId", String(selectedKb.id));
-    form.append("file", file);
-    const res = await fetch("/kb/documents/upload", {
-      method: "POST",
-      headers: headers(),
-      body: form,
-    });
-    const json = await res.json();
-    if (!json.success) {
-      flash(`上传失败：${json.message}`);
-      return;
-    }
-    flash("文档上传成功");
-    await listDocuments(selectedKb.id);
-    const docId = json.data?.id;
-    if (docId) {
-      await publishDocument(docId);
+    setIsUploading(true);
+    try {
+      setUploadFeedback({ tone: "progress", title: "正在上传", detail: `${file.name}，请勿关闭页面` });
+      const form = new FormData();
+      form.append("knowledgeBaseId", String(kbId));
+      form.append("file", file);
+      const uploadResponse = await fetch("/kb/documents/upload", {
+        method: "POST",
+        headers: headers(),
+        body: form,
+      });
+      const uploadResult = await readKnowledgeApiResponse<{ id?: number }>(uploadResponse, "上传文档");
+      const docId = Number(uploadResult.data?.id);
+      if (!Number.isFinite(docId) || docId <= 0) {
+        throw new Error("上传文档失败：服务没有返回文档编号");
+      }
+
+      setUploadFeedback({ tone: "progress", title: "上传完成，正在提交索引", detail: file.name });
+      await listDocuments(kbId);
+      const publishResponse = await fetch(`/kb/documents/${docId}/publish`, {
+        method: "POST",
+        headers: headers(),
+      });
+      await readKnowledgeApiResponse(publishResponse, "提交索引");
+      setUploadFeedback({ tone: "progress", title: "正在解析并建立索引", detail: `${file.name}，状态会自动更新` });
+
+      let terminalDocument: KbDocument | undefined;
+      for (let attempt = 0; attempt < 30; attempt += 1) {
+        const documentsResponse = await fetch(`/kb/${kbId}/documents`, { headers: headers() });
+        const documentsResult = await readKnowledgeApiResponse<KbDocument[]>(documentsResponse, "刷新文档状态");
+        const latestDocuments = documentsResult.data ?? [];
+        setDocs(latestDocuments);
+        terminalDocument = latestDocuments.find((document) => document.id === docId && isUploadTerminalStatus(document.status));
+        if (terminalDocument) break;
+        await new Promise((resolve) => window.setTimeout(resolve, 2000));
+      }
+
+      if (!terminalDocument) {
+        setUploadFeedback({
+          tone: "progress",
+          title: "文档已上传，索引仍在处理中",
+          detail: `${file.name}，可继续留在当前页面查看状态`,
+        });
+      } else if (terminalDocument.status === "PUBLISHED") {
+        setUploadFeedback({
+          tone: "success",
+          title: "文档上传成功",
+          detail: `${file.name}，已生成 ${terminalDocument.chunkCount ?? 0} 个切片并可用于检索`,
+        });
+        flash("文档上传并索引成功");
+      } else {
+        throw new Error(`文档索引失败：${terminalDocument.errorMessage || "请检查文件内容后重试"}`);
+      }
+      await listKnowledgeBases();
+    } catch (error) {
+      const message = uploadFailureMessage(error, "文档上传失败，请稍后重试");
+      setUploadFeedback({ tone: "warning", title: "文档上传失败", detail: `${file.name}：${message}` });
+      flash(message);
+      await listDocuments(kbId).catch(() => undefined);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -1572,6 +1635,7 @@ export default function AdminKnowledgePage() {
                     type="file"
                     accept={uploadAccept}
                     hidden
+                    disabled={isUploading}
                     onChange={(e) => {
                       const f = e.target.files?.[0];
                       if (f) void uploadDocument(f);
@@ -1581,9 +1645,10 @@ export default function AdminKnowledgePage() {
                   <button
                     type="button"
                     className="cici-btn cici-btn--primary"
+                    disabled={isUploading}
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    + 添加文件
+                    {isUploading ? "处理中..." : "+ 添加文件"}
                   </button>
                 </div>
               </div>
@@ -1592,6 +1657,31 @@ export default function AdminKnowledgePage() {
                 <span>单文件上限 {uploadLimitLabel}</span>
                 <span>{uploadPolicy?.pdfPolicy ?? "PDF 暂不支持索引，请先提取文本后上传。"}</span>
               </div>
+
+              {uploadFeedback && (
+                <div
+                  className={`cici-inline-feedback cici-inline-feedback--${uploadFeedback.tone} cici-upload-feedback`}
+                  role={uploadFeedback.tone === "warning" ? "alert" : "status"}
+                  aria-live={uploadFeedback.tone === "warning" ? "assertive" : "polite"}
+                >
+                  <div className="cici-inline-feedback__main">
+                    <strong>
+                      {uploadFeedback.tone === "progress" && <span className="cici-spinner" aria-hidden />}
+                      {uploadFeedback.title}
+                    </strong>
+                    <span>{uploadFeedback.detail}</span>
+                  </div>
+                  {uploadFeedback.tone !== "progress" && (
+                    <button
+                      type="button"
+                      className="cici-btn cici-btn--text cici-btn--xs"
+                      onClick={() => setUploadFeedback(null)}
+                    >
+                      关闭
+                    </button>
+                  )}
+                </div>
+              )}
 
               <div className="cici-kb-settings__actions cici-kb-settings__actions--batch">
                 <span className="subtle">已选 {selectedDocCount} 项</span>
