@@ -1,8 +1,12 @@
 ---
+kind: feature-spec
 feature_id: FEAT-178
-status: implementation
+title: DevAutopilot 受理草稿字段保真
+status: implemented
 primary_project: agentcici
 integration_id: INT-015
+updated_at: 2026-08-13T02:00:00Z
+updated_by: codex
 ---
 
 # FEAT-178 - DevAutopilot 受理草稿字段保真
@@ -14,7 +18,8 @@ integration_id: INT-015
 ## 契约
 
 - 可见草稿与 `DEV_AUTOPILOT_INTAKE_V1` 必须来自同一份结构化事实。
-- 可见分析要点完整进入 `pm_assessment`；可见验收标准逐条进入 `acceptance_criteria`；可见影响分析逐条进入 `impact_analysis`；开发者验证表逐条进入 `assumptions`。
+- 可见分类依据独立进入 `classification_reason`；可见分析要点完整进入 `pm_assessment` 且不得混入分类依据；可见验收标准逐条进入 `acceptance_criteria`；可见影响分析逐条进入 `impact_analysis`；开发者验证表逐条进入 `assumptions`。
+- 语义数组中的每一项必须至少包含一个 Unicode 字母或数字；Markdown 分隔线和纯标点内容必须在写入前拒绝，不能成为验收、影响、复现或开发者验证事实。
 - `original_report` 和 `user_supplements` 继续要求逐字匹配真实用户消息。
 - 若隐藏标记缺失，可见草稿兜底必须忠实解析已经展示的专业内容；只有草稿本身未提供具体内容时才允许最小安全默认值。
 - Semattice 原生字段承载标题、摘要、优先级、验收标准等查询事实，`intake` 保存完整受理来源与审计包，不得互相错位。
@@ -32,7 +37,7 @@ integration_id: INT-015
 - 租户 `ORG_ADMIN` 可针对明确的 `session_id + record_id` 发起纠正；平台 `PLATFORM_ADMIN` 可在租户生命周期维护入口发起同一受控动作。两类调用都不能提交业务字段。服务端必须确认：会话属于目标租户、会话中存在该记录 ID 的成功回执、草稿在回执之前、目标记录的 `intake.conversation_id` 与会话一致、标题与分类一致。
 - 纠正通过产品经理 SERVICE 身份调用 Semattice 官方 `runtime.record.update`，使用 `expected_revision` 乐观锁；SERVICE 委托人固定为原确认会话的人类成员，平台维护人员不替代原确认人、不能获得其业务数据权限。禁止 AgentCiCi 直接写 Semattice 数据库。
 - 原确认人、确认时间和 correlation ID 保持不变；只以已确认草稿恢复专业摘要、验收/影响/复现字段与 `intake` 语义字段，并追加纠正时间、纠正人和来源审计。
-- 写后必须再次调用 `runtime.record.get`，逐字段比对 patch；回执除 `record_id/revision` 外还必须返回内容摘要 `content_digest`，只有逐字段一致才允许标记 `readback_verified=true`。
+- 写后必须再次调用 `runtime.record.get`，逐字段比对由已确认草稿恢复出的规范语义模型，而不只是验证调用方 patch 自洽；回执除 `record_id/revision` 外还必须返回内容摘要 `content_digest`，只有逐字段一致才允许标记 `readback_verified=true`。
 - 重复纠正必须幂等：字段已经一致时不增加 revision，返回 `UNCHANGED`。
 - 平台租户应用页通过独立弹窗提供维护入口，只接受会话 ID 和记录 UUID；页面必须明确说明不能填写业务内容，并展示 revision、回读状态和内容摘要结果。
 

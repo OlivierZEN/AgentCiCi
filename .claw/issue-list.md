@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-08-12T07:36:57Z
+updated_at: 2026-08-13T02:00:00Z
 updated_by: codex
 status: active
 ---
@@ -13,8 +13,8 @@ status: active
 - Symptom: DevAutopilot 详情抽屉中的 `REQ-6F34ECF3` 只有通用产品经理摘要、1 条通用验收和 1 条通用开发者验证项，与确认前可见草稿的 4/5/4 条具体内容不一致。
 - Verified root cause: 记录创建于 2026-08-12 22:37 CST，字段保真修复版 backend 于 23:28 CST 才部署；Semattice 忠实保存了旧解析器生成的占位字段。新页面读取的是同一条旧记录，现有功能没有受治理的历史草稿纠正路径。
 - Evidence: AgentCiCi `chat_message` 22 保存完整草稿、23 保存确认、24 保存该 record ID 回执；Semattice 记录 revision=1 的 `summary/acceptance/intake.assumptions` 均为旧占位内容。
-- Resolution: TASK-296 增加同租户会话约束、产品经理 SERVICE `runtime.record.update`、乐观锁、逐字段回读、内容摘要和幂等纠正，并修复当前本地记录。
-- Status: in progress.
+- Resolution: TASK-296 增加同租户会话约束、产品经理 SERVICE `runtime.record.update`、乐观锁、规范语义逐字段回读、内容摘要和幂等纠正。首次 revision 2 回读进一步发现 Markdown `---` 被解析为 `--` 验收项且分类理由混入产品经理分析；最终规则拒绝纯标点语义项并独立保存 `classification_reason`。本地记录已纠正为 revision 3，4/5/4 条内容与草稿一致，重复调用不增加 revision。
+- Status: resolved locally; UAT/production unchanged.
 
 ## Open Issues
 

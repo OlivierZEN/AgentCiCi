@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-08-12T13:05:08Z
+updated_at: 2026-08-13T02:00:00Z
 updated_by: codex
 board_status: active
 ---
@@ -14,18 +14,6 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
-
-### TASK-296 - DevAutopilot 历史受理记录字段纠正
-
-- status: `in_progress`
-- priority: `critical`
-- owner_role: `backend-agent`
-- claimed_by: `codex`
-- integration_id: `INT-015`
-- spec_path: `docs/specs/FEAT-178-devautopilot-intake-field-fidelity.md`
-- task_status_path: `.claw/tasks/TASK-296.md`
-- blocked_by: `none`
-- next_action: 实现受信会话重放、Semattice 乐观锁纠正和逐字段回读，并修复本地 `REQ-6F34ECF3`。
 
 ### TASK-293 - DevAutopilot 授权初始化编排
 
@@ -1539,6 +1527,18 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-296 - DevAutopilot 历史受理记录字段纠正
+
+- status: `done`
+- priority: `critical`
+- owner_role: `backend-agent`
+- claimed_by: `codex`
+- integration_id: `INT-015`
+- spec_path: `docs/specs/FEAT-178-devautopilot-intake-field-fidelity.md`
+- task_status_path: `.claw/tasks/TASK-296.md`
+- completion_evidence: `REQ-6F34ECF3 revision 3；分类理由独立，分析/验收/验证项 4/5/4；重复校准不增加 revision；AgentCiCi 78ebeae 与 DevAutopilot 32e95a9 本地健康`
+- next_action: 已完成本地 revision 3 字段纠正、幂等回读及 DevAutopilot 抽屉分类理由展示；UAT/生产未修改。
 
 ### TASK-291 - 平台代码解释器集成与内置工具
 

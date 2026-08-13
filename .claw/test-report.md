@@ -1,14 +1,26 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-12T15:35:00Z
+updated_at: 2026-08-13T02:00:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-12T15:35:00Z
-last_run_status: passed_with_authorized_business_acceptance_pending
+last_run_at: 2026-08-13T02:00:00Z
+last_run_status: passed
 ---
 
 # Test Report
+
+## 2026-08-13 TASK-296 DevAutopilot 历史受理字段纠正
+
+- 初次受控纠正通过平台维护弹窗写入 revision 2，但独立回读发现 Markdown `---` 被兜底解析为 `--` 第六条验收，分类理由也混入了产品经理分析；未把接口自报成功当作最终验收。
+- 最终解析规则将 `classification_reason` 与 `pm_assessment` 分离，并统一拒绝不含 Unicode 字母或数字的数组项；真实故障同构测试包含 Markdown 分隔线。
+- AgentCiCi：`SematticeProjectDeliveryWriteToolServiceTest,DevAutopilotIntakeReconciliationServiceTest,DeliveryWriteReceiptGuardTest,ChatOrchestratorServiceModelIdentityTest` 通过；`mvn -q -DskipTests package` 与 `git diff --check` 通过。
+- 正式纠正：平台返回 revision 3 / digest `04b27d83078e`；Semattice 只读回读确认分类理由、4 条分析、5 条验收、4 条开发者验证项与确认前草稿一致，`--` 不存在。
+- 幂等与审计：第二次相同校准返回“已核验一致”，数据库 revision 保持 3；`platform_audit_log` 保存会话、原确认人、revision 3 和完整 64 位摘要。
+- DevAutopilot：详情抽屉新增独立“分类理由”，37/37 Node 测试、JS 语法和 diff check 通过；部署脚本回读包含 `intake.classification_reason`。
+- 本地环境：AgentCiCi `2.8.61-dev.78ebeae`、DevAutopilot `1.0.4-dev.32e95a9`；相关容器 healthy/restart=0，两次完整 `./stack verify` 通过域名门禁、数据库隔离、TLS、OIDC、应用健康/版本和匿名授权边界。
+- 边界：DevAutopilot 直达 URL 无租户 OACT 时按设计拒绝读取；未用平台管理员冒充租户业务成员。UAT/生产未修改。
+- 状态：`passed`。
 
 ## 2026-08-12 TASK-294 DevAutopilot 受理草稿字段保真
 
