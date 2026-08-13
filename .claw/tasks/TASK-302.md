@@ -3,8 +3,8 @@ kind: task-status
 task_id: TASK-302
 feature_id: FEAT-183
 integration_id: INT-019
-status: review
-updated_at: 2026-08-13T15:34:50Z
+status: in_progress
+updated_at: 2026-08-13T15:50:30Z
 updated_by: codex
 owner_role: fullstack-agent
 spec_path: docs/specs/FEAT-183-system-api-catalog.md
@@ -19,21 +19,31 @@ spec_path: docs/specs/FEAT-183-system-api-catalog.md
 - 在能力治理中新增“系统 API”及 AgentCiCi、Semattice 子菜单。
 - 实现概览、提供方列表、宽抽屉速览和独立调用文档页。
 - 明确公司 API 的 HUMAN 鉴权边界，并按 AgentCiCi 前端、同源扩展、新独立应用和机器应用说明 Token 取得或接入流程。
+- 补齐独立内部应用直接使用 Keycloak Access Token 调用的通用入口、受信 Client 治理及无状态公司上下文契约。
 
 ## 完成条件
 
 - 目录读取受平台角色保护，业务 API 原鉴权和功能逻辑不变。
 - 前后端定向测试与生产构建通过。
 - 任务提交进入 AgentCiCi 本地 `main`，从该提交更新 `cici.localhost` 并回读运行指纹。
+- 独立应用只需 Keycloak `access_token` 与可选 `X-Company-Id` 即可调用；未知 Client、错误 Audience、停用应用和非 ACTIVE 成员均失败关闭。
 
 ## 实现结果
 
-- AgentCiCi 提供方收录 8 个核心契约，其中新增可访问公司查询和公司上下文切换；Semattice 通过提供方持有的 HMAC 投影聚合 11 个核心 Capability。
-- 公司切换沿用现有 `/auth/switch-company` 逻辑：服务端校验同一全局账号的 ACTIVE 成员关系并签发新令牌；目录文档区分 HUMAN 会话令牌、SERVICE Token、OACT 与内部 HMAC，不改变原接口逻辑。
+- AgentCiCi 提供方收录 8 个核心契约；公司相关契约已升级为 `GET /openapi/v1/ecosystem/companies` 与 `POST /openapi/v1/ecosystem/company-context`。Semattice 继续通过提供方持有的 HMAC 投影聚合 11 个核心 Capability。
+- 内部独立应用使用自己的 Keycloak Client 完成标准登录，直接以 `access_token` 调用；服务端校验 RS256 签名、Issuer、有效期、`typ=Bearer`、`aud=agentcici-api` 和 `azp`，再按 `(issuer, sub)` 映射 HUMAN 账号。
+- V115 新增受信内部应用目录；平台管理员可在系统 API 首页进入独立列表，以弹窗登记 `app_code`、Keycloak Client ID、允许 Scope 和状态。Client Secret 不进入 AgentCiCi，停用立即阻断调用，配置变更写入平台审计。
+- 公司列表不接受账号参数；公司上下文不签发第二套长期令牌。后续公司级调用继续使用同一 Keycloak Token 和 `X-Company-Id`，服务端逐请求校验 ACTIVE 公司及成员关系。
 - 运营端已实现提供方首页、可搜索/筛选列表、宽抽屉速览和独立文档页；URL 支持列表、抽屉与文档深链。
 - 目录读取继续受平台角色保护，页面不提供在线执行入口，目录可见性不授予业务 API 调用权限。
-- 公司 API 现使用结构化鉴权指南：抽屉直接说明 Keycloak 原始 Token 不可调用；完整文档展示 OIDC 授权码/PKCE、身份与 ACTIVE 成员映射、生态 HUMAN Token 签发、API 调用和切换后令牌替换链路。
-- 新独立应用被明确标记为“接入前置”：须先登记 Keycloak Client、平台应用激活/信任与应用专用 handoff 或受治理交换契约。当前没有对外公布通用 HUMAN Token 交换端点，文档未虚构可调用地址；机器应用继续使用 SERVICE/OACT，不得调用 HUMAN 公司 API。
+- AgentCiCi 自身前端继续使用现有 OIDC BFF；DevAutopilot 单次 handoff 和机器应用 SERVICE/OACT 均保持原逻辑，不强行迁移到 HUMAN 直调入口。
+
+## Keycloak HUMAN 直调实现
+
+- 后端定向 13 项通过：Keycloak HUMAN Token 验签与错误 Audience、受信 Client 未登记/停用/Scope 缺失、HUMAN 映射、公司目录、公司上下文和非成员 403 均有断言。
+- 后端 production package 通过；前端 49 文件/272 项与 production build 通过。
+- OpenAPI CORS 已允许 `X-Company-Id`，具体 Origin 继续由环境配置注入，不在业务源码维护环境域名。
+- 本地 `main` 提交与 `cici.localhost` 部署证据在完成部署后补充；UAT/生产未修改。
 
 ## 验证证据
 

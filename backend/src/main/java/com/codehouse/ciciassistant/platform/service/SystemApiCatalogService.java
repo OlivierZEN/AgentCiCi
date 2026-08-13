@@ -77,51 +77,51 @@ public class SystemApiCatalogService {
     private List<ApiView> agentCiCiEntries() {
         return List.of(
                 entry("agentcici.organization.list", "可访问公司列表",
-                        "查询当前登录账号拥有有效成员关系的公司，并标识当前公司上下文。",
-                        "身份与公司", "GET", "/auth/companies", "Bearer AgentCiCi Ecosystem HUMAN Token", "AgentCiCi",
-                        "authenticated HUMAN member", "low", false,
-                        schema("{\"type\":\"object\",\"description\":\"No request body. The current account and company are derived from the verified token.\"}"),
-                        schema("{\"type\":\"object\",\"required\":[\"success\",\"data\",\"message\"],\"properties\":{\"success\":{\"type\":\"boolean\"},\"data\":{\"type\":\"object\",\"required\":[\"accountId\",\"currentCompanyId\",\"companies\"],\"properties\":{\"accountId\":{\"type\":\"string\"},\"currentCompanyId\":{\"type\":\"string\"},\"companies\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"companyId\",\"companyName\",\"memberId\",\"roleCode\",\"current\"]}}}},\"message\":{\"type\":\"string\"}}}"),
+                        "使用当前 Keycloak HUMAN Access Token 查询账号拥有有效成员关系的公司。",
+                        "身份与公司", "GET", "/openapi/v1/ecosystem/companies", "Bearer Keycloak HUMAN Access Token", "AgentCiCi",
+                        EcosystemApplicationTrustService.ORGANIZATION_READ_SCOPE, "low", false,
+                        schema("{\"type\":\"object\",\"description\":\"No request body. The HUMAN account is derived from the verified Keycloak access token.\"}"),
+                        schema("{\"type\":\"object\",\"required\":[\"success\",\"data\",\"message\"],\"properties\":{\"success\":{\"type\":\"boolean\"},\"data\":{\"type\":\"object\",\"required\":[\"appCode\",\"accountId\",\"tokenExpiresAt\",\"companies\"],\"properties\":{\"appCode\":{\"type\":\"string\"},\"accountId\":{\"type\":\"string\"},\"tokenExpiresAt\":{\"type\":\"string\"},\"companies\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"companyId\",\"companyName\",\"memberId\",\"roleCode\"]}}}},\"message\":{\"type\":\"string\"}}}"),
                         Map.of(), Map.of(
                                 "success", true,
                                 "data", Map.of(
+                                        "appCode", "${REGISTERED_APP_CODE}",
                                         "accountId", "${ACCOUNT_ID}",
-                                        "currentCompanyId", "${CURRENT_COMPANY_ID}",
+                                        "tokenExpiresAt", "${ISO_8601}",
                                         "companies", List.of(Map.of(
                                                 "companyId", "${COMPANY_ID}",
                                                 "companyName", "${COMPANY_NAME}",
                                                 "memberId", "${MEMBER_ID}",
-                                                "roleCode", "ORG_USER",
-                                                "current", true))),
+                                                "roleCode", "ORG_USER"))),
                                 "message", "OK"),
-                        List.of("AgentCiCi 前端", "内部生态应用"), "FEAT-024 Account Tenant Lifecycle Contract",
+                        List.of("内部独立应用", "生态扩展应用"), "FEAT-183 Ecosystem Keycloak HUMAN Contract",
                         List.of("只返回当前全局账号下公司与成员状态均有效的公司，不接受客户端传入 accountId。",
-                                "companyId 与 memberId 只用于选择和展示；调用方不得据此绕过后端成员关系校验。",
-                                "切换公司后必须重新加载所有公司隔离的数据，不能复用上一公司的业务缓存。"),
+                                "Bearer 必须是 access_token；id_token 不能调用系统 API。",
+                                "应用身份由 Keycloak azp 与平台登记的 Client 精确匹配，调用方不传 appCode。"),
                         companyHumanAuthGuide()),
-                entry("agentcici.organization.switch", "切换当前公司",
-                        "把当前登录账号切换到其拥有有效成员关系的目标公司，并签发新的公司上下文访问令牌。",
-                        "身份与公司", "POST", "/auth/switch-company", "Bearer AgentCiCi Ecosystem HUMAN Token", "AgentCiCi",
-                        "authenticated HUMAN member", "medium", false,
+                entry("agentcici.organization.context", "建立公司调用上下文",
+                        "校验当前 Keycloak 用户对目标公司的有效成员关系，返回后续请求使用的无状态公司上下文。",
+                        "身份与公司", "POST", "/openapi/v1/ecosystem/company-context", "Bearer Keycloak HUMAN Access Token", "AgentCiCi",
+                        EcosystemApplicationTrustService.ORGANIZATION_CONTEXT_SCOPE, "medium", false,
                         schema("{\"type\":\"object\",\"required\":[\"companyId\"],\"properties\":{\"companyId\":{\"type\":\"string\"}},\"additionalProperties\":false}"),
-                        schema("{\"type\":\"object\",\"required\":[\"success\",\"data\",\"message\"],\"properties\":{\"success\":{\"type\":\"boolean\"},\"data\":{\"type\":\"object\",\"required\":[\"token\",\"companyId\",\"companyName\",\"userId\",\"memberId\",\"accountId\",\"roles\",\"issuedAt\"]},\"message\":{\"type\":\"string\"}}}"),
+                        schema("{\"type\":\"object\",\"required\":[\"success\",\"data\",\"message\"],\"properties\":{\"success\":{\"type\":\"boolean\"},\"data\":{\"type\":\"object\",\"required\":[\"appCode\",\"companyId\",\"companyName\",\"memberId\",\"accountId\",\"roles\",\"companyHeader\",\"tokenExpiresAt\"]},\"message\":{\"type\":\"string\"}}}"),
                         Map.of("companyId", "${TARGET_COMPANY_ID}"), Map.of(
                                 "success", true,
                                 "data", Map.of(
-                                        "token", "${NEW_AGENTCICI_ECOSYSTEM_HUMAN_TOKEN}",
+                                        "appCode", "${REGISTERED_APP_CODE}",
                                         "companyId", "${TARGET_COMPANY_ID}",
                                         "companyName", "${COMPANY_NAME}",
-                                        "userId", "${TARGET_MEMBER_ID}",
                                         "memberId", "${TARGET_MEMBER_ID}",
                                         "accountId", "${ACCOUNT_ID}",
                                         "roles", List.of("ORG_USER"),
-                                        "issuedAt", "${ISO_8601}"),
-                                "message", "Company switched"),
-                        List.of("AgentCiCi 前端", "内部生态应用"), "FEAT-024 Account Tenant Lifecycle Contract",
+                                        "companyHeader", "X-Company-Id",
+                                        "tokenExpiresAt", "${ISO_8601}"),
+                                "message", "Company context authorized"),
+                        List.of("内部独立应用", "生态扩展应用"), "FEAT-183 Ecosystem Keycloak HUMAN Contract",
                         List.of("目标 companyId 必须来自受信的公司列表，并由当前 HUMAN 用户主动选择。",
                                 "服务端按当前账号重新校验目标公司的 ACTIVE 成员关系；不属于目标公司时返回 403。",
-                                "成功响应会签发新的公司上下文令牌；调用方必须原子替换旧令牌，并清空上一公司的租户级缓存。",
-                                "不得仅修改客户端 companyId 或继续使用旧令牌模拟切换。"),
+                                "不签发第二套长期令牌；后续调用继续使用同一 Keycloak access_token 并携带 X-Company-Id。",
+                                "切换公司后必须清空上一公司的业务缓存；每个公司级 API 都会重新校验成员关系。"),
                         companyHumanAuthGuide()),
                 entry("agentcici.service-token.exchange", "SERVICE Token 交换",
                         "把已验证的 Keycloak SERVICE Bearer Token 交换为面向 Semattice 的短时 OACT。",
@@ -203,27 +203,29 @@ public class SystemApiCatalogService {
 
     private static AuthGuideView companyHumanAuthGuide() {
         return new AuthGuideView(
-                "AgentCiCi Ecosystem HUMAN Token",
-                false,
-                "Keycloak access_token / id_token 只证明统一登录身份，不包含 AgentCiCi 当前公司成员关系，也不是 agentcici-api 的受信业务令牌，因此不能直接调用本接口。",
+                "Keycloak HUMAN Access Token",
+                true,
+                "已登记内部应用的 Keycloak access_token 可直接调用；id_token 只用于客户端登录展示，不能作为 API Bearer Token。",
                 List.of(
-                        new AuthFlowStepView("keycloak-login", "Keycloak 完成统一认证", "用户在应用登记的 Keycloak Client 中登录；浏览器只获得授权码流程所需的短时状态。"),
-                        new AuthFlowStepView("agentcici-callback", "AgentCiCi 后端交换并校验", "AgentCiCi 后端使用授权码和 PKCE 完成交换，校验 issuer、签名、时效、nonce 与客户端绑定。"),
-                        new AuthFlowStepView("identity-membership", "映射 HUMAN 身份与公司成员", "按 (issuer, sub) 定位全局账号，并校验账号、公司和成员关系均为 ACTIVE。"),
-                        new AuthFlowStepView("ecosystem-token", "签发 AgentCiCi 生态令牌", "AgentCiCi 签发 aud=agentcici-api、typ=ecosystem_user 的短时 HUMAN Token，并绑定 account、principal、company 与 member 上下文。"),
-                        new AuthFlowStepView("company-api", "携带生态令牌调用", "调用公司 API；切换成功后原子替换响应中的新令牌，并清理旧公司的租户级缓存。")
+                        new AuthFlowStepView("application-registration", "登记内部应用", "平台管理员登记 app_code、Keycloak client_id 和允许 Scope；运行时不需要 AgentCiCi Client Secret。"),
+                        new AuthFlowStepView("keycloak-login", "使用应用自己的 Keycloak Client 登录", "应用执行标准 Authorization Code + PKCE，取得 aud 包含 agentcici-api 的 access_token。"),
+                        new AuthFlowStepView("direct-call", "直接携带 Access Token", "应用发送 Authorization: Bearer <KEYCLOAK_ACCESS_TOKEN>；AgentCiCi 从 azp 识别受信应用。"),
+                        new AuthFlowStepView("identity-membership", "服务端逐请求授权", "AgentCiCi 验证令牌并按 (issuer, sub) 映射 HUMAN 账号，重新校验应用 Scope 和 ACTIVE 公司成员关系。"),
+                        new AuthFlowStepView("company-context", "显式传递公司上下文", "公司级 API 继续使用同一 access_token，并发送服务端已校验的 X-Company-Id；不再交换第二套长期 Token。")
                 ),
                 List.of(
-                        new AuthScenarioView("agentcici-web", "AgentCiCi 自身前端", "已支持", "沿用 /auth/oidc/login → Keycloak callback → 单次完成票据 → /auth/oidc/complete；使用响应 data.token 调用本接口。"),
-                        new AuthScenarioView("same-origin-extension", "AgentCiCi 同源扩展应用", "已支持", "由已认证宿主或受管会话传递 AgentCiCi HUMAN 上下文；不得读取、转发或持久化 Keycloak 原始令牌。"),
-                        new AuthScenarioView("new-standalone-app", "新加入的独立应用", "接入前置", "先登记独立 Keycloak Client、平台应用激活与信任关系，再建设应用专用单次 handoff 或受治理 HUMAN Token 交换。当前未发布通用 HUMAN Token 交换端点，完成接入前不能直调本接口。"),
+                        new AuthScenarioView("new-standalone-app", "新加入的独立应用", "已支持", "登记 Keycloak Client 与允许 Scope 后，直接使用该 Client 取得的 access_token 调用 /openapi/v1/ecosystem/*；无需专用 handoff 或二次 Token 交换。"),
+                        new AuthScenarioView("agentcici-web", "AgentCiCi 自身前端", "保持现状", "继续沿用 /auth/oidc/login 与 AgentCiCi BFF 会话，不需要改造为生态直调入口。"),
+                        new AuthScenarioView("same-origin-extension", "AgentCiCi 同源扩展应用", "可选", "可以复用 AgentCiCi 受管会话，也可以登记独立 Keycloak Client 后使用同一生态直调契约。"),
                         new AuthScenarioView("service-app", "机器或服务应用", "不适用", "使用 SERVICE Principal、Keycloak SERVICE Token 交换与 OACT 契约；不得调用面向 HUMAN 会话的公司列表和切换接口。")
                 ),
                 List.of(
                         "aud 必须包含 agentcici-api",
-                        "typ 必须为 ecosystem_user，principal_type 必须为 HUMAN",
-                        "authorized_party 必须为 agentcici",
-                        "account_id、principal_id、sub、company_id 与 member_id 必须一致且由 AgentCiCi 签发")
+                        "iss 必须是 AgentCiCi 配置的 Keycloak Realm，签名、exp 必须有效",
+                        "Token typ 必须为 Bearer；Keycloak id_token 不满足本接口要求",
+                        "azp 必须精确匹配平台登记且状态为 ACTIVE 的 Keycloak client_id",
+                        "(iss, sub) 必须已绑定 ACTIVE AgentCiCi HUMAN 账号",
+                        "应用必须具备接口要求的 Scope；公司级调用必须携带 X-Company-Id 并通过 ACTIVE 成员校验")
         );
     }
 

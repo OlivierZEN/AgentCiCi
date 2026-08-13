@@ -104,6 +104,33 @@ class KeycloakOidcLoginServiceTest {
             assertThat(service.verifyServiceAccessToken(token))
                     .isEqualTo(new KeycloakOidcLoginService.ServiceAccessToken(
                             "service-account-agentcici-data-sync", "agentcici-data-sync"));
+            String humanToken = Jwts.builder().header().keyId(keyId).and()
+                    .issuer(issuer).subject("human-user-subject")
+                    .audience().add("agentcici-api").and()
+                    .claim("azp", "internal-workbench")
+                    .claim("typ", "Bearer")
+                    .claim("scope", "openid profile")
+                    .claim("sid", "keycloak-session-1")
+                    .issuedAt(java.util.Date.from(Instant.now()))
+                    .expiration(java.util.Date.from(Instant.now().plusSeconds(60)))
+                    .signWith(keyPair.getPrivate(), Jwts.SIG.RS256).compact();
+            assertThat(service.verifyHumanAccessToken(humanToken, "agentcici-api"))
+                    .isEqualTo(new KeycloakOidcLoginService.HumanAccessToken(
+                            "human-user-subject", "internal-workbench", List.of("openid", "profile"),
+                            "keycloak-session-1", Jwts.parser().verifyWith(publicKey).build()
+                                    .parseSignedClaims(humanToken).getPayload().getExpiration().toInstant()));
+
+            String wrongAudience = Jwts.builder().header().keyId(keyId).and()
+                    .issuer(issuer).subject("human-user-subject")
+                    .audience().add("another-api").and()
+                    .claim("azp", "internal-workbench")
+                    .claim("typ", "Bearer")
+                    .issuedAt(java.util.Date.from(Instant.now()))
+                    .expiration(java.util.Date.from(Instant.now().plusSeconds(60)))
+                    .signWith(keyPair.getPrivate(), Jwts.SIG.RS256).compact();
+            assertThatThrownBy(() -> service.verifyHumanAccessToken(wrongAudience, "agentcici-api"))
+                    .isInstanceOf(UnauthorizedException.class)
+                    .hasMessage("Keycloak access token claims are invalid");
             assertThatThrownBy(() -> service.verifyServiceAccessToken("not.a.valid.jwt"))
                     .isInstanceOf(UnauthorizedException.class);
         } finally {

@@ -21,6 +21,7 @@ import java.security.SecureRandom;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.RSAPublicKeySpec;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -226,6 +227,54 @@ public class KeycloakOidcLoginService {
         }
     }
 
+    /**
+     * Validates a Keycloak HUMAN access token for a registered internal application.
+     * The caller application is always derived from {@code azp}; request parameters cannot override it.
+     */
+    public HumanAccessToken verifyHumanAccessToken(String token, String requiredAudience) {
+        requireEnabled();
+        try {
+            String[] parts = token == null ? new String[0] : token.split("\\.");
+            if (parts.length != 3) {
+                throw new UnauthorizedException("Keycloak access token is malformed");
+            }
+            JsonNode header = objectMapper.readTree(Base64.getUrlDecoder().decode(parts[0]));
+            String kid = header.path("kid").asText("");
+            if (!"RS256".equals(header.path("alg").asText("")) || kid.isBlank()) {
+                throw new UnauthorizedException("Keycloak access token algorithm is invalid");
+            }
+            Claims claims = Jwts.parser().verifyWith((RSAPublicKey) resolveJwk(kid))
+                    .build().parseSignedClaims(token).getPayload();
+            String subject = trim(claims.getSubject());
+            String authorizedParty = trim(claims.get("azp", String.class));
+            String tokenType = trim(claims.get("typ", String.class));
+            String audience = trim(requiredAudience);
+            if (!issuer.equals(trimTrailingSlash(claims.getIssuer()))
+                    || subject.isBlank()
+                    || authorizedParty.isBlank()
+                    || !"Bearer".equalsIgnoreCase(tokenType)
+                    || audience.isBlank()
+                    || claims.getAudience() == null
+                    || !claims.getAudience().contains(audience)) {
+                throw new UnauthorizedException("Keycloak access token claims are invalid");
+            }
+            String scopeClaim = trim(claims.get("scope", String.class));
+            List<String> scopes = scopeClaim.isBlank()
+                    ? List.of()
+                    : List.of(scopeClaim.split("\\s+")).stream().filter(KeycloakOidcLoginService::hasText).distinct().toList();
+            String sessionId = trim(claims.get("sid", String.class));
+            if (sessionId.isBlank()) {
+                sessionId = trim(claims.get("session_state", String.class));
+            }
+            Instant expiresAt = claims.getExpiration() == null ? Instant.EPOCH : claims.getExpiration().toInstant();
+            return new HumanAccessToken(subject, authorizedParty, scopes, sessionId, expiresAt);
+        } catch (UnauthorizedException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new UnauthorizedException("Keycloak access token verification failed");
+        }
+    }
+
     private TokenResponse exchangeCode(String code, String verifier) {
         try {
             Map<String, String> form = Map.of(
@@ -368,6 +417,14 @@ public class KeycloakOidcLoginService {
     }
 
     public record ServiceAccessToken(String subject, String clientId) {
+    }
+
+    public record HumanAccessToken(
+            String subject,
+            String clientId,
+            List<String> scopes,
+            String sessionId,
+            Instant expiresAt) {
     }
 
     private record TokenResponse(String idToken, String refreshToken, int refreshExpiresIn) {

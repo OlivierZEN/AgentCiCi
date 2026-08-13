@@ -2,11 +2,11 @@
 kind: feature-spec
 feature_id: FEAT-183
 title: 内部生态系统 API 目录
-status: implemented
+status: in_implementation
 primary_project: agentcici
 task_ids: TASK-302
 related_integrations: INT-019
-updated_at: 2026-08-13T13:15:32Z
+updated_at: 2026-08-13T15:50:30Z
 updated_by: codex
 ---
 
@@ -20,6 +20,7 @@ updated_by: codex
 
 - 能力治理新增一级菜单“系统 API”，下设 `AgentCiCi` 与 `Semattice` 两个提供方入口。
 - 首页说明治理边界并展示提供方摘要；提供方页面使用可搜索、可筛选的紧凑列表。
+- 首页提供独立“接入应用”入口；受信应用使用单独列表扫描 Client、Scope 和状态，新增/编辑使用显式弹窗，停用是独立治理动作。
 - 点击记录打开宽抽屉，展示用途、调用约束、鉴权、输入输出和常见错误速览。
 - 完整调用说明使用独立路由，承载 Schema、请求/响应示例、兼容与回滚说明。
 - 不提供在线执行按钮，避免把目录读取权限误解为业务调用授权。
@@ -33,13 +34,14 @@ updated_by: codex
 
 ## HUMAN API 鉴权说明
 
-- 公司查询与公司切换只接受 AgentCiCi 签发的 `Ecosystem HUMAN Token`。Keycloak 原始 `access_token` / `id_token` 只证明用户完成统一认证，不能直接作为这两个接口的 Bearer Token。
-- 完整调用文档必须明确展示当前链路：Keycloak 完成用户认证；AgentCiCi 后端交换授权码并校验令牌；按 `(issuer, sub)` 映射 HUMAN 账号并校验 ACTIVE 公司成员关系；AgentCiCi 签发 `aud=agentcici-api`、`typ=ecosystem_user` 的生态令牌；调用方再使用该令牌请求公司 API。
-- AgentCiCi 自身前端沿用现有 OIDC 登录、回调和单次完成票据流程，从 `/auth/oidc/complete` 响应的 `data.token` 取得生态令牌。
-- 同源扩展应用必须从 AgentCiCi 已认证宿主或受管会话继承 HUMAN 上下文，不得读取、转发或持久化 Keycloak 原始令牌。
-- 新加入的独立应用须先完成独立 Keycloak Client、平台应用激活/信任关系和 HUMAN 交接方案登记。当前不公布通用 HUMAN Token 交换端点；在应用专用单次 handoff 或受治理交换契约完成前，不得直接调用公司 API。
-- 机器或服务应用使用 SERVICE Principal、SERVICE Token 交换和 OACT 契约，不得调用面向 HUMAN 会话的公司查询与切换 API。
-- 抽屉只展示可调用令牌和 Keycloak 直调结论；独立文档页展示完整链路、场景差异、令牌声明和调用示例。
+- 内部独立应用以 Keycloak `access_token` 为统一 HUMAN 调用凭证，不再为每个应用建设专用 handoff，也不要求先交换 AgentCiCi 长期令牌；`id_token` 只服务于客户端登录展示，不能调用 API。
+- 平台管理员先登记受信应用的 `app_code`、Keycloak `client_id` 和允许 Scope。调用时应用只发送 `Authorization: Bearer <KEYCLOAK_ACCESS_TOKEN>`；AgentCiCi 根据令牌 `azp` 自动识别应用，不接受客户端自报 `app_code`。
+- AgentCiCi 必须验证 Keycloak 签名、Issuer、有效期、`azp` 和 `aud=agentcici-api`，按 `(issuer, sub)` 映射既有 HUMAN 账号，并在每次调用时重新校验受信应用状态及 ACTIVE 公司成员关系。
+- 无公司上下文的 `GET /openapi/v1/ecosystem/companies` 返回当前 Keycloak 用户可访问的 ACTIVE 公司；`POST /openapi/v1/ecosystem/company-context` 校验指定公司并返回成员、角色和后续请求所需的 `X-Company-Id`，不创建服务端“当前公司”全局状态。
+- 后续生态 HUMAN API 继续携带同一 Keycloak `access_token`，并在需要公司上下文时发送 `X-Company-Id`。服务端必须逐请求校验公司成员关系，禁止只相信 Header。
+- AgentCiCi 自身前端继续使用现有 OIDC BFF 与 Ecosystem HUMAN Token，不受本契约影响；已有 DevAutopilot 单次 handoff 继续用于从 AgentCiCi 主动启动目标应用，但不作为独立应用自主登录的通用前置。
+- 机器或服务应用继续使用 SERVICE Principal、SERVICE Token 交换和 OACT，不能借用 HUMAN 端点。
+- Keycloak Client 的注册是一次性平台治理操作；应用运行时只处理标准 Keycloak 登录、Bearer Token 和可选 `X-Company-Id`，不接触 AgentCiCi 密钥、OACT 或 HMAC。
 
 ## 首批范围
 
@@ -54,8 +56,10 @@ updated_by: codex
 4. Semattice 暂时不可用时 AgentCiCi 目录仍显示，并明确标记远端不可用。
 5. 页面明确说明“出现在目录中不代表自动获得调用权限”。
 6. 本地开发环境从 AgentCiCi 与 Semattice 各自本地 `main` 构建并通过跨项目契约与全栈验证。
-7. 公司查询不接受客户端指定账号；公司切换重新校验 ACTIVE 成员关系并返回新的公司上下文令牌，调用文档不得把 HUMAN 令牌误写成 SERVICE OACT。
-8. 公司 API 文档明确说明 Keycloak 原始令牌不可直调，并分别给出 AgentCiCi 前端、同源扩展、新独立应用和机器应用的接入结论；不得虚构尚未发布的通用 HUMAN Token 交换端点。
+7. 公司查询不接受客户端指定账号；公司上下文选择必须根据 Keycloak `sub` 对应账号重新校验 ACTIVE 成员关系，不产生可绕过 Keycloak 的第二套长期令牌。
+8. 只有平台登记为 ACTIVE、Scope 匹配且 Keycloak `azp` 精确命中的内部应用可使用 HUMAN 生态端点；未知、停用、Audience 不匹配或未绑定 HUMAN 账号的 Token 一律失败关闭。
+9. 公司 API 文档分别给出独立应用直调、AgentCiCi 自身前端和机器应用流程，明确 `access_token` 可调用、`id_token` 不可调用、公司级请求必须携带 `X-Company-Id`。
+10. 受信应用登记、停用与 Scope 变更必须由平台角色执行并记录审计；不得在业务源码中硬编码环境域名、Client Secret 或允许 Client 列表。
 
 ## 回滚
 
@@ -66,4 +70,4 @@ updated_by: codex
 
 - 代码、定向测试、前端全量测试和前后端生产构建已经完成。
 - AgentCiCi 与 Semattice 本地 `main` 制品已部署到统一开发环境，并完成版本、健康、鉴权边界和提供方投影回读。
-- 当前技术实现进入评审；真实平台登录态下的视觉与交互验收不以匿名路由检查替代。
+- 目录首版已发布 UAT，但面向独立应用的通用 HUMAN 调用链路被确认是核心缺口，当前重新进入实现阶段；完成 Keycloak 直调、受信 Client 治理和公司上下文 API 后再进入评审。

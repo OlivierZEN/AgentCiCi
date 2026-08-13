@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-13T15:34:50Z
+updated_at: 2026-08-13T15:50:30Z
 updated_by: codex
-phase: review
+phase: implementation
 active_task: TASK-302
-next_action: "平台运营人员在 UAT 使用真实登录态确认公司 API 抽屉和完整文档中的 Keycloak 直调结论、现有 OIDC 流程及新应用接入前置；生产未修改。"
+next_action: "实现受信 Keycloak Client 登记、Keycloak Access Token 直调和无状态公司上下文 API；完成定向验证后提交本地 main 并更新 cici.localhost。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-302 / FEAT-183 已补齐内部独立应用的 Keycloak HUMAN 直调代码：平台登记受信 Client 与 Scope，应用直接携带 `access_token` 调用生态公司目录/上下文 API，服务端验证签名、Issuer、`typ=Bearer`、`aud=agentcici-api`、`azp`、HUMAN 绑定和 ACTIVE 成员关系；不再要求应用专用 handoff 或第二套长期 Token。受信应用独立列表、编辑弹窗、停用和审计已实现。后端定向 13 项、package、前端 49 文件/272 项与 production build 通过；待提交本地 `main`、部署 V115 和更新 `cici.localhost`，UAT/生产未修改。
 
 - TASK-302 / FEAT-183 已发布 UAT `2.8.61-beta.19 / 2343b9bbafd6`。backend/frontend ACR index digest 为 `sha256:36f9591b78b9f2c22f2dd5c435f0e2d1dbd693978c195dbe6f241c958184bda7` / `sha256:0958cbe7b5614c16548895c233afa828545c1be6775bfd160aefbb0bfb4de0a7`；完整备份 `/data/apps/agentcici/backups/20260813T153050Z-before-2.8.61-beta.19` 已校验，回滚目标 beta.18。仅重建 backend/frontend，四个状态服务 ID 不变；六容器 healthy/restart=0，版本、health、Flyway V114、Nginx、公开 smoke、系统 API 路由 200、匿名 JSON 401 和稳定窗口通过。远程 `main`、tag 与制品 commit 一致；授权态视觉验收待运营人员完成，生产未修改。
 

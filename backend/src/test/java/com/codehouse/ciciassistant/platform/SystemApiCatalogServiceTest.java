@@ -29,7 +29,7 @@ class SystemApiCatalogServiceTest {
         assertThat(agentCiCi.apis()).extracting(SystemApiCatalogService.ApiView::id)
                 .containsExactly(
                         "agentcici.organization.list",
-                        "agentcici.organization.switch",
+                        "agentcici.organization.context",
                         "agentcici.service-token.exchange",
                         "agentcici.devautopilot.activation.resolve",
                         "agentcici.devautopilot.handoff.exchange",
@@ -42,26 +42,27 @@ class SystemApiCatalogServiceTest {
             assertThat(api.requestExample().toString()).doesNotContain("secret", "eyJ");
         });
         assertThat(agentCiCi.apis().getFirst()).satisfies(api -> {
-            assertThat(api.path()).isEqualTo("/auth/companies");
-            assertThat(api.authType()).isEqualTo("Bearer AgentCiCi Ecosystem HUMAN Token");
+            assertThat(api.path()).isEqualTo("/openapi/v1/ecosystem/companies");
+            assertThat(api.authType()).isEqualTo("Bearer Keycloak HUMAN Access Token");
             assertThat(api.outputSchema().path("properties").path("data").path("properties")
                     .path("companies").path("type").asText()).isEqualTo("array");
             assertThat(api.authGuide()).isNotNull();
-            assertThat(api.authGuide().directKeycloakTokenAccepted()).isFalse();
-            assertThat(api.authGuide().directKeycloakTokenReason()).contains("不能直接调用");
+            assertThat(api.authGuide().directKeycloakTokenAccepted()).isTrue();
+            assertThat(api.authGuide().directKeycloakTokenReason()).contains("access_token 可直接调用");
             assertThat(api.authGuide().currentFlow()).extracting(SystemApiCatalogService.AuthFlowStepView::code)
-                    .containsExactly("keycloak-login", "agentcici-callback", "identity-membership", "ecosystem-token", "company-api");
+                    .containsExactly("application-registration", "keycloak-login", "direct-call", "identity-membership", "company-context");
             assertThat(api.authGuide().scenarios()).anySatisfy(scenario -> {
                 assertThat(scenario.code()).isEqualTo("new-standalone-app");
-                assertThat(scenario.status()).isEqualTo("接入前置");
-                assertThat(scenario.instruction()).contains("当前未发布通用 HUMAN Token 交换端点");
+                assertThat(scenario.status()).isEqualTo("已支持");
+                assertThat(scenario.instruction()).contains("无需专用 handoff 或二次 Token 交换");
             });
         });
         assertThat(agentCiCi.apis().get(1)).satisfies(api -> {
-            assertThat(api.path()).isEqualTo("/auth/switch-company");
+            assertThat(api.path()).isEqualTo("/openapi/v1/ecosystem/company-context");
             assertThat(api.requestExample().path("companyId").asText()).isEqualTo("${TARGET_COMPANY_ID}");
-            assertThat(api.responseExample().path("data").path("token").asText())
-                    .isEqualTo("${NEW_AGENTCICI_ECOSYSTEM_HUMAN_TOKEN}");
+            assertThat(api.responseExample().path("data").has("token")).isFalse();
+            assertThat(api.responseExample().path("data").path("companyHeader").asText())
+                    .isEqualTo("X-Company-Id");
             assertThat(api.callNotes()).anyMatch(note -> note.contains("返回 403"));
         });
         assertThat(catalog.providers().get(1).status()).isEqualTo("unavailable");

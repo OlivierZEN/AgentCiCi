@@ -118,6 +118,7 @@ const router = createBrowserRouter(createRoutesFromElements(
             <Route path="tools" element={<PlatformToolsPage />} />
             <Route path="tools/:toolName" element={<PlatformToolsPage />} />
             <Route path="system-apis" element={<PlatformSystemApisPage />} />
+            <Route path="system-apis/applications" element={<PlatformSystemApisPage />} />
             <Route path="system-apis/:providerCode" element={<PlatformSystemApisPage />} />
             <Route path="system-apis/:providerCode/:apiId" element={<PlatformSystemApisPage />} />
             <Route path="system-apis/:providerCode/:apiId/docs" element={<PlatformSystemApisPage />} />

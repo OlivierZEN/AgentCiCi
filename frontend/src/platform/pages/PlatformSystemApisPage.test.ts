@@ -55,39 +55,39 @@ describe("system API catalog transport", () => {
 });
 
 describe("system API invocation documentation", () => {
-  it("uses a HUMAN session token for company context APIs", () => {
-    const companyList = api("agentcici.organization.list", "可访问公司列表", "身份与公司", "low", "authenticated HUMAN member");
+  it("uses a Keycloak HUMAN access token directly for ecosystem company APIs", () => {
+    const companyList = api("agentcici.organization.list", "可访问公司列表", "身份与公司", "low", "organization.read");
     companyList.method = "GET";
-    companyList.path = "/auth/companies";
-    companyList.authType = "Bearer AgentCiCi Ecosystem HUMAN Token";
+    companyList.path = "/openapi/v1/ecosystem/companies";
+    companyList.authType = "Bearer Keycloak HUMAN Access Token";
     companyList.authGuide = {
-      acceptedToken: "AgentCiCi Ecosystem HUMAN Token",
-      directKeycloakTokenAccepted: false,
-      directKeycloakTokenReason: "Keycloak token 不能证明公司成员关系",
+      acceptedToken: "Keycloak HUMAN Access Token",
+      directKeycloakTokenAccepted: true,
+      directKeycloakTokenReason: "已登记应用可直接调用",
       currentFlow: [], scenarios: [], tokenRequirements: [],
     };
 
     expect(systemApiRequestPrelude(companyList)).toBe([
-      "GET ${SYSTEM_API_ORIGIN}/auth/companies",
-      "Authorization: Bearer ${AGENTCICI_ECOSYSTEM_HUMAN_TOKEN}",
+      "GET ${SYSTEM_API_ORIGIN}/openapi/v1/ecosystem/companies",
+      "Authorization: Bearer ${KEYCLOAK_ACCESS_TOKEN}",
     ].join("\n"));
-    expect(systemApiKeycloakVerdict(companyList)).toBe("Keycloak access_token / id_token 不能直接调用");
+    expect(systemApiKeycloakVerdict(companyList)).toBe("Keycloak access_token 可直接调用");
   });
 
   it("keeps content type for the company switch request", () => {
-    const companySwitch = api("agentcici.organization.switch", "切换当前公司", "身份与公司", "medium", "authenticated HUMAN member");
-    companySwitch.path = "/auth/switch-company";
-    companySwitch.authType = "Bearer AgentCiCi Ecosystem HUMAN Token";
+    const companySwitch = api("agentcici.organization.context", "建立公司上下文", "身份与公司", "medium", "organization.context");
+    companySwitch.path = "/openapi/v1/ecosystem/company-context";
+    companySwitch.authType = "Bearer Keycloak HUMAN Access Token";
 
     expect(systemApiRequestPrelude(companySwitch)).toContain("Content-Type: application/json");
   });
 
-  it("documents the existing OIDC completion flow without inventing a generic HUMAN exchange endpoint", () => {
+  it("documents direct Keycloak access without a second token exchange", () => {
     const guide = agentCiCiHumanTokenAcquisitionExample();
 
-    expect(guide).toContain("/auth/oidc/login?return_to=${SAME_ORIGIN_RETURN_PATH}");
-    expect(guide).toContain("/auth/oidc/complete?ticket=${OIDC_COMPLETION_TICKET}");
-    expect(guide).toContain("data.token -> ${AGENTCICI_ECOSYSTEM_HUMAN_TOKEN}");
-    expect(guide).not.toContain("/openapi/v1/human-token");
+    expect(guide).toContain("/openapi/v1/ecosystem/companies");
+    expect(guide).toContain("Authorization: Bearer ${KEYCLOAK_ACCESS_TOKEN}");
+    expect(guide).toContain("X-Company-Id: ${COMPANY_ID}");
+    expect(guide).not.toContain("/auth/oidc/complete");
   });
 });

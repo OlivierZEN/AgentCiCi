@@ -23,6 +23,7 @@ public class AgentOpenApiCorsConfig {
                 "Content-Type",
                 "Accept",
                 "X-Cici-Api-Key",
+                "X-Company-Id",
                 "Idempotency-Key",
                 "Last-Event-ID"
         ));

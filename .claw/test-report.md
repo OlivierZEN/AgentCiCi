@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-13T15:34:50Z
+updated_at: 2026-08-13T16:02:51Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-13T15:34:50Z
-last_run_status: passed_with_authorized_visual_pending
+last_run_at: 2026-08-13T16:02:51Z
+last_run_status: passed_with_local_deployment_pending
 ---
 
 # Test Report
+
+## 2026-08-14 TASK-302 Keycloak HUMAN 跨应用直调
+
+- 契约：已登记内部应用直接携带 Keycloak `access_token` 调用 `/openapi/v1/ecosystem/companies` 与 `/openapi/v1/ecosystem/company-context`；不再建设应用专用 handoff 或第二套长期 HUMAN Token。公司级后续请求继续使用同一 Token 与 `X-Company-Id`。
+- 安全边界：验证 RS256、Issuer、有效期、`typ=Bearer`、`aud=agentcici-api`、`azp`；`azp` 必须命中 ACTIVE 受信 Client 和接口 Scope，`(issuer, sub)` 必须映射 ACTIVE HUMAN 账号，公司及成员关系逐请求校验。未知 Client、停用、Scope 缺失、错误 Audience 和非成员均失败关闭。
+- 平台治理：V115 新增受信内部应用表；平台管理员可以通过独立“接入应用”列表与编辑弹窗登记 Client ID、Scope 和状态，不保存 Client Secret，变更写入平台审计。
+- 后端：`mvn -q -Dtest=KeycloakOidcLoginServiceTest,EcosystemHumanApiServiceTest,EcosystemApplicationTrustServiceTest,SystemApiCatalogServiceTest test` 共 13 项通过；`mvn -q -DskipTests package` 通过。
+- 前端：全量 49 文件/272 项通过；`npm run build` 通过，仅保留既有 chunk-size warning。
+- 状态：`passed_with_local_deployment_pending`；本地 `main` 提交、V115 迁移和 `cici.localhost` 运行回读待下一步完成，UAT/生产未修改。
 
 ## 2026-08-13 TASK-302 UAT `2.8.61-beta.19`
 
