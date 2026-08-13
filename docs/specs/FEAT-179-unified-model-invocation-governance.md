@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-179
 title: 统一模型调用治理
-status: implementation
+status: review
 primary_project: agentcici
 task_ids: TASK-297, TASK-298
 related_decisions: ADR-010
 related_issues: ISSUE-2026-08-13-model-provider-bypass
-updated_at: 2026-08-13T07:47:39Z
+updated_at: 2026-08-13T07:55:37Z
 updated_by: codex
 ---
 
@@ -97,6 +97,7 @@ updated_by: codex
 - 2026-08-13：知识库管理页改为只读显示 `knowledge-embedding` 路由结果，不再提供按知识库覆盖厂商或模型的控件。后端干净编译、定向 10 项测试、前端生产构建与 diff check 均通过；UAT/生产未修改。
 - 2026-08-13：用户确认模型能力元数据无法可信获得时一律视为不支持。TASK-298 已补齐受控目录/检测能力持久化、场景专属候选过滤、服务端写入及运行时校验和推荐说明。提交 `1df52ac` 已发布本地开发环境 `2.8.61-dev.1df52ac`，完整 `./stack verify` 通过；Spring 集成仍被既有测试库 Flyway V81 checksum 漂移阻断，未 repair。UAT/生产不修改。
 - 2026-08-13：用户确认需要可操作的能力确认闭环。TASK-298 正在补充带厂商 HTTPS 文档与证据引用的人工确认、审计和撤销，不放宽“未知能力不可路由”的失败关闭原则；UAT/生产不修改。
+- 2026-08-13：TASK-298 已提交 `f96efaf` 并发布本地开发环境 `2.8.61-dev.f96efaf`。模型目录回读证据来源，人工确认与撤销都受平台角色保护并写平台审计；撤销后服务端候选立即失效。后端 compile/package、前端定向 5 项、production build 与完整 `./stack verify` 通过；Spring 集成仍被既有 `agentcici_test` Flyway V81 checksum 漂移阻断，未 repair。受权交互和 UAT 业务验收待完成，UAT/生产未修改。
 
 ## 交接说明
 

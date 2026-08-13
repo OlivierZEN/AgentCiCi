@@ -1,7 +1,7 @@
 ---
 task_id: TASK-298
 feature_id: FEAT-179
-status: in_progress
+status: review
 priority: critical
 owner_role: fullstack-agent
 claimed_by: codex
@@ -24,12 +24,13 @@ claimed_by: codex
 - 人工确认不从模型名称或历史调用猜测能力；仅接受 HTTPS 厂商文档及证据引用，确认与撤销均有 API/审计测试。
 - 定向测试、构建、桌面端路由检查和本地开发环境发布通过；UAT/生产不修改。
 
-## 当前验证
+## 验证结果
 
-- 后端 `mvn -q -DskipTests compile`、前端定向 5 项与 production build 通过。
+- 提交 `f96efaf`：确认 API 只接受已选模型、支持能力、厂商 HTTPS 文档及可核验证据引用；来源、操作者、时间与可撤销标记随模型目录回读，确认/撤销均写平台审计。
+- 后端 `mvn -q -DskipTests compile` 与 `mvn -q -DskipTests package`、前端定向 5 项与 production build 通过。
 - Spring 集成仍在应用上下文创建前被既有 `agentcici_test` Flyway V81 checksum 漂移阻断；未执行 repair 或修改历史迁移。
-- 本增量尚未提交或发布本地开发环境。
+- backend/frontend 已从本地 `main@f96efaffa9c0` 构建并发布为 `2.8.61-dev.f96efaf`；两容器 healthy/restart=0，页面制品含确认/撤销入口，`/platform/models` 返回 200、匿名模型 API 返回 401，完整 `./stack verify` 通过。
 
 ## 下一步
 
-- 完成审阅、提交并从本地 `main` 发布本地开发环境；UAT 仍需使用真实厂商资料刷新目录、确认能力并配置每个启用场景后验收。
+- 使用受权平台会话确认厂商文档、选择能力、保存、场景候选进入、撤销后路由失效和审计记录；UAT 仍需使用真实厂商资料刷新目录、确认能力并配置每个启用场景后验收。

@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-13T07:47:39Z
+updated_at: 2026-08-13T07:55:37Z
 updated_by: codex
-phase: implementation
+phase: review
 active_task: TASK-298
-next_action: "完成 TASK-298 的人工文档能力确认、撤销与审计实现，提交后发布本地开发环境并回读。"
+next_action: "以受权平台会话完成 TASK-298 的人工确认、文档跳转、撤销与场景路由业务验收；测试库基线恢复后补跑 Spring 集成。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-298 已恢复 implementation：在既有厂商目录/受控检测证据之外，补充平台运营人员基于厂商 HTTPS 文档的显式能力确认、可核验证据引用、操作者/时间、审计与可撤销闭环；不通过模型名称推断能力，撤销后候选与已配置路由保持失败关闭。正在进行编译、测试与本地开发环境发布；UAT/生产不修改。
+- TASK-298 / FEAT-179 已回到 review：平台管理员/运营可对已选模型提交厂商 HTTPS 文档、可核验证据引用和能力清单，服务端记录来源、操作者与时间并写入审计；人工确认可撤销，撤销后该模型立即退出场景候选，现有路由保持失败关闭。模型名称和历史调用不能推断能力，厂商目录和受控检测仍分别保留其来源。提交 `f96efaf` 已从本地 `main` 构建为 `2.8.61-dev.f96efaf`；backend/frontend healthy/restart=0，制品含确认/撤销入口，`/platform/models`=200、匿名 API=401，完整 `./stack verify` 通过。后端 compile/package、前端定向 5 项与 production build 通过；Spring 集成仍在断言前被既有 `agentcici_test` Flyway V81 checksum 漂移阻断，未 repair。UAT/生产未修改，受权业务交互仍待验收。
 
 - TASK-298 / FEAT-179 已进入 review：模型能力只接受厂商远程目录或受控检测所确认并持久化的元数据；无法确认的模型不会进入场景候选。路由读取按必需能力和协议限制过滤候选，写入与运行时再次拒绝未知或不兼容模型；路由页显示必需能力、推荐原则、候选数量及空状态处置。提交 `1df52ac` 已从本地 `main` 构建为 `2.8.61-dev.1df52ac`，backend/frontend 均 healthy/restart=0，页面制品、镜像 label、运行环境和完整 `./stack verify` 一致；匿名桌面路由进入平台登录边界且 console 无 error/warn。后端 package、前端定向 4 项与生产构建通过；Spring 集成在断言前仍被既有 `agentcici_test` Flyway V81 checksum 漂移阻断，未 repair。UAT/生产未修改。
 
