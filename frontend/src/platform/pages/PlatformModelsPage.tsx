@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { LS_PLATFORM_TOKEN, PLATFORM_API_BASE } from "../../constants";
+import { safeFetchJson } from "../../utils/http";
 
 type ProviderConfig = {
   id: number;
@@ -175,6 +176,14 @@ export function capabilityConfirmationError(capabilities: CapabilityKey[]): stri
   return capabilities.length === 0 ? "请至少选择一项模型能力。" : "";
 }
 
+export function modelApiFailureMessage(status: number, message: string | undefined, rawText: string, fallback: string): string {
+  if (message?.trim()) return message.trim();
+  if (rawText.trimStart().startsWith("<")) {
+    return `${fallback}：服务未返回预期数据（HTTP ${status}）。请刷新页面并确认前后端版本一致后重试。`;
+  }
+  return `${fallback}（HTTP ${status}）。请稍后重试。`;
+}
+
 export default function PlatformModelsPage() {
   const token = readToken();
   const [providers, setProviders] = useState<ProviderConfig[]>([]);
@@ -203,7 +212,7 @@ export default function PlatformModelsPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const authHeaders = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
+  const authHeaders = useMemo(() => ({ Authorization: `Bearer ${token}`, Accept: "application/json" }), [token]);
   const orderedProviders = useMemo(
     () => [...providers].sort((a, b) => (providerRank.get(a.providerCode) ?? 99) - (providerRank.get(b.providerCode) ?? 99)),
     [providers],
@@ -535,8 +544,10 @@ export default function PlatformModelsPage() {
           }),
         },
       );
-      const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.message || "确认模型能力失败");
+      const { body, rawText } = await safeFetchJson(res);
+      if (!res.ok || !body?.success) {
+        throw new Error(modelApiFailureMessage(res.status, body?.message, rawText, "确认模型能力失败"));
+      }
       const { providerCode, modelName } = capabilityConfirmation;
       setCapabilityConfirmation(null);
       setNotice(`已确认 ${modelName} 的模型能力，可在匹配场景中配置路由。`);
@@ -558,8 +569,10 @@ export default function PlatformModelsPage() {
         `${PLATFORM_API_BASE}/models/providers/${encodeURIComponent(capabilityRevokeTarget.providerCode)}/model-capabilities?modelName=${encodeURIComponent(capabilityRevokeTarget.modelName)}`,
         { method: "DELETE", headers: authHeaders },
       );
-      const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.message || "撤销模型能力确认失败");
+      const { body, rawText } = await safeFetchJson(res);
+      if (!res.ok || !body?.success) {
+        throw new Error(modelApiFailureMessage(res.status, body?.message, rawText, "撤销模型能力确认失败"));
+      }
       const { providerCode, modelName } = capabilityRevokeTarget;
       setCapabilityRevokeTarget(null);
       setNotice(`已撤销 ${modelName} 的人工能力确认；该模型不再可用于场景路由。`);
