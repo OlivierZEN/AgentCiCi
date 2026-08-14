@@ -15,7 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 /** Trusted control-plane client for Semattice's immutable DevAutopilot authorization template. */
 @Component
 public class SematticeDevAutopilotAuthorizationClient {
-    public static final String TEMPLATE_VERSION = "devautopilot.authorization.v2";
+    public static final String TEMPLATE_VERSION = "devautopilot.authorization.v3";
     private static final String PATH = "/internal/v1/devautopilot-authorization-templates";
     private final RestClient restClient;
     private final ObjectMapper objectMapper;

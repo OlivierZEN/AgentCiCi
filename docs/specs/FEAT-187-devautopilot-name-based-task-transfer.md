@@ -6,7 +6,7 @@ status: implemented
 primary_project: agentcici
 task_ids: TASK-307
 related_integrations: INT-022
-updated_at: 2026-08-14T06:52:00Z
+updated_at: 2026-08-14T07:35:00Z
 updated_by: codex
 ---
 
@@ -30,6 +30,8 @@ updated_by: codex
 精确确认属于受治理写操作，必须在任意通用运行模式、执行计划或模型自由回复之前被识别并路由到服务端 transfer Service。复制自界面的 Markdown 包裹以及中英文终止标点不改变确认语义。不得在 transfer 调用后降级为只读查询或由模型补充内部 Principal ID。
 
 当 `runtime.record.transfer` 未生效时，结果必须明确说明缺少该 scope 且未修改任务；不得返回泛化的“转派请求无效”。当结果声明转派成功时，必须包含 Semattice 返回并经读取验证的 `owner_principal_id` 与 `revision` 收据；无有效收据的成功文案一律拒绝输出。
+
+受管 Semattice 授权 manifest 发生变更时，应用端必须使用新的 `devautopilot.authorization` 模板版本生成协调幂等键。这样相同版本的重复同步保持幂等，而新增 `dev_task / transfer` 权限的升级会真实重放到租户，不会被旧版本的幂等记录吞掉。
 
 ## 回滚
 

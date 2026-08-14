@@ -548,7 +548,10 @@ public class DevAutopilotTenantApplicationService {
                     .reduce((left, right) -> left + "\n" + right).orElse("");
             String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                     .digest(canonical.getBytes(StandardCharsets.UTF_8)));
-            return "devautopilot.authorization.v1:" + activationId + ":" + digest.substring(0, 16);
+            // The managed manifest is immutable. Its version is part of the
+            // idempotency key so a template upgrade replays reconciliation
+            // while repeated requests for one version stay idempotent.
+            return SematticeDevAutopilotAuthorizationClient.TEMPLATE_VERSION + ":" + activationId + ":" + digest.substring(0, 16);
         } catch (Exception exception) {
             throw new IllegalStateException("Cannot derive DevAutopilot authorization reconciliation key", exception);
         }

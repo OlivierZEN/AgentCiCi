@@ -163,6 +163,7 @@ class DevAutopilotTenantApplicationReadinessTest {
 
         assertThat(ordered).isEqualTo(reversed).hasSizeLessThanOrEqualTo(96);
         assertThat(withDeveloper).isNotEqualTo(ordered).hasSizeLessThanOrEqualTo(96);
+        assertThat(ordered).startsWith(SematticeDevAutopilotAuthorizationClient.TEMPLATE_VERSION + ":");
     }
 
     private DevAutopilotTenantApplicationService service(JdbcTemplate targetJdbc,
