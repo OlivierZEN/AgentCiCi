@@ -1,22 +1,26 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-14T10:52:54Z
+updated_at: 2026-08-14T11:14:23Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-14T10:52:54Z
-last_run_status: passed_task_309_predeploy_with_known_full_suite_debt
+last_run_at: 2026-08-14T11:14:23Z
+last_run_status: passed_task_309_local_e2e_with_known_full_suite_debt
 ---
 
 # Test Report
 
-## 2026-08-14 TASK-309 对话连续粘贴图片预部署验证
+## 2026-08-14 TASK-309 对话连续粘贴图片本地端到端验证
 
+- 状态：`passed_task_309_local_e2e_with_known_full_suite_debt`
 - 后端定向：`ChatAttachmentServiceTest` 与 `ChatOrchestratorServiceModelIdentityTest` 共 47 项通过，覆盖签名检测、MIME/内容拒绝、20 MiB 超限预检、10 张额度、归属失败关闭、多模态请求组装和既有聊天编排回归；`mvn -q -DskipTests package` 通过。
 - 前端：新增附件规则 3 项通过；全量 50 个测试文件、278 项通过；production build 通过，仅保留既有大 chunk warning。
 - 全量后端边界：`mvn -q test` 运行 810 项后为 24 failures / 201 errors / 3 skipped；Spring 集成上下文的主要共同根因是共享 `agentcici_test` 已存在的 Flyway V81 checksum 漂移（applied `2112500543`、local `379982424`），本轮未执行 repair。另有既有模型调用断言失败，因此全量套件不计为本任务通过。
-- 静态：后端 clean compile、前端 TypeScript/build 与 `git diff --check` 通过。
-- 待验证：本地 main 提交、`cici.localhost` V116 实库迁移、附件 API、桌面连续粘贴和消息发送。UAT/生产未授权。
+- 静态与主线：后端 clean compile、前端 TypeScript/build 与 `git diff --check` 通过；`a9d838b6`、`b7e03a56`、`aaf9706b` 已进入本地 `main`。
+- 实库迁移：V116 创建附件表后，真实启动发现 `slot_no SMALLINT` 与 JPA `int` 校验不一致；未改已执行迁移校验和，新增 V117 向前转换为 `INTEGER`。V116/V117 均回读成功，backend healthy/restart=0。
+- 开发环境：页面版本 `2.8.61-dev.aaf9706`；frontend healthy/restart=0；完整 `cc-local-stack ./stack verify` 通过域名门禁、共享数据库隔离、TLS、OIDC、应用健康/版本和匿名鉴权边界。
+- 已登录桌面浏览器：两张真实 PNG 上传后均显示缩略图和“已就绪”，删除与替换成功；删除最后一张后队列消失、提示改为“已删除图片”且不残留旧计数。选择非 vision 模型发送返回 `409 VISION_MODEL_REQUIRED`，当前页保留文本和附件供恢复；刷新后该失败消息与图片均未落库。系统剪贴板图片注入不由当前浏览器自动化接口提供，Ctrl/Command+V 图片提取由 `chatAttachments.test.ts` 定向测试覆盖。
+- 发布边界：仅更新 `https://cici.localhost/` 本地开发测试环境；UAT/生产未授权、未修改。
 
 ## 2026-08-14 TASK-308 任务评审驳回授权修复
 

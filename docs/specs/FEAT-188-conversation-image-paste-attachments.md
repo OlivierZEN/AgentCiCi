@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-188
 title: 对话框连续粘贴图片附件
-status: in_progress
+status: verified
 primary_project: agentcici
 owner_role: fullstack-agent
 task_ids: TASK-309
 related_issues: none
-updated_at: 2026-08-14T10:52:54Z
+updated_at: 2026-08-14T11:14:23Z
 updated_by: codex
 ---
 
