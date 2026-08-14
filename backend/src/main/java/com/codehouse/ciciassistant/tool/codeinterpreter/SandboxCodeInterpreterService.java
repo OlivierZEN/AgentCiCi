@@ -2,6 +2,7 @@ package com.codehouse.ciciassistant.tool.codeinterpreter;
 
 import com.codehouse.ciciassistant.ai.service.ModelInvocationResolver;
 import com.codehouse.ciciassistant.integration.service.IntegrationAppService;
+import com.codehouse.ciciassistant.integration.service.PlatformIntegrationRuntimeLimits;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
@@ -136,7 +137,11 @@ public class SandboxCodeInterpreterService {
 
     public void validateConfigurationDraft(Map<String, Object> config) {
         Map<String, Object> safeConfig = config == null ? Map.of() : config;
-        parseBoundedInt(safeConfig.get("timeoutMs"), 120_000, 10_000, 180_000, "请求超时");
+        parseBoundedInt(safeConfig.get("timeoutMs"),
+                PlatformIntegrationRuntimeLimits.DEFAULT_REQUEST_TIMEOUT_MS,
+                PlatformIntegrationRuntimeLimits.MIN_REQUEST_TIMEOUT_MS,
+                PlatformIntegrationRuntimeLimits.MAX_REQUEST_TIMEOUT_MS,
+                "请求超时");
         parseBoundedInt(safeConfig.get("maxInputChars"), 12_000, 1_000, 50_000, "最大输入字符数");
     }
 
@@ -148,7 +153,11 @@ public class SandboxCodeInterpreterService {
         if (rawOptional.isEmpty()) return Optional.empty();
         ModelInvocationResolver.ResolvedModelInvocation invocation =
                 modelInvocationResolver.resolve(companyId, "code-interpreter");
-        int timeoutMs = parseBoundedInt(raw.get("timeoutMs"), 120_000, 10_000, 180_000, "请求超时");
+        int timeoutMs = parseBoundedInt(raw.get("timeoutMs"),
+                PlatformIntegrationRuntimeLimits.DEFAULT_REQUEST_TIMEOUT_MS,
+                PlatformIntegrationRuntimeLimits.MIN_REQUEST_TIMEOUT_MS,
+                PlatformIntegrationRuntimeLimits.MAX_REQUEST_TIMEOUT_MS,
+                "请求超时");
         int maxInputChars = parseBoundedInt(raw.get("maxInputChars"), 12_000, 1_000, 50_000, "最大输入字符数");
         return Optional.of(new ResolvedConfig(invocation.apiKey(), invocation.apiBaseUrl(), invocation.modelName(), timeoutMs, maxInputChars));
     }

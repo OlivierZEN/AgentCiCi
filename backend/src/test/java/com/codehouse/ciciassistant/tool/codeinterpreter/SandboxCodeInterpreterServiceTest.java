@@ -1,6 +1,7 @@
 package com.codehouse.ciciassistant.tool.codeinterpreter;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.Mockito.mock;
 
 import com.codehouse.ciciassistant.auth.config.PlatformAccountProperties;
@@ -80,6 +81,20 @@ class SandboxCodeInterpreterServiceTest {
         assertThat(org.assertj.core.api.Assertions.catchThrowable(lookalike)).isInstanceOf(IllegalArgumentException.class);
         SandboxCodeInterpreterService.validateApiBaseUrl(
                 "https://workspace-id.cn-beijing.maas.aliyuncs.com/compatible-mode/v1");
+    }
+
+    @Test
+    void acceptsSixtyMinuteTimeoutAndRejectsAnythingLonger() {
+        SandboxCodeInterpreterService service = new SandboxCodeInterpreterService(
+                new SandboxCodeInterpreterClient(objectMapper), integrationAppService,
+                mock(ModelInvocationResolver.class), objectMapper);
+
+        service.validateConfigurationDraft(Map.of("timeoutMs", "3600000"));
+
+        assertThat(catchThrowable(() -> service.validateConfigurationDraft(
+                Map.of("timeoutMs", "3600001"))))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("10000–3600000");
     }
 
     private static final class FakeRepository implements IntegrationAppRepository {

@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-14T01:14:07Z
+updated_at: 2026-08-14T01:31:58Z
 updated_by: codex
 board_status: active
 ---
@@ -15,29 +15,16 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
-### TASK-304 - 提供产品经理 SERVICE 窄范围委托执行授权
+### TASK-305 - 平台长任务集成超时上限调整
 
 - status: `review`
-- priority: `critical`
-- owner_role: `backend-agent`
+- priority: `high`
+- owner_role: `fullstack-agent`
 - claimed_by: `codex`
-- integration_id: `INT-020`
-- spec_path: `docs/specs/FEAT-185-devautopilot-delegated-product-manager-execution.md`
-- task_status_path: `.claw/tasks/TASK-304.md`
+- spec_path: `docs/specs/FEAT-176-platform-managed-web-tools.md`
+- task_status_path: `.claw/tasks/TASK-305.md`
 - blocked_by: `none`
-- next_action: `从本地 main 重建 backend 并完成真实需求确认与任务创建 actor 回读`
-
-### TASK-303 - 修正确认式需求创建状态
-
-- status: `review`
-- priority: `critical`
-- owner_role: `backend-agent`
-- claimed_by: `codex`
-- integration_id: `INT-020`
-- spec_path: `docs/specs/FEAT-184-devautopilot-confirmed-requirement-status.md`
-- task_status_path: `.claw/tasks/TASK-303.md`
-- blocked_by: `none`
-- next_action: `从本地 main 构建 backend 镜像并完成本地环境回读`
+- next_action: `提交本地 main，从该提交重建 backend/frontend 并回读开发环境版本与健康`
 
 ### TASK-302 - 运营端系统 API 目录
 
@@ -1597,6 +1584,30 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-304 - 提供产品经理 SERVICE 窄范围委托执行授权
+
+- status: `done`
+- priority: `critical`
+- owner_role: `backend-agent`
+- claimed_by: `codex`
+- integration_id: `INT-020`
+- spec_path: `docs/specs/FEAT-185-devautopilot-delegated-product-manager-execution.md`
+- task_status_path: `.claw/tasks/TASK-304.md`
+- completion_evidence: `53715a33；定向测试与 package 通过；本地 2.8.61-dev.53715a3 healthy/restart=0；真实需求确认和 5 项任务写入均由 primary 产品经理 SERVICE 执行`
+- next_action: `已完成本地闭环；UAT/生产未修改。`
+
+### TASK-303 - 修正确认式需求创建状态
+
+- status: `done`
+- priority: `critical`
+- owner_role: `backend-agent`
+- claimed_by: `codex`
+- integration_id: `INT-020`
+- spec_path: `docs/specs/FEAT-184-devautopilot-confirmed-requirement-status.md`
+- task_status_path: `.claw/tasks/TASK-303.md`
+- completion_evidence: `e8275353；状态回归通过；真实 REQ-6F34ECF3 已进入已确认并完成 5 项任务派发`
+- next_action: `已完成本地闭环；UAT/生产未修改。`
 
 ### TASK-301 - 知识库 PDF 上传门禁修复
 

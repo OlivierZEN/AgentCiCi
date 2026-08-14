@@ -48,7 +48,11 @@ type FieldMeta = {
   hint?: string;
   placeholder?: string;
   required?: boolean;
+  min?: number;
+  max?: number;
 };
+
+export const PLATFORM_LONG_TASK_TIMEOUT_MAX_MS = 3_600_000;
 
 const FIELD_META: Record<string, Record<string, FieldMeta>> = {
   tavily: {
@@ -169,7 +173,9 @@ const FIELD_META: Record<string, Record<string, FieldMeta>> = {
     timeoutMs: {
       label: "请求超时（毫秒）",
       placeholder: "120000",
-      hint: "允许 10000–180000。代码解释器可能进行多轮模型推理，建议保留 120000。",
+      min: 10_000,
+      max: PLATFORM_LONG_TASK_TIMEOUT_MAX_MS,
+      hint: "允许 10000–3600000（最长 60 分钟）。代码解释器可能进行多轮模型推理，默认 120000。",
     },
     maxInputChars: {
       label: "最大输入字符数",
@@ -199,7 +205,9 @@ const FIELD_META: Record<string, Record<string, FieldMeta>> = {
     timeoutMs: {
       label: "请求超时（毫秒）",
       placeholder: "120000",
-      hint: "允许 10000–180000，联网搜索可能包含多轮搜索与总结。",
+      min: 10_000,
+      max: PLATFORM_LONG_TASK_TIMEOUT_MAX_MS,
+      hint: "允许 10000–3600000（最长 60 分钟），联网搜索可能包含多轮搜索与总结。",
     },
     maxInputChars: {
       label: "最大输入字符数",
@@ -229,7 +237,9 @@ const FIELD_META: Record<string, Record<string, FieldMeta>> = {
     timeoutMs: {
       label: "请求超时（毫秒）",
       placeholder: "120000",
-      hint: "允许 10000–180000，网页加载与正文提取可能需要较长时间。",
+      min: 10_000,
+      max: PLATFORM_LONG_TASK_TIMEOUT_MAX_MS,
+      hint: "允许 10000–3600000（最长 60 分钟），网页加载与正文提取可能需要较长时间。",
     },
     maxInputChars: {
       label: "最大输入字符数",
@@ -538,7 +548,9 @@ export function IntegrationSettingsPage({ token, apiBase, title, subtitle, class
                     </span>
                     <input
                       className="cici-field__input"
-                      type={secret ? "password" : "text"}
+                      type={secret ? "password" : meta.min !== undefined ? "number" : "text"}
+                      min={meta.min}
+                      max={meta.max}
                       autoComplete={secret ? "new-password" : undefined}
                       placeholder={meta.placeholder}
                       value={form[key] ?? ""}

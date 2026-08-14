@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-14T00:29:24Z
+updated_at: 2026-08-14T01:31:58Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-14T00:29:24Z
-last_run_status: passed_with_uat_business_acceptance_pending
+last_run_at: 2026-08-14T01:31:58Z
+last_run_status: passed_with_local_runtime_pending
 ---
 
 # Test Report
+
+## 2026-08-14 TASK-305 平台长任务集成超时上限
+
+- 契约：代码解释器、联网搜索与网页抓取默认超时仍为 120 秒、最小 10 秒，可配置上限统一从 180 秒提升为 `3,600,000 ms`（60 分钟）；既有配置不自动变更。
+- 后端：`mvn -q -Dtest=ManagedWebToolServiceTest,SandboxCodeInterpreterServiceTest test` 通过，覆盖 `3,600,000` 接受和 `3,600,001` 拒绝；`mvn -q -DskipTests package` 通过。
+- 前端：`AdminIntegrationsPage.test.ts` 5/5 通过；`npm run build` 通过，仅保留既有 chunk-size warning。页面数字输入 `min=10000`、`max=3600000`，提示明确最长 60 分钟。
+- 命令更正：仓库无 `backend/mvnw`，首次 wrapper 命令退出 127 且未运行测试；随后按项目实际入口使用系统 Maven，结果通过。
+- 状态：`passed_with_local_runtime_pending`。代码验证通过，本地 main 提交与 `cici.localhost` 运行回读待完成。
 
 ## 2026-08-14 TASK-302 UAT `2.8.61-beta.20`
 

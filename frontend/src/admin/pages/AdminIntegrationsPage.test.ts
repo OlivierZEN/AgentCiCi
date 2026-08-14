@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { readIntegrationAppsResponse } from "./AdminIntegrationsPage";
+import { PLATFORM_LONG_TASK_TIMEOUT_MAX_MS, readIntegrationAppsResponse } from "./AdminIntegrationsPage";
 
 describe("platform integration response handling", () => {
+  it("allows governed long-running integrations to configure up to 60 minutes", () => {
+    expect(PLATFORM_LONG_TASK_TIMEOUT_MAX_MS).toBe(60 * 60 * 1000);
+  });
+
   it("accepts the managed integration list returned by the backend", async () => {
     const response = new Response(JSON.stringify({
       success: true,

@@ -87,6 +87,22 @@ class ManagedWebToolServiceTest {
         ManagedWebToolService.validatePublicWebUrl("https://help.aliyun.com/zh/model-studio/web-extractor");
     }
 
+    @Test
+    void acceptsSixtyMinuteTimeoutAndRejectsAnythingLonger() {
+        ManagedWebToolService service = new ManagedWebToolService(
+                new ManagedWebToolClient(objectMapper), integrationAppService,
+                mock(ModelInvocationResolver.class), objectMapper);
+
+        service.validateConfigurationDraft(IntegrationAppService.APP_CODE_MANAGED_WEB_EXTRACTOR,
+                Map.of("timeoutMs", "3600000"));
+
+        assertThat(catchThrowable(() -> service.validateConfigurationDraft(
+                IntegrationAppService.APP_CODE_MANAGED_WEB_SEARCH,
+                Map.of("timeoutMs", "3600001"))))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("10000–3600000");
+    }
+
     private Map<String, Object> config() {
         return Map.of("timeoutMs", "120000", "maxInputChars", "12000");
     }

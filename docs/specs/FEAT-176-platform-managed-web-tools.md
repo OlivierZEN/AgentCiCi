@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-176
 title: 平台联网搜索与网页抓取集成
-status: implemented
+status: in_implementation
 owner_role: fullstack-agent
-task_ids: TASK-292
+task_ids: TASK-292, TASK-305
 related_decisions: none
 related_issues: none
-updated_at: 2026-08-12T13:05:08Z
+updated_at: 2026-08-14T01:30:03Z
 updated_by: codex
 ---
 
@@ -25,6 +25,7 @@ updated_by: codex
 
 - 在运营端“平台集成配置”新增“联网搜索（百炼）”和“网页抓取（百炼）”两张独立卡片。
 - 两项配置分别保存 API Key、业务空间 API Host、模型、超时和输入上限，API Key 沿用 `SecretCipherService` 加密与固定掩码。
+- 代码解释器、联网搜索和网页抓取的同步请求超时保持默认 120 秒、最小 10 秒，可配置上限统一提升到 60 分钟；保存校验与运行时 HTTP 请求使用同一上限。
 - 新增 `managed_web_search` 与 `managed_web_extract` 两个内置工具，接入工具目录、平台治理、Agent/Skill 授权和运行时安全网关。
 - 联网搜索请求只声明 `web_search`；网页抓取请求固定同时声明 `web_search` 与 `web_extractor`。
 - 返回最终答案、搜索/抓取调用次数、Token 用量、模型和延迟，不返回模型思考过程。
@@ -73,6 +74,7 @@ updated_by: codex
 - 两个内置工具出现在目录中，停用平台集成或平台工具后不可执行。
 - 搜索结果不伪造协议未提供的来源；成功结果不包含 reasoning。
 - 后端定向测试、前端完整测试与生产构建通过。
+- 运营页面明确显示最长 60 分钟，并以数字输入约束阻止超过 `3,600,000 ms` 的配置；后端仍作为最终可信门禁。
 - 提交合并本地 `main` 后，仅从该提交重建本地 backend/frontend，并回读 `https://cici.localhost/` 路由、健康、重启次数和版本指纹。
 
 ## 风险与回滚
