@@ -3126,6 +3126,8 @@ export default function AssistantApp() {
     setConversationMessages((prev) => ({ ...prev, [sessionCacheKey]: [] }));
     setWorkbenchMessagesByAgent((prev) => ({ ...prev, [agentCacheKey]: [] }));
     setActiveWorkbenchSessionIdByAgent((prev) => ({ ...prev, [agentCacheKey]: sessionId }));
+    setInput("");
+    setSpeechNotice("");
   };
 
   const selectWorkbenchConversation = async (sessionId: string) => {
@@ -4098,6 +4100,7 @@ export default function AssistantApp() {
       URL.revokeObjectURL(attachment.previewUrl);
       attachmentObjectUrlsRef.current.delete(attachment.previewUrl);
     }
+    setSpeechNotice("已删除图片。");
     return true;
   };
 
