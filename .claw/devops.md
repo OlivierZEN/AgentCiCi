@@ -1,12 +1,18 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-14T02:20:00Z
+updated_at: 2026-08-14T09:20:00Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-14 TASK-308 本地开发环境
+
+- AgentCiCi backend 从本地 `main@95656c5b564d` 构建为 `2.8.61-dev.95656c5`，运行镜像 `sha256:99bc4b9938de4243c8a83f4648b0f6187f202a4b8e381116199172c56043ca79`。
+- 仅重建 backend；容器 healthy/restart=0，容器内 `/system/version` 回读版本与 commit 一致，`/actuator/health=UP`。数据库、Semattice、Keycloak 和 AgentCiCi frontend 未重建。
+- 与 DevAutopilot 完成真实设计驳回和完整 `./stack verify`。UAT/生产未修改；回滚 backend 不会删除已记录的评审事件。
 
 ## 2026-08-14 TASK-302 UAT `2.8.61-beta.22`
 

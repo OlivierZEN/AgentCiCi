@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-14T08:43:00Z
+updated_at: 2026-08-14T09:20:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-14T08:43:00Z
-last_run_status: passed_local_task_review_authorization
+last_run_at: 2026-08-14T09:20:00Z
+last_run_status: passed_local_task_review_rejection_e2e
 ---
 
 # Test Report
+
+## 2026-08-14 TASK-308 任务评审驳回授权修复
+
+- 红灯复现：更新后的 `DevAutopilotExecutionAuthorizationServiceTest` 在实现前因 `TASK_REVIEW` 未请求 `identity.principal.sync` 失败，证明旧固定 scope 与实际评审调用链不一致。
+- 后端验证：`mvn -q -Dtest=DevAutopilotExecutionAuthorizationServiceTest test` 与 `mvn -q -DskipTests package` 通过；`git diff --check` 通过。
+- 本地运行：backend 从本地 `main@95656c5b564d` 构建为 `2.8.61-dev.95656c5`，镜像 `sha256:99bc4b9938de4243c8a83f4648b0f6187f202a4b8e381116199172c56043ca79`，healthy/restart=0；完整 `cc-local-stack ./stack verify` 通过。
+- 真实业务：HUMAN 二次确认后委托产品经理 SERVICE，以原始意见成功产生 `design_changes_requested / changes_requested`；任务由 `设计待确认 / revision 4` 更新为 `设计驳回 / revision 5`。UAT/生产未修改。
+- 状态：`passed_local_task_review_rejection_e2e`。
 
 ## 2026-08-14 TASK-308 DevAutopilot 任务评审委托授权
 

@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-14T08:43:00Z
+updated_at: 2026-08-14T09:20:00Z
 updated_by: codex
 board_status: active
 ---
@@ -25,7 +25,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - spec_path: `docs/specs/FEAT-185-devautopilot-delegated-product-manager-execution.md`
 - task_status_path: `.claw/tasks/TASK-308.md`
 - blocked_by: `none`
-- next_action: `由用户在 DevAutopilot 真实设计卡片明确批准或驳回；批准后回读任务进入已批准待执行且产生评审事件。`
+- completion_evidence: `95656c5b；定向测试与 package 通过；本地 2.8.61-dev.95656c5 healthy/restart=0；真实任务设计驳回写入 Semattice 事件并进入 revision 5`
+- next_action: `哪吒读取驳回意见，补充单图 20M 和每会话 10 张限制后提交新版设计；未再次批准前不得进入代码实现。`
 
 ### TASK-307 - 产品经理自动识别开发者并转派任务
 

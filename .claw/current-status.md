@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-14T08:43:00Z
+updated_at: 2026-08-14T09:20:00Z
 updated_by: codex
-phase: review
+phase: verification
 active_task: TASK-308
-next_action: "用户在 DevAutopilot 真实任务详情审阅哪吒方案，并明确批准或驳回；批准后回读评审事件和任务状态，开发者才可进入实现。"
+next_action: "哪吒读取 design_changes_requested 事件，补充单图 20M 与每会话 10 张限制后重新提交设计；用户再次明确批准前不得进入实现。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-308 / FEAT-185 / INT-023 的驳回鉴权缺口已修复并完成真实闭环：旧 `TASK_REVIEW` OACT 缺少评审前置的 `identity.principal.sync`，导致 Semattice 在产品经理 SERVICE 生命周期同步时拒绝。提交 `95656c5b` 将该 scope 加入固定白名单，调用方仍不能自选权限。定向测试、backend package、完整 stack verify 通过；backend 运行 `2.8.61-dev.95656c5`、healthy/restart=0。用户原始意见已真实写入 `design_changes_requested`，任务进入 `设计驳回 / revision 5`。UAT/生产未修改。
 
 - TASK-308 / FEAT-185 / INT-023 已补齐 DevAutopilot 任务评审委托授权：固定 `TASK_REVIEW` 只签发 `runtime.record.read/create/update`，提交 `44f4a6f9` 已进入本地 main；定向测试通过。backend/frontend 运行 `2.8.61-dev.44f4a6f`、healthy/restart=0，完整 `cc-local-stack ./stack verify` 通过。DevAutopilot 真实页面已显示哪吒设计方案和批准/驳回二次确认；未替用户提交决定，任务保持 `设计待确认 / revision 4`。UAT/生产未修改。
 

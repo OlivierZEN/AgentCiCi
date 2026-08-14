@@ -6,7 +6,7 @@ status: implemented
 primary_project: agentcici
 task_ids: TASK-304,TASK-308
 related_integrations: INT-020,INT-023
-updated_at: 2026-08-14T08:43:00Z
+updated_at: 2026-08-14T09:20:00Z
 updated_by: codex
 ---
 
@@ -21,7 +21,7 @@ DevAutopilot 浏览器会话代表 HUMAN，Semattice 中该 HUMAN 按应用管�
 - 新增受认证后端接口 `POST /api/devautopilot/execution-authorizations`；公司和成员只从 AgentCiCi 签发的 ecosystem HUMAN token 推导。
 - 请求只能选择 `REQUIREMENT_CONFIRM`、`TASK_PLAN_CONFIRM` 或 `TASK_REVIEW`，调用方不能提交 scope、Agent ID、SERVICE Principal ID、tenant 或 company。
 - AgentCiCi 复用现有 `AgentServicePrincipalExecutionService` 校验 HUMAN 成员、Agent RUN、DevAutopilot 应用角色、产品经理绑定/生命周期、负责人和 SERVICE scope。
-- `REQUIREMENT_CONFIRM` 固定签发 `runtime.record.read/update`；`TASK_PLAN_CONFIRM` 固定签发 `runtime.record.read/create`；`TASK_REVIEW` 固定签发 `runtime.record.read/create/update`，用于读取最新提交、创建评审事件并推进任务状态。
+- `REQUIREMENT_CONFIRM` 固定签发 `runtime.record.read/update`；`TASK_PLAN_CONFIRM` 固定签发 `runtime.record.read/create`；`TASK_REVIEW` 固定签发 `identity.principal.sync` 与 `runtime.record.read/create/update`。评审会先同步并校验产品经理 SERVICE 生命周期，再读取最新提交、创建评审事件并推进任务状态；身份同步是实际前置能力，不得从委托令牌中遗漏。
 - 返回短时 Semattice OACT 前，必须核对实际 SERVICE 与激活记录中的 primary 产品经理 Principal 一致，并记录实际委托人和机器执行人审计。
 - OACT 只允许 DevAutopilot 服务端短时消费，不进入浏览器 JavaScript、URL、仓库、日志或业务记录。
 
@@ -31,6 +31,7 @@ DevAutopilot 浏览器会话代表 HUMAN，Semattice 中该 HUMAN 按应用管�
 2. 产品经理 Agent、SERVICE、绑定、owner、tenant、scope 或生命周期任一不一致时失败关闭。
 3. 未知操作不能自选 scope。
 4. 聚焦测试和 backend package 通过；真实需求写入的 Semattice actor 是产品经理 SERVICE，确认人单独保留为 HUMAN。
+5. `TASK_REVIEW` 委托令牌缺少 `identity.principal.sync` 时必须失败关闭；完整 scope 下真实批准或驳回可以写入评审事件并更新任务快照。
 
 ## 回滚
 
