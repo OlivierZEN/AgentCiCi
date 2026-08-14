@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
@@ -96,6 +97,39 @@ class SematticeProjectDeliveryWriteToolServiceTest {
                 "把已确认需求的审批规则改成产品总监确认")).isTrue();
         assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest("现在有哪些项目在执行"))
                 .isFalse();
+    }
+
+    @Test
+    void confirmedRequirementIsCreatedAsConfirmedAndReadBackBeforeSuccess() throws Exception {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        AgentServicePrincipalExecutionService execution = mock(AgentServicePrincipalExecutionService.class);
+        OfficialAccessTokenService.IssuedToken token = new OfficialAccessTokenService.IssuedToken(
+                "service-oact", Instant.now().plusSeconds(300), "tenant-1", "org-1",
+                List.of("runtime.record.read", "runtime.record.create"));
+        when(execution.authorizeSemattice("org-1", "member-1", "dev-autopilot-pm",
+                List.of("runtime.record.read", "runtime.record.create"), "semattice_project_delivery_create"))
+                .thenReturn(new AgentServicePrincipalExecutionService.ExecutionAuthorization(
+                        "service-1", "研发产品经理", "owner-1", "PRIMARY_OWNER", token));
+        server.expect(requestTo("https://semattice.example.test/v1/capabilities/runtime.record.query/invoke"))
+                .andRespond(withSuccess("{\"status\":\"succeeded\",\"result\":{\"records\":[{\"record_id\":\"019fb381-622b-73b9-b8c8-b97181509001\",\"data\":{\"code\":\"DAS-001\"}}]}}", MediaType.APPLICATION_JSON));
+        server.expect(requestTo("https://semattice.example.test/v1/capabilities/runtime.record.create/invoke"))
+                .andExpect(jsonPath("$.input.object_api_name").value("dev_requirement"))
+                .andExpect(jsonPath("$.input.data.status").value("已确认"))
+                .andRespond(withSuccess("{\"status\":\"succeeded\",\"result\":{\"record_id\":\"019fb381-622b-73b9-b8c8-b97181509011\"}}", MediaType.APPLICATION_JSON));
+        server.expect(requestTo("https://semattice.example.test/v1/capabilities/runtime.record.get/invoke"))
+                .andRespond(withSuccess("{\"status\":\"succeeded\",\"result\":{\"record_id\":\"019fb381-622b-73b9-b8c8-b97181509011\",\"revision\":1,\"data\":{\"code\":\"REQ-PLACEHOLDER\",\"project_id\":\"019fb381-622b-73b9-b8c8-b97181509001\",\"title\":\"需求确认状态闭环\",\"status\":\"已确认\",\"priority\":\"P1\",\"owner\":\"研发产品经理\",\"summary\":\"由研发交付产品经理创建\",\"acceptance\":[]}}}", MediaType.APPLICATION_JSON));
+        SematticeProjectDeliveryWriteToolService service = new SematticeProjectDeliveryWriteToolService(
+                builder, objectMapper, execution, mock(DevAutopilotDeveloperAssignmentService.class),
+                "https://semattice.example.test");
+
+        JsonNode result = objectMapper.readTree(service.dispatch("org-1", "member-1", "dev-autopilot-pm",
+                "{\"operation\":\"create_requirement\",\"project\":\"DAS-001\",\"title\":\"需求确认状态闭环\"}"));
+
+        assertThat(result.path("status").asText()).isEqualTo("SUCCESS");
+        assertThat(result.path("object_api_name").asText()).isEqualTo("dev_requirement");
+        assertThat(result.path("readback_verified").asBoolean()).isTrue();
+        server.verify();
     }
 
     @Test

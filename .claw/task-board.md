@@ -15,6 +15,18 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-303 - 修正确认式需求创建状态
+
+- status: `review`
+- priority: `critical`
+- owner_role: `backend-agent`
+- claimed_by: `codex`
+- integration_id: `INT-020`
+- spec_path: `docs/specs/FEAT-184-devautopilot-confirmed-requirement-status.md`
+- task_status_path: `.claw/tasks/TASK-303.md`
+- blocked_by: `none`
+- next_action: `从本地 main 构建 backend 镜像并完成本地环境回读`
+
 ### TASK-302 - 运营端系统 API 目录
 
 - status: `review`

@@ -306,7 +306,7 @@ public class SematticeProjectDeliveryWriteToolService {
                 data.put("code", code);
                 data.put("project_id", parent.get("record_id"));
                 data.put("title", intent.title());
-                data.put("status", "待确认");
+                data.put("status", "已确认");
                 data.put("priority", intent.priority().isBlank() ? "P1" : intent.priority());
                 data.put("owner", actor);
                 data.put("summary", intent.description().isBlank() ? "由研发交付产品经理创建" : intent.description());
