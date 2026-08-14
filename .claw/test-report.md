@@ -1,14 +1,21 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-14T06:38:00Z
+updated_at: 2026-08-14T06:52:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-14T06:38:00Z
-last_run_status: passed_local_transfer_fallback_repair
+last_run_at: 2026-08-14T06:52:00Z
+last_run_status: passed_local_confirmed_transfer_termination_repair
 ---
 
 # Test Report
+
+## 2026-08-14 TASK-307 复制确认与 DEV 版本修复
+
+- 运行日志：截图对应会话在 `semattice_project_delivery_transfer` 后仍调用只读 query 并开始 LLM 流；该证据说明精确确认没有被解析，不能归因于浏览器缓存或用户未确认。
+- 后端验证：`mvn -q -Dtest=SematticeProjectDeliveryTransferToolServiceTest,DeliveryWriteReceiptGuardTest test`、`mvn -q -DskipTests package` 与 `git diff --check` 通过。新增用例覆盖带反引号和中文句号的复制确认；已识别确认的能力缺失直接失败关闭。
+- 本地开发环境：backend/frontend 同从本地 `main@107ac0440dc3` 构建，镜像 label 均为 `2.8.61-dev.107ac04`；backend `/system/version` 与首页资源 `index-BOe72A75-2.8.61-dev.107ac04.js` 回读一致，两个容器 healthy/restart=0，完整 `cc-local-stack ./stack verify` 通过。
+- 验收边界：未使用或伪造登录会话，未重放确认、未修改任务 owner；UAT/生产未修改。真实业务转派待用户在已登录会话再次确认。
 
 ## 2026-08-14 TASK-307 确认式转派降级修复
 
