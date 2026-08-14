@@ -6,7 +6,7 @@ status: in_implementation
 primary_project: agentcici
 task_ids: TASK-302
 related_integrations: INT-019
-updated_at: 2026-08-13T16:22:24Z
+updated_at: 2026-08-14T00:29:24Z
 updated_by: codex
 ---
 
@@ -70,4 +70,4 @@ updated_by: codex
 
 - Keycloak HUMAN 直调、受信 Client 治理、公司目录/上下文 API、系统 API 调用文档和运营端管理 UI 已完成，任务进入 review。
 - 功能提交 `e90a2d2b` 与 HTTP 方法错误修复 `9f58d972` 已进入 AgentCiCi 本地 `main`；统一开发环境运行 `2.8.61-dev.9f58d97`，V115、健康、版本、匿名 401、错误方法 405、页面路由和完整 `./stack verify` 均已回读通过。
-- 现有目录首版 UAT 仍是 `2.8.61-beta.19`，本次 Keycloak 直调增量未发布 UAT/生产。进入 done 前仍需使用一个真实新登记 Keycloak Client 完成登录、公司列表、公司上下文及后续 `X-Company-Id` 业务调用验收。
+- Keycloak 直调增量已发布 UAT `2.8.61-beta.20 / 1b6bb8f1974a`；V115、运行版本、制品 digest、健康、状态服务不重启、页面/匿名鉴权边界和稳定窗口均通过，生产未修改。进入 done 前仍需使用一个真实新登记 Keycloak Client 完成登录、公司列表、公司上下文及后续 `X-Company-Id` 业务调用验收。

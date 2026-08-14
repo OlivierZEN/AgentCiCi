@@ -4,7 +4,7 @@ task_id: TASK-302
 feature_id: FEAT-183
 integration_id: INT-019
 status: review
-updated_at: 2026-08-13T16:22:24Z
+updated_at: 2026-08-14T00:29:24Z
 updated_by: codex
 owner_role: fullstack-agent
 spec_path: docs/specs/FEAT-183-system-api-catalog.md
@@ -80,6 +80,10 @@ spec_path: docs/specs/FEAT-183-system-api-catalog.md
 - 浏览器访问受保护深链会正确进入运营平台登录页；当前没有可复用的运营平台登录态，因此授权态抽屉和完整文档的视觉/交互验收仍待平台运营人员完成。UAT/生产未修改。
 
 ## UAT 发布
+
+- Keycloak HUMAN 直调增量已以不可变候选 `2.8.61-beta.20 / 1b6bb8f1974a` 发布；backend/frontend digest 为 `sha256:18c1e7c3c082ad475e3a4b714b96e3f3e385d08deaa6384ec5c944ba0143eb56` / `sha256:48520c667024f7d9e94f9d696c37eb089e0cca115c8a87d7b5f72df4a0180c56`。
+- 发布前完整备份 `/data/apps/agentcici/backups/20260814T002542Z-before-2.8.61-beta.20` 已通过数据库、KB/Qdrant tar、beta.19 镜像 gzip 与 SHA 清单校验；仅重建 backend/frontend，状态服务 ID 不变，六容器 healthy/restart=0。
+- 运行版本、commit、digest、V115、Nginx、路由、匿名 JSON 401、错误方法 JSON 405、两轮公网 smoke 和稳定窗口均通过。即时应用回滚目标为 beta.19；真实新 Keycloak Client/HUMAN 成功调用仍待业务验收，生产未修改。
 
 - 冻结提交 `2343b9bbafd6` 已推送远程 `main` 并发布不可变候选 `2.8.61-beta.19`；backend/frontend ACR index digest 分别为 `sha256:36f9591b78b9f2c22f2dd5c435f0e2d1dbd693978c195dbe6f241c958184bda7` 与 `sha256:0958cbe7b5614c16548895c233afa828545c1be6775bfd160aefbb0bfb4de0a7`。
 - 发布前完整备份 `/data/apps/agentcici/backups/20260813T153050Z-before-2.8.61-beta.19` 已通过 PostgreSQL 容器内 `pg_restore`、KB/Qdrant tar 和 beta.18 旧镜像 gzip 校验，全部工件权限为 `0600`；即时应用回滚目标为 `2.8.61-beta.18`。

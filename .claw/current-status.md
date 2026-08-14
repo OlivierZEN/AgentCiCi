@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-13T16:22:24Z
+updated_at: 2026-08-14T00:29:24Z
 updated_by: codex
 phase: review
 active_task: TASK-302
@@ -22,9 +22,9 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-302 / FEAT-183 已进入 review：内部独立应用可直接携带自己的 Keycloak `access_token` 调用 `GET /openapi/v1/ecosystem/companies` 与 `POST /openapi/v1/ecosystem/company-context`，AgentCiCi 校验签名、Issuer、`typ=Bearer`、`aud=agentcici-api`、`azp`、平台受信应用、Scope、HUMAN 绑定和 ACTIVE 成员关系；不再要求应用专用 handoff 或第二套长期 Token。平台受信应用列表、编辑弹窗、停用和审计已实现。功能与 405 协议修复提交 `e90a2d2b`、`9f58d972` 已进入本地 `main`，统一开发环境运行 `2.8.61-dev.9f58d97`；backend/frontend healthy，V115 成功，正确的匿名请求为 JSON 401、错误方法为 JSON 405，路由 200，完整 `./stack verify` 通过。后端定向 14 项、package、前端 49 文件/272 项与 production build 通过；真实新 Keycloak Client 端到端业务验收待接入应用完成，UAT/生产未修改。
+- TASK-302 / FEAT-183 已进入 review：内部独立应用可直接携带自己的 Keycloak `access_token` 调用 `GET /openapi/v1/ecosystem/companies` 与 `POST /openapi/v1/ecosystem/company-context`，AgentCiCi 校验签名、Issuer、`typ=Bearer`、`aud=agentcici-api`、`azp`、平台受信应用、Scope、HUMAN 绑定和 ACTIVE 成员关系；不再要求应用专用 handoff 或第二套长期 Token。平台受信应用列表、编辑弹窗、停用和审计已实现。后端定向 14 项、package、前端 49 文件/272 项、production build、本地 V115 和完整 `./stack verify` 均通过；UAT 技术发布见下一条，真实新 Keycloak Client 端到端业务验收仍待接入应用完成。
 
-- TASK-302 / FEAT-183 已发布 UAT `2.8.61-beta.19 / 2343b9bbafd6`。backend/frontend ACR index digest 为 `sha256:36f9591b78b9f2c22f2dd5c435f0e2d1dbd693978c195dbe6f241c958184bda7` / `sha256:0958cbe7b5614c16548895c233afa828545c1be6775bfd160aefbb0bfb4de0a7`；完整备份 `/data/apps/agentcici/backups/20260813T153050Z-before-2.8.61-beta.19` 已校验，回滚目标 beta.18。仅重建 backend/frontend，四个状态服务 ID 不变；六容器 healthy/restart=0，版本、health、Flyway V114、Nginx、公开 smoke、系统 API 路由 200、匿名 JSON 401 和稳定窗口通过。远程 `main`、tag 与制品 commit 一致；授权态视觉验收待运营人员完成，生产未修改。
+- TASK-302 / FEAT-183 已发布 UAT `2.8.61-beta.20 / 1b6bb8f1974a`。backend/frontend digest 为 `sha256:18c1e7c3c082ad475e3a4b714b96e3f3e385d08deaa6384ec5c944ba0143eb56` / `sha256:48520c667024f7d9e94f9d696c37eb089e0cca115c8a87d7b5f72df4a0180c56`；完整备份 `/data/apps/agentcici/backups/20260814T002542Z-before-2.8.61-beta.20` 已校验，回滚目标 beta.19。仅重建 backend/frontend，四个状态服务 ID 不变；六容器 healthy/restart=0，V115、Nginx、系统 API 路由、JSON 401/405、两轮公开 smoke 和稳定窗口通过。真实独立 Client/HUMAN 成功调用待验收，生产未修改。
 
 - TASK-302 / FEAT-183 已把公司 API 鉴权文案改为可执行的接入指南：明确 Keycloak 原始 `access_token` / `id_token` 不能直接调用，现有 AgentCiCi Web 使用 `/auth/oidc/login` 与 `/auth/oidc/complete` 完成登录和一次性票据兑换，同源扩展复用服务端会话，新独立应用须先完成 Keycloak Client、平台激活/信任及应用专用 handoff/受治理交换契约，机器应用继续使用 SERVICE/OACT；当前未虚构通用 HUMAN Token 交换端点。提交 `99ae151` 已进入本地 `main`，backend/frontend 运行 `2.8.61-dev.99ae151`、healthy/restart=0，目标页 200、匿名 API JSON 401、完整 `./stack verify` 通过。浏览器无运营平台登录态，授权态视觉验收待运营人员完成；UAT/生产未修改。
 

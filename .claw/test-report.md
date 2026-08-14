@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-13T16:02:51Z
+updated_at: 2026-08-14T00:29:24Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-13T16:02:51Z
-last_run_status: passed_with_local_deployment_pending
+last_run_at: 2026-08-14T00:29:24Z
+last_run_status: passed_with_uat_business_acceptance_pending
 ---
 
 # Test Report
+
+## 2026-08-14 TASK-302 UAT `2.8.61-beta.20`
+
+- Git/制品：远程 `main` 已同步；annotated tag `2.8.61-beta.20` 指向 `1b6bb8f1974a`。backend/frontend linux/amd64 ACR index digest 为 `sha256:18c1e7c3c082ad475e3a4b714b96e3f3e385d08deaa6384ec5c944ba0143eb56` / `sha256:48520c667024f7d9e94f9d696c37eb089e0cca115c8a87d7b5f72df4a0180c56`，镜像 label 与运行 `/system/version` 一致；未更新 `latest`。
+- 备份：`/data/apps/agentcici/backups/20260814T002542Z-before-2.8.61-beta.20` 的 Compose、受管环境、PostgreSQL、KB、Qdrant、beta.19 旧镜像、发布前状态和 SHA 清单均非空且为 `0600`；数据库归档、两个 tar、旧镜像 gzip 和 SHA 清单均验证通过。
+- 部署：仅 force-recreate backend/frontend，24 秒内恢复 healthy；四个状态服务 ID 哈希保持 `be954223201a867fbef7aff12e97786a136b9ab1e8011c5ab1a0ed968cd3477f`，六容器 healthy/restart=0。
+- 运行门禁：backend health=`UP`、Flyway V115 成功、受信应用表存在、frontend Nginx 有效且部署制品包含生态公司入口。系统 API/接入应用路由 200，匿名平台 API、公司列表和正确的公司上下文 POST 为 JSON 401，错误 GET 为 JSON 405。
+- 外部与稳定性：UAT 首页、匿名 auth、Keycloak discovery、Semattice health/version、DevAutopilot integrated health 两轮通过；稳定窗口 backend severe error=0、frontend 5xx=0。
+- 状态：`passed_with_uat_business_acceptance_pending`。没有可用于验收的新独立 Keycloak Client 与 HUMAN 用户凭据，未执行真实成功登录、公司列表/上下文及后续 `X-Company-Id` 业务调用；即时应用回滚目标为 beta.19，生产未修改。
 
 ## 2026-08-14 TASK-302 Keycloak HUMAN 跨应用直调
 
@@ -17,7 +26,7 @@ last_run_status: passed_with_local_deployment_pending
 - 平台治理：V115 新增受信内部应用表；平台管理员可以通过独立“接入应用”列表与编辑弹窗登记 Client ID、Scope 和状态，不保存 Client Secret，变更写入平台审计。
 - 后端：`mvn -q -Dtest=KeycloakOidcLoginServiceTest,EcosystemHumanApiServiceTest,EcosystemApplicationTrustServiceTest,SystemApiCatalogServiceTest test` 共 13 项通过；`mvn -q -DskipTests package` 通过。
 - 前端：全量 49 文件/272 项通过；`npm run build` 通过，仅保留既有 chunk-size warning。
-- 状态：`passed_with_local_deployment_pending`；本地 `main` 提交、V115 迁移和 `cici.localhost` 运行回读待下一步完成，UAT/生产未修改。
+- 状态：本地提交、V115 与 `cici.localhost` 技术验收均已完成；后续 UAT 证据见 `2.8.61-beta.20` 条目。
 
 ## 2026-08-13 TASK-302 UAT `2.8.61-beta.19`
 

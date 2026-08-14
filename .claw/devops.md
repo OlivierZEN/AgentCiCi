@@ -1,12 +1,20 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-13T15:34:50Z
+updated_at: 2026-08-14T00:29:24Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-14 TASK-302 UAT `2.8.61-beta.20`
+
+- 冻结 Git tag/commit 为 `2.8.61-beta.20 / 1b6bb8f1974a`；backend/frontend linux/amd64 ACR index digest 为 `sha256:18c1e7c3c082ad475e3a4b714b96e3f3e385d08deaa6384ec5c944ba0143eb56` / `sha256:48520c667024f7d9e94f9d696c37eb089e0cca115c8a87d7b5f72df4a0180c56`，image label、tag 与运行版本一致；未更新 `latest`。
+- 完整备份 `/data/apps/agentcici/backups/20260814T002542Z-before-2.8.61-beta.20` 包含 Compose、受管环境、PostgreSQL、KB、Qdrant、beta.19 旧镜像、发布前容器状态和 SHA-256 清单；数据库、tar 与 gzip 均通过读取校验，全部工件非空且 `0600`。即时应用回滚目标为 `2.8.61-beta.19`。
+- 仅 pull/force-recreate backend/frontend；database、Redis、RabbitMQ、Qdrant 容器 ID 哈希发布前后保持 `be954223201a867fbef7aff12e97786a136b9ab1e8011c5ab1a0ed968cd3477f`，六容器 healthy/restart=0。
+- `/system/version=2.8.61-beta.20 / 1b6bb8f1974a`、health=`UP`、Flyway V115 成功、Nginx 有效；系统 API 与接入应用页面 200，匿名目录/受信应用 API 与生态公司 API 为 JSON 401，错误方法为 JSON 405。两轮六项公网 smoke 与稳定窗口通过，backend severe error=0、frontend 5xx=0。
+- UAT 已具备 Keycloak HUMAN 直调代码、受信 Client 治理与公司上下文接口，但本次没有新登记独立 Keycloak Client 的受权凭据，未执行成功登录和 `X-Company-Id` 真实业务调用；生产未修改。
 
 ## 2026-08-13 TASK-302 UAT `2.8.61-beta.19`
 
