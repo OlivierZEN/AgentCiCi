@@ -3,8 +3,8 @@ kind: task-status
 task_id: TASK-303
 feature_id: FEAT-184
 integration_id: INT-020
-status: review
-updated_at: 2026-08-14T01:00:00Z
+status: done
+updated_at: 2026-08-14T01:30:50Z
 updated_by: codex
 owner_role: backend-agent
 spec_path: docs/specs/FEAT-184-devautopilot-confirmed-requirement-status.md
@@ -30,4 +30,5 @@ spec_path: docs/specs/FEAT-184-devautopilot-confirmed-requirement-status.md
 - `mvn -q -DskipTests package`：通过。
 - backend 全量套件受既有 Spring 上下文/AI fixture 失败影响；未将其声明为本任务通过证据。
 - 本地 `main@e8275353e0d0` 已构建 `cc-aixone/agentcici-backend:local`；运行版本 `2.8.61-dev.e827535`、health=`UP`、container healthy/restart=0。
-- 新需求真实确认写入尚待登录态业务验收；当前保持 `review`。
+- 本地真实需求 `REQ-6F34ECF3` 已通过受治理 HUMAN 确认链进入 `已确认`，并在同一闭环完成 5 项开发任务派发。
+- AgentCiCi backend 运行 `2.8.61-dev.53715a3`、healthy/restart=0；完整 `./stack verify` 通过，UAT/生产未修改。

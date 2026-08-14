@@ -22,6 +22,8 @@ read_next:
 
 ## Latest Snapshot
 
+- TASK-303 / TASK-304 / INT-020 已完成本地端到端验收：HUMAN 在 DevAutopilot 显式确认后，AgentCiCi 只按固定操作白名单为当前激活的 primary 产品经理 SERVICE 签发短时 OACT；真实 `REQ-6F34ECF3` 已进入 `已确认`，随后 5 项任务均由该 SERVICE 写入 Semattice。backend 从本地 `main@53715a337691` 构建为 `2.8.61-dev.53715a3`，healthy/restart=0，定向测试、package 与完整 `./stack verify` 通过。UAT/生产未修改。
+
 - TASK-305 / FEAT-176 已完成代码与构建验证：代码解释器、联网搜索和网页抓取保持默认 120 秒、最小 10 秒，可配置上限统一从 180 秒提升到 60 分钟；前端数字输入、后端保存门禁与实际 HTTP 客户端使用同一上限。后端定向测试与 package、前端 5/5 与 production build 均通过，待本地 main 提交和开发环境回读。
 
 - TASK-302 / FEAT-183 已进入 review：内部独立应用可直接携带自己的 Keycloak `access_token` 调用 `GET /openapi/v1/ecosystem/companies` 与 `POST /openapi/v1/ecosystem/company-context`，AgentCiCi 校验签名、Issuer、`typ=Bearer`、`aud=agentcici-api`、`azp`、平台受信应用、Scope、HUMAN 绑定和 ACTIVE 成员关系；不再要求应用专用 handoff 或第二套长期 Token。平台受信应用列表、编辑弹窗、停用和审计已实现。后端定向 14 项、package、前端 49 文件/272 项、production build、本地 V115 和完整 `./stack verify` 均通过；UAT 技术发布见下一条，真实新 Keycloak Client 端到端业务验收仍待接入应用完成。

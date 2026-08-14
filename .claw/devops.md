@@ -8,6 +8,12 @@ status: active
 
 # DevOps
 
+## 2026-08-14 TASK-304 本地开发环境
+
+- 从 AgentCiCi 本地 `main@53715a337691` 构建 backend `2.8.61-dev.53715a3`，镜像 ID `sha256:7f60629c800bdf51ee793b1e2f8ad0d376867002e31607c823259bb1268aab01`。
+- backend healthy/restart=0；与 DevAutopilot `1.0.4-dev.a819973` 完成需求确认、任务创建、actor/owner 回读和完整 `./stack verify`。
+- 本条仅记录本地开发环境；UAT/生产未修改。回滚应用代码不自动删除已确认需求或已创建任务。
+
 ## 2026-08-14 TASK-303 本地开发环境
 
 - 代码制品从本地 `main@e8275353e0d0e6dbdd85e68fb95e8d2ed1a7ff11` 构建为 `cc-aixone/agentcici-backend:local`，镜像 ID `sha256:b98eb8aec5d8101af860fad1c42d5f578602f0334e6234b733213d01030e8dfd`，label 版本/提交为 `2.8.61-dev.e827535 / e8275353e0d0`。

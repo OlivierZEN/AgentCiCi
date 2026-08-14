@@ -3,8 +3,8 @@ kind: task-status
 task_id: TASK-304
 feature_id: FEAT-185
 integration_id: INT-020
-status: review
-updated_at: 2026-08-14T01:14:07Z
+status: done
+updated_at: 2026-08-14T01:30:50Z
 updated_by: codex
 owner_role: backend-agent
 spec_path: docs/specs/FEAT-185-devautopilot-delegated-product-manager-execution.md
@@ -22,4 +22,6 @@ spec_path: docs/specs/FEAT-185-devautopilot-delegated-product-manager-execution.
 
 - `mvn -q -Dtest=DevAutopilotExecutionAuthorizationServiceTest test`：通过。
 - `mvn -q -DskipTests package`：通过。
-- 本地环境与真实 Semattice actor/业务结果待从 AgentCiCi、DevAutopilot 本地 `main` 重建后验收。
+- 本地 backend 已从 `main@53715a337691` 构建为 `2.8.61-dev.53715a3`，healthy/restart=0。
+- 真实需求确认和 5 项 `dev_task` 创建的 Semattice 审计 actor 均为 primary 产品经理 SERVICE `d841968a-88c3-4681-b866-e230f3563616`；没有使用 HUMAN 写权限回退。
+- 完整 `./stack verify` 通过，UAT/生产未修改。
