@@ -84,7 +84,7 @@ public class SematticeProjectDeliveryTransferToolService {
     }
 
     private Resolved resolve(String companyId, String userId, String agentId, TransferIntent intent, List<String> scopes) {
-        var source = developers.resolveActiveByDisplayName(companyId, intent.from()).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "未找到有效开发者“" + intent.from() + "”。"));
+        var source = developers.resolveTransferSourceByDisplayName(companyId, intent.from()).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "未找到可转出的开发者“" + intent.from() + "”。"));
         var target = developers.resolveActiveByDisplayName(companyId, intent.to()).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "未找到有效开发者“" + intent.to() + "”。"));
         if (source.principalId().equals(target.principalId())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "转出与转入开发者不能相同。");
         var authorization = executions.authorizeSemattice(companyId, userId, agentId, scopes, TOOL_NAME);

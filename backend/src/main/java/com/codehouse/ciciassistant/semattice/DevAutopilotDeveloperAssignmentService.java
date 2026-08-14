@@ -34,6 +34,34 @@ public class DevAutopilotDeveloperAssignmentService {
         return matches.size() == 1 ? Optional.of(matches.getFirst()) : Optional.empty();
     }
 
+    /**
+     * A paused developer may be the source of an evacuation. Only the receiving developer needs
+     * to be schedulable; a historical source profile remains resolvable while its app activation
+     * and SERVICE principal still exist.
+     */
+    public Optional<DeveloperAssignment> resolveTransferSourceByDisplayName(String companyId, String displayName) {
+        String normalized = displayName == null ? "" : displayName.trim();
+        if (normalized.isBlank()) return Optional.empty();
+        List<DeveloperAssignment> matches = jdbcTemplate.query("""
+                SELECT resource.external_id, resource.display_name
+                FROM tenant_application_activation activation
+                JOIN tenant_application_resource resource
+                  ON resource.activation_id = activation.id
+                 AND resource.logical_role = 'developer'
+                 AND resource.resource_type = 'SERVICE_PRINCIPAL'
+                JOIN principal principal
+                  ON principal.id = resource.external_id
+                 AND principal.principal_type = 'SERVICE'
+                WHERE activation.company_id = ?
+                  AND activation.app_code = 'devautopilot'
+                  AND activation.actual_state = 'ACTIVE'
+                ORDER BY resource.external_id
+                """, (rs, rowNum) -> new DeveloperAssignment(rs.getString(1), rs.getString(2)), companyId).stream()
+                .filter(item -> item.displayName().equalsIgnoreCase(normalized))
+                .toList();
+        return matches.size() == 1 ? Optional.of(matches.getFirst()) : Optional.empty();
+    }
+
     private List<DeveloperAssignment> activeDevelopers(String companyId) {
         return jdbcTemplate.query("""
                 SELECT resource.external_id, resource.display_name
