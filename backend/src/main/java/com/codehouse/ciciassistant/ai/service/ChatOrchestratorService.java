@@ -1441,12 +1441,22 @@ public class ChatOrchestratorService {
             String toolName,
             String arguments,
             ResolvedSkillContext skillContext) {
+        List<String> allowedTools = skillContext.allowedToolNames();
+        // Existing tenants can have a published delivery-skill snapshot from before transfer was
+        // introduced. The deterministic route remains limited to that same delivery skill; it is
+        // not a general tool-whitelist bypass and Semattice still enforces the PM SERVICE scope.
+        if (SematticeProjectDeliveryTransferToolService.TOOL_NAME.equals(toolName)
+                && skillContext.skillCodes().contains("semattice-project-delivery-management")
+                && !allowedTools.contains(SematticeProjectDeliveryTransferToolService.TOOL_NAME)) {
+            allowedTools = new ArrayList<>(allowedTools);
+            allowedTools.add(SematticeProjectDeliveryTransferToolService.TOOL_NAME);
+        }
         return toolOrchestratorService.executeTool(
                 companyId,
                 userId,
                 toolName,
                 arguments,
-                skillContext.allowedToolNames(),
+                allowedTools,
                 skillContext.agentDirectToolNames(),
                 skillContext.agentId());
     }
@@ -1610,7 +1620,9 @@ public class ChatOrchestratorService {
             List<Map<String, Object>> messages, String companyId, String userId, String sessionId,
             ResolvedSkillContext skillContext, SseEmitter emitter,
             List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces, String runId, String question) {
-        if (skillContext == null || !skillContext.allowedToolNames().contains(SematticeProjectDeliveryTransferToolService.TOOL_NAME)) return Optional.empty();
+        if (skillContext == null
+                || (!skillContext.allowedToolNames().contains(SematticeProjectDeliveryTransferToolService.TOOL_NAME)
+                && !skillContext.skillCodes().contains("semattice-project-delivery-management"))) return Optional.empty();
         Optional<SematticeProjectDeliveryTransferToolService.TransferIntent> confirmed = SematticeProjectDeliveryTransferToolService.confirmedIntent(question);
         Optional<SematticeProjectDeliveryTransferToolService.TransferIntent> draft = confirmed.isPresent() ? Optional.empty() : SematticeProjectDeliveryTransferToolService.draftIntent(question);
         if (confirmed.isEmpty() && draft.isEmpty()) return Optional.empty();
