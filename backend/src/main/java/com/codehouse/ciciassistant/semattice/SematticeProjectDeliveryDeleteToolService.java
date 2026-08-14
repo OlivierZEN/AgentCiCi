@@ -33,7 +33,8 @@ public class SematticeProjectDeliveryDeleteToolService {
     private static final String DELETE_CAPABILITY_ID = "runtime.record.delete";
     private static final String QUERY_CAPABILITY_ID = "runtime.record.query";
     private static final Pattern CONFIRM_DELETE = Pattern.compile(
-            "^\\s*(?:请)?(?:确认|确定)删除(?:项目|需求|任务)[：:]\\s*(.+?)\\s*$", Pattern.CASE_INSENSITIVE);
+            "^\\s*(?:请)?(?:确认|确定)删除(项目|需求|任务|工时|变更|交付事件)[：:]\\s*(.+?)\\s*$",
+            Pattern.CASE_INSENSITIVE);
 
     private static final Map<String, String> ENTITY_OBJECTS = Map.of(
             "project", "dev_project",
@@ -62,9 +63,21 @@ public class SematticeProjectDeliveryDeleteToolService {
         String value = question == null ? "" : question.trim();
         Matcher matcher = CONFIRM_DELETE.matcher(value);
         if (matcher.matches()) {
-            return Optional.of(new DeleteIntent(matcher.group(1)));
+            return Optional.of(new DeleteIntent(entityTypeForLabel(matcher.group(1)), matcher.group(2)));
         }
         return Optional.empty();
+    }
+
+    private static String entityTypeForLabel(String label) {
+        return switch (label) {
+            case "项目" -> "project";
+            case "需求" -> "requirement";
+            case "任务" -> "task";
+            case "工时" -> "worklog";
+            case "变更" -> "change";
+            case "交付事件" -> "delivery_event";
+            default -> "";
+        };
     }
 
     public static boolean isDraftRequest(String question) {
@@ -148,9 +161,10 @@ public class SematticeProjectDeliveryDeleteToolService {
         String recordId = (String) record.get("record_id");
         long revision = extractRevision(record);
 
+        String requestId = "cici-delivery-delete-" + UUID.randomUUID();
         Map<String, Object> request = new LinkedHashMap<>();
         request.put("capability_id", DELETE_CAPABILITY_ID);
-        request.put("request_id", "cici-delivery-delete-" + UUID.randomUUID());
+        request.put("request_id", requestId);
         request.put("idempotency_key", "cici-delivery-delete-" + UUID.randomUUID());
         request.put("input", Map.of(
                 "object_api_name", objectApiName,
@@ -170,11 +184,24 @@ public class SematticeProjectDeliveryDeleteToolService {
             return failure("DELETE_FAILED", error);
         }
 
+        JsonNode deleted = response.path("result");
+        String deletedRecordId = deleted.path("record_id").asText();
+        String lifecycleState = deleted.path("lifecycle_state").asText();
+        long deletedRevision = deleted.path("revision").asLong();
+        if (!recordId.equals(deletedRecordId) || !"trashed".equals(lifecycleState) || deletedRevision <= revision) {
+            return failure("DELETE_READBACK_INVALID", "Semattice 删除回读不完整，未确认删除成功。");
+        }
+
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("status", "succeeded");
+        result.put("status", "SUCCESS");
+        result.put("source", "SEMATTICE_LIVE");
         result.put("message", "记录已移入回收站，30 天内可恢复。");
         result.put("record_id", recordId);
-        result.put("lifecycle_state", "trashed");
+        result.put("object_api_name", objectApiName);
+        result.put("revision", deletedRevision);
+        result.put("correlation_id", response.path("correlationId").asText(requestId));
+        result.put("lifecycle_state", lifecycleState);
+        result.put("readback_verified", true);
         return result;
     }
 
@@ -267,6 +294,16 @@ public class SematticeProjectDeliveryDeleteToolService {
             if (lower.contains("变更") || lower.contains("change")) return "change";
             if (lower.contains("交付事件") || lower.contains("delivery")) return "delivery_event";
             return "project";
+        }
+
+        public String toArguments(ObjectMapper objectMapper) {
+            try {
+                return objectMapper.writeValueAsString(Map.of(
+                        "entity_type", entityType,
+                        "reference", reference));
+            } catch (Exception exception) {
+                throw new IllegalArgumentException("无法生成删除工具参数", exception);
+            }
         }
     }
 }

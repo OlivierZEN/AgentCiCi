@@ -33,6 +33,7 @@ import com.codehouse.ciciassistant.model.service.ModelProviderService;
 import com.codehouse.ciciassistant.ops.service.AuditService;
 import com.codehouse.ciciassistant.kb.service.KbAccessControlService;
 import com.codehouse.ciciassistant.security.service.SafetyGatewayService;
+import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryDeleteToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryWriteToolService;
 import com.codehouse.ciciassistant.skill.service.SkillPromptAssembler;
@@ -498,8 +499,12 @@ public class ChatOrchestratorService {
                     messages, companyId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
         }
         Optional<String> forcedProjectDeliveryWriteAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty()
-                : appendForcedSematticeProjectDeliveryWriteAnswer(
+                : appendForcedSematticeProjectDeliveryDeleteAnswer(
                 messages, companyId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
+        if (forcedProjectDeliveryWriteAnswer.isEmpty() && !modeDecision.suppressesTools() && !planExec.active()) {
+            forcedProjectDeliveryWriteAnswer = appendForcedSematticeProjectDeliveryWriteAnswer(
+                    messages, companyId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
+        }
         boolean projectDeliveryCreateDraftRequested = forcedProjectDeliveryWriteAnswer.isEmpty()
                 && !modeDecision.suppressesTools() && !planExec.active()
                 && appendSematticeProjectDeliveryCreateDraftPrompt(messages, skillContext, question);
@@ -792,8 +797,12 @@ public class ChatOrchestratorService {
                             messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
                 }
                 Optional<String> forcedProjectDeliveryWriteAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty()
-                        : appendForcedSematticeProjectDeliveryWriteAnswer(
+                        : appendForcedSematticeProjectDeliveryDeleteAnswer(
                         messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
+                if (forcedProjectDeliveryWriteAnswer.isEmpty() && !modeDecision.suppressesTools() && !planExec.active()) {
+                    forcedProjectDeliveryWriteAnswer = appendForcedSematticeProjectDeliveryWriteAnswer(
+                            messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
+                }
                 boolean projectDeliveryCreateDraftRequested = forcedProjectDeliveryWriteAnswer.isEmpty()
                         && !modeDecision.suppressesTools() && !planExec.active()
                         && appendSematticeProjectDeliveryCreateDraftPrompt(messages, skillContext, question);
@@ -1548,6 +1557,64 @@ public class ChatOrchestratorService {
                 confirmed.get().toArguments(TOOL_RESULT_OBJECT_MAPPER),
                 "auto_semattice_delivery_create_");
         return Optional.of(formatProjectDeliveryWriteResult(toolResult));
+    }
+
+    /** A confirmed delete is server-routed and never delegated to free-form model planning. */
+    private Optional<String> appendForcedSematticeProjectDeliveryDeleteAnswer(
+            List<Map<String, Object>> messages,
+            String companyId,
+            String userId,
+            String sessionId,
+            ResolvedSkillContext skillContext,
+            SseEmitter emitter,
+            List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces,
+            String runId,
+            String question) {
+        if (skillContext == null
+                || !skillContext.allowedToolNames().contains(SematticeProjectDeliveryDeleteToolService.TOOL_NAME)) {
+            return Optional.empty();
+        }
+        Optional<SematticeProjectDeliveryDeleteToolService.DeleteIntent> confirmed =
+                SematticeProjectDeliveryDeleteToolService.confirmedIntent(question);
+        if (confirmed.isEmpty()) {
+            return Optional.empty();
+        }
+        String toolResult = executeAndAppendSyntheticToolCall(
+                messages,
+                companyId,
+                userId,
+                sessionId,
+                skillContext,
+                emitter,
+                toolCallTraces,
+                runId,
+                SematticeProjectDeliveryDeleteToolService.TOOL_NAME,
+                confirmed.get().toArguments(TOOL_RESULT_OBJECT_MAPPER),
+                "auto_semattice_delivery_delete_");
+        return Optional.of(formatProjectDeliveryDeleteResult(toolResult));
+    }
+
+    static String formatProjectDeliveryDeleteResult(String toolResult) {
+        try {
+            JsonNode result = TOOL_RESULT_OBJECT_MAPPER.readTree(toolResult);
+            if (!"SUCCESS".equals(result.path("status").asText())
+                    || !"SEMATTICE_LIVE".equals(result.path("source").asText())
+                    || result.path("record_id").asText().isBlank()
+                    || result.path("revision").asLong() < 1
+                    || result.path("correlation_id").asText().isBlank()
+                    || !"trashed".equals(result.path("lifecycle_state").asText())
+                    || !result.path("readback_verified").asBoolean(false)) {
+                return "未删除研发交付记录："
+                        + result.path("error").path("message").asText("Semattice 未返回完整的回收站回读。")
+                        + " 请核对记录编号和删除权限后重试。";
+            }
+            return "已将研发交付记录移入 Semattice 回收站，30 天内可恢复。记录 ID："
+                    + result.path("record_id").asText()
+                    + "；revision：" + result.path("revision").asLong()
+                    + "；关联号：" + result.path("correlation_id").asText() + "。";
+        } catch (Exception exception) {
+            return "未删除研发交付记录：Semattice 回执解析失败，不能确认删除成功。请稍后重试。";
+        }
     }
 
     /**

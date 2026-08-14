@@ -13,6 +13,7 @@ import com.codehouse.ciciassistant.mcp.service.McpServerService;
 import com.codehouse.ciciassistant.memory.service.UserMemoryService;
 import com.codehouse.ciciassistant.platform.service.PlatformGovernanceService;
 import com.codehouse.ciciassistant.security.service.SafetyGatewayService;
+import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryDeleteToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryReviewToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryWriteToolService;
@@ -231,6 +232,38 @@ class ToolOrchestratorServiceTest {
                 List.of(SematticeProjectDeliveryReviewToolService.TOOL_NAME), "dev-autopilot-pm"))
                 .contains("SERVICE");
         verify(review).dispatch("org-1", "user-1", "dev-autopilot-pm", "{\"gate\":\"design\"}");
+    }
+
+    @Test
+    void dispatchesConfirmedDeliveryDeleteWithTheResolvedAgentExecutionContext() {
+        McpServerService mcp = mock(McpServerService.class);
+        PlatformGovernanceService governance = mock(PlatformGovernanceService.class);
+        SkillApiToolService skillApi = mock(SkillApiToolService.class);
+        SematticeProjectDeliveryDeleteToolService delete = mock(SematticeProjectDeliveryDeleteToolService.class);
+        when(governance.isRuntimeToolEnabled("org-1", SematticeProjectDeliveryDeleteToolService.TOOL_NAME))
+                .thenReturn(true);
+        when(delete.dispatch("org-1", "user-1", "dev-autopilot-pm",
+                "{\"entity_type\":\"task\",\"reference\":\"task-1\"}"))
+                .thenReturn("{\"status\":\"SUCCESS\",\"source\":\"SEMATTICE_LIVE\"}");
+
+        ToolOrchestratorService orchestrator = new ToolOrchestratorService(
+                mcp, mock(CloudccOpenApiService.class), mock(CrmProductSalesAnalysisToolService.class),
+                mock(EmailToolService.class), mock(UserMemoryService.class), mock(TavilyToolService.class),
+                governance, skillApi, mock(SematticeProjectDeliveryToolService.class),
+                mock(SematticeProjectDeliveryWriteToolService.class),
+                mock(SematticeProjectDeliveryReviewToolService.class), allowSafetyGateway(),
+                new ObjectMapper().findAndRegisterModules());
+        orchestrator.setSematticeProjectDeliveryDeleteToolService(delete);
+
+        String result = orchestrator.executeTool(
+                "org-1", "user-1", SematticeProjectDeliveryDeleteToolService.TOOL_NAME,
+                "{\"entity_type\":\"task\",\"reference\":\"task-1\"}",
+                List.of(SematticeProjectDeliveryDeleteToolService.TOOL_NAME),
+                List.of(SematticeProjectDeliveryDeleteToolService.TOOL_NAME), "dev-autopilot-pm");
+
+        assertThat(result).contains("SEMATTICE_LIVE");
+        verify(delete).dispatch("org-1", "user-1", "dev-autopilot-pm",
+                "{\"entity_type\":\"task\",\"reference\":\"task-1\"}");
     }
 
     private SafetyGatewayService allowSafetyGateway() {

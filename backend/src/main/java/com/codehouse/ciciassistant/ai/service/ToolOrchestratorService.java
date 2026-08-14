@@ -8,6 +8,7 @@ import com.codehouse.ciciassistant.mcp.service.McpServerService;
 import com.codehouse.ciciassistant.mcp.service.McpServerService.ResolvedTool;
 import com.codehouse.ciciassistant.platform.service.PlatformGovernanceService;
 import com.codehouse.ciciassistant.security.service.SafetyGatewayService;
+import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryDeleteToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryReviewToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryWriteToolService;
@@ -56,6 +57,7 @@ public class ToolOrchestratorService {
     private final SematticeProjectDeliveryToolService sematticeProjectDeliveryToolService;
     private final SematticeProjectDeliveryWriteToolService sematticeProjectDeliveryWriteToolService;
     private final SematticeProjectDeliveryReviewToolService sematticeProjectDeliveryReviewToolService;
+    private SematticeProjectDeliveryDeleteToolService sematticeProjectDeliveryDeleteToolService;
     private final SafetyGatewayService safetyGatewayService;
     private final ObjectMapper objectMapper;
     private AssistantScheduleToolService assistantScheduleToolService;
@@ -101,6 +103,12 @@ public class ToolOrchestratorService {
     @Autowired(required = false)
     void setManagedWebToolService(ManagedWebToolService managedWebToolService) {
         this.managedWebToolService = managedWebToolService;
+    }
+
+    @Autowired(required = false)
+    void setSematticeProjectDeliveryDeleteToolService(
+            SematticeProjectDeliveryDeleteToolService sematticeProjectDeliveryDeleteToolService) {
+        this.sematticeProjectDeliveryDeleteToolService = sematticeProjectDeliveryDeleteToolService;
     }
 
     /**
@@ -323,6 +331,12 @@ public class ToolOrchestratorService {
         }
         if (SematticeProjectDeliveryReviewToolService.TOOL_NAME.equals(canonicalToolName)) {
             return sematticeProjectDeliveryReviewToolService.dispatch(companyId, userId, currentAgentId, safeArgumentsJson);
+        }
+        if (SematticeProjectDeliveryDeleteToolService.TOOL_NAME.equals(canonicalToolName)) {
+            return sematticeProjectDeliveryDeleteToolService == null
+                    ? "{\"status\":\"failed\",\"error\":{\"code\":\"DELETE_TOOL_UNAVAILABLE\"}}"
+                    : sematticeProjectDeliveryDeleteToolService.dispatch(
+                            companyId, userId, currentAgentId, safeArgumentsJson);
         }
         if (CloudccOpenApiService.toolName().equals(canonicalToolName)) {
             return safeToolResult(companyId, userId, canonicalToolName,

@@ -51,6 +51,23 @@ class DeliveryWriteReceiptGuardTest {
     }
 
     @Test
+    void preservesConfirmedDeleteOnlyWithRecycleBinReadbackReceipt() {
+        AgentRunTraceService.ToolCallTraceInput receipt = trace(
+                "semattice_project_delivery_delete",
+                "{\"status\":\"SUCCESS\",\"source\":\"SEMATTICE_LIVE\","
+                        + "\"object_api_name\":\"dev_task\",\"record_id\":\"task-1\","
+                        + "\"revision\":2,\"correlation_id\":\"corr-1\",\"readback_verified\":true,"
+                        + "\"lifecycle_state\":\"trashed\"}",
+                true);
+
+        assertThat(DeliveryWriteReceiptGuard.enforce(
+                "确认删除任务：task-1",
+                "已将研发交付记录移入 Semattice 回收站。记录 ID：task-1。",
+                List.of(receipt)))
+                .contains("task-1");
+    }
+
+    @Test
     void doesNotChangeDraftsOrNonDeliveryAnswers() {
         assertThat(DeliveryWriteReceiptGuard.enforce(
                 "帮我创建项目", "确认后我会创建项目。", List.of()))
