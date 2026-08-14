@@ -3,7 +3,7 @@ kind: task-status
 task_id: TASK-309
 feature_id: FEAT-188
 status: review
-updated_at: 2026-08-14T11:14:23Z
+updated_at: 2026-08-14T11:17:51Z
 updated_by: codex
 owner_role: fullstack-agent
 spec_path: docs/specs/FEAT-188-conversation-image-paste-attachments.md
@@ -20,7 +20,7 @@ spec_path: docs/specs/FEAT-188-conversation-image-paste-attachments.md
 ## 外部交付任务
 
 - DevAutopilot task：`019ffeb0-88a0-739f-afcb-6e667e9d2572`。
-- 当前状态：设计已批准；失效租约已通过正式 claim 恢复，任务为 `开发中 / revision 11`，本地实现与验证证据待登记。
+- 当前状态：设计已批准；失效租约已通过正式 claim 恢复；代码与测试证据已登记，任务为 `UAT待发布 / revision 14`。
 
 ## 完成条件
 
@@ -29,7 +29,7 @@ spec_path: docs/specs/FEAT-188-conversation-image-paste-attachments.md
 - [x] 连续粘贴队列与错误恢复前端测试、50 文件/278 项全量测试和 production build 通过。
 - [x] 桌面真实浏览器验证多图上传、缩略图、删除、替换、发送门禁、失败保留与刷新未落库。
 - [x] 代码提交进入本地 main，并从明确提交更新本地开发测试环境。
-- [ ] DevAutopilot 登记 commit/test_report，按阶段门禁推进至等待 UAT 发布授权。
+- [x] DevAutopilot 登记 commit/test_report，并按阶段门禁推进至等待 UAT 发布授权。
 
 ## 当前验证
 
@@ -41,3 +41,4 @@ spec_path: docs/specs/FEAT-188-conversation-image-paste-attachments.md
 - 本地主线提交：`a9d838b6`（端到端附件实现）、`b7e03a56`（V117 类型兼容迁移）、`aaf9706b`（删除/新会话提示同步）。
 - 本地运行：页面 `2.8.61-dev.aaf9706`；V116/V117 均成功；backend/frontend healthy、restart=0；完整 `./stack verify` 通过。
 - 已登录桌面浏览器：两图上传与缩略图、删除、替换均通过；非 vision 模型返回 `409 VISION_MODEL_REQUIRED`，当前页保留输入和附件，刷新后失败消息未落库。系统剪贴板图片注入受浏览器自动化边界限制，paste 入口由前端定向测试覆盖。
+- DevAutopilot：已登记 commit 与 test_report、实际消耗 1.0 agent-hour；`implementation_completed`、`local_test_passed` 已依次完成，当前停在 `UAT待发布`。

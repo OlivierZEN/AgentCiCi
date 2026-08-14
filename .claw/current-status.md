@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-14T11:14:23Z
+updated_at: 2026-08-14T11:17:51Z
 updated_by: codex
 phase: review
 active_task: TASK-309
-next_action: "向 DevAutopilot 登记 TASK-309 的代码与本地验证证据，推进至 local_test_passed；等待用户另行授权 UAT，未经授权不发布。"
+next_action: "TASK-309 已在 DevAutopilot 推进到 UAT待发布；等待用户另行授权 UAT，未经授权不发布。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-309 / FEAT-188 已完成本地实现与开发环境验收：主线提交 `a9d838b6`、`b7e03a56`、`aaf9706b`；V116/V117 成功，页面为 `2.8.61-dev.aaf9706`，backend/frontend healthy、restart=0，完整 stack verify 通过。已登录桌面页面验证两图上传、缩略图、删除、替换及提示同步；非 vision 模型按预期返回 409，当前页保留草稿，刷新证明失败消息未落库。后端 47 项定向、package、前端 50 文件/278 项和 build 通过；后端全量套件仍受既有共享测试库 V81 checksum 漂移与既有断言债务影响，未 repair。下一步登记 DevAutopilot 代码/测试证据并推进到等待 UAT 授权；UAT/生产未修改。
+- TASK-309 / FEAT-188 已完成本地实现与开发环境验收：主线提交 `a9d838b6`、`b7e03a56`、`aaf9706b`；V116/V117 成功，页面为 `2.8.61-dev.aaf9706`，backend/frontend healthy、restart=0，完整 stack verify 通过。已登录桌面页面验证两图上传、缩略图、删除、替换及提示同步；非 vision 模型按预期返回 409，当前页保留草稿，刷新证明失败消息未落库。后端 47 项定向、package、前端 50 文件/278 项和 build 通过；后端全量套件仍受既有共享测试库 V81 checksum 漂移与既有断言债务影响，未 repair。DevAutopilot 已登记 commit/test_report 和 1.0 agent-hour，依次完成 implementation_completed、local_test_passed，当前为 UAT待发布；UAT/生产未修改。
 
 - TASK-308 / FEAT-185 / INT-023 的驳回鉴权缺口已修复并完成真实闭环：旧 `TASK_REVIEW` OACT 缺少评审前置的 `identity.principal.sync`，导致 Semattice 在产品经理 SERVICE 生命周期同步时拒绝。提交 `95656c5b` 将该 scope 加入固定白名单，调用方仍不能自选权限。定向测试、backend package、完整 stack verify 通过；backend 运行 `2.8.61-dev.95656c5`、healthy/restart=0。用户原始意见已真实写入 `design_changes_requested`，任务进入 `设计驳回 / revision 5`。UAT/生产未修改。
 

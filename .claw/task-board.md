@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-14T11:14:23Z
+updated_at: 2026-08-14T11:17:51Z
 updated_by: codex
 board_status: active
 ---
@@ -26,7 +26,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - scope_files: `会话附件 API/V116/V117、聊天消息关联与 vision 门禁、工作台附件队列、测试与本地环境验证`
 - completion_evidence: `a9d838b6、b7e03a56、aaf9706b；后端定向 47 项/package、前端 50 文件/278 项/build、V116/V117、真实登录桌面交互和完整 stack verify 通过`
-- next_action: `登记 DevAutopilot commit/test_report 并推进 implementation_completed、local_test_passed；等待用户另行授权 UAT。`
+- next_action: `DevAutopilot 已完成 implementation_completed、local_test_passed 并进入 UAT待发布；等待用户另行授权 UAT。`
 
 ### TASK-308 - DevAutopilot 任务评审委托授权
 
