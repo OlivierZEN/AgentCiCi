@@ -44,10 +44,18 @@ public class SematticeProjectDeliveryTransferToolService {
     public static Optional<TransferIntent> draftIntent(String text) { return parse(text, REQUEST); }
     public static Optional<TransferIntent> confirmedIntent(String text) { return parse(text, CONFIRM); }
     private static Optional<TransferIntent> parse(String text, Pattern pattern) {
-        Matcher match = pattern.matcher(text == null ? "" : text.trim());
+        Matcher match = pattern.matcher(normalizeInstruction(text));
         if (!(pattern == REQUEST ? match.find() : match.matches())) return Optional.empty();
         String from = match.group(1).trim(), to = match.group(2).trim();
         return from.isBlank() || to.isBlank() || from.equals(to) ? Optional.empty() : Optional.of(new TransferIntent(from, to));
+    }
+
+    /** Chat input commonly includes a terminal sentence mark or a copied Markdown wrapper. */
+    private static String normalizeInstruction(String text) {
+        String normalized = text == null ? "" : text.trim();
+        normalized = normalized.replaceAll("^[`\\\"“”‘’']+", "");
+        normalized = normalized.replaceAll("[`\\\"“”‘’。！？!?]+$", "");
+        return normalized.trim();
     }
 
     public String dispatch(String companyId, String userId, String agentId, String arguments) {

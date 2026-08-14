@@ -1622,12 +1622,16 @@ public class ChatOrchestratorService {
             List<Map<String, Object>> messages, String companyId, String userId, String sessionId,
             ResolvedSkillContext skillContext, SseEmitter emitter,
             List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces, String runId, String question) {
-        if (skillContext == null
-                || (!skillContext.allowedToolNames().contains(SematticeProjectDeliveryTransferToolService.TOOL_NAME)
-                && !skillContext.skillCodes().contains("semattice-project-delivery-management"))) return Optional.empty();
         Optional<SematticeProjectDeliveryTransferToolService.TransferIntent> confirmed = SematticeProjectDeliveryTransferToolService.confirmedIntent(question);
         Optional<SematticeProjectDeliveryTransferToolService.TransferIntent> draft = confirmed.isPresent() ? Optional.empty() : SematticeProjectDeliveryTransferToolService.draftIntent(question);
         if (confirmed.isEmpty() && draft.isEmpty()) return Optional.empty();
+        if (skillContext == null
+                || (!skillContext.allowedToolNames().contains(SematticeProjectDeliveryTransferToolService.TOOL_NAME)
+                && !skillContext.skillCodes().contains("semattice-project-delivery-management"))) {
+            return confirmed.isPresent()
+                    ? Optional.of("未转派任务：当前产品经理未启用受治理的任务转派能力，未修改任务。")
+                    : Optional.empty();
+        }
         var intent = confirmed.orElseGet(draft::get);
         String arguments;
         try {
