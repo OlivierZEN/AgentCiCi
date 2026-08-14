@@ -45,11 +45,15 @@ class DevAutopilotExecutionAuthorizationServiceTest {
     }
 
     @Test
-    void taskReviewUsesReadCreateAndUpdateScopes() {
+    void taskReviewUsesPrincipalSyncReadCreateAndUpdateScopes() {
         DevAutopilotTenantApplicationService applications = mock(DevAutopilotTenantApplicationService.class);
         AgentServicePrincipalExecutionService executions = mock(AgentServicePrincipalExecutionService.class);
         when(applications.get(COMPANY_ID)).thenReturn(activeApplication());
-        List<String> scopes = List.of("runtime.record.read", "runtime.record.create", "runtime.record.update");
+        List<String> scopes = List.of(
+                "identity.principal.sync",
+                "runtime.record.read",
+                "runtime.record.create",
+                "runtime.record.update");
         var token = new OfficialAccessTokenService.IssuedToken(
                 "test-service-oact", Instant.parse("2030-01-01T00:00:00Z"), TENANT_ID, COMPANY_ID, scopes);
         when(executions.authorizeSemattice(eq(COMPANY_ID), eq(MEMBER_ID), eq(AGENT_ID), eq(scopes),
