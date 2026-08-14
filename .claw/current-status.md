@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-14T06:52:00Z
+updated_at: 2026-08-14T08:43:00Z
 updated_by: codex
 phase: review
-active_task: TASK-307
-next_action: "用户在已登录产品经理会话重发确认语句；成功必须回读 Semattice owner、revision 与审计。若仍失败，保留服务端返回的确定性错误而不回退到模型解释。"
+active_task: TASK-308
+next_action: "用户在 DevAutopilot 真实任务详情审阅哪吒方案，并明确批准或驳回；批准后回读评审事件和任务状态，开发者才可进入实现。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-308 / FEAT-185 / INT-023 已补齐 DevAutopilot 任务评审委托授权：固定 `TASK_REVIEW` 只签发 `runtime.record.read/create/update`，提交 `44f4a6f9` 已进入本地 main；定向测试通过。backend/frontend 运行 `2.8.61-dev.44f4a6f`、healthy/restart=0，完整 `cc-local-stack ./stack verify` 通过。DevAutopilot 真实页面已显示哪吒设计方案和批准/驳回二次确认；未替用户提交决定，任务保持 `设计待确认 / revision 4`。UAT/生产未修改。
 
 - TASK-307 / FEAT-187 / INT-022 已修复确认式转派第二次降级：实时日志证明截图中的输入先由模型调用 transfer，再调用 query 和模型流；根因是复制的确认语句带终止标点/Markdown 包裹，旧精确确认正则未识别。提交 `107ac044` 归一化此类确认输入，并让已识别的确认即使产品经理尚未绑定转派能力也失败关闭、绝不交给模型解释。AgentCiCi backend/frontend 同从本地 `main@107ac044` 构建为 `2.8.61-dev.107ac04`，镜像 label、backend `/system/version`、页面 JS 资源一致；均 healthy/restart=0，完整 `cc-local-stack ./stack verify` 通过。浏览器控制端没有可用已登录会话，未重放最终确认，任务 owner 未改；UAT/生产未修改。
 - TASK-302 / FEAT-183 受信内部应用运营界面已完成桌面端可读性修整：应用目录改为固定列宽和独立操作列，完整展示“编辑/停用”，避免继承通用目录最小列宽后裁切；登记/编辑弹窗加宽为稳定工作区，统一字段、辅助说明和 Scope 选项高度，并将表单主体提升至 14–16px。提交 `8522fefb` 已进入本地及远程 `main`；前端定向 10 项、全量 49 文件/275 项、production build、`cici.localhost` 路由和完整 `./stack verify` 通过。前端镜像从本地 main 构建为 `2.8.61-dev.8522fef`，healthy/restart=0。可控浏览器仅有平台登录页，未伪造授权态截图。

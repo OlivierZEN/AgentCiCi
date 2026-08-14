@@ -1,14 +1,21 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-14T06:52:00Z
+updated_at: 2026-08-14T08:43:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-14T06:52:00Z
-last_run_status: passed_local_confirmed_transfer_termination_repair
+last_run_at: 2026-08-14T08:43:00Z
+last_run_status: passed_local_task_review_authorization
 ---
 
 # Test Report
+
+## 2026-08-14 TASK-308 DevAutopilot 任务评审委托授权
+
+- 后端定向：`mvn -q -Dtest=DevAutopilotExecutionAuthorizationServiceTest test` 通过；新增用例固定验证 `TASK_REVIEW` 只签发 `runtime.record.read/create/update`。
+- 本地主线与运行：提交 `44f4a6f9` 已进入本地 `main`；backend/frontend 运行 `2.8.61-dev.44f4a6f`，healthy/restart=0；完整 `cc-local-stack ./stack verify` 通过。
+- 消费联调：DevAutopilot `3d4ad9e` 的 59 项 Node 测试通过，包含 HUMAN 明确确认委托给产品经理 SERVICE 的 HTTP 回归。已登录真实页面显示任务提交版本和二次确认门禁。
+- 业务边界：只打开并返回评审二次确认，没有提交批准或驳回；CLI 回读任务仍为 `设计待确认 / revision 4`。UAT/生产未修改。
 
 ## 2026-08-14 TASK-307 复制确认与 DEV 版本修复
 

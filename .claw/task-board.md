@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-14T06:38:00Z
+updated_at: 2026-08-14T08:43:00Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,18 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-308 - DevAutopilot 任务评审委托授权
+
+- status: `review`
+- priority: `critical`
+- owner_role: `integration-agent`
+- claimed_by: `codex`
+- integration_id: `INT-023`
+- spec_path: `docs/specs/FEAT-185-devautopilot-delegated-product-manager-execution.md`
+- task_status_path: `.claw/tasks/TASK-308.md`
+- blocked_by: `none`
+- next_action: `由用户在 DevAutopilot 真实设计卡片明确批准或驳回；批准后回读任务进入已批准待执行且产生评审事件。`
 
 ### TASK-307 - 产品经理自动识别开发者并转派任务
 
