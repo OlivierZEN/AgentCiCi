@@ -2,6 +2,7 @@ package com.codehouse.ciciassistant.semattice;
 
 import com.codehouse.ciciassistant.agent.service.AgentServicePrincipalExecutionService;
 import com.codehouse.ciciassistant.auth.service.OfficialAccessTokenService;
+import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
@@ -17,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 
 /** Deterministic product-manager hand-off for queued DevAutopilot tasks. */
@@ -55,7 +57,7 @@ public class SematticeProjectDeliveryTransferToolService {
             boolean execute = "execute".equals(request.path("mode").asText());
             TransferIntent intent = new TransferIntent(request.path("from").asText(), request.path("to").asText());
             return json(execute ? execute(companyId, userId, agentId, intent) : draft(companyId, userId, agentId, intent));
-        } catch (Exception ex) { return json(Map.of("status", "FAILED", "message", "转派请求无效，未修改任务。")); }
+        } catch (Exception ex) { return json(Map.of("status", "FAILED", "message", failureMessage(ex))); }
     }
 
     private Map<String, Object> draft(String companyId, String userId, String agentId, TransferIntent intent) {
@@ -70,7 +72,7 @@ public class SematticeProjectDeliveryTransferToolService {
         Resolved resolved = resolve(companyId, userId, agentId, intent, List.of("runtime.record.read", "runtime.record.transfer"));
         List<Task> tasks = queuedTasks(resolved.token(), resolved.source().principalId());
         if (tasks.isEmpty()) return result("NOOP", resolved, tasks);
-        List<String> transferred = new ArrayList<>();
+        List<Map<String, Object>> transferred = new ArrayList<>();
         for (Task task : tasks) {
             Map<String, Object> input = Map.of("object_api_name", "dev_task", "record_id", task.id(), "expected_revision", task.revision(), "new_owner_principal_id", resolved.target().principalId());
             JsonNode response = invoke("runtime.record.transfer", input, resolved.token());
@@ -78,9 +80,17 @@ public class SematticeProjectDeliveryTransferToolService {
             if (!"succeeded".equals(response.path("status").asText()) || !resolved.target().principalId().equals(record.path("owner_principal_id").asText()) || record.path("revision").asLong() <= task.revision()) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "任务转派回读不完整，已停止后续转派。");
             }
-            transferred.add(task.title());
+            transferred.add(Map.of(
+                    "title", task.title(),
+                    "record_id", record.path("record_id").asText(),
+                    "revision", record.path("revision").asLong()));
         }
-        Map<String, Object> out = result("SUCCESS", resolved, tasks); out.put("transferred", transferred); return out;
+        Map<String, Object> out = result("SUCCESS", resolved, tasks);
+        out.put("source", "SEMATTICE_LIVE");
+        out.put("object_api_name", "dev_task");
+        out.put("transferred", transferred);
+        out.put("readback_verified", true);
+        return out;
     }
 
     private Resolved resolve(String companyId, String userId, String agentId, TransferIntent intent, List<String> scopes) {
@@ -114,6 +124,18 @@ public class SematticeProjectDeliveryTransferToolService {
         Map<String, Object> out = new LinkedHashMap<>(); out.put("status", status); out.put("from", resolved.source().displayName()); out.put("to", resolved.target().displayName()); out.put("tasks", tasks.stream().map(Task::title).toList()); return out;
     }
     private String json(Map<String, Object> value) { try { return mapper.writeValueAsString(value); } catch (Exception ex) { return "{\"status\":\"FAILED\"}"; } }
+    public static String failureMessage(Exception ex) {
+        if (ex instanceof ForbiddenException) {
+            return "产品经理 SERVICE 缺少 `runtime.record.transfer` 授权；请由组织管理员同步交付授权后重试。未修改任务。";
+        }
+        if (ex instanceof ResponseStatusException response && response.getReason() != null && !response.getReason().isBlank()) {
+            return response.getReason();
+        }
+        if (ex instanceof RestClientResponseException response) {
+            return "Semattice 拒绝了转派请求（HTTP " + response.getStatusCode().value() + "），未修改任务。";
+        }
+        return "转派执行失败，未修改任务。请稍后重试。";
+    }
     public record TransferIntent(String from, String to) { }
     private record Resolved(DevAutopilotDeveloperAssignmentService.DeveloperAssignment source, DevAutopilotDeveloperAssignmentService.DeveloperAssignment target, OfficialAccessTokenService.IssuedToken token) { }
     private record Task(String id, long revision, String title) { }

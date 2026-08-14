@@ -499,8 +499,9 @@ public class ChatOrchestratorService {
             appendConfirmedPendingEmailBodyToolResult(
                     messages, companyId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
         }
-        Optional<String> forcedProjectDeliveryWriteAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty()
-                : appendForcedSematticeProjectDeliveryTransferAnswer(
+        // An exact transfer confirmation is server-governed. It must not fall back to generic
+        // delivery analysis because a runtime-mode experiment has suppressed model tools.
+        Optional<String> forcedProjectDeliveryWriteAnswer = appendForcedSematticeProjectDeliveryTransferAnswer(
                 messages, companyId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
         if (forcedProjectDeliveryWriteAnswer.isEmpty()) {
             forcedProjectDeliveryWriteAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty()
@@ -802,8 +803,9 @@ public class ChatOrchestratorService {
                     appendConfirmedPendingEmailBodyToolResult(
                             messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
                 }
-                Optional<String> forcedProjectDeliveryWriteAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty()
-                        : appendForcedSematticeProjectDeliveryTransferAnswer(
+                // Exact transfer confirmations always remain on the deterministic path; the
+                // transfer service itself enforces role, scope and Semattice read-back.
+                Optional<String> forcedProjectDeliveryWriteAnswer = appendForcedSematticeProjectDeliveryTransferAnswer(
                         messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
                 if (forcedProjectDeliveryWriteAnswer.isEmpty()) {
                     forcedProjectDeliveryWriteAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty()
@@ -1631,15 +1633,20 @@ public class ChatOrchestratorService {
         try {
             arguments = TOOL_RESULT_OBJECT_MAPPER.writeValueAsString(Map.of("mode", confirmed.isPresent() ? "execute" : "draft", "from", intent.from(), "to", intent.to()));
         } catch (Exception ex) { return Optional.of("无法生成任务转派草案，未修改任务。"); }
-        String result = executeAndAppendSyntheticToolCall(messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId,
-                SematticeProjectDeliveryTransferToolService.TOOL_NAME, arguments, "auto_semattice_delivery_transfer_");
+        String result;
+        try {
+            result = executeAndAppendSyntheticToolCall(messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId,
+                    SematticeProjectDeliveryTransferToolService.TOOL_NAME, arguments, "auto_semattice_delivery_transfer_");
+        } catch (RuntimeException ex) {
+            return Optional.of("未转派任务：" + SematticeProjectDeliveryTransferToolService.failureMessage(ex));
+        }
         try {
             JsonNode value = TOOL_RESULT_OBJECT_MAPPER.readTree(result);
             String status = value.path("status").asText();
             String from = value.path("from").asText(intent.from()), to = value.path("to").asText(intent.to());
             List<String> tasks = new ArrayList<>(); value.path("tasks").forEach(item -> tasks.add(item.asText()));
             if ("DRAFT".equals(status)) return Optional.of(tasks.isEmpty() ? "“" + from + "”当前没有可安全转派的排队任务。" : "已识别开发者“" + from + "”和“" + to + "”。将转派 " + tasks.size() + " 项排队任务：" + String.join("；", tasks) + "。确认无误后，请回复：`确认将" + from + "的任务转交给" + to + "`。运行中的任务不会转派。");
-            if ("SUCCESS".equals(status)) return Optional.of("已将 " + tasks.size() + " 项排队任务从“" + from + "”转交给“" + to + "”，新的开发者可按自身实例容量排队受理。");
+            if ("SUCCESS".equals(status)) return Optional.of("已将 " + tasks.size() + " 项排队任务从“" + from + "”转交给“" + to + "”；Semattice 已回读新的负责人和 revision，新的开发者可按自身实例容量排队受理。");
             return Optional.of(value.path("message").asText("未转派任务，请确认开发者状态和任务阶段。"));
         } catch (Exception ex) { return Optional.of("未转派任务：回执解析失败。"); }
     }

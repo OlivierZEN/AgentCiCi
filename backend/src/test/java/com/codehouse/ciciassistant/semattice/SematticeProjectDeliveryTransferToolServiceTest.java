@@ -2,6 +2,7 @@ package com.codehouse.ciciassistant.semattice;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import org.junit.jupiter.api.Test;
 
 class SematticeProjectDeliveryTransferToolServiceTest {
@@ -20,5 +21,13 @@ class SematticeProjectDeliveryTransferToolServiceTest {
     void rejectsSelfTransferAndBareConfirmation() {
         assertThat(SematticeProjectDeliveryTransferToolService.draftIntent("把鲁班的任务转交给鲁班")).isEmpty();
         assertThat(SematticeProjectDeliveryTransferToolService.confirmedIntent("确认转派")).isEmpty();
+    }
+
+    @Test
+    void explainsMissingTransferScopeWithoutExposingInternalPrincipalIds() {
+        assertThat(SematticeProjectDeliveryTransferToolService.failureMessage(
+                new ForbiddenException("机器执行身份缺少本次操作所需的 Semattice scope")))
+                .contains("runtime.record.transfer")
+                .doesNotContain("principal");
     }
 }

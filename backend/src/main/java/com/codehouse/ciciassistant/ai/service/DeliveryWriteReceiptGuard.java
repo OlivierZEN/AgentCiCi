@@ -21,14 +21,15 @@ final class DeliveryWriteReceiptGuard {
             "semattice_project_delivery_create",
             "semattice_project_delivery_update",
             "semattice_project_delivery_delete",
+            "semattice_project_delivery_transfer",
             "semattice_project_delivery_review",
             "semattice_dev_defect_create",
             "semattice_dev_defect_update"
     );
     private static final Pattern SUCCESS_CLAIM = Pattern.compile(
-            "(?:已经|已|成功)(?:在\\s*Semattice\\s*)?(?:创建|记录|提交|写入|更新|修改|删除|关闭|重开|分派|保存|登记|处理完成)"
-                    + "|(?:已经|已)(?:在\\s*Semattice\\s*)?[^。；\\n]{0,24}(?:创建|记录|提交|写入|更新|修改|删除|关闭|重开|分派|保存|登记)"
-                    + "|(?:创建|记录|提交|写入|更新|修改|删除|关闭|重开|分派|保存|登记)(?:成功|完成)",
+            "(?:已经|已|成功)(?:在\\s*Semattice\\s*)?(?:创建|记录|提交|写入|更新|修改|删除|关闭|重开|分派|转派|转交|保存|登记|处理完成)"
+                    + "|(?:已经|已)(?:在\\s*Semattice\\s*)?[^。；\\n]{0,24}(?:创建|记录|提交|写入|更新|修改|删除|关闭|重开|分派|转派|转交|保存|登记)"
+                    + "|(?:创建|记录|提交|写入|更新|修改|删除|关闭|重开|分派|转派|转交|保存|登记)(?:成功|完成)",
             Pattern.CASE_INSENSITIVE);
 
     private DeliveryWriteReceiptGuard() {
@@ -54,7 +55,7 @@ final class DeliveryWriteReceiptGuard {
         }
         boolean writeVerb = containsAny(normalized,
                 "创建", "新建", "新增", "记录", "登记", "提交", "写入", "更新", "修改",
-                "删除", "关闭", "重开", "分派", "指派", "create", "add", "record", "submit",
+                "删除", "关闭", "重开", "分派", "指派", "转派", "转交", "create", "add", "record", "submit",
                 "update", "delete", "close", "reopen", "assign");
         boolean deliveryEntity = containsAny(normalized,
                 "研发项目", "项目", "需求", "任务", "缺陷", "bug", "defect", "工时", "变更",
@@ -71,6 +72,12 @@ final class DeliveryWriteReceiptGuard {
             }
             try {
                 JsonNode result = OBJECT_MAPPER.readTree(trace.result());
+                if ("semattice_project_delivery_transfer".equals(trace.name())) {
+                    if (hasTransferReadback(result)) {
+                        return true;
+                    }
+                    continue;
+                }
                 boolean fieldDigestRequired = "semattice_project_delivery_create".equals(trace.name());
                 String contentDigest = result.path("content_digest").asText();
                 if ("SUCCESS".equals(result.path("status").asText())
@@ -88,6 +95,23 @@ final class DeliveryWriteReceiptGuard {
             }
         }
         return false;
+    }
+
+    private static boolean hasTransferReadback(JsonNode result) {
+        if (!"SUCCESS".equals(result.path("status").asText())
+                || !"SEMATTICE_LIVE".equals(result.path("source").asText())
+                || !"dev_task".equals(result.path("object_api_name").asText())
+                || !result.path("readback_verified").asBoolean(false)
+                || !result.path("transferred").isArray()
+                || result.path("transferred").isEmpty()) {
+            return false;
+        }
+        for (JsonNode transfer : result.path("transferred")) {
+            if (transfer.path("record_id").asText().isBlank() || transfer.path("revision").asLong() < 1) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**

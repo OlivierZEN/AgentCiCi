@@ -68,6 +68,20 @@ class DeliveryWriteReceiptGuardTest {
     }
 
     @Test
+    void preservesTransferClaimOnlyWithEveryTransferredTaskReadBack() {
+        AgentRunTraceService.ToolCallTraceInput receipt = trace(
+                "semattice_project_delivery_transfer",
+                "{\"status\":\"SUCCESS\",\"source\":\"SEMATTICE_LIVE\","
+                        + "\"object_api_name\":\"dev_task\",\"readback_verified\":true,"
+                        + "\"transferred\":[{\"record_id\":\"task-1\",\"revision\":2}]}",
+                true);
+
+        assertThat(DeliveryWriteReceiptGuard.enforce(
+                "确认将鲁班的任务转交给哪吒", "已将 1 项排队任务从鲁班转交给哪吒。", List.of(receipt)))
+                .contains("已将 1 项");
+    }
+
+    @Test
     void doesNotChangeDraftsOrNonDeliveryAnswers() {
         assertThat(DeliveryWriteReceiptGuard.enforce(
                 "帮我创建项目", "确认后我会创建项目。", List.of()))
