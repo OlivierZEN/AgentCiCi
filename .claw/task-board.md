@@ -1,7 +1,7 @@
 ---
 kind: task-board
-version: 4
-updated_at: 2026-08-13T16:22:24Z
+version: 5
+updated_at: 2026-08-14T01:14:07Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,18 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-304 - 提供产品经理 SERVICE 窄范围委托执行授权
+
+- status: `review`
+- priority: `critical`
+- owner_role: `backend-agent`
+- claimed_by: `codex`
+- integration_id: `INT-020`
+- spec_path: `docs/specs/FEAT-185-devautopilot-delegated-product-manager-execution.md`
+- task_status_path: `.claw/tasks/TASK-304.md`
+- blocked_by: `none`
+- next_action: `从本地 main 重建 backend 并完成真实需求确认与任务创建 actor 回读`
 
 ### TASK-303 - 修正确认式需求创建状态
 
