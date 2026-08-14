@@ -11,6 +11,8 @@ import static org.mockito.Mockito.when;
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.platform.service.EcosystemApplicationTrustService;
 import com.codehouse.ciciassistant.platform.service.PlatformAuditService;
+import java.sql.ResultSet;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -55,6 +57,40 @@ class EcosystemApplicationTrustServiceTest {
         assertThatThrownBy(() -> service.requireActiveClient("internal-workbench", "organization.read"))
                 .isInstanceOf(ForbiddenException.class)
                 .hasMessageContaining("suspended");
+    }
+
+    @Test
+    void savesAndReadsBackPostgresTimestampColumnsWithoutUnsupportedInstantConversion() throws Exception {
+        Instant createdAt = Instant.parse("2026-08-14T03:40:08Z");
+        Instant updatedAt = Instant.parse("2026-08-14T03:41:09Z");
+        when(jdbc.query(anyString(), any(RowMapper.class), eq("cosales-web"))).thenAnswer(invocation -> {
+            RowMapper<EcosystemApplicationTrustService.TrustedApplicationView> mapper = invocation.getArgument(1);
+            ResultSet row = mock(ResultSet.class);
+            when(row.getString("app_code")).thenReturn("cosales-web");
+            when(row.getString("display_name")).thenReturn("CCSales Web");
+            when(row.getString("keycloak_client_id")).thenReturn("cosales-web");
+            when(row.getString("allowed_scopes"))
+                    .thenReturn("organization.read organization.context");
+            when(row.getString("status")).thenReturn(EcosystemApplicationTrustService.STATUS_ACTIVE);
+            when(row.getString("created_by")).thenReturn("platform-admin");
+            when(row.getTimestamp("created_at")).thenReturn(Timestamp.from(createdAt));
+            when(row.getTimestamp("updated_at")).thenReturn(Timestamp.from(updatedAt));
+            return List.of(mapper.mapRow(row, 0));
+        });
+
+        var application = service.upsert(
+                new EcosystemApplicationTrustService.TrustedApplicationCommand(
+                        "cosales-web",
+                        "CCSales Web",
+                        "cosales-web",
+                        List.of("organization.read", "organization.context"),
+                        EcosystemApplicationTrustService.STATUS_ACTIVE),
+                "platform-admin",
+                "PLATFORM_ADMIN");
+
+        assertThat(application.appCode()).isEqualTo("cosales-web");
+        assertThat(application.createdAt()).isEqualTo(createdAt);
+        assertThat(application.updatedAt()).isEqualTo(updatedAt);
     }
 
     private EcosystemApplicationTrustService.TrustedApplicationView application(String status, Set<String> scopes) {

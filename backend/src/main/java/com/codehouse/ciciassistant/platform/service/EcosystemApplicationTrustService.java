@@ -4,6 +4,7 @@ import com.codehouse.ciciassistant.common.error.ConflictException;
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -144,8 +145,12 @@ public class EcosystemApplicationTrustService {
                 parseScopes(rs.getString("allowed_scopes")),
                 rs.getString("status"),
                 rs.getString("created_by"),
-                rs.getObject("created_at", Instant.class),
-                rs.getObject("updated_at", Instant.class));
+                toInstant(rs.getTimestamp("created_at")),
+                toInstant(rs.getTimestamp("updated_at")));
+    }
+
+    private static Instant toInstant(Timestamp value) {
+        return value == null ? null : value.toInstant();
     }
 
     private static Set<String> normalizeScopes(List<String> values) {
