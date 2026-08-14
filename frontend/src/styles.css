@@ -19964,38 +19964,78 @@ td.skills-data-table__actions > * {
   font-weight: 700;
 }
 
-.platform-main .platform-page .system-api-application-table th:first-child { width: 18%; }
-.platform-main .platform-page .system-api-application-table th:nth-child(2) { width: 22%; }
-.platform-main .platform-page .system-api-application-table th:nth-child(3) { width: 25%; }
-.platform-main .platform-page .system-api-application-table th:nth-child(4) { width: 10%; }
-.platform-main .platform-page .system-api-application-table th:nth-child(5) { width: 15%; }
-.platform-main .platform-page .system-api-application-table th:last-child { width: 10%; }
+.platform-main .platform-page .system-api-application-table {
+  min-width: 0;
+  table-layout: fixed;
+  font-size: 14px;
+}
 
-.system-api-application-scopes,
+.platform-main .platform-page .system-api-application-table th,
+.platform-main .platform-page .system-api-application-table td {
+  min-width: 0 !important;
+  padding: 16px 18px;
+  vertical-align: middle;
+}
+
+.platform-main .platform-page .system-api-application-table th {
+  font-size: 12px;
+}
+
+.system-api-application-table__col-application { width: 19%; }
+.system-api-application-table__col-client { width: 22%; }
+.system-api-application-table__col-scopes { width: 22%; }
+.system-api-application-table__col-status { width: 10%; }
+.system-api-application-table__col-updated { width: 16%; }
+.system-api-application-table__col-actions { width: 11%; }
+
+.system-api-application-table .skills-data-table__skill-name {
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.system-api-application-table .skills-data-table__skill-code,
+.system-api-application-table .system-api-scope,
+.system-api-application-table .system-api-application-scopes code {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.system-api-application-scopes {
+  display: grid;
+  gap: 6px;
+}
+
+.system-api-application-scopes code,
+.system-api-application-date {
+  color: var(--platform-muted);
+}
+
+.system-api-application-table .system-api-status {
+  margin-top: 0;
+  font-size: 14px;
+}
+
 .system-api-row-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 7px 14px;
-}
-
-.system-api-application-scopes code {
-  color: var(--platform-muted);
-  font-size: 10px;
-}
-
-.system-api-row-actions {
   justify-content: flex-end;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  white-space: nowrap;
 }
 
 .system-api-row-actions .platform-table-link {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  padding: 2px 0;
+  font-size: 14px;
 }
 
 .system-api-application-date {
-  color: var(--platform-muted);
-  font-size: 10px;
+  display: block;
+  font-size: 13px;
+  line-height: 1.45;
   white-space: nowrap;
 }
 
@@ -20015,19 +20055,62 @@ td.skills-data-table__actions > * {
 }
 
 .system-api-application-modal {
-  width: min(660px, calc(100vw - 48px));
+  width: min(900px, calc(100vw - 96px));
+  max-height: min(760px, calc(100vh - 64px));
+}
+
+.system-api-application-modal .tenant-lifecycle__modal-head,
+.system-api-application-modal .tenant-lifecycle__modal-foot {
+  padding: 22px 28px;
+}
+
+.system-api-application-modal .tenant-lifecycle__modal-body {
+  gap: 22px;
+  padding: 26px 28px 30px;
+}
+
+.system-api-application-modal__intro {
+  max-width: 68ch;
+  margin: 0;
+  color: var(--platform-muted);
+  font-size: 15px;
+  line-height: 1.65;
 }
 
 .system-api-application-form {
-  margin-top: 22px;
+  align-items: start;
+  gap: 24px 28px !important;
+  margin-top: 0;
+}
+
+.system-api-application-form .system-api-application-field {
+  align-content: start;
+  gap: 8px;
+}
+
+.system-api-application-form .system-api-application-field > span,
+.system-api-scope-options legend {
+  color: var(--platform-heading);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.system-api-application-form input {
+  min-height: 52px;
+  padding: 12px 15px;
+  font-size: 16px;
+  line-height: 1.4;
 }
 
 .system-api-application-form small {
   display: block;
-  margin-top: 5px;
+  min-height: 42px;
+  margin-top: 0;
   color: var(--platform-muted);
-  font-size: 10px;
-  line-height: 1.45;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .system-api-application-form input[aria-invalid="true"] {
@@ -20048,45 +20131,58 @@ td.skills-data-table__actions > * {
 .system-api-scope-options {
   min-width: 0;
   margin: 0;
-  padding: 15px 0 0;
+  padding: 20px 0 0;
   border: 0;
   border-top: 1px solid var(--platform-line);
 }
 
 .system-api-scope-options legend {
   padding: 0;
-  color: var(--platform-heading);
-  font-size: 12px;
-  font-weight: 700;
 }
 
-.system-api-scope-options > label {
+.system-api-scope-options > p {
+  margin: 7px 0 16px;
+  color: var(--platform-muted);
+  font-size: 14px;
+}
+
+.system-api-scope-options__list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.system-api-scope-options__list > label {
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr);
   gap: 10px;
   align-items: start;
-  padding: 11px 0;
-  border-bottom: 1px solid var(--platform-line);
+  min-height: 76px;
+  padding: 14px 12px;
+  border: 1px solid var(--platform-line);
+  border-radius: 8px;
 }
 
-.system-api-scope-options > label > input {
+.system-api-scope-options__list > label > input {
   width: 15px;
   height: 15px;
-  margin: 2px 0 0;
+  margin: 4px 0 0;
 }
 
-.system-api-scope-options > label > span {
+.system-api-scope-options__list > label > span {
   display: grid;
   gap: 3px;
 }
 
 .system-api-scope-options code {
   color: var(--platform-heading);
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .system-api-scope-options small {
+  min-height: 0;
   margin: 0;
+  font-size: 13px;
 }
 
 .system-api-search {
