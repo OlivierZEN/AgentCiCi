@@ -4,7 +4,7 @@ task_id: TASK-302
 feature_id: FEAT-183
 integration_id: INT-019
 status: review
-updated_at: 2026-08-14T04:07:30Z
+updated_at: 2026-08-14T04:59:00Z
 updated_by: codex
 owner_role: fullstack-agent
 spec_path: docs/specs/FEAT-183-system-api-catalog.md
@@ -71,6 +71,19 @@ spec_path: docs/specs/FEAT-183-system-api-catalog.md
 - 回归测试实际执行 `upsert` 的“写入后立即回读”路径，并让 RowMapper 消费 PostgreSQL 时间戳；定向 4 项与 production package 通过。
 - 功能提交 `d9f7bc009aab` 已进入本地 `main`。因随后合入独立鉴权提交，`cici-backend` 最终从当时最新 `main@26809b8a07b7` 重建为 `2.8.61-dev.26809b8`，其中包含本修复；healthy/restart=0，运行版本与镜像 revision 一致，匿名受信应用接口为 JSON 401，完整 `./stack verify` 通过且启动后无同类时间转换异常。
 - 当前没有可复用的平台管理员登录态，未伪造平台 Token，因此授权态真实保存待运营人员在 `cici.localhost` 复测。本轮用户明确暂停 UAT 发布；仅执行 UAT 只读日志和健康检查，未 push、未 tag、未构建或部署 UAT。
+
+## 受信应用目录与登记弹窗可读性修整
+
+- 目录表格改用受信应用专属固定列分配，覆盖通用技能目录的最小列宽，新增清晰的“操作”列；应用、Client ID、Scope、状态、更新时间和操作在桌面端均可完整扫描，`编辑` 与 `启用/停用` 不再被右边界裁切。
+- 登记和编辑弹窗加宽为稳定桌面工作区，保持既有 modal 交互与保存逻辑；字段输入统一 52px 高度、16px 主输入字号与 14px 标签/说明字号，两个首行字段保留同高说明区，Scope 选项使用等高双列选择区，页头、正文和页脚固定为可滚动工作区。
+- 功能提交 `8522fefb52a2` 已进入 AgentCiCi 本地及远程 `main`。前端定向 10 项、全量 49 文件/275 项、production build、`git diff --check` 与完整 `cc-local-stack ./stack verify` 通过；`cici-frontend` 从本地 `main@8522fefb52a2` 构建为 `2.8.61-dev.8522fef`，目标路由为 200、healthy/restart=0、镜像 revision 一致。
+- 可控浏览器只返回平台登录页，未持有可用平台管理员会话，故不把授权态页面截图冒充为已验证；用户提供的真实保存截图是本次布局问题的复现与验收输入。
+
+## UAT 发布阻断
+
+- 本地 `main@8522fefb52a2` 已推送远程；版本 dry-run 按当前单发布线正确推导 `2.8.61-beta.22`，UAT 公网只读 smoke 通过。
+- 实际不可变镜像构建在后端推送阶段收到 ACR OAuth 连接重置，未创建 `2.8.61-beta.22` Git tag，前端镜像亦未开始发布，因此没有可部署候选；按受管发布规则停止重试，未在 UAT 执行 Compose、镜像、数据库或配置写操作。
+- UAT 只读回读保持 `2.8.61-beta.21 / 626f7e22c774`，backend/frontend healthy/restart=0；即时回滚点仍是 beta.20。等待 registry 鉴权链路恢复后，从同一远程 main commit 重新完成 build、digest、tag、备份与最小应用容器发布。
 
 ## 目录加载缺陷修复
 

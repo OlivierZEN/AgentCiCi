@@ -10,6 +10,15 @@ last_run_status: passed_with_authorized_visual_pending
 
 # Test Report
 
+## 2026-08-14 TASK-302 受信应用运营界面可读性修整
+
+- 前端实现：目录表格使用专属固定列宽及最右独立动作列，`编辑` 和 `启用/停用` 在桌面端不再被裁切；新增与编辑 modal 统一字段和 Scope 选项高度，表单主输入为 16px、标签和说明为 14px，原有保存、停用、Scope 和审计逻辑未改。
+- 定向验证：`npm test -- --run src/platform/pages/PlatformSystemApisPage.test.ts`，10 项通过。
+- 前端回归：`npm test -- --run`，49 个测试文件、275 项通过；`npm run build` 通过，仅保留既有大 chunk warning；`git diff --check` 通过。
+- 本地开发环境：`cici-frontend` 从 AgentCiCi 本地 `main@8522fefb52a2` 构建为 `2.8.61-dev.8522fef`，镜像 revision 对齐，healthy/restart=0；`https://cici.localhost/platform/system-apis/applications` 返回 200，`cc-local-stack ./stack verify` 通过。
+- 授权态视觉边界：可控浏览器只有运营平台登录页，未通过任何账号、Token 或伪造会话访问受信应用列表；真实保存行为已由用户截图确认，后续可由平台管理员在 UAT 继续复核。
+- UAT 发布：公开 smoke 通过，版本 dry-run 为 `2.8.61-beta.22`；实际 ACR backend 推送的 OAuth 连接被重置，Git tag/完整镜像未生成，按发布规则停止。UAT 无 Compose、镜像、数据库或配置修改，仍为 beta.21。
+
 ## 2026-08-14 TASK-306 产品经理删除 scope 角色隔离
 
 - 后端定向：`ServicePrincipalServiceTest`、`SematticeProjectDeliveryDeleteToolServiceTest`、`ToolOrchestratorServiceTest`、`DeliveryWriteReceiptGuardTest` 通过；production package 与 `git diff --check` 通过。

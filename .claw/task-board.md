@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-14T01:40:41Z
+updated_at: 2026-08-14T04:59:00Z
 updated_by: codex
 board_status: active
 ---
@@ -17,7 +17,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-302 - 运营端系统 API 目录
 
-- status: `review`
+- status: `in_progress`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - claimed_by: `codex`
@@ -25,7 +25,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - spec_path: `docs/specs/FEAT-183-system-api-catalog.md`
 - task_status_path: `.claw/tasks/TASK-302.md`
 - blocked_by: `none`
-- next_action: `用新登记的独立 Keycloak Client 完成真实登录、公司列表、公司上下文及 X-Company-Id 端到端业务验收`
+- next_action: `等待 ACR 鉴权网络恢复后发布 main@8522fef 的 2.8.61-beta.22，再用新登记独立 Keycloak Client 完成真实登录、公司列表、公司上下文及 X-Company-Id 端到端业务验收`
 
 ### TASK-300 - 机器开发者实例上限控制面
 
