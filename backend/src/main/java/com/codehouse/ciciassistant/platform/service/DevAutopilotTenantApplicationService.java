@@ -225,6 +225,27 @@ public class DevAutopilotTenantApplicationService {
         return requireView(companyId);
     }
 
+    /**
+     * Re-apply only the immutable authorization template for the current tenant team.
+     * Unlike initialization, this leaves metadata, principals, credentials and business records untouched.
+     */
+    @Transactional
+    public View reconcileAuthorization(String companyId, String actorMemberId) {
+        Row activation = requireExisting(companyId);
+        if (!"ACTIVE".equals(activation.actualState())) {
+            throw new ForbiddenException("Only an active DevAutopilot application can synchronize authorization");
+        }
+        var authorization = reconcileAuthorizationTemplate(companyId, activation.id());
+        String actorPrincipalId = jdbc.queryForObject("""
+                SELECT account_id FROM company_member WHERE id=? AND company_id=? AND member_status='ACTIVE'
+                """, String.class, actorMemberId, companyId);
+        audit.log(companyId, actorPrincipalId, "ORG_ADMIN", "tenant_application.authorization_reconciled",
+                "tenant_application", activation.id(),
+                "DevAutopilot authorization template reconciled; version=" + authorization.templateVersion()
+                        + "; digest=" + authorization.authorizationDigest());
+        return requireView(companyId);
+    }
+
     SematticeDevAutopilotTemplateClient.TemplateView reconcileMetadataBaseline(String companyId, String activationId) {
         var metadata = template.apply(companyId, metadataReconciliationKey(activationId));
         if (!companyId.equals(metadata.companyId())

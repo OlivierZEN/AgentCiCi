@@ -24,6 +24,7 @@ updated_by: codex
 - `runtime.record.delete` 只允许出现在 DevAutopilot `product_manager` SERVICE 的可选范围中；developer 等其他机器主体即使直接调用授权接口也必须被拒绝。
 - 平台 SERVICE 最大许可清单负责令牌签发上限，DevAutopilot 产品经理模板负责初始权限；两者都必须显式包含 delete，且不能据此扩大其他角色权限。
 - Semattice 必须应用 `devautopilot.authorization.v2`：只有 `product_manager` 获得交付对象的 delete 原子权限与 delete 数据范围，其他固定角色继续失败关闭。
+- 模板升级后的租户级重同步由 `ORG_ADMIN` 在“机器主体”中明确确认后执行；该动作只重新应用当前 DevAutopilot 团队的不可变授权模板，不能创建成员、轮换凭据、改动元数据或业务记录，并写入审计。
 - 删除只调用 Semattice `runtime.record.delete`，语义为移入回收站，30 天内可恢复；禁止数据库直写和物理删除。
 - 只有 Semattice 返回相同 `record_id`、`lifecycle_state=trashed`、递增 revision、关联号并完成回读，才允许回复成功。
 - 查不到、同名多条、revision 冲突、scope/PDP 拒绝或回执不完整时失败关闭，不继续处理后续记录。
@@ -34,7 +35,8 @@ updated_by: codex
 2. Tool 编排器把删除调用交给当前 Agent 的受治理删除 Service。
 3. 无完整 Semattice 回收站回读时，成功声明守卫继续阻止“已删除”。
 4. 产品经理授权弹窗可选择 `runtime.record.delete`，开发者授权弹窗不显示该项且后端拒绝越权提交。
-5. 聚焦测试、backend package、本地真实任务删除、回收站回读及完整 stack verify 通过。
+5. 组织管理员可在不具备平台运营账号的前提下，明确确认后同步当前交付授权模板，并回读模板版本。
+6. 聚焦测试、backend package、本地真实任务删除、回收站回读及完整 stack verify 通过。
 
 ## 回滚
 

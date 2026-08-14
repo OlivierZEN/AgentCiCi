@@ -66,6 +66,16 @@ public class AdminDevAutopilotTeamController {
         return ApiResponse.ok(applications.replaceAccessMembers(companyId(), actorMemberId(), request.members()));
     }
 
+    /**
+     * Tenant administrators can re-apply the immutable authorization template after a governed
+     * template upgrade.  This deliberately does not create members, rotate credentials, or
+     * change business delivery records.
+     */
+    @PostMapping("/authorization")
+    public ApiResponse<DevAutopilotTenantApplicationService.View> reconcileAuthorization() {
+        return ApiResponse.ok(applications.reconcileAuthorization(companyId(), actorMemberId()));
+    }
+
     private String companyId() {
         return TenantContext.requireCompanyId();
     }

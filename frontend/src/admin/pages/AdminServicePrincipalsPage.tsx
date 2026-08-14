@@ -157,7 +157,7 @@ export default function AdminServicePrincipalsPage() {
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<"rename-client-id" | "scopes" | "rotate" | "suspend" | "activate" | null>(null);
+  const [confirmAction, setConfirmAction] = useState<"rename-client-id" | "scopes" | "rotate" | "suspend" | "activate" | "authorization" | null>(null);
   const [replacementClientId, setReplacementClientId] = useState("");
   const [replacementScopes, setReplacementScopes] = useState<string[]>([]);
   const [oneTimeSecret, setOneTimeSecret] = useState<RotateSecretResult | null>(null);
@@ -243,6 +243,29 @@ export default function AdminServicePrincipalsPage() {
       setNotice("DevAutopilot 调用权限保存失败，请稍后重试");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const reconcileAuthorization = async () => {
+    setSubmitting(true);
+    try {
+      const response = await fetch(adminApi.devAutopilotTeam("/authorization"), {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await response.json();
+      if (!response.ok || !json.success) {
+        setNotice(json.message ?? "研发交付授权同步失败");
+        return;
+      }
+      setDevAutopilotTeam(json.data as DevAutopilotTeam);
+      setNotice("研发交付授权模板已同步。成员、密钥和业务记录均未变更。");
+      await load({ quiet: true });
+    } catch {
+      setNotice("研发交付授权同步失败，请稍后重试");
+    } finally {
+      setSubmitting(false);
+      setConfirmAction(null);
     }
   };
 
@@ -479,6 +502,7 @@ export default function AdminServicePrincipalsPage() {
     if (confirmAction === "rotate") void rotateSecret();
     if (confirmAction === "suspend") void updateLifecycle("suspend");
     if (confirmAction === "activate") void updateLifecycle("activate");
+    if (confirmAction === "authorization") void reconcileAuthorization();
   };
 
   return (
@@ -515,6 +539,9 @@ export default function AdminServicePrincipalsPage() {
         </div>
         <div className="service-principals-team__access-action">
           <p className="service-principals-team__hint">负责人承担治理问责；业务调用者按 DevAutopilot 应用角色独立授权。</p>
+          <button type="button" className="secondary" onClick={() => setConfirmAction("authorization")} disabled={submitting || devAutopilotTeam?.actualState !== "ACTIVE"}>
+            同步交付授权
+          </button>
           <button type="button" className="secondary" onClick={openAccessDialog} disabled={submitting || devAutopilotTeam?.actualState !== "ACTIVE"}>
             管理调用权限
           </button>
@@ -653,7 +680,7 @@ export default function AdminServicePrincipalsPage() {
         </section>
       </div>
 
-      {confirmAction && selected && (
+      {confirmAction && (selected || confirmAction === "authorization") && (
         <div className="service-principal-dialog-backdrop" role="presentation">
           <section className="service-principal-dialog" role="dialog" aria-modal="true" aria-labelledby="service-principal-dialog-title">
             <p className="service-principals-page__eyebrow">需要明确确认</p>
@@ -661,18 +688,22 @@ export default function AdminServicePrincipalsPage() {
               {confirmAction === "rename-client-id"
                 ? "确认变更 Client ID？"
                 : confirmAction === "scopes" ? "确认调整授权范围？"
-                : confirmAction === "rotate" ? "确认轮换 Client Secret？" : confirmAction === "suspend" ? "确认暂停机器主体？" : "确认恢复机器主体？"}
+                : confirmAction === "rotate" ? "确认轮换 Client Secret？"
+                  : confirmAction === "suspend" ? "确认暂停机器主体？"
+                    : confirmAction === "activate" ? "确认恢复机器主体？" : "确认同步交付授权？"}
             </h2>
             <p>
               {confirmAction === "rename-client-id"
-                ? `变更后，旧 ID “${selected.clientId}”将立即失效。现有 Client Secret 保持不变；请同步更新所有调用方的配置。`
+                ? `变更后，旧 ID “${selected?.clientId ?? ""}”将立即失效。现有 Client Secret 保持不变；请同步更新所有调用方的配置。`
                 : confirmAction === "scopes"
-                  ? `提交后，“${selected.displayName}”后续新签发令牌将使用下列完整授权范围；Client ID 和 Client Secret 均不改变。`
+                  ? `提交后，“${selected?.displayName ?? ""}”后续新签发令牌将使用下列完整授权范围；Client ID 和 Client Secret 均不改变。`
                 : confirmAction === "rotate"
-                ? `“${selected.displayName}”的旧 Client Secret 将立即失效。新密钥仅会在下一步显示一次。`
+                ? `“${selected?.displayName ?? ""}”的旧 Client Secret 将立即失效。新密钥仅会在下一步显示一次。`
                 : confirmAction === "suspend"
-                  ? `暂停后，“${selected.displayName}”将不能再获取新的访问令牌或执行受授权调用。`
-                  : `恢复后，“${selected.displayName}”可再次按已授权范围获取访问令牌。`}
+                  ? `暂停后，“${selected?.displayName ?? ""}”将不能再获取新的访问令牌或执行受授权调用。`
+                  : confirmAction === "activate"
+                    ? `恢复后，“${selected?.displayName ?? ""}”可再次按已授权范围获取访问令牌。`
+                    : "这会重新应用当前研发交付团队的固定授权模板，用于补齐模板升级；不会变更成员、Client Secret 或任何业务记录。"}
             </p>
             {confirmAction === "rename-client-id" && (
               <label className="service-principal-dialog__field">
