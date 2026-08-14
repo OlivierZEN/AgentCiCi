@@ -23,6 +23,7 @@ public class ServicePrincipalService {
 
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final char[] ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".toCharArray();
+    private static final String RECORD_DELETE_SCOPE = "runtime.record.delete";
 
     private final JdbcTemplate jdbcTemplate;
     private final UserRepository userRepository;
@@ -124,7 +125,17 @@ public class ServicePrincipalService {
                 SELECT p.id, p.display_name, p.lifecycle_status, sp.public_id, sp.service_kind,
                        sp.client_id, sp.token_audience, sp.last_rotated_at, sp.created_at,
                        owner.owner_principal_id, owner.company_member_id,
-                       account.public_id AS owner_public_id, account.display_name AS owner_display_name
+                       account.public_id AS owner_public_id, account.display_name AS owner_display_name,
+                       EXISTS (
+                           SELECT 1
+                           FROM tenant_application_resource resource
+                           JOIN tenant_application_activation activation ON activation.id=resource.activation_id
+                           WHERE resource.external_id=sp.principal_id
+                             AND resource.resource_type='SERVICE_PRINCIPAL'
+                             AND resource.logical_role='product_manager'
+                             AND activation.app_code='devautopilot'
+                             AND activation.company_id=member.company_id
+                       ) AS devautopilot_product_manager
                 FROM service_principal sp
                 JOIN principal p ON p.id = sp.principal_id
                 JOIN LATERAL (
@@ -151,7 +162,7 @@ public class ServicePrincipalService {
             item.put("clientId", rs.getString("client_id"));
             item.put("tokenAudience", rs.getString("token_audience"));
             item.put("scopes", scopes(principalId));
-            item.put("availableScopes", sematticeAllowedScopes);
+            item.put("availableScopes", allowedScopesFor(rs.getBoolean("devautopilot_product_manager")));
             item.put("lastRotatedAt", toInstant(rs.getTimestamp("last_rotated_at")));
             item.put("createdAt", toInstant(rs.getTimestamp("created_at")));
             item.put("ownerPrincipalId", rs.getString("owner_principal_id"));
@@ -234,7 +245,8 @@ public class ServicePrincipalService {
         if ("REVOKED".equals(service.lifecycleStatus())) {
             throw new ForbiddenException("已撤销机器账户不能调整授权范围");
         }
-        List<String> replacement = requireAllowedScopes(requestedScopes);
+        List<String> replacement = requireAllowedScopes(requestedScopes,
+                allowedScopesFor(isDevAutopilotProductManager(companyId, principalId)));
         List<String> previous = scopes(principalId).stream().distinct().sorted().toList();
         if (previous.equals(replacement)) {
             return Map.of("principalId", principalId, "scopes", replacement, "changed", false);
@@ -431,6 +443,25 @@ public class ServicePrincipalService {
                 """, String.class, principalId);
     }
 
+    private boolean isDevAutopilotProductManager(String companyId, String principalId) {
+        Integer count = jdbcTemplate.queryForObject("""
+                SELECT count(*)
+                FROM tenant_application_resource resource
+                JOIN tenant_application_activation activation ON activation.id=resource.activation_id
+                WHERE resource.external_id=?
+                  AND resource.resource_type='SERVICE_PRINCIPAL'
+                  AND resource.logical_role='product_manager'
+                  AND activation.app_code='devautopilot'
+                  AND activation.company_id=?
+                """, Integer.class, principalId, companyId);
+        return count != null && count > 0;
+    }
+
+    private List<String> allowedScopesFor(boolean devAutopilotProductManager) {
+        if (devAutopilotProductManager) return sematticeAllowedScopes;
+        return sematticeAllowedScopes.stream().filter(scope -> !RECORD_DELETE_SCOPE.equals(scope)).toList();
+    }
+
     private void audit(String companyId, String actorPrincipalId, String action, String principalId, String detail) {
         audit.log(companyId, actorPrincipalId, "ORG_ADMIN", "service_principal." + action,
                 "service_principal", principalId, detail);
@@ -451,12 +482,16 @@ public class ServicePrincipalService {
     }
 
     private List<String> requireAllowedScopes(List<String> requestedScopes) {
+        return requireAllowedScopes(requestedScopes, sematticeAllowedScopes);
+    }
+
+    private List<String> requireAllowedScopes(List<String> requestedScopes, List<String> allowedScopes) {
         List<String> scopes = requestedScopes == null ? List.of() : requestedScopes.stream()
                 .filter(scope -> scope != null && !scope.isBlank()).map(String::trim).distinct().sorted().toList();
         if (scopes.isEmpty()) {
             throw new IllegalArgumentException("机器账户至少需要一个 scope");
         }
-        if (sematticeAllowedScopes.isEmpty() || scopes.stream().anyMatch(scope -> !sematticeAllowedScopes.contains(scope))) {
+        if (allowedScopes.isEmpty() || scopes.stream().anyMatch(scope -> !allowedScopes.contains(scope))) {
             throw new ForbiddenException("机器账户申请了未授权的 Semattice scope");
         }
         return scopes;

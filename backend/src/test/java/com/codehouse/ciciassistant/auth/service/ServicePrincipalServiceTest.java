@@ -100,6 +100,7 @@ class ServicePrincipalServiceTest {
         UserEntity actor = activeMember("account-director");
         when(users.findByIdAndCompany_Id("member-director", "company-a")).thenReturn(Optional.of(actor));
         stubGovernedService("principal-manager", "company-a", "dev-autopilot-product-manager", "ACTIVE");
+        stubDevAutopilotProductManager("principal-manager", "company-a", 1);
         when(jdbc.queryForList(anyString(), eq(String.class), eq("principal-manager")))
                 .thenReturn(List.of("identity.principal.sync", "runtime.record.read", "runtime.record.update"));
 
@@ -115,6 +116,19 @@ class ServicePrincipalServiceTest {
         verify(audit).log(eq("company-a"), eq("account-director"), eq("ORG_ADMIN"),
                 eq("service_principal.scopes_updated"), eq("service_principal"),
                 eq("principal-manager"), contains("runtime.record.delete"));
+    }
+
+    @Test
+    void rejectsRecordDeleteForADeveloperEvenWhenTheServiceIssuerAllowsIt() throws Exception {
+        UserEntity actor = activeMember("account-director");
+        when(users.findByIdAndCompany_Id("member-director", "company-a")).thenReturn(Optional.of(actor));
+        stubGovernedService("principal-developer", "company-a", "dev-autopilot-developer", "ACTIVE");
+        stubDevAutopilotProductManager("principal-developer", "company-a", 0);
+
+        assertThatThrownBy(() -> service.updateScopes("company-a", "member-director", "principal-developer",
+                List.of("runtime.record.read", "runtime.record.update", "runtime.record.delete")))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessageContaining("未授权");
     }
 
     @Test
@@ -151,6 +165,11 @@ class ServicePrincipalServiceTest {
                     when(resultSet.getString("lifecycle_status")).thenReturn(status);
                     return List.of(mapper.mapRow(resultSet, 0));
                 });
+    }
+
+    private void stubDevAutopilotProductManager(String principalId, String companyId, int count) {
+        when(jdbc.queryForObject(contains("resource.logical_role='product_manager'"), eq(Integer.class),
+                eq(principalId), eq(companyId))).thenReturn(count);
     }
 
     private UserEntity activeMember(String accountId) {
