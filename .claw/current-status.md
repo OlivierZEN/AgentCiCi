@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-14T04:07:30Z
+updated_at: 2026-08-14T04:15:00Z
 updated_by: codex
 phase: review
 active_task: TASK-302
@@ -22,6 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
+- TASK-306 / FEAT-186 / INT-021 的删除授权候选缺口已修复：提交 `96c97bbc` 按 DevAutopilot `product_manager` 资源角色暴露并接受 `runtime.record.delete`，developer 即使直接提交也失败关闭。本地 backend 运行包含该提交的 `2.8.61-dev.26809b8 / 26809b8a07b7`，healthy/restart=0，完整 `./stack verify` 通过；受权页面已回读大乔PM候选有 delete、哪吒候选无 delete。实际授权尚未由用户确认，5 条旧任务未删除、单任务未重建，UAT/生产未修改。
 - TASK-302 / FEAT-183 受信应用保存 500 已修复：UAT `2.8.61-beta.21` 只读日志确认 PostgreSQL JDBC 不支持把 `timestamptz` 通过 `ResultSet#getObject(..., Instant.class)` 直接转换为 `Instant`，保存后的立即回读因此抛错并回滚事务。提交 `d9f7bc00` 改用 `getTimestamp(...).toInstant()`，并新增“保存后立即回读”回归；定向 4 项与 production package 通过。因本地 `main` 随后合入独立鉴权提交，backend 最终从当时最新 `main@26809b8a07b7` 重建为 `2.8.61-dev.26809b8`，其中包含本修复；healthy/restart=0，匿名受信应用接口按预期为 JSON 401，完整 `./stack verify` 通过且启动后无同类异常。当前没有可复用的平台管理员登录态，授权态页面保存待运营人员复测；本轮仅只读检查 UAT，未推送、未打 tag、未构建或发布 UAT。
 
 - TASK-302 / FEAT-183 受信应用登记表单已补齐应用代码实时校验反馈：空格、长度、首字符和非法字符均显示具体原因，截图中的 `ccsales web` 会明确提示改用 `ccsales-web`；错误字段同步暴露 `aria-invalid` 与说明关联，保存按钮继续与同一校验规则保持一致。提交 `2daa18ef` 已进入本地 `main`，前端 49 文件/275 项、production build、域名门禁和完整 `./stack verify` 通过；`cici-frontend` 运行 `2.8.61-dev.2daa18e`、healthy/restart=0，目标路由 200，部署制品已回读提示文案。浏览器无运营平台登录态，授权态视觉交互仍待运营人员验收；UAT/生产未修改。

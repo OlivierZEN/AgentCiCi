@@ -4,7 +4,7 @@ task_id: TASK-306
 feature_id: FEAT-186
 integration_id: INT-021
 status: implementing
-updated_at: 2026-08-14T04:05:00Z
+updated_at: 2026-08-14T04:15:00Z
 updated_by: codex
 owner_role: backend-agent
 spec_path: docs/specs/FEAT-186-governed-delivery-delete-route.md
@@ -24,4 +24,6 @@ spec_path: docs/specs/FEAT-186-governed-delivery-delete-route.md
 
 - 定向测试通过：`ServicePrincipalServiceTest`、`SematticeProjectDeliveryDeleteToolServiceTest`、`ToolOrchestratorServiceTest`、`DeliveryWriteReceiptGuardTest`。
 - `mvn -q -DskipTests package` 通过。
-- 角色化候选 scope 与本地运行配置已修复；部署、人工显式授权、真实数据纠正待完成。
+- 角色化候选 scope 已随本地 backend `2.8.61-dev.26809b8 / 26809b8a07b7` 运行，healthy、restart=0，完整 `./stack verify` 通过。
+- 受权页面已回读大乔PM候选包含 delete、哪吒候选不包含 delete；未替用户勾选或提交。
+- 人工显式授权、真实旧任务回收站删除和单任务重建仍待完成。

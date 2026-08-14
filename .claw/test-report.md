@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-14T04:07:30Z
+updated_at: 2026-08-14T04:15:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-14T04:07:30Z
+last_run_at: 2026-08-14T04:15:00Z
 last_run_status: passed_with_authorized_visual_pending
 ---
 
 # Test Report
+
+## 2026-08-14 TASK-306 产品经理删除 scope 角色隔离
+
+- 后端定向：`ServicePrincipalServiceTest`、`SematticeProjectDeliveryDeleteToolServiceTest`、`ToolOrchestratorServiceTest`、`DeliveryWriteReceiptGuardTest` 通过；production package 与 `git diff --check` 通过。
+- 角色门禁：DevAutopilot `product_manager` SERVICE 可选择 `runtime.record.delete`；developer SERVICE 请求该 scope 时服务端拒绝。
+- 本地运行：backend 为 `2.8.61-dev.26809b8 / 26809b8a07b7`，包含功能提交 `96c97bbc`，healthy、restart=0；完整 `./stack verify` 通过。
+- 受权页面：大乔PM候选包含 delete，哪吒候选不包含 delete；未勾选或提交权限变更。
+- 验收边界：人工显式授权、5 条旧任务回收站删除和单任务重建尚未执行；UAT/生产未修改。
 
 ## 2026-08-14 TASK-302 受信应用保存时间映射修复
 
