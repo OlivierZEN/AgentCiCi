@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-14T09:20:00Z
+updated_at: 2026-08-14T10:52:54Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-14T09:20:00Z
-last_run_status: passed_local_task_review_rejection_e2e
+last_run_at: 2026-08-14T10:52:54Z
+last_run_status: passed_task_309_predeploy_with_known_full_suite_debt
 ---
 
 # Test Report
+
+## 2026-08-14 TASK-309 对话连续粘贴图片预部署验证
+
+- 后端定向：`ChatAttachmentServiceTest` 与 `ChatOrchestratorServiceModelIdentityTest` 共 47 项通过，覆盖签名检测、MIME/内容拒绝、20 MiB 超限预检、10 张额度、归属失败关闭、多模态请求组装和既有聊天编排回归；`mvn -q -DskipTests package` 通过。
+- 前端：新增附件规则 3 项通过；全量 50 个测试文件、278 项通过；production build 通过，仅保留既有大 chunk warning。
+- 全量后端边界：`mvn -q test` 运行 810 项后为 24 failures / 201 errors / 3 skipped；Spring 集成上下文的主要共同根因是共享 `agentcici_test` 已存在的 Flyway V81 checksum 漂移（applied `2112500543`、local `379982424`），本轮未执行 repair。另有既有模型调用断言失败，因此全量套件不计为本任务通过。
+- 静态：后端 clean compile、前端 TypeScript/build 与 `git diff --check` 通过。
+- 待验证：本地 main 提交、`cici.localhost` V116 实库迁移、附件 API、桌面连续粘贴和消息发送。UAT/生产未授权。
 
 ## 2026-08-14 TASK-308 任务评审驳回授权修复
 

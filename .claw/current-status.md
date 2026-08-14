@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-14T09:20:00Z
+updated_at: 2026-08-14T10:52:54Z
 updated_by: codex
-phase: verification
-active_task: TASK-308
-next_action: "哪吒读取 design_changes_requested 事件，补充单图 20M 与每会话 10 张限制后重新提交设计；用户再次明确批准前不得进入实现。"
+phase: testing
+active_task: TASK-309
+next_action: "提交 FEAT-188 到本地 main，从该提交更新 cici.localhost，验证 V116、附件 API 与桌面连续粘贴闭环；未经授权不发布 UAT。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-309 / FEAT-188 已进入本地测试：后端附件 API、V116、单图 20 MiB/每会话 10 张权威门禁、消息关联和 vision 能力门禁已实现；前端支持 Ctrl/Command+V 连续粘贴、选择、缩略图、上传状态、删除/替换、图片-only 发送、失败保留和历史鉴权预览。后端 47 项定向测试与 package、前端 50 文件/278 项和 production build、diff check 通过。后端全量 810 项被既有共享测试库 V81 checksum 漂移及既有模型断言债务阻断，未 repair。下一步提交本地 main、更新 `cici.localhost` 并完成 V116/API/桌面真实交互；UAT/生产未授权。
 
 - TASK-308 / FEAT-185 / INT-023 的驳回鉴权缺口已修复并完成真实闭环：旧 `TASK_REVIEW` OACT 缺少评审前置的 `identity.principal.sync`，导致 Semattice 在产品经理 SERVICE 生命周期同步时拒绝。提交 `95656c5b` 将该 scope 加入固定白名单，调用方仍不能自选权限。定向测试、backend package、完整 stack verify 通过；backend 运行 `2.8.61-dev.95656c5`、healthy/restart=0。用户原始意见已真实写入 `design_changes_requested`，任务进入 `设计驳回 / revision 5`。UAT/生产未修改。
 

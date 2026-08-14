@@ -1,0 +1,82 @@
+---
+kind: feature-spec
+feature_id: FEAT-188
+title: 对话框连续粘贴图片附件
+status: in_progress
+primary_project: agentcici
+owner_role: fullstack-agent
+task_ids: TASK-309
+related_issues: none
+updated_at: 2026-08-14T10:52:54Z
+updated_by: codex
+---
+
+# FEAT-188 - 对话框连续粘贴图片附件
+
+## 背景与目标
+
+DevAutopilot 需求 `REQ-6F34ECF3` 的端到端任务 `019ffeb0-88a0-739f-afcb-6e667e9d2572` 已完成设计评审并由用户批准。员工在 AgentCiCi 助手工作台输入框聚焦时，需要通过 Ctrl+V / Command+V 连续粘贴本地截图，看到缩略图与上传状态，并把图片随本轮消息交给已确认 vision 能力的模型。
+
+## 范围
+
+### In Scope
+
+- `/` 助手工作台的统一图片附件队列：文件选择、一次多张粘贴、连续多次粘贴、缩略图、大小、状态、删除与失败替换。
+- 单张图片服务端实际字节数不超过 20 MiB；同一会话有效图片累计不超过 10 张。
+- HUMAN 登录态下的会话附件上传、读取、删除和消息关联 API；tenant、user、session 三层隔离。
+- 图片附件元数据、会话额度槽位、消息关联和本地受管文件存储。
+- 当前聊天模型具备平台已确认 `vision` 能力时，以 OpenAI-compatible multimodal content 传入本轮图片；不具备时失败关闭并保留已上传附件。
+- 纯文本旧请求、知识库、Agent、Skill、工具调用和流式响应兼容。
+
+### Out Of Scope
+
+- 图片编辑、OCR 产品能力、跨会话素材库、任意文件附件、移动端专项适配。
+- UAT 或生产发布；需本地开发测试完成后另行取得发布授权。
+- 把附件复制到 DevAutopilot、Semattice 或其他仓库形成第二事实源。
+
+## 用户流程
+
+1. 用户粘贴或选择 PNG/JPEG/WebP 图片，前端先校验类型、20 MiB 和剩余数量。
+2. 合格图片进入队列并逐项上传；服务端按实际内容签名复验类型和字节数，并以 1..10 的唯一槽位保证并发下不超额。
+3. 用户可删除尚未关联消息的附件并释放槽位；失败项保留原因以及删除、替换入口。
+4. 发送时携带 `attachmentIds`；服务端确认附件 READY、属于当前主体和会话，在保存用户消息的同一事务中关联附件。
+5. 模型具备已确认 vision 能力时，当前用户消息由文本和 `image_url` data URL 组成；否则返回明确的能力错误，附件保持可恢复。
+
+## 接口与数据
+
+- `POST /ai/sessions/{sessionId}/attachments`：multipart `file` + `clientAttachmentId`，同步上传并返回附件视图。
+- `GET /ai/sessions/{sessionId}/attachments`：返回当前用户在该会话中的有效附件与 10 张额度。
+- `GET /ai/sessions/{sessionId}/attachments/{attachmentId}/content`：鉴权读取图片内容。
+- `DELETE /ai/sessions/{sessionId}/attachments/{attachmentId}`：只允许删除未关联消息的附件。
+- `/ai/chat` 与 `/ai/chat/stream` 的 `ChatRequest` 新增 `attachmentIds`；允许图片存在时正文为空。
+- 新表 `chat_attachment`：public id、company/user/session、slot、client id、message id、文件名、MIME、size、SHA-256、storage path、状态与审计时间。
+- 唯一键 `(company_id, session_id, slot_no)` 从数据库层限制每会话最多 10 个有效附件；未关联删除采用物理删除释放槽位，已关联附件保留。
+
+## 错误语义
+
+- `ATTACHMENT_TOO_LARGE`：HTTP 413。
+- `CONVERSATION_IMAGE_LIMIT_EXCEEDED`：HTTP 409。
+- `UNSUPPORTED_IMAGE_TYPE`：HTTP 415。
+- `ATTACHMENT_NOT_READY` 或重复消费：HTTP 409。
+- `VISION_MODEL_REQUIRED`：HTTP 409，表示当前聊天路由模型未确认 vision 能力。
+- 无权读取的 tenant/user/session 附件按非泄露原则返回 404。
+
+## 验收标准
+
+- 20 MiB 图片通过，20 MiB + 1 字节失败；PNG/JPEG/WebP 文件签名与 MIME 不匹配失败。
+- 同会话第 10 张成功、第 11 张失败；并发竞争不能突破 10 张。
+- 删除未发送附件释放额度；跨用户、跨会话、跨租户读取与引用失败。
+- 连续粘贴、多选、缩略图、上传中/失败/已就绪、删除与替换状态可用；键盘粘贴不破坏文本粘贴。
+- 流式聊天只在所有本轮附件 READY 后发送，发送成功后附件与消息关联；失败时队列可恢复。
+- 聚焦后端测试、前端测试、前端 production build、完整 backend package、`git diff --check`、桌面真实浏览器交互和本地 `cici.localhost` 版本/健康门禁通过。
+
+## 风险与回滚
+
+- 大图片会放大模型请求体：只注入本轮附件，不在后续轮次重复注入历史图片；服务端严格限制单图和会话总数。
+- 文件写入与数据库事务不完全原子：失败路径删除新建文件；未引用过期清理作为后续受管运维任务，不在本轮直接删除业务数据。
+- 回滚时先关闭前端入口并回滚消费代码；保留 `chat_attachment` 表与已关联文件，避免历史消息引用损坏。
+
+## 实现进展
+
+- 设计批准事件：`019fffb8-c211-7e87-abee-7f9b583628f2`。
+- 2026-08-14：后端附件 API、V116、消息关联和 vision 能力门禁已实现；前端连续粘贴、选择、缩略图、上传状态、删除/替换、图片-only 发送和历史鉴权预览已接通。后端 47 项定向测试、skip-tests package、前端 50 文件/278 项全量测试、production build 和 diff check 通过；共享测试库仍被既有 V81 checksum 漂移阻断。待本地 main 提交、`cici.localhost` 迁移与桌面真实浏览器验收。

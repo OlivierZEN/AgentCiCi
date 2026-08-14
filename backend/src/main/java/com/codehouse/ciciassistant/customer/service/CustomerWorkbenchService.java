@@ -184,9 +184,9 @@ public class CustomerWorkbenchService {
         try {
             return chatOrchestratorService.sessionMessages(companyId, userId, assistantSessionId(userId, accountId)).stream()
                     .map(item -> Map.of(
-                            "role", item.getOrDefault("role", "assistant"),
-                            "content", sanitizeAssistantHistoryContent(item.getOrDefault("content", "")),
-                            "createdAt", item.getOrDefault("createdAt", "")))
+                            "role", String.valueOf(item.getOrDefault("role", "assistant")),
+                            "content", sanitizeAssistantHistoryContent(String.valueOf(item.getOrDefault("content", ""))),
+                            "createdAt", String.valueOf(item.getOrDefault("createdAt", ""))))
                     .filter(item -> !item.get("content").isBlank())
                     .toList();
         } catch (ResponseStatusException ex) {

@@ -8,6 +8,7 @@ export type StreamChatBody = {
   agentId?: string;
   /** When set, authorizes skill-scoped tools for this skill code for the session (see backend permission model). */
   activeSkillCode?: string;
+  attachmentIds?: string[];
 };
 
 export type StreamToolResultEvent = {

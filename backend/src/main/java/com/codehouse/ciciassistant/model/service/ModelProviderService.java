@@ -226,6 +226,21 @@ public class ModelProviderService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public boolean supportsTrustedCapability(String companyId, String providerCode,
+                                             String modelName, String capability) {
+        String normalizedProvider = nullableToBlank(providerCode).trim();
+        String normalizedModel = nullableToBlank(modelName).trim();
+        String normalizedCapability = normalizeCapabilityToken(capability);
+        if (normalizedProvider.isBlank() || normalizedModel.isBlank() || normalizedCapability.isBlank()) {
+            return false;
+        }
+        return providerRepository.findByCompanyIdAndProviderCode(companyId, normalizedProvider)
+                .map(this::trustedModelCapabilities)
+                .map(capabilities -> capabilities.getOrDefault(normalizedModel, List.of()).contains(normalizedCapability))
+                .orElse(false);
+    }
+
     @Transactional
     public Map<String, Object> updatePlatformProvider(String providerCode,
                                                       Boolean enabled,

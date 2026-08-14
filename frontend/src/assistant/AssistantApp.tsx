@@ -1,4 +1,4 @@
-import { FormEvent, KeyboardEvent, PointerEvent as ReactPointerEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { ClipboardEvent as ReactClipboardEvent, FormEvent, KeyboardEvent, PointerEvent as ReactPointerEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { applyProductTheme } from "../theme/theme";
@@ -51,6 +51,11 @@ import {
 import { isMeetingMinutesStartCommand } from "./meetingMinutesCommand";
 import { appendMeetingTranscriptSegment, speakerDisplayName } from "./meetingTranscript";
 import { shouldAutoStartOidcLogin } from "./oidcAutoRedirect";
+import {
+  composerCanSubmit,
+  createClientAttachmentId,
+  validateChatImages,
+} from "./chatAttachments";
 
 const FRONT_LOGIN_MODE_CONFIG: FrontLoginMode = "login_mode2";
 const FRONT_LOGIN_USER_MODE_CONFIG: LoginMode = "agent";
@@ -65,6 +70,22 @@ type ChatBubble = {
   time?: string;
   modelName?: string;
   deliveryReceipt?: DeliveryWriteReceipt;
+  attachments?: ChatAttachmentView[];
+};
+type ChatAttachmentView = {
+  id?: string;
+  clientAttachmentId?: string;
+  name: string;
+  contentType: string;
+  sizeBytes: number;
+  contentUrl?: string;
+  previewUrl?: string;
+};
+type ComposerAttachment = ChatAttachmentView & {
+  clientAttachmentId: string;
+  sessionId: string;
+  status: "uploading" | "ready" | "error";
+  error?: string;
 };
 type KnowledgeBase = { id: number; name: string; description: string; status: string };
 type MeProfile = {
@@ -190,6 +211,7 @@ type ConversationMessagePayload = {
   role?: ChatBubble["role"];
   content?: string;
   createdAt?: string;
+  attachments?: ChatAttachmentView[];
 };
 
 type WorkbenchDockAgent = {
@@ -618,12 +640,124 @@ function normalizeConversationThread(payload: ConversationThreadPayload): Conver
 
 function normalizeConversationMessages(payloads: ConversationMessagePayload[]): ChatBubble[] {
   return payloads
-    .map((item): ChatBubble => ({
-      role: item.role === "user" ? "user" : "assistant",
-      content: item.content?.trim() || "",
-      time: formatConversationTime(item.createdAt),
-    }))
-    .filter((item) => item.content);
+    .map((item): ChatBubble => {
+      const attachments = Array.isArray(item.attachments)
+        ? item.attachments.filter((attachment) => attachment?.contentType?.startsWith("image/"))
+        : [];
+      return {
+        role: item.role === "user" ? "user" : "assistant",
+        content: item.content?.trim() || (attachments.length ? "请分析这些图片。" : ""),
+        time: formatConversationTime(item.createdAt),
+        attachments,
+      };
+    })
+    .filter((item) => item.content || item.attachments?.length);
+}
+
+function AuthenticatedAttachmentImage({ attachment }: { attachment: ChatAttachmentView }) {
+  const [source, setSource] = useState(attachment.previewUrl ?? "");
+
+  useEffect(() => {
+    if (attachment.previewUrl || !attachment.contentUrl) {
+      setSource(attachment.previewUrl ?? "");
+      return;
+    }
+    let disposed = false;
+    let objectUrl = "";
+    void authFetch(LS_ASSISTANT_TOKEN, attachment.contentUrl)
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.blob();
+      })
+      .then((blob) => {
+        if (disposed) return;
+        objectUrl = URL.createObjectURL(blob);
+        setSource(objectUrl);
+      })
+      .catch(() => {
+        if (!disposed) setSource("");
+      });
+    return () => {
+      disposed = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [attachment.contentUrl, attachment.previewUrl]);
+
+  return source ? (
+    <img src={source} alt={attachment.name || "会话图片"} loading="lazy" />
+  ) : (
+    <span className="cici-chat-attachment__fallback">图片暂不可预览</span>
+  );
+}
+
+function MessageAttachmentGrid({ attachments }: { attachments?: ChatAttachmentView[] }) {
+  if (!attachments?.length) return null;
+  return (
+    <div className="cici-chat-attachment-grid" aria-label={`${attachments.length} 张会话图片`}>
+      {attachments.map((attachment, index) => (
+        <figure key={attachment.id || attachment.clientAttachmentId || `${attachment.name}-${index}`}>
+          <AuthenticatedAttachmentImage attachment={attachment} />
+          <figcaption>{attachment.name}</figcaption>
+        </figure>
+      ))}
+    </div>
+  );
+}
+
+function ComposerAttachmentQueue({
+  attachments,
+  onRemove,
+  onReplace,
+}: {
+  attachments: ComposerAttachment[];
+  onRemove: (attachment: ComposerAttachment) => void;
+  onReplace: (attachment: ComposerAttachment, file: File | undefined) => void;
+}) {
+  if (!attachments.length) return null;
+  return (
+    <section className="cici-composer-attachments" aria-label="待发送图片">
+      <header>
+        <strong>待发送图片</strong>
+        <span>{attachments.length} 张 · 单张不超过 20MB · 每个会话最多 10 张</span>
+      </header>
+      <div className="cici-composer-attachments__list">
+        {attachments.map((attachment) => (
+          <article key={attachment.clientAttachmentId} className={`is-${attachment.status}`}>
+            <div className="cici-composer-attachments__preview">
+              <AuthenticatedAttachmentImage attachment={attachment} />
+            </div>
+            <div className="cici-composer-attachments__detail">
+              <strong title={attachment.name}>{attachment.name}</strong>
+              <span className="cici-composer-attachments__status">
+                {attachment.status === "uploading" ? "上传中…" : attachment.status === "ready" ? "已就绪" : `失败：${attachment.error || "请重试"}`}
+              </span>
+              <div className="cici-composer-attachments__actions">
+                <label className={attachment.status === "uploading" ? "is-disabled" : ""}>
+                  替换
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    disabled={attachment.status === "uploading"}
+                    onChange={(event) => {
+                      onReplace(attachment, event.target.files?.[0]);
+                      event.currentTarget.value = "";
+                    }}
+                  />
+                </label>
+                <button
+                  type="button"
+                  disabled={attachment.status === "uploading"}
+                  onClick={() => onRemove(attachment)}
+                >
+                  删除
+                </button>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 function createDraftConversationThread(
@@ -1329,6 +1463,7 @@ export default function AssistantApp() {
   const [launchingDevAutopilot, setLaunchingDevAutopilot] = useState(false);
   const [me, setMe] = useState<MeProfile | null>(null);
   const [input, setInput] = useState("");
+  const [composerAttachments, setComposerAttachments] = useState<ComposerAttachment[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
   const [skillPickerOpen, setSkillPickerOpen] = useState(false);
   const [quickCommandMenuOpen, setQuickCommandMenuOpen] = useState(false);
@@ -1395,6 +1530,7 @@ export default function AssistantApp() {
   const companyMenuRef = useRef<HTMLDivElement | null>(null);
   const companyMenuCloseTimerRef = useRef<number | null>(null);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
+  const attachmentObjectUrlsRef = useRef<Set<string>>(new Set());
   const composerInputRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
   const chatLoadingStaleTimerRef = useRef<number | null>(null);
   const cloudccSsoAttemptedRef = useRef(false);
@@ -1407,6 +1543,11 @@ export default function AssistantApp() {
   const [activeMonitorLogId, setActiveMonitorLogId] = useState("");
   const [monitorSearchText, setMonitorSearchText] = useState("");
 
+  useEffect(() => () => {
+    attachmentObjectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    attachmentObjectUrlsRef.current.clear();
+  }, []);
+
   const resetCompanyScopedUiState = (companyId: string) => {
     if (chatLoadingStaleTimerRef.current !== null) {
       window.clearTimeout(chatLoadingStaleTimerRef.current);
@@ -1416,6 +1557,9 @@ export default function AssistantApp() {
     setMe(null);
     setKbs([]);
     setSelectedKbIds([]);
+    attachmentObjectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    attachmentObjectUrlsRef.current.clear();
+    setComposerAttachments([]);
     setConversationThreads([]);
     setConversationMessages({});
     setConversationListLoading(false);
@@ -2471,6 +2615,16 @@ export default function AssistantApp() {
     (message) => message.role === "assistant" ? (chatLoading || message.content.trim()) : message.content.trim(),
   );
   const visibleMessages = workspaceTab === "workbench" ? workbenchMessages : messages;
+  const activeComposerSessionId = workspaceTab === "workbench"
+    ? activeWorkbenchSessionId
+    : (activeConversation?.id ?? "");
+  const activeComposerAttachments = composerAttachments.filter(
+    (attachment) => attachment.sessionId === activeComposerSessionId,
+  );
+  const activeComposerCanSubmit = composerCanSubmit(
+    input,
+    activeComposerAttachments.map((attachment) => attachment.status),
+  );
 
   useEffect(() => {
     if (!auth?.token || authStatus !== "authenticated" || workspaceTab !== "workbench") {
@@ -3417,7 +3571,10 @@ export default function AssistantApp() {
   };
 
   const submitQuestion = async (question: string) => {
-    if (!auth || !question.trim() || chatLoading) {
+    const queuedAttachments = composerAttachments.filter(
+      (attachment) => attachment.sessionId === activeComposerSessionId,
+    );
+    if (!auth || chatLoading || !composerCanSubmit(question, queuedAttachments.map((item) => item.status))) {
       return;
     }
     if (workspaceTab === "workbench" && activeWorkbenchInvocationBlocked) {
@@ -3428,17 +3585,25 @@ export default function AssistantApp() {
       return;
     }
     const cleanQuestion = question.trim();
-    const firstLine = cleanQuestion.split("\n")[0]?.trim() || cleanQuestion;
+    const displayQuestion = cleanQuestion || "请分析这些图片。";
+    const firstLine = displayQuestion.split("\n")[0]?.trim() || displayQuestion;
     const nextConversationTitle = firstLine.slice(0, 24);
     const timestamp = formatWorkbenchTime();
-    setInput("");
     const isWorkbench = workspaceTab === "workbench";
     const conversationId = activeConversation?.id ?? "workbench";
     const sessionId = isWorkbench ? activeWorkbenchSessionId : conversationId;
     const requestScope = companyScopeRef.current;
     const workbenchAgentCacheKey = buildCompanyScopedCacheKey(requestScope.companyId, activeWorkbenchAgent.key);
     const sessionCacheKey = buildCompanyScopedCacheKey(requestScope.companyId, sessionId);
-    const userBubble: ChatBubble = { role: "user", content: cleanQuestion, time: timestamp };
+    const readyAttachments = queuedAttachments.filter((attachment) => attachment.status === "ready" && attachment.id);
+    const requestAttachmentIds = readyAttachments.map((attachment) => attachment.id as string);
+    const requestClientAttachmentIds = readyAttachments.map((attachment) => attachment.clientAttachmentId);
+    const userBubble: ChatBubble = {
+      role: "user",
+      content: displayQuestion,
+      time: timestamp,
+      attachments: readyAttachments.map((attachment) => ({ ...attachment })),
+    };
     const assistantPlaceholder: ChatBubble = { role: "assistant", content: "", time: timestamp };
     if (isWorkbench) {
       const agentKey = activeWorkbenchAgent.key;
@@ -3448,7 +3613,7 @@ export default function AssistantApp() {
             ? {
                 ...thread,
                 title: thread.title === "新工作台对话" ? nextConversationTitle : thread.title,
-                lastMessage: cleanQuestion,
+                lastMessage: displayQuestion,
                 time: timestamp,
                 updatedAt: new Date().toISOString(),
               }
@@ -3457,7 +3622,7 @@ export default function AssistantApp() {
       );
       setWorkbenchRuntimeByAgent((prev) => ({
         ...prev,
-        [workbenchAgentCacheKey]: deriveWorkbenchStateFromPrompt(cleanQuestion, agentKey),
+        [workbenchAgentCacheKey]: deriveWorkbenchStateFromPrompt(displayQuestion, agentKey),
       }));
       setWorkbenchMessagesByAgent((prev) => ({
         ...prev,
@@ -3487,6 +3652,7 @@ export default function AssistantApp() {
           knowledgeBaseIds: kbIds.length ? kbIds : [],
           agentId: isWorkbench ? activeWorkbenchAgent.runtimeAgentId : activeAgent.id,
           activeSkillCode: isWorkbench && activeWorkbenchSkillCode ? activeWorkbenchSkillCode : undefined,
+          attachmentIds: requestAttachmentIds,
         },
         (delta) => {
           if (suppress || !isCurrentCompanyScope(requestScope)) {
@@ -3693,6 +3859,10 @@ export default function AssistantApp() {
       if (!isWorkbench) {
         await loadConversationThreads(conversationId);
       }
+      setInput("");
+      setComposerAttachments((prev) => prev.filter(
+        (attachment) => !requestClientAttachmentIds.includes(attachment.clientAttachmentId),
+      ));
     } catch (error) {
       if (!isCurrentCompanyScope(requestScope)) {
         return;
@@ -3755,10 +3925,15 @@ export default function AssistantApp() {
 
   const submitCurrentInput = async () => {
     const currentInput = input.trim();
-    if (!currentInput) {
+    if (!composerCanSubmit(currentInput, activeComposerAttachments.map((attachment) => attachment.status))) {
+      if (activeComposerAttachments.some((attachment) => attachment.status === "uploading")) {
+        setSpeechNotice("图片仍在上传，请等待全部完成后再发送。");
+      } else if (activeComposerAttachments.some((attachment) => attachment.status === "error")) {
+        setSpeechNotice("存在上传失败的图片，请删除、替换或重试后再发送。");
+      }
       return;
     }
-    if (workspaceTab === "workbench" && isMeetingMinutesStartCommand(currentInput)) {
+    if (currentInput && workspaceTab === "workbench" && isMeetingMinutesStartCommand(currentInput)) {
       await startMeetingMinutes(currentInput);
       return;
     }
@@ -3800,14 +3975,142 @@ export default function AssistantApp() {
     setSkillPickerOpen(true);
   };
 
-  const handleComposerFileSelection = (files: FileList | null) => {
-    if (!files || files.length === 0) {
+  const uploadComposerImages = async (files: File[], sessionId = activeComposerSessionId) => {
+    if (!auth || !sessionId || files.length === 0) {
+      setSpeechNotice("请先进入一个可用会话，再粘贴或选择图片。");
       return;
     }
-    const names = Array.from(files).map((file) => file.name).join("、");
-    setSpeechNotice(`已选择 ${names}，当前对话附件上传接口尚未接入发送流程。`);
     setSkillPickerOpen(false);
     setQuickCommandMenuOpen(false);
+    let usedCount = 0;
+    try {
+      const response = await authFetch(
+        LS_ASSISTANT_TOKEN,
+        `/ai/sessions/${encodeURIComponent(sessionId)}/attachments`,
+        {},
+        { onUnauthorized: () => persistAuth(null) },
+      );
+      const { body } = await safeFetchJson<{ used?: number }>(response);
+      if (!response.ok || !body?.success) {
+        setSpeechNotice(`无法读取会话图片额度：${body?.message ?? `HTTP ${response.status}`}`);
+        return;
+      }
+      usedCount = Number(body.data?.used ?? 0);
+    } catch (error) {
+      setSpeechNotice(`无法读取会话图片额度：${error instanceof Error ? error.message : String(error)}`);
+      return;
+    }
+
+    const { accepted, rejected } = validateChatImages(files, usedCount);
+    if (rejected.length) {
+      setSpeechNotice(rejected.map((item) => item.reason).join("；"));
+    }
+    for (const file of accepted) {
+      const clientAttachmentId = createClientAttachmentId();
+      const previewUrl = URL.createObjectURL(file);
+      attachmentObjectUrlsRef.current.add(previewUrl);
+      const pending: ComposerAttachment = {
+        clientAttachmentId,
+        sessionId,
+        name: file.name || "剪贴板图片",
+        contentType: file.type,
+        sizeBytes: file.size,
+        previewUrl,
+        status: "uploading",
+      };
+      setComposerAttachments((prev) => [...prev, pending]);
+      try {
+        const form = new FormData();
+        form.set("clientAttachmentId", clientAttachmentId);
+        form.set("file", file, pending.name);
+        const response = await authFetch(
+          LS_ASSISTANT_TOKEN,
+          `/ai/sessions/${encodeURIComponent(sessionId)}/attachments`,
+          { method: "POST", body: form },
+          { onUnauthorized: () => persistAuth(null) },
+        );
+        const { body } = await safeFetchJson<ChatAttachmentView>(response);
+        if (!response.ok || !body?.success || !body.data?.id) {
+          throw new Error(body?.message ?? `HTTP ${response.status}`);
+        }
+        setComposerAttachments((prev) => prev.map((item) => item.clientAttachmentId === clientAttachmentId
+          ? {
+              ...item,
+              ...body.data,
+              clientAttachmentId,
+              sessionId,
+              previewUrl,
+              status: "ready",
+              error: undefined,
+            }
+          : item));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        setComposerAttachments((prev) => prev.map((item) => item.clientAttachmentId === clientAttachmentId
+          ? { ...item, status: "error", error: message }
+          : item));
+        setSpeechNotice(`图片 ${pending.name} 上传失败：${message}`);
+      }
+    }
+    if (accepted.length > 0 && rejected.length === 0) {
+      setSpeechNotice(`已加入 ${accepted.length} 张图片；全部显示“已就绪”后即可发送。`);
+    }
+  };
+
+  const handleComposerFileSelection = (files: FileList | null) => {
+    if (!files?.length) return;
+    void uploadComposerImages(Array.from(files));
+  };
+
+  const handleComposerPaste = (event: ReactClipboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const images = Array.from(event.clipboardData.items)
+      .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
+      .map((item) => item.getAsFile())
+      .filter((file): file is File => !!file);
+    if (!images.length) return;
+    event.preventDefault();
+    void uploadComposerImages(images);
+  };
+
+  const removeComposerAttachment = async (attachment: ComposerAttachment): Promise<boolean> => {
+    if (attachment.id) {
+      try {
+        const response = await authFetch(
+          LS_ASSISTANT_TOKEN,
+          `/ai/sessions/${encodeURIComponent(attachment.sessionId)}/attachments/${encodeURIComponent(attachment.id)}`,
+          { method: "DELETE" },
+          { onUnauthorized: () => persistAuth(null) },
+        );
+        const { body } = await safeFetchJson<{ deleted?: boolean }>(response);
+        if (!response.ok || !body?.success || !body.data?.deleted) {
+          setSpeechNotice(`删除图片失败：${body?.message ?? `HTTP ${response.status}`}`);
+          return false;
+        }
+      } catch (error) {
+        setSpeechNotice(`删除图片失败：${error instanceof Error ? error.message : String(error)}`);
+        return false;
+      }
+    }
+    setComposerAttachments((prev) => prev.filter(
+      (item) => item.clientAttachmentId !== attachment.clientAttachmentId,
+    ));
+    if (attachment.previewUrl) {
+      URL.revokeObjectURL(attachment.previewUrl);
+      attachmentObjectUrlsRef.current.delete(attachment.previewUrl);
+    }
+    return true;
+  };
+
+  const replaceComposerAttachment = async (attachment: ComposerAttachment, file: File | undefined) => {
+    if (!file) return;
+    const validation = validateChatImages([file], 0);
+    if (!validation.accepted.length) {
+      setSpeechNotice(validation.rejected[0]?.reason ?? "替换图片不符合要求。");
+      return;
+    }
+    if (await removeComposerAttachment(attachment)) {
+      await uploadComposerImages([file], attachment.sessionId);
+    }
   };
 
   const ask = async (event: FormEvent) => {
@@ -3891,6 +4194,9 @@ export default function AssistantApp() {
     setApprovalDrawerOpen(false);
     setApprovalPageHtml(null);
     setSpeechNotice("");
+    attachmentObjectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    attachmentObjectUrlsRef.current.clear();
+    setComposerAttachments([]);
     setMeetingDrawerOpen(false);
     setMeetingStatus("idle");
     setMeetingNotice("");
@@ -4433,7 +4739,10 @@ export default function AssistantApp() {
                             </div>
                             <div className={`cici-workbench__bubble${isUser ? " is-user" : ""}`}>
                               {isUser ? (
-                                message.content
+                                <>
+                                  <MessageAttachmentGrid attachments={message.attachments} />
+                                  {message.content ? <div className="cici-chat-message-text">{message.content}</div> : null}
+                                </>
                               ) : (
                                 <ChatMarkdown content={message.content} busy={chatLoading && index === workbenchConversation.length - 1} />
                               )}
@@ -4470,8 +4779,14 @@ export default function AssistantApp() {
                         value={input}
                         onChange={(event) => handleComposerInputChange(event.target.value)}
                         onKeyDown={handleComposerTextareaKeyDown}
+                        onPaste={handleComposerPaste}
                         placeholder={activeWorkbenchInvocationBlocked ? "请联系租户管理员授予 DevAutopilot 应用角色" : "发消息或输入“/”选择技能"}
                         disabled={chatLoading || activeWorkbenchInvocationBlocked}
+                      />
+                      <ComposerAttachmentQueue
+                        attachments={activeComposerAttachments}
+                        onRemove={(attachment) => void removeComposerAttachment(attachment)}
+                        onReplace={(attachment, file) => void replaceComposerAttachment(attachment, file)}
                       />
                       <div className="cici-workbench__composer-footer">
                         <div className="cici-workbench__composer-tools">
@@ -4480,15 +4795,18 @@ export default function AssistantApp() {
                             className="cici-composer-upload-input"
                             type="file"
                             multiple
-                            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.md"
-                            onChange={(event) => handleComposerFileSelection(event.target.files)}
+                            accept="image/png,image/jpeg,image/webp"
+                            onChange={(event) => {
+                              handleComposerFileSelection(event.target.files);
+                              event.currentTarget.value = "";
+                            }}
                           />
                           <button
                             type="button"
                             className="cici-composer-tool cici-composer-tool--icon"
                             onClick={() => uploadInputRef.current?.click()}
-                            title="上传文件或图片"
-                            aria-label="上传文件或图片"
+                            title="选择图片（PNG、JPG、WebP）"
+                            aria-label="选择图片"
                           >
                             <svg viewBox="0 0 24 24">
                               <path d="M21.4 11.6 12 21a6 6 0 0 1-8.5-8.5l9.8-9.8a4 4 0 0 1 5.7 5.7l-9.9 9.9a2 2 0 0 1-2.8-2.8l8.8-8.8" />
@@ -4641,7 +4959,7 @@ export default function AssistantApp() {
                               <path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6" />
                             </svg>
                           </button>
-                          <button type="submit" disabled={chatLoading || activeWorkbenchInvocationBlocked} className="cici-workbench__send-btn">
+                          <button type="submit" disabled={chatLoading || activeWorkbenchInvocationBlocked || !activeComposerCanSubmit} className="cici-workbench__send-btn">
                             <svg viewBox="0 0 24 24">
                               <line x1="12" y1="19" x2="12" y2="5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
                               <polyline points="5 12 12 5 19 12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
@@ -5311,7 +5629,10 @@ export default function AssistantApp() {
                       {message.role === "assistant" ? (
                         <ChatMarkdown content={message.content} busy={chatLoading && index === messages.length - 1} />
                       ) : (
-                        message.content
+                        <>
+                          <MessageAttachmentGrid attachments={message.attachments} />
+                          {message.content ? <div className="cici-chat-message-text">{message.content}</div> : null}
+                        </>
                       )}
                     </div>
                     {message.role === "assistant" && (message.deliveryReceipt || extractDeliveryWriteReceipt(message.content)) ? (
@@ -5336,11 +5657,17 @@ export default function AssistantApp() {
             </div>
 
             <form className="cici-composer" onSubmit={ask}>
+              <ComposerAttachmentQueue
+                attachments={activeComposerAttachments}
+                onRemove={(attachment) => void removeComposerAttachment(attachment)}
+                onReplace={(attachment, file) => void replaceComposerAttachment(attachment, file)}
+              />
               <div className="cici-composer__wrapper">
                 <input
                   ref={attachComposerTextInputRef}
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
+                  onPaste={handleComposerPaste}
                   placeholder={
                     activeConversation
                       ? `向 ${activeAgent.name} 的「${activeConversation.participantName}」会话发送消息…`
@@ -5349,6 +5676,29 @@ export default function AssistantApp() {
                   disabled={chatLoading || !activeConversation}
                 />
                 <div className="cici-composer__actions">
+                  <input
+                    ref={uploadInputRef}
+                    className="cici-composer-upload-input"
+                    type="file"
+                    multiple
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={(event) => {
+                      handleComposerFileSelection(event.target.files);
+                      event.currentTarget.value = "";
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="cici-composer__mic"
+                    onClick={() => uploadInputRef.current?.click()}
+                    disabled={chatLoading || !activeConversation}
+                    title="选择图片"
+                    aria-label="选择图片"
+                  >
+                    <svg viewBox="0 0 24 24">
+                      <path d="M21.4 11.6 12 21a6 6 0 0 1-8.5-8.5l9.8-9.8a4 4 0 0 1 5.7 5.7l-9.9 9.9a2 2 0 0 1-2.8-2.8l8.8-8.8" />
+                    </svg>
+                  </button>
                   <button
                     type="button"
                     className={`cici-composer__mic${listening ? " cici-composer__mic--on" : ""}`}
@@ -5361,7 +5711,7 @@ export default function AssistantApp() {
                       <path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6" />
                     </svg>
                   </button>
-                  <button type="submit" disabled={chatLoading || !activeConversation} className="cici-composer__send">
+                  <button type="submit" disabled={chatLoading || !activeConversation || !activeComposerCanSubmit} className="cici-composer__send">
                     <svg viewBox="0 0 24 24">
                       <path d="M22 2L11 13" />
                       <path d="M22 2L15 22l-4-9-9-4L22 2z" />

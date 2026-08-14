@@ -39,7 +39,8 @@ public class ChatController {
                 request.knowledgeBaseIds(),
                 request.agentId(),
                 request.activeSkillCode(),
-                request.metadataFilters()
+                request.metadataFilters(),
+                request.attachmentIds()
         ));
     }
 
@@ -57,6 +58,7 @@ public class ChatController {
                 request.agentId(),
                 request.activeSkillCode(),
                 request.metadataFilters(),
+                request.attachmentIds(),
                 emitter);
         return emitter;
     }
@@ -76,7 +78,7 @@ public class ChatController {
     }
 
     @GetMapping("/sessions/{sessionId}/messages")
-    public ApiResponse<List<Map<String, String>>> sessionMessages(@NotBlank @PathVariable String sessionId) {
+    public ApiResponse<List<Map<String, Object>>> sessionMessages(@NotBlank @PathVariable String sessionId) {
         String companyId = TenantContext.requireCompanyId();
         String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
         return ApiResponse.ok(chatOrchestratorService.sessionMessages(companyId, userId, sessionId));
@@ -98,12 +100,13 @@ public class ChatController {
 
     public record ChatRequest(
             @NotBlank String sessionId,
-            @NotBlank String question,
+            String question,
             List<String> knowledgeBaseIds,
             String agentId,
             /** Normalized skill code to authorize skill-only tools for this session (optional). Empty clears persisted selection. */
             String activeSkillCode,
-            Map<String, String> metadataFilters
+            Map<String, String> metadataFilters,
+            List<String> attachmentIds
     ) {
     }
 }

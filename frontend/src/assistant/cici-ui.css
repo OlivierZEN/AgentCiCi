@@ -6184,6 +6184,178 @@
   cursor: not-allowed;
 }
 
+.cici-chat-message-text {
+  white-space: pre-wrap;
+}
+
+.cici-chat-attachment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 156px));
+  gap: 8px;
+  margin: 0 0 8px;
+}
+
+.cici-chat-attachment-grid figure {
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+}
+
+.cici-chat-attachment-grid img,
+.cici-chat-attachment__fallback {
+  display: block;
+  width: 100%;
+  height: 112px;
+  object-fit: cover;
+  background: var(--surface-hover);
+}
+
+.cici-chat-attachment__fallback {
+  padding: 34px 10px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  text-align: center;
+}
+
+.cici-chat-attachment-grid figcaption {
+  overflow: hidden;
+  padding: 6px 8px;
+  color: inherit;
+  font-size: 11px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cici-composer-attachments {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin: 0 0 10px;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.cici-composer-attachments > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.cici-composer-attachments > header span {
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.cici-composer-attachments__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 8px;
+}
+
+.cici-composer-attachments__list article {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr);
+  gap: 9px;
+  min-width: 0;
+  padding: 7px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.cici-composer-attachments__list article.is-error {
+  border-color: color-mix(in srgb, var(--danger, #c2413b) 42%, var(--border));
+}
+
+.cici-composer-attachments__preview,
+.cici-composer-attachments__preview img,
+.cici-composer-attachments__preview .cici-chat-attachment__fallback {
+  width: 68px;
+  height: 68px;
+  overflow: hidden;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.cici-composer-attachments__preview .cici-chat-attachment__fallback {
+  padding: 20px 4px;
+  font-size: 9px;
+}
+
+.cici-composer-attachments__detail {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cici-composer-attachments__detail > strong {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cici-composer-attachments__status {
+  flex: 1;
+  overflow: hidden;
+  margin-top: 3px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.is-ready .cici-composer-attachments__status {
+  color: var(--success, #287b52);
+}
+
+.is-error .cici-composer-attachments__status {
+  color: var(--danger, #c2413b);
+}
+
+.cici-composer-attachments__actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.cici-composer-attachments__actions button,
+.cici-composer-attachments__actions label {
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent-text);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.cici-composer-attachments__actions input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.cici-composer-attachments__actions button:disabled,
+.cici-composer-attachments__actions label.is-disabled {
+  color: var(--text-tertiary);
+  cursor: not-allowed;
+}
+
 .cici-speech-notice {
   padding: 6px 20px;
   font-size: 12px;

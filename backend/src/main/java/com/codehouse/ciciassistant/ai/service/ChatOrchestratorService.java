@@ -12,6 +12,7 @@ import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionRepository;
 import com.codehouse.ciciassistant.ai.domain.ChatMessageEntity;
 import com.codehouse.ciciassistant.ai.domain.ChatMessageRepository;
+import com.codehouse.ciciassistant.ai.domain.ChatAttachmentEntity;
 import com.codehouse.ciciassistant.ai.domain.ChatSessionEntity;
 import com.codehouse.ciciassistant.ai.domain.ChatSessionRepository;
 import com.codehouse.ciciassistant.ai.domain.ChatSessionStateEntity;
@@ -103,6 +104,8 @@ public class ChatOrchestratorService {
 
     private final ChatSessionRepository chatSessionRepository;
     private final ChatMessageRepository chatMessageRepository;
+    private final ChatAttachmentService chatAttachmentService;
+    private final ModelProviderService modelProviderService;
     private final ModelRouterService modelRouterService;
     private final ModelInvocationResolver modelInvocationResolver;
     private final ToolOrchestratorService toolOrchestratorService;
@@ -138,6 +141,8 @@ public class ChatOrchestratorService {
 
     public ChatOrchestratorService(ChatSessionRepository chatSessionRepository,
                                    ChatMessageRepository chatMessageRepository,
+                                   ChatAttachmentService chatAttachmentService,
+                                   ModelProviderService modelProviderService,
                                    ModelRouterService modelRouterService,
                                    ModelInvocationResolver modelInvocationResolver,
                                    ToolOrchestratorService toolOrchestratorService,
@@ -172,6 +177,8 @@ public class ChatOrchestratorService {
                                    PlatformTransactionManager transactionManager) {
         this.chatSessionRepository = chatSessionRepository;
         this.chatMessageRepository = chatMessageRepository;
+        this.chatAttachmentService = chatAttachmentService;
+        this.modelProviderService = modelProviderService;
         this.modelRouterService = modelRouterService;
         this.modelInvocationResolver = modelInvocationResolver;
         this.toolOrchestratorService = toolOrchestratorService;
@@ -219,12 +226,28 @@ public class ChatOrchestratorService {
     }
 
     public Map<String, Object> chat(String companyId, String userId, String sessionId,
+                                    String question, List<String> kbIds, String requestedAgentId,
+                                    String activeSkillCode, Map<String, String> metadataFilters,
+                                    List<String> attachmentIds) {
+        return chat(companyId, userId, sessionId, question, kbIds, requestedAgentId,
+                activeSkillCode, metadataFilters, attachmentIds, "web");
+    }
+
+    public Map<String, Object> chat(String companyId, String userId, String sessionId,
                                      String question, List<String> kbIds, String requestedAgentId,
                                      String activeSkillCode, Map<String, String> metadataFilters, String channel) {
+        return chat(companyId, userId, sessionId, question, kbIds, requestedAgentId,
+                activeSkillCode, metadataFilters, List.of(), channel);
+    }
+
+    public Map<String, Object> chat(String companyId, String userId, String sessionId,
+                                    String question, List<String> kbIds, String requestedAgentId,
+                                    String activeSkillCode, Map<String, String> metadataFilters,
+                                    List<String> attachmentIds, String channel) {
         String runId = newRunId();
         return agentRuntimeConcurrencyService.run(companyId, userId, requestedAgentId, sessionId,
                 () -> chatLocked(companyId, userId, sessionId, question, kbIds, requestedAgentId,
-                        activeSkillCode, metadataFilters, runId, channel));
+                        activeSkillCode, metadataFilters, attachmentIds, runId, channel));
     }
 
     /**
@@ -409,7 +432,7 @@ public class ChatOrchestratorService {
     private Map<String, Object> chatLocked(String companyId, String userId, String sessionId,
                                            String question, List<String> kbIds, String requestedAgentId,
                                            String activeSkillCode, Map<String, String> metadataFilters,
-                                           String runId, String channel) {
+                                           List<String> attachmentIds, String runId, String channel) {
         Instant runStartedAt = Instant.now();
         List<AgentRunTraceService.StageTraceInput> stageTraces = new ArrayList<>();
         List<AgentRunTraceService.ModelCallTraceInput> modelCallTraces = new ArrayList<>();
@@ -418,22 +441,28 @@ public class ChatOrchestratorService {
         ResolvedSkillContext skillContext = skillResolverService.resolve(
                 companyId, requestedAgentId, sessionId, Optional.ofNullable(activeSkillCode));
         agentAccessControlService.require(companyId, userId, TenantContext.getRoles(), skillContext.agentId(), AgentPermission.RUN);
+        String normalizedQuestion = normalizeQuestion(question, attachmentIds);
         SafetyGatewayService.SafetyDecision inputDecision =
-                safetyGatewayService.checkInput(companyId, userId, "CHAT_INPUT", question);
+                safetyGatewayService.checkInput(companyId, userId, "CHAT_INPUT", normalizedQuestion);
         if (inputDecision.blocked()) {
             String blockedAnswer = blockedBySecurityMessage();
-            persistUserTurnCommitted(companyId, userId, sessionId, "[BLOCKED_BY_SECURITY_GATEWAY]", skillContext.agentId());
+            persistUserTurnCommitted(companyId, userId, sessionId, "[BLOCKED_BY_SECURITY_GATEWAY]", skillContext.agentId(), List.of());
             persistAssistantTurnCommitted(companyId, userId, sessionId, blockedAnswer, "AI_CHAT_BLOCKED", "safety-gateway");
             return blockedPayload(companyId, userId, sessionId, skillContext.agentId(), runId, blockedAnswer, inputDecision);
         }
         String safeQuestion = inputDecision.safeText();
+        List<ChatAttachmentEntity> turnAttachments = chatAttachmentService.requireReadyForMessage(
+                companyId, userId, sessionId, attachmentIds);
+        Map<String, String> routedModel = modelRouterService.route(companyId, "chat", skillContext.agentModel());
+        String modelName = resolveModelName(skillContext.agentModel(), routedModel.get("provider"), routedModel.get("modelName"));
+        requireVisionCapability(companyId, routedModel.get("provider"), modelName, turnAttachments);
         BuiltinSkillDocumentService.ResolvedBuiltinSkillDocs builtinDocs =
                 builtinSkillDocumentService.resolveDocs(skillContext, safeQuestion);
         stageTraces.add(stageTrace("SKILL_RESOLVE", "技能候选解析", "SUCCESS", skillStartedAt, Instant.now(),
                 "已解析当前智能体绑定技能、工具边界与会话激活技能。",
                 withRunId(skillTraceMetadata(skillContext, List.of(), builtinDocs), runId)));
         Instant userPersistStartedAt = Instant.now();
-        persistUserTurnCommitted(companyId, userId, sessionId, safeQuestion, skillContext.agentId());
+        persistUserTurnCommitted(companyId, userId, sessionId, safeQuestion, skillContext.agentId(), turnAttachments);
         stageTraces.add(stageTrace("USER_MESSAGE", "用户输入", "SUCCESS", userPersistStartedAt, Instant.now(),
                 clipForTrace(safeQuestion, 220), Map.of("sessionId", sessionId, "runId", runId)));
         List<String> effectiveKnowledgeBaseIds = skillResolverService.resolveKnowledgeBaseIds(skillContext, kbIds);
@@ -451,8 +480,6 @@ public class ChatOrchestratorService {
         stageTraces.add(stageTrace("MODE_ROUTING", "运行模式路由", "SUCCESS", Instant.now(), Instant.now(),
                 "已按服务端规则选择 " + modeDecision.mode() + "。",
                 withRunId(agentRuntimeModeRouter.payload(modeDecision), runId)));
-        Map<String, String> routedModel = modelRouterService.route(companyId, "chat", skillContext.agentModel());
-        String modelName = resolveModelName(skillContext.agentModel(), routedModel.get("provider"), routedModel.get("modelName"));
         ModelCallCredentials modelCredentials = resolveModelCallCredentials(companyId, routedModel.get("provider"));
         boolean showThinking = chatThinkingConfigService.isEnabled(companyId);
         boolean useKnowledgeRetrieval = knowledgeDecision.shouldRetrieve();
@@ -491,7 +518,7 @@ public class ChatOrchestratorService {
         chatSessionStateService.mergeUserTurn(companyId, sessionId, skillContext.agentId(), safeQuestion);
         List<Map<String, Object>> messages = buildInitialMessages(
                 sessionId, safeQuestion, ragContext, showThinking, skillContext, companyId, userId,
-                runtimeContext, routedModel.get("provider"), modelName, builtinDocs);
+                runtimeContext, routedModel.get("provider"), modelName, builtinDocs, turnAttachments);
         stageTraces.add(stageTrace("MEMORY_CONTEXT", "主体记忆上下文", "SUCCESS", Instant.now(), Instant.now(),
                 "已按可信运行时上下文完成记忆装配。",
                 withRunId(trustedMemoryRuntimeContextService.traceMetadata(), runId)));
@@ -649,8 +676,18 @@ public class ChatOrchestratorService {
     public void chatStream(String companyId, String userId, String sessionId,
                            String question, List<String> kbIds, String requestedAgentId,
                            String activeSkillCode, Map<String, String> metadataFilters, SseEmitter emitter) {
+        chatStream(companyId, userId, sessionId, question, kbIds, requestedAgentId,
+                activeSkillCode, metadataFilters, List.of(), emitter);
+    }
+
+    public void chatStream(String companyId, String userId, String sessionId,
+                           String question, List<String> kbIds, String requestedAgentId,
+                           String activeSkillCode, Map<String, String> metadataFilters,
+                           List<String> attachmentIds, SseEmitter emitter) {
+        List<String> requestedAttachments = attachmentIds == null ? List.of() : List.copyOf(attachmentIds);
         CompletableFuture.runAsync(() -> {
-            chatStreamBlocking(companyId, userId, sessionId, question, kbIds, requestedAgentId, activeSkillCode, metadataFilters, emitter);
+            chatStreamBlocking(companyId, userId, sessionId, question, kbIds, requestedAgentId,
+                    activeSkillCode, metadataFilters, requestedAttachments, "web", emitter);
         }, agentRuntimeExecutor);
     }
 
@@ -670,10 +707,18 @@ public class ChatOrchestratorService {
     public void chatStreamBlocking(String companyId, String userId, String sessionId,
                                    String question, List<String> kbIds, String requestedAgentId,
                                    String activeSkillCode, Map<String, String> metadataFilters, String channel, SseEmitter emitter) {
+        chatStreamBlocking(companyId, userId, sessionId, question, kbIds, requestedAgentId,
+                activeSkillCode, metadataFilters, List.of(), channel, emitter);
+    }
+
+    public void chatStreamBlocking(String companyId, String userId, String sessionId,
+                                   String question, List<String> kbIds, String requestedAgentId,
+                                   String activeSkillCode, Map<String, String> metadataFilters,
+                                   List<String> attachmentIds, String channel, SseEmitter emitter) {
         String runId = newRunId();
         agentRuntimeConcurrencyService.run(companyId, userId, requestedAgentId, sessionId, () -> {
             chatStreamBlockingLocked(companyId, userId, sessionId, question, kbIds, requestedAgentId,
-                    activeSkillCode, metadataFilters, channel, emitter, runId);
+                    activeSkillCode, metadataFilters, attachmentIds, channel, emitter, runId);
             return null;
         });
     }
@@ -681,7 +726,7 @@ public class ChatOrchestratorService {
     private void chatStreamBlockingLocked(String companyId, String userId, String sessionId,
                                           String question, List<String> kbIds, String requestedAgentId,
                                           String activeSkillCode, Map<String, String> metadataFilters,
-                                          String channel, SseEmitter emitter, String runId) {
+                                          List<String> attachmentIds, String channel, SseEmitter emitter, String runId) {
             Instant runStartedAt = Instant.now();
             List<AgentRunTraceService.StageTraceInput> stageTraces = new ArrayList<>();
             List<AgentRunTraceService.ModelCallTraceInput> modelCallTraces = new ArrayList<>();
@@ -692,11 +737,12 @@ public class ChatOrchestratorService {
         ResolvedSkillContext skillContext = skillResolverService.resolve(
                 companyId, requestedAgentId, sessionId, Optional.ofNullable(activeSkillCode));
         agentAccessControlService.require(companyId, userId, TenantContext.getRoles(), skillContext.agentId(), AgentPermission.RUN);
+                String normalizedQuestion = normalizeQuestion(question, attachmentIds);
                 SafetyGatewayService.SafetyDecision inputDecision =
-                        safetyGatewayService.checkInput(companyId, userId, "CHAT_STREAM_INPUT", question);
+                        safetyGatewayService.checkInput(companyId, userId, "CHAT_STREAM_INPUT", normalizedQuestion);
                 if (inputDecision.blocked()) {
                     String blockedAnswer = blockedBySecurityMessage();
-                    persistUserTurnCommitted(companyId, userId, sessionId, "[BLOCKED_BY_SECURITY_GATEWAY]", skillContext.agentId());
+                    persistUserTurnCommitted(companyId, userId, sessionId, "[BLOCKED_BY_SECURITY_GATEWAY]", skillContext.agentId(), List.of());
                     persistAssistantTurnCommitted(companyId, userId, sessionId, blockedAnswer, "AI_CHAT_STREAM_BLOCKED", "safety-gateway");
                     safeSendDeltaInChunks(emitter, blockedAnswer);
                     emitter.send(SseEmitter.event().name("done").data(Map.of(
@@ -707,13 +753,18 @@ public class ChatOrchestratorService {
                     return;
                 }
                 String safeQuestion = inputDecision.safeText();
+                List<ChatAttachmentEntity> turnAttachments = chatAttachmentService.requireReadyForMessage(
+                        companyId, userId, sessionId, attachmentIds);
+                Map<String, String> routedModel = modelRouterService.route(companyId, "chat", skillContext.agentModel());
+                String modelName = resolveModelName(skillContext.agentModel(), routedModel.get("provider"), routedModel.get("modelName"));
+                requireVisionCapability(companyId, routedModel.get("provider"), modelName, turnAttachments);
                 BuiltinSkillDocumentService.ResolvedBuiltinSkillDocs builtinDocs =
                         builtinSkillDocumentService.resolveDocs(skillContext, safeQuestion);
                 stageTraces.add(stageTrace("SKILL_RESOLVE", "技能候选解析", "SUCCESS", skillStartedAt, Instant.now(),
                         "已解析当前智能体绑定技能、工具边界与会话激活技能。",
                         withRunId(skillTraceMetadata(skillContext, List.of(), builtinDocs), runId)));
                 Instant userPersistStartedAt = Instant.now();
-                persistUserTurnCommitted(companyId, userId, sessionId, safeQuestion, skillContext.agentId());
+                persistUserTurnCommitted(companyId, userId, sessionId, safeQuestion, skillContext.agentId(), turnAttachments);
                 stageTraces.add(stageTrace("USER_MESSAGE", "用户输入", "SUCCESS", userPersistStartedAt, Instant.now(),
                         clipForTrace(safeQuestion, 220), Map.of("sessionId", sessionId, "runId", runId)));
                 List<String> effectiveKnowledgeBaseIds = skillResolverService.resolveKnowledgeBaseIds(skillContext, kbIds);
@@ -735,8 +786,6 @@ public class ChatOrchestratorService {
                 safeSendPhase(emitter, "runtime_started", null, Map.of(
                         "modeDecision", agentRuntimeModeRouter.payload(modeDecision),
                         "taskRun", agentPlanExecCanaryService.payload(planExec)));
-                Map<String, String> routedModel = modelRouterService.route(companyId, "chat", skillContext.agentModel());
-                String modelName = resolveModelName(skillContext.agentModel(), routedModel.get("provider"), routedModel.get("modelName"));
                 ModelCallCredentials modelCredentials = resolveModelCallCredentials(companyId, routedModel.get("provider"));
                 boolean showThinking = chatThinkingConfigService.isEnabled(companyId);
                 boolean useKnowledgeRetrieval = knowledgeDecision.shouldRetrieve();
@@ -795,7 +844,7 @@ public class ChatOrchestratorService {
                 chatSessionStateService.mergeUserTurn(companyId, sessionId, skillContext.agentId(), safeQuestion);
                 List<Map<String, Object>> messages = buildInitialMessages(
                         sessionId, safeQuestion, ragContext, showThinking, skillContext, companyId, userId,
-                        runtimeContext, routedModel.get("provider"), modelName, builtinDocs);
+                        runtimeContext, routedModel.get("provider"), modelName, builtinDocs, turnAttachments);
                 stageTraces.add(stageTrace("MEMORY_CONTEXT", "主体记忆上下文", "SUCCESS", Instant.now(), Instant.now(),
                         "已按可信运行时上下文完成记忆装配。",
                         withRunId(trustedMemoryRuntimeContextService.traceMetadata(), runId)));
@@ -2183,7 +2232,8 @@ public class ChatOrchestratorService {
                                                            RuntimeContext runtimeContext,
                                                            String routedProvider,
                                                            String modelName,
-                                                           BuiltinSkillDocumentService.ResolvedBuiltinSkillDocs builtinDocs) {
+                                                           BuiltinSkillDocumentService.ResolvedBuiltinSkillDocs builtinDocs,
+                                                           List<ChatAttachmentEntity> turnAttachments) {
         List<Map<String, Object>> messages = new ArrayList<>();
         String baseSystem = showThinking ? AliyunBailianClient.SYSTEM_PROMPT_WITH_THINKING : AliyunBailianClient.SYSTEM_PROMPT;
         BuiltinSkillRuntimeConfigService.ResolvedBuiltinSkillRuntimeConfig runtimeConfig =
@@ -2217,7 +2267,8 @@ public class ChatOrchestratorService {
                 userContent.append(i + 1).append(". ").append(ragContext.get(i)).append("\n");
             }
         }
-        messages.add(Map.of("role", "user", "content", userContent.toString()));
+        messages.add(Map.of("role", "user", "content",
+                chatAttachmentService.buildModelContent(userContent.toString(), turnAttachments)));
         return messages;
     }
 
@@ -2249,17 +2300,21 @@ public class ChatOrchestratorService {
         return history;
     }
 
-    private void persistUserTurn(String companyId, String userId, String sessionId, String question, String agentId) {
+    private void persistUserTurn(String companyId, String userId, String sessionId, String question,
+                                 String agentId, List<ChatAttachmentEntity> attachments) {
         Optional<ChatSessionEntity> existing = chatSessionRepository.findById(sessionId);
         ChatSessionEntity session = existing.orElseGet(() ->
                 new ChatSessionEntity(sessionId, companyId, userId, agentId, clip(question, 48)));
         session.touch(clip(question, 48), agentId);
         chatSessionRepository.save(session);
-        chatMessageRepository.save(new ChatMessageEntity(sessionId, companyId, "user", question));
+        ChatMessageEntity message = chatMessageRepository.save(new ChatMessageEntity(sessionId, companyId, "user", question));
+        chatMessageRepository.flush();
+        chatAttachmentService.attachToMessage(attachments, message);
     }
 
-    private void persistUserTurnCommitted(String companyId, String userId, String sessionId, String question, String agentId) {
-        tx.executeWithoutResult(s -> persistUserTurn(companyId, userId, sessionId, question, agentId));
+    private void persistUserTurnCommitted(String companyId, String userId, String sessionId, String question,
+                                          String agentId, List<ChatAttachmentEntity> attachments) {
+        tx.executeWithoutResult(s -> persistUserTurn(companyId, userId, sessionId, question, agentId, attachments));
         publishSessionUpdated(companyId, userId, sessionId, "user_message");
     }
 
@@ -2372,15 +2427,18 @@ public class ChatOrchestratorService {
         return sessionRealtimeEventService.subscribe(companyId, userId);
     }
 
-    public List<Map<String, String>> sessionMessages(String companyId, String userId, String sessionId) {
+    public List<Map<String, Object>> sessionMessages(String companyId, String userId, String sessionId) {
         queryVisibleSession(companyId, userId, sessionId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
         return chatMessageRepository.findByCompanyIdAndSessionIdOrderByCreatedAtAsc(companyId, sessionId).stream()
-                .map(item -> Map.of(
-                        "role", item.getRoleCode(),
-                        "content", item.getContent(),
-                        "createdAt", item.getCreatedAt().toString()
-                ))
+                .map(item -> {
+                    Map<String, Object> message = new LinkedHashMap<>();
+                    message.put("role", item.getRoleCode());
+                    message.put("content", item.getContent());
+                    message.put("createdAt", item.getCreatedAt().toString());
+                    message.put("attachments", chatAttachmentService.viewsForMessage(item.getId()));
+                    return message;
+                })
                 .toList();
     }
 
@@ -2925,6 +2983,19 @@ public class ChatOrchestratorService {
                 continue;
             }
             Object content = msg.get("content");
+            if (content instanceof String text) {
+                return text;
+            }
+            if (content instanceof List<?> parts) {
+                return parts.stream()
+                        .filter(Map.class::isInstance)
+                        .map(Map.class::cast)
+                        .filter(part -> "text".equals(String.valueOf(part.get("type"))))
+                        .map(part -> String.valueOf(part.getOrDefault("text", "")))
+                        .filter(text -> !text.isBlank())
+                        .findFirst()
+                        .orElse("");
+            }
             return content == null ? "" : String.valueOf(content);
         }
         return "";
@@ -3344,6 +3415,27 @@ public class ChatOrchestratorService {
 
     private static String resolveModelName(String agentModel, String routedProvider, String routedModelName) {
         return routedModelName;
+    }
+
+    private static String normalizeQuestion(String question, List<String> attachmentIds) {
+        String normalized = question == null ? "" : question.trim();
+        if (!normalized.isBlank()) {
+            return normalized;
+        }
+        if (attachmentIds != null && attachmentIds.stream().anyMatch(id -> id != null && !id.isBlank())) {
+            return "请分析这些图片。";
+        }
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "QUESTION_OR_ATTACHMENT_REQUIRED");
+    }
+
+    private void requireVisionCapability(String companyId, String providerCode, String modelName,
+                                         List<ChatAttachmentEntity> attachments) {
+        if (attachments == null || attachments.isEmpty()) {
+            return;
+        }
+        if (!modelProviderService.supportsTrustedCapability(companyId, providerCode, modelName, "vision")) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "VISION_MODEL_REQUIRED");
+        }
     }
 
     private String clip(String value, int max) {

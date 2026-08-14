@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-14T09:20:00Z
+updated_at: 2026-08-14T10:52:54Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,18 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-309 - 对话框连续粘贴图片附件
+
+- status: `testing`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- claimed_by: `哪吒 / workbuddy-macbook-m5max`
+- spec_path: `docs/specs/FEAT-188-conversation-image-paste-attachments.md`
+- task_status_path: `.claw/tasks/TASK-309.md`
+- blocked_by: `none`
+- scope_files: `会话附件 API/V116、聊天消息关联与 vision 门禁、工作台附件队列、测试与本地环境验证`
+- next_action: `代码、定向后端、全量前端和构建已通过；提交本地 main 后更新 cici.localhost，执行 V116/API/桌面交互验收并登记 DevAutopilot 证据。`
 
 ### TASK-308 - DevAutopilot 任务评审委托授权
 

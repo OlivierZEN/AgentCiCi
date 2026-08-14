@@ -785,6 +785,8 @@ class ChatOrchestratorServiceModelIdentityTest {
     private static final class CrmRouteFixture {
         private final ChatSessionRepository chatSessionRepository = mock(ChatSessionRepository.class);
         private final ChatMessageRepository chatMessageRepository = mock(ChatMessageRepository.class);
+        private final ChatAttachmentService chatAttachmentService = mock(ChatAttachmentService.class);
+        private final ModelProviderService modelProviderService = mock(ModelProviderService.class);
         private final ModelRouterService modelRouterService = mock(ModelRouterService.class);
         private final ModelInvocationResolver modelInvocationResolver = mock(ModelInvocationResolver.class);
         private final ToolOrchestratorService toolOrchestratorService = mock(ToolOrchestratorService.class);
@@ -867,6 +869,9 @@ class ChatOrchestratorServiceModelIdentityTest {
                     any(SkillResolverService.ResolvedSkillContext.class), anyString())).thenReturn(builtinDocs);
             when(modelRouterService.route(eq("demo-org"), eq("chat"), eq("mock-model")))
                     .thenReturn(Map.of("provider", "mock", "modelName", "mock-model"));
+            when(modelInvocationResolver.resolve("demo-org", "chat"))
+                    .thenReturn(new ModelInvocationResolver.ResolvedModelInvocation(
+                            "chat", "mock", "mock-model", "https://model.test", "test-key", true));
             when(chatThinkingConfigService.isEnabled("demo-org")).thenReturn(false);
             when(toolOrchestratorService.getToolDefinitions(anyString(), anyList(), anyList()))
                     .thenReturn(List.of());
@@ -883,6 +888,10 @@ class ChatOrchestratorServiceModelIdentityTest {
             when(chatSessionStateService.get(anyString(), anyString())).thenReturn(Optional.empty());
             when(chatMessageRepository.findByCompanyIdAndSessionIdOrderByCreatedAtDesc(anyString(), anyString(), any()))
                     .thenReturn(List.of());
+            when(chatAttachmentService.requireReadyForMessage(anyString(), anyString(), anyString(), anyList()))
+                    .thenReturn(List.of());
+            when(chatAttachmentService.buildModelContent(anyString(), anyList()))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
             when(chatSessionRepository.findById(anyString())).thenReturn(Optional.empty());
             when(agentWorkflowRuntimeService.evaluateForChat(anyString(), anyString(), anyString(), anyList()))
                     .thenReturn(executionResult);
@@ -899,6 +908,8 @@ class ChatOrchestratorServiceModelIdentityTest {
             service = new ChatOrchestratorService(
                     chatSessionRepository,
                     chatMessageRepository,
+                    chatAttachmentService,
+                    modelProviderService,
                     modelRouterService,
                     modelInvocationResolver,
                     toolOrchestratorService,
