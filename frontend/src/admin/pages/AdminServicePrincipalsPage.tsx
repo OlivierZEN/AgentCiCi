@@ -190,7 +190,7 @@ export default function AdminServicePrincipalsPage() {
 
   const load = async (options?: { quiet?: boolean }) => {
     if (!options?.quiet) setLoading(true);
-    setNotice("");
+    if (!options?.quiet) setNotice("");
     try {
       const [res, teamRes, membersRes, accessRes] = await Promise.all([
         fetch(adminApi.servicePrincipals(), { headers: { Authorization: `Bearer ${token}` } }),
