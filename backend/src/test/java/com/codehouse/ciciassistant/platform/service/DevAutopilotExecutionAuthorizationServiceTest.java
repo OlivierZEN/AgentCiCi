@@ -45,6 +45,29 @@ class DevAutopilotExecutionAuthorizationServiceTest {
     }
 
     @Test
+    void taskReviewUsesReadCreateAndUpdateScopes() {
+        DevAutopilotTenantApplicationService applications = mock(DevAutopilotTenantApplicationService.class);
+        AgentServicePrincipalExecutionService executions = mock(AgentServicePrincipalExecutionService.class);
+        when(applications.get(COMPANY_ID)).thenReturn(activeApplication());
+        List<String> scopes = List.of("runtime.record.read", "runtime.record.create", "runtime.record.update");
+        var token = new OfficialAccessTokenService.IssuedToken(
+                "test-service-oact", Instant.parse("2030-01-01T00:00:00Z"), TENANT_ID, COMPANY_ID, scopes);
+        when(executions.authorizeSemattice(eq(COMPANY_ID), eq(MEMBER_ID), eq(AGENT_ID), eq(scopes),
+                eq("devautopilot_task_review")))
+                .thenReturn(new AgentServicePrincipalExecutionService.ExecutionAuthorization(
+                        SERVICE_ID, "研发产品经理", "owner-a", "human-a", "TENANT_APP_ROLE", "CONTRIBUTOR", token));
+
+        var result = new DevAutopilotExecutionAuthorizationService(applications, executions)
+                .authorize(COMPANY_ID, MEMBER_ID,
+                        DevAutopilotExecutionAuthorizationService.Operation.TASK_REVIEW);
+
+        assertEquals(SERVICE_ID, result.servicePrincipalId());
+        assertEquals(scopes, result.scopes());
+        verify(executions).authorizeSemattice(COMPANY_ID, MEMBER_ID, AGENT_ID, scopes,
+                "devautopilot_task_review");
+    }
+
+    @Test
     void unknownOperationCannotChooseScopes() {
         DevAutopilotTenantApplicationService applications = mock(DevAutopilotTenantApplicationService.class);
         when(applications.get(COMPANY_ID)).thenReturn(activeApplication());

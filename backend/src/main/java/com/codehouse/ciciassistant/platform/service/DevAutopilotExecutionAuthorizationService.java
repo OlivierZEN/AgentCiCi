@@ -48,6 +48,7 @@ public class DevAutopilotExecutionAuthorizationService {
         List<String> scopes = switch (selected) {
             case REQUIREMENT_CONFIRM -> List.of("runtime.record.read", "runtime.record.update");
             case TASK_PLAN_CONFIRM -> List.of("runtime.record.read", "runtime.record.create");
+            case TASK_REVIEW -> List.of("runtime.record.read", "runtime.record.create", "runtime.record.update");
             case UNKNOWN -> throw new IllegalArgumentException("不支持的 DevAutopilot 委托操作");
         };
         AgentServicePrincipalExecutionService.ExecutionAuthorization authorization =
@@ -71,6 +72,7 @@ public class DevAutopilotExecutionAuthorizationService {
     public enum Operation {
         REQUIREMENT_CONFIRM,
         TASK_PLAN_CONFIRM,
+        TASK_REVIEW,
         UNKNOWN
     }
 
