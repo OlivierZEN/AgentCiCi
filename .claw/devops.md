@@ -8,6 +8,13 @@ status: active
 
 # DevOps
 
+## 2026-08-14 TASK-303 本地开发环境
+
+- 代码制品从本地 `main@e8275353e0d0e6dbdd85e68fb95e8d2ed1a7ff11` 构建为 `cc-aixone/agentcici-backend:local`，镜像 ID `sha256:b98eb8aec5d8101af860fad1c42d5f578602f0334e6234b733213d01030e8dfd`，label 版本/提交为 `2.8.61-dev.e827535 / e8275353e0d0`。
+- 仅重建 backend；容器 healthy/restart=0，内部 `/system/version` 与 `/actuator/health=UP` 回读通过。数据库、Keycloak、Semattice 和 AgentCiCi frontend 未重建。
+- 与 DevAutopilot TASK-036 完成完整 `./stack verify`，基础设施隔离、TLS、OIDC、应用版本/健康和匿名鉴权边界通过。
+- 运行制品提交早于本条文档提交；本条不改变应用制品。真实登录态确认创建新需求仍待业务验收，UAT/生产未修改。
+
 ## 2026-08-14 TASK-302 UAT `2.8.61-beta.20`
 
 - 冻结 Git tag/commit 为 `2.8.61-beta.20 / 1b6bb8f1974a`；backend/frontend linux/amd64 ACR index digest 为 `sha256:18c1e7c3c082ad475e3a4b714b96e3f3e385d08deaa6384ec5c944ba0143eb56` / `sha256:48520c667024f7d9e94f9d696c37eb089e0cca115c8a87d7b5f72df4a0180c56`，image label、tag 与运行版本一致；未更新 `latest`。
