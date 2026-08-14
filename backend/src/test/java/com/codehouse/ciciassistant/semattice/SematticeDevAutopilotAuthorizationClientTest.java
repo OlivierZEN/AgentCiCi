@@ -1,6 +1,7 @@
 package com.codehouse.ciciassistant.semattice;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -10,13 +11,16 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.server.ResponseStatusException;
 
 class SematticeDevAutopilotAuthorizationClientTest {
     @Test
@@ -55,6 +59,28 @@ class SematticeDevAutopilotAuthorizationClientTest {
         assertThat(result.assignmentCount()).isEqualTo(2);
         verify(signer).signature(eq("agentcici"), eq("POST"),
                 eq("/internal/v1/devautopilot-authorization-templates"), anyString(), anyString(), anyString());
+        server.verify();
+    }
+
+    @Test
+    void reportsOnlySematticeStatusAndStableErrorCodeWhenTheTemplateIsRejected() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        SematticeProvisioningClient signer = mock(SematticeProvisioningClient.class);
+        when(signer.signature(eq("agentcici"), eq("POST"),
+                eq("/internal/v1/devautopilot-authorization-templates"), anyString(), anyString(), anyString()))
+                .thenReturn("signed");
+        server.expect(requestTo("https://semattice.example.test/internal/v1/devautopilot-authorization-templates"))
+                .andRespond(withStatus(HttpStatus.FORBIDDEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"status\":\"failed\",\"error\":{\"code\":\"UNAUTHORIZED\"}}"));
+        SematticeDevAutopilotAuthorizationClient client = new SematticeDevAutopilotAuthorizationClient(
+                builder, new ObjectMapper(), signer, "https://semattice.example.test/");
+
+        assertThatThrownBy(() -> client.apply("company-a", "activation-a", "key-a", List.of(
+                new SematticeDevAutopilotAuthorizationClient.Assignment("service-pm", "product_manager"))))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("HTTP 403 UNAUTHORIZED");
         server.verify();
     }
 }

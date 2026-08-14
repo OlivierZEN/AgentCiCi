@@ -6,10 +6,12 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 
 /** Trusted control-plane client for Semattice's immutable DevAutopilot authorization template. */
@@ -17,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class SematticeDevAutopilotAuthorizationClient {
     public static final String TEMPLATE_VERSION = "devautopilot.authorization.v3";
     private static final String PATH = "/internal/v1/devautopilot-authorization-templates";
+    private static final Pattern STABLE_ERROR_CODE = Pattern.compile("^[A-Z][A-Z0-9_]{2,63}$");
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
     private final SematticeProvisioningClient signer;
@@ -68,14 +71,34 @@ public class SematticeDevAutopilotAuthorizationClient {
                     result.path("role_count").asInt(), result.path("permission_set_count").asInt(),
                     result.path("object_count").asInt(), result.path("assignment_count").asInt(),
                     result.path("verified").asBoolean(), result.path("state").asText());
+        } catch (RestClientResponseException exception) {
+            throw unavailable(remoteFailureDetail(exception));
         } catch (RestClientException | java.io.IOException exception) {
             throw unavailable();
         }
     }
 
     private ResponseStatusException unavailable() {
+        return unavailable("request failed");
+    }
+
+    private ResponseStatusException unavailable(String detail) {
         return new ResponseStatusException(HttpStatus.BAD_GATEWAY,
-                "Semattice DevAutopilot authorization template request failed");
+                "Semattice DevAutopilot authorization template request failed: " + detail);
+    }
+
+    private String remoteFailureDetail(RestClientResponseException exception) {
+        String detail = "HTTP " + exception.getStatusCode().value();
+        try {
+            String code = objectMapper.readTree(exception.getResponseBodyAsString())
+                    .path("error").path("code").asText();
+            if (STABLE_ERROR_CODE.matcher(code).matches()) {
+                return detail + " " + code;
+            }
+        } catch (java.io.IOException ignored) {
+            // Only a Semattice stable error code is safe to surface to the human owner.
+        }
+        return detail;
     }
 
     public record Assignment(String principalId, String logicalRole) { }
