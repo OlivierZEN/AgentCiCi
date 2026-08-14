@@ -1,12 +1,20 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-14T00:29:24Z
+updated_at: 2026-08-14T02:20:00Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-14 TASK-303 / TASK-304 / TASK-305 UAT `2.8.61-beta.21`
+
+- 冻结 Git tag/commit 为 `2.8.61-beta.21 / 626f7e22c774`；backend/frontend linux/amd64 ACR index digest 为 `sha256:ab37b2621ce9800070bf05d3307ba531b46363a0d94a32b69539b1d15731b8d4` / `sha256:c9e24c55c92b8ede42d96c6c3c839d11a62a3cdfde9d50380c7f6575525fc291`，未更新 `latest`。
+- 完整备份 `/data/apps/agentcici/backups/20260814T021238Z-before-2.8.61-beta.21` 包含 Compose、受管环境、PostgreSQL、KB、Qdrant、beta.20 旧镜像、容器状态、回滚说明和 SHA-256 清单；数据库、tar、gzip 与清单均校验通过，全部工件非空且 `0600`。即时应用回滚目标为 `2.8.61-beta.20`。
+- 仅 pull/force-recreate backend/frontend；database、Redis、RabbitMQ、Qdrant 的容器 ID 发布前后保持 `d14ef...`、`db094...`、`4166...`、`26aec...`，六容器 healthy/restart=0。
+- `/system/version=2.8.61-beta.21 / 626f7e22c774`、health=`UP`、Flyway V111-V115 成功、Nginx 有效；六项公网 smoke、平台集成路由 200、匿名 API JSON 401 和稳定窗口通过，backend severe error=0、frontend HTTP 5xx=0。
+- 运行前端制品已核验包含“最长 60 分钟”和 `3600000`。未配置或执行真实 60 分钟厂商任务，业务验收待受权平台管理员完成；生产未修改。
 
 ## 2026-08-14 TASK-304 本地开发环境
 

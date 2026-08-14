@@ -3,7 +3,7 @@ kind: task-status
 task_id: TASK-305
 feature_id: FEAT-176
 status: done
-updated_at: 2026-08-14T01:40:41Z
+updated_at: 2026-08-14T02:20:00Z
 updated_by: codex
 owner_role: fullstack-agent
 spec_path: docs/specs/FEAT-176-platform-managed-web-tools.md
@@ -32,3 +32,6 @@ spec_path: docs/specs/FEAT-176-platform-managed-web-tools.md
 - 部署 JS 已回读“允许 10000–3600000（最长 60 分钟）”；backend `/system/version` 的 version、commit 和 imageTag 一致。
 - Compose 依赖图同时重建 Semattice 与 DevAutopilot 应用容器；共享 PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak 和边缘 Nginx 未重建，完整 `./stack verify` 通过。
 - 当前 AgentCiCi main 的后续提交 `18f28b04` 仅含其他任务交付文档，不影响本次制品；UAT/生产未修改。
+- 远程 `main@626f7e22c774` 已冻结并发布 UAT `2.8.61-beta.21`；部署前完整备份可回滚到 beta.20，仅重建 backend/frontend，所有容器 healthy/restart=0，状态服务 ID 未改变。
+- UAT 平台集成路由为 200、匿名 API 为 JSON 401，部署 JS 已回读“最长 60 分钟”和 `3600000`；最新五条 Flyway 均成功，公网 smoke 和稳定窗口通过。
+- UAT 未配置或调用真实长达 60 分钟的厂商任务，因此当前结论为技术发布通过，真实长任务业务验收仍待平台管理员使用受权配置完成；生产未修改。

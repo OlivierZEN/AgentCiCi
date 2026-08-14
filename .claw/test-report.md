@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-14T01:40:41Z
+updated_at: 2026-08-14T02:20:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-14T01:40:41Z
-last_run_status: passed_local_end_to_end
+last_run_at: 2026-08-14T02:20:00Z
+last_run_status: passed_with_uat_business_acceptance_pending
 ---
 
 # Test Report
+
+## 2026-08-14 TASK-303 / TASK-304 / TASK-305 UAT `2.8.61-beta.21`
+
+- Git/制品：本地与远程 `main` 同步于 `626f7e22c774`，annotated tag `2.8.61-beta.21` 指向该提交。backend/frontend linux/amd64 ACR index digest 为 `sha256:ab37b2621ce9800070bf05d3307ba531b46363a0d94a32b69539b1d15731b8d4` / `sha256:c9e24c55c92b8ede42d96c6c3c839d11a62a3cdfde9d50380c7f6575525fc291`；未更新 `latest`。
+- 备份：`/data/apps/agentcici/backups/20260814T021238Z-before-2.8.61-beta.21` 包含 Compose、受管环境、PostgreSQL、KB、Qdrant、beta.20 旧镜像、发布前状态、回滚说明和 SHA 清单；工件均非空、`0600` 且数据库/tar/gzip/SHA 读取校验通过。
+- 部署：仅 pull/force-recreate backend/frontend；database、Redis、RabbitMQ、Qdrant 容器 ID 保持 `d14ef...`、`db094...`、`4166...`、`26aec...`，六容器均 healthy/restart=0。
+- 运行门禁：`/system/version=2.8.61-beta.21 / 626f7e22c774`，backend health=`UP`，Flyway 最新五条 V111-V115 均成功，frontend Nginx 配置有效。
+- 外部与稳定性：六项公网只读 smoke 通过；`/platform/integrations`=200，匿名 `/api/platform/integrations`=`401 application/json`。部署 JS 包含“最长 60 分钟”和 `3600000`；稳定窗口 backend severe error=0、按 Nginx status 字段统计 frontend HTTP 5xx=0。
+- 状态：`passed_with_uat_business_acceptance_pending`。未配置或调用真实长达 60 分钟的厂商任务；即时应用回滚目标为 beta.20，生产未修改。
 
 ## 2026-08-14 TASK-303 / TASK-304 DevAutopilot 委托产品经理执行闭环
 
