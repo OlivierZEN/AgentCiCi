@@ -2,8 +2,8 @@
 kind: task-status
 task_id: TASK-305
 feature_id: FEAT-176
-status: review
-updated_at: 2026-08-14T01:31:58Z
+status: done
+updated_at: 2026-08-14T01:40:41Z
 updated_by: codex
 owner_role: fullstack-agent
 spec_path: docs/specs/FEAT-176-platform-managed-web-tools.md
@@ -28,4 +28,7 @@ spec_path: docs/specs/FEAT-176-platform-managed-web-tools.md
 - 后端 `ManagedWebToolServiceTest,SandboxCodeInterpreterServiceTest` 定向测试通过；60 分钟边界被接受，超过 1 ms 被拒绝。
 - 后端 package 通过。
 - 前端定向 5/5 通过，production build 通过；仅保留既有 chunk-size warning。
-- 待提交本地 main 并从该提交重建本地 backend/frontend 后完成运行回读。
+- 功能提交 `4f7aca02bf85` 已进入本地 main；运行 backend/frontend 版本为 `2.8.61-dev.4f7aca0`，均 healthy/restart=0。
+- 部署 JS 已回读“允许 10000–3600000（最长 60 分钟）”；backend `/system/version` 的 version、commit 和 imageTag 一致。
+- Compose 依赖图同时重建 Semattice 与 DevAutopilot 应用容器；共享 PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak 和边缘 Nginx 未重建，完整 `./stack verify` 通过。
+- 当前 AgentCiCi main 的后续提交 `18f28b04` 仅含其他任务交付文档，不影响本次制品；UAT/生产未修改。

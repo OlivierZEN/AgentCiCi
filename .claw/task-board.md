@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-14T01:31:58Z
+updated_at: 2026-08-14T01:40:41Z
 updated_by: codex
 board_status: active
 ---
@@ -14,17 +14,6 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
-
-### TASK-305 - 平台长任务集成超时上限调整
-
-- status: `review`
-- priority: `high`
-- owner_role: `fullstack-agent`
-- claimed_by: `codex`
-- spec_path: `docs/specs/FEAT-176-platform-managed-web-tools.md`
-- task_status_path: `.claw/tasks/TASK-305.md`
-- blocked_by: `none`
-- next_action: `提交本地 main，从该提交重建 backend/frontend 并回读开发环境版本与健康`
 
 ### TASK-302 - 运营端系统 API 目录
 
@@ -1584,6 +1573,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-305 - 平台长任务集成超时上限调整
+
+- status: `done`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-176-platform-managed-web-tools.md`
+- task_status_path: `.claw/tasks/TASK-305.md`
+- completion_evidence: `4f7aca02；60 分钟边界测试、后端 package、前端 5/5/build、本地 2.8.61-dev.4f7aca0 与完整 stack verify 通过`
+- next_action: `已完成本地闭环；平台管理员可按长任务需要将超时配置到 3,600,000 ms，UAT/生产未修改。`
 
 ### TASK-304 - 提供产品经理 SERVICE 窄范围委托执行授权
 

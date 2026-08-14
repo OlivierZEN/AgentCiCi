@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-176
 title: 平台联网搜索与网页抓取集成
-status: in_implementation
+status: verified
 owner_role: fullstack-agent
 task_ids: TASK-292, TASK-305
 related_decisions: none
 related_issues: none
-updated_at: 2026-08-14T01:30:03Z
+updated_at: 2026-08-14T01:40:41Z
 updated_by: codex
 ---
 
@@ -91,3 +91,4 @@ updated_by: codex
 - 后端定向 16 项、package、前端完整 46 文件/249 项和生产构建通过；共享测试库既有 V81 checksum 漂移继续阻断 Spring 集成用例，未 repair。
 - 功能提交 `9a8cb9a` 已合并本地 `main@1f362c7`，本地 backend/frontend 从该提交构建和运行，完整 stack verify 与版本指纹回读通过。
 - 集成默认关闭；平台管理员需分别录入百炼业务空间 API Key/API Host，执行“测试搜索”“测试抓取”后按需启用，再用 Agent 会话完成真实调用验收。
+- TASK-305 将代码解释器、联网搜索和网页抓取的可配置超时上限统一提升为 60 分钟；默认 120 秒与最小 10 秒不变。前后端边界测试、构建、本地 main 制品和完整本地栈验证通过。

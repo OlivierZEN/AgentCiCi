@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-14T01:31:58Z
+updated_at: 2026-08-14T01:40:41Z
 updated_by: codex
 phase: review
-active_task: TASK-305
-next_action: "提交平台长任务 60 分钟超时调整到本地 main，从该提交重建 backend/frontend 并回读 cici.localhost。"
+active_task: TASK-302
+next_action: "使用一个新登记的独立 Keycloak Client 完成真实登录、公司列表、公司上下文和 X-Company-Id 端到端业务验收；UAT/生产继续按独立发布流程处理。"
 read_next:
   goals: false
   decisions: false
@@ -24,7 +24,7 @@ read_next:
 
 - TASK-303 / TASK-304 / INT-020 已完成本地端到端验收：HUMAN 在 DevAutopilot 显式确认后，AgentCiCi 只按固定操作白名单为当前激活的 primary 产品经理 SERVICE 签发短时 OACT；真实 `REQ-6F34ECF3` 已进入 `已确认`，随后 5 项任务均由该 SERVICE 写入 Semattice。backend 从本地 `main@53715a337691` 构建为 `2.8.61-dev.53715a3`，healthy/restart=0，定向测试、package 与完整 `./stack verify` 通过。UAT/生产未修改。
 
-- TASK-305 / FEAT-176 已完成代码与构建验证：代码解释器、联网搜索和网页抓取保持默认 120 秒、最小 10 秒，可配置上限统一从 180 秒提升到 60 分钟；前端数字输入、后端保存门禁与实际 HTTP 客户端使用同一上限。后端定向测试与 package、前端 5/5 与 production build 均通过，待本地 main 提交和开发环境回读。
+- TASK-305 / FEAT-176 已完成：代码解释器、联网搜索和网页抓取保持默认 120 秒、最小 10 秒，可配置上限统一从 180 秒提升到 60 分钟；前端数字输入、后端保存门禁与实际 HTTP 客户端使用同一上限。提交 `4f7aca02` 已从本地 main 构建为 `2.8.61-dev.4f7aca0`，backend/frontend healthy/restart=0，部署 JS 包含最长 60 分钟提示，完整 `./stack verify` 通过。当前 main 后续 `18f28b04` 仅为其他任务验收文档；UAT/生产未修改。
 
 - TASK-302 / FEAT-183 已进入 review：内部独立应用可直接携带自己的 Keycloak `access_token` 调用 `GET /openapi/v1/ecosystem/companies` 与 `POST /openapi/v1/ecosystem/company-context`，AgentCiCi 校验签名、Issuer、`typ=Bearer`、`aud=agentcici-api`、`azp`、平台受信应用、Scope、HUMAN 绑定和 ACTIVE 成员关系；不再要求应用专用 handoff 或第二套长期 Token。平台受信应用列表、编辑弹窗、停用和审计已实现。后端定向 14 项、package、前端 49 文件/272 项、production build、本地 V115 和完整 `./stack verify` 均通过；UAT 技术发布见下一条，真实新 Keycloak Client 端到端业务验收仍待接入应用完成。
 

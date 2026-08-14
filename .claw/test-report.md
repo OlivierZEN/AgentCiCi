@@ -1,11 +1,11 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-14T01:31:58Z
+updated_at: 2026-08-14T01:40:41Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-14T01:31:58Z
-last_run_status: passed_with_local_runtime_pending
+last_run_at: 2026-08-14T01:40:41Z
+last_run_status: passed_local_end_to_end
 ---
 
 # Test Report
@@ -23,7 +23,9 @@ last_run_status: passed_with_local_runtime_pending
 - 后端：`mvn -q -Dtest=ManagedWebToolServiceTest,SandboxCodeInterpreterServiceTest test` 通过，覆盖 `3,600,000` 接受和 `3,600,001` 拒绝；`mvn -q -DskipTests package` 通过。
 - 前端：`AdminIntegrationsPage.test.ts` 5/5 通过；`npm run build` 通过，仅保留既有 chunk-size warning。页面数字输入 `min=10000`、`max=3600000`，提示明确最长 60 分钟。
 - 命令更正：仓库无 `backend/mvnw`，首次 wrapper 命令退出 127 且未运行测试；随后按项目实际入口使用系统 Maven，结果通过。
-- 状态：`passed_with_local_runtime_pending`。代码验证通过，本地 main 提交与 `cici.localhost` 运行回读待完成。
+- 本地主线与制品：功能提交 `4f7aca02bf85` 已进入本地 main；backend/frontend 运行 `2.8.61-dev.4f7aca0`，版本 API、容器环境与资源文件名一致，部署 JS 回读“允许 10000–3600000（最长 60 分钟）”。当前 main 后续 `18f28b04` 仅含其他任务验收文档。
+- 运行态：backend/frontend healthy/restart=0。Compose 依赖图也重新创建 Semattice 与 DevAutopilot 应用容器；共享 PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak 和边缘 Nginx 未重建，完整 `./stack verify` 通过。
+- 状态：`passed`。本地技术闭环完成；未配置或调用真实长达 60 分钟的厂商任务，UAT/生产未修改。
 
 ## 2026-08-14 TASK-302 UAT `2.8.61-beta.20`
 
