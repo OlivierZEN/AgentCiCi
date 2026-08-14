@@ -74,4 +74,4 @@ updated_by: codex
 - Keycloak 直调增量已发布 UAT `2.8.61-beta.20 / 1b6bb8f1974a`；V115、运行版本、制品 digest、健康、状态服务不重启、页面/匿名鉴权边界和稳定窗口均通过，生产未修改。进入 done 前仍需使用一个真实新登记 Keycloak Client 完成登录、公司列表、公司上下文及后续 `X-Company-Id` 业务调用验收。
 - 受信应用应用代码的实时错误反馈已由本地 `main@2daa18ef` 实现并部署到 `cici.localhost`；空格、长度、首字符和字符集均有具体提示，前端全量测试、production build、运行制品回读和完整本地栈验证通过。UAT/生产未修改。
 - 受信应用目录与登记/编辑 modal 的桌面可读性已由 `8522fefb` 修整：表格不再继承通用目录的最小列宽，最右操作列完整显示；弹窗使用统一字段高度、稳定 Scope 选项和更清晰的 14–16px 表单字号，保存、启停、权限与审计逻辑不变。前端全量 49 文件/275 项、production build 和完整本地栈验证通过，`cici.localhost` 前端为 `2.8.61-dev.8522fef`。
-- `2.8.61-beta.22` 的 UAT 候选构建因 ACR OAuth 连接重置而未完成，Git tag 与完整镜像均不存在；UAT 继续运行 beta.21，未发生部署写入。待 registry 鉴权网络恢复后重新从远程 `main@8522fef` 冻结候选。
+- `2.8.61-beta.22 / 8522fefb52a2` 已发布 UAT，backend/frontend ACR index digest 为 `sha256:29e7449a0c88ff50ad17fb759091cc9b98a0cd95193fde8ebc59f6073337b145` / `sha256:96fb8e0040837e0067ae5fe57fb7b88167a0987ea814683bf52c3bc046915fe2`。仅重建 backend/frontend；V115、健康、Nginx、公开 smoke、页面路由、匿名 JSON 401 和稳定窗口均通过，生产未修改。仍需真实新登记 Keycloak Client/HUMAN 的端到端调用与平台管理员授权态视觉验收。

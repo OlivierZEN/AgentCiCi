@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-14T04:15:00Z
+updated_at: 2026-08-14T05:07:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-14T04:15:00Z
+last_run_at: 2026-08-14T05:07:00Z
 last_run_status: passed_with_authorized_visual_pending
 ---
 
@@ -17,7 +17,7 @@ last_run_status: passed_with_authorized_visual_pending
 - 前端回归：`npm test -- --run`，49 个测试文件、275 项通过；`npm run build` 通过，仅保留既有大 chunk warning；`git diff --check` 通过。
 - 本地开发环境：`cici-frontend` 从 AgentCiCi 本地 `main@8522fefb52a2` 构建为 `2.8.61-dev.8522fef`，镜像 revision 对齐，healthy/restart=0；`https://cici.localhost/platform/system-apis/applications` 返回 200，`cc-local-stack ./stack verify` 通过。
 - 授权态视觉边界：可控浏览器只有运营平台登录页，未通过任何账号、Token 或伪造会话访问受信应用列表；真实保存行为已由用户截图确认，后续可由平台管理员在 UAT 继续复核。
-- UAT 发布：公开 smoke 通过，版本 dry-run 为 `2.8.61-beta.22`；实际 ACR backend 推送的 OAuth 连接被重置，Git tag/完整镜像未生成，按发布规则停止。UAT 无 Compose、镜像、数据库或配置修改，仍为 beta.21。
+- UAT 发布：不可变候选 `2.8.61-beta.22 / 8522fefb52a2` 已发布，backend/frontend ACR index digest 为 `sha256:29e7449a0c88ff50ad17fb759091cc9b98a0cd95193fde8ebc59f6073337b145` / `sha256:96fb8e0040837e0067ae5fe57fb7b88167a0987ea814683bf52c3bc046915fe2`。发布前备份 `/data/apps/agentcici/backups/20260814T050143Z-before-2.8.61-beta.22` 已校验；只重建应用容器，运行版本、health、Flyway V115、Nginx、公开 smoke、页面路由 200、匿名 API JSON 401 和稳定窗口通过。真实独立 Client/HUMAN 调用和受权视觉验收待完成。
 
 ## 2026-08-14 TASK-306 产品经理删除 scope 角色隔离
 

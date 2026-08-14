@@ -8,6 +8,12 @@ status: active
 
 # DevOps
 
+## 2026-08-14 TASK-302 UAT `2.8.61-beta.22`
+
+- 冻结 Git tag/commit 为 `2.8.61-beta.22 / 8522fefb52a2`；backend/frontend ACR index digest 为 `sha256:29e7449a0c88ff50ad17fb759091cc9b98a0cd95193fde8ebc59f6073337b145` / `sha256:96fb8e0040837e0067ae5fe57fb7b88167a0987ea814683bf52c3bc046915fe2`，未更新 `latest`。
+- 完整备份 `/data/apps/agentcici/backups/20260814T050143Z-before-2.8.61-beta.22` 包含 Compose、受管环境、PostgreSQL、KB、Qdrant、beta.21 旧镜像、容器状态、回滚说明和 SHA-256 清单；PostgreSQL 回读、tar、gzip 与清单均通过，工件权限为 `0600`。即时应用回滚目标为 `2.8.61-beta.21`。
+- 仅 pull/force-recreate backend/frontend；database、Redis、RabbitMQ、Qdrant 保持运行。前后端 healthy/restart=0，`/system/version=2.8.61-beta.22 / 8522fefb52a2`、health=`UP`、Flyway V115、Nginx、公开 smoke、页面路由 200、匿名系统 API JSON 401 与稳定窗口错误计数均通过。生产未修改；真实受权页面和独立 Client/HUMAN 业务验收待完成。
+
 ## 2026-08-14 TASK-303 / TASK-304 / TASK-305 UAT `2.8.61-beta.21`
 
 - 冻结 Git tag/commit 为 `2.8.61-beta.21 / 626f7e22c774`；backend/frontend linux/amd64 ACR index digest 为 `sha256:ab37b2621ce9800070bf05d3307ba531b46363a0d94a32b69539b1d15731b8d4` / `sha256:c9e24c55c92b8ede42d96c6c3c839d11a62a3cdfde9d50380c7f6575525fc291`，未更新 `latest`。

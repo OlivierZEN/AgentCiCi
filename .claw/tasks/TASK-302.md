@@ -4,7 +4,7 @@ task_id: TASK-302
 feature_id: FEAT-183
 integration_id: INT-019
 status: review
-updated_at: 2026-08-14T04:59:00Z
+updated_at: 2026-08-14T05:07:00Z
 updated_by: codex
 owner_role: fullstack-agent
 spec_path: docs/specs/FEAT-183-system-api-catalog.md
@@ -79,11 +79,12 @@ spec_path: docs/specs/FEAT-183-system-api-catalog.md
 - 功能提交 `8522fefb52a2` 已进入 AgentCiCi 本地及远程 `main`。前端定向 10 项、全量 49 文件/275 项、production build、`git diff --check` 与完整 `cc-local-stack ./stack verify` 通过；`cici-frontend` 从本地 `main@8522fefb52a2` 构建为 `2.8.61-dev.8522fef`，目标路由为 200、healthy/restart=0、镜像 revision 一致。
 - 可控浏览器只返回平台登录页，未持有可用平台管理员会话，故不把授权态页面截图冒充为已验证；用户提供的真实保存截图是本次布局问题的复现与验收输入。
 
-## UAT 发布阻断
+## UAT 发布 `2.8.61-beta.22`
 
-- 本地 `main@8522fefb52a2` 已推送远程；版本 dry-run 按当前单发布线正确推导 `2.8.61-beta.22`，UAT 公网只读 smoke 通过。
-- 实际不可变镜像构建在后端推送阶段收到 ACR OAuth 连接重置，未创建 `2.8.61-beta.22` Git tag，前端镜像亦未开始发布，因此没有可部署候选；按受管发布规则停止重试，未在 UAT 执行 Compose、镜像、数据库或配置写操作。
-- UAT 只读回读保持 `2.8.61-beta.21 / 626f7e22c774`，backend/frontend healthy/restart=0；即时回滚点仍是 beta.20。等待 registry 鉴权链路恢复后，从同一远程 main commit 重新完成 build、digest、tag、备份与最小应用容器发布。
+- 不可变候选 `2.8.61-beta.22 / 8522fefb52a2` 已从远程 `main` 冻结；backend/frontend ACR index digest 分别为 `sha256:29e7449a0c88ff50ad17fb759091cc9b98a0cd95193fde8ebc59f6073337b145` 与 `sha256:96fb8e0040837e0067ae5fe57fb7b88167a0987ea814683bf52c3bc046915fe2`，未更新 `latest`。
+- 发布前完整备份 `/data/apps/agentcici/backups/20260814T050143Z-before-2.8.61-beta.22` 已通过 PostgreSQL 回读、KB/Qdrant tar、beta.21 镜像 gzip 与 SHA-256 清单校验；即时应用回滚目标 beta.21。首次不完整备份目录保留以保障可追溯性，未作为回滚证据使用。
+- UAT 仅 pull/force-recreate backend/frontend；database、Redis、RabbitMQ、Qdrant 持续运行。运行版本为 `2.8.61-beta.22 / 8522fefb52a2`，前后端 healthy/restart=0，Flyway V115 成功、Nginx 有效、公开 smoke、页面路由 200、匿名系统 API JSON 401 与稳定窗口错误计数均通过；生产未修改。
+- 当前仍无可复用的平台管理员或真实新登记 Keycloak Client/HUMAN 会话，未将登录态视觉效果或业务成功响应冒充为验收；该端到端业务验收是任务进入 done 前的剩余项。
 
 ## 目录加载缺陷修复
 

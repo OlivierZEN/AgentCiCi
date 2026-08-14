@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-14T04:59:00Z
+updated_at: 2026-08-14T05:07:00Z
 updated_by: codex
-phase: delivery_blocked
+phase: review
 active_task: TASK-302
-next_action: "等待 ACR 鉴权网络恢复后，从远程 main@8522fef 冻结并发布 2.8.61-beta.22；UAT 当前保持 beta.21，禁止手工替换镜像。"
+next_action: "使用真实新登记 Keycloak Client 与 HUMAN 用户完成登录、公司列表、公司上下文及后续 X-Company-Id 业务调用验收；平台管理员复核受信应用目录与编辑弹窗。"
 read_next:
   goals: false
   decisions: false
@@ -23,7 +23,7 @@ read_next:
 ## Latest Snapshot
 
 - TASK-302 / FEAT-183 受信内部应用运营界面已完成桌面端可读性修整：应用目录改为固定列宽和独立操作列，完整展示“编辑/停用”，避免继承通用目录最小列宽后裁切；登记/编辑弹窗加宽为稳定工作区，统一字段、辅助说明和 Scope 选项高度，并将表单主体提升至 14–16px。提交 `8522fefb` 已进入本地及远程 `main`；前端定向 10 项、全量 49 文件/275 项、production build、`cici.localhost` 路由和完整 `./stack verify` 通过。前端镜像从本地 main 构建为 `2.8.61-dev.8522fef`，healthy/restart=0。可控浏览器仅有平台登录页，未伪造授权态截图。
-- UAT 发布 `2.8.61-beta.22` 当前受 ACR 鉴权网络连接重置阻断：构建前干净主线、UAT smoke、版本推导和 dry-run 均通过，候选应冻结 `8522fefb52a2`；实际 `docker buildx` 在后端推送时被 registry OAuth 连接重置，未创建 Git tag、未形成完整前后端镜像，故未在 UAT 执行任何写操作。UAT 只读回读仍为 `2.8.61-beta.21 / 626f7e22c774`，backend/frontend healthy/restart=0，`/data` 可用 181G、root Docker auth 文件模式为 `0600`。按发布规范停止重试，不手工替换镜像或修改受管 Secret；等待鉴权链路恢复后重新执行受管候选流程。
+- TASK-302 / FEAT-183 已发布 UAT `2.8.61-beta.22 / 8522fefb52a2`：backend/frontend ACR index digest 为 `sha256:29e7449a0c88ff50ad17fb759091cc9b98a0cd95193fde8ebc59f6073337b145` / `sha256:96fb8e0040837e0067ae5fe57fb7b88167a0987ea814683bf52c3bc046915fe2`，未更新 `latest`。完整备份 `/data/apps/agentcici/backups/20260814T050143Z-before-2.8.61-beta.22` 已完成 PostgreSQL、KB/Qdrant tar、beta.21 旧镜像 gzip 和 SHA-256 清单校验，回滚目标 beta.21。仅重建 backend/frontend；状态服务保持运行。运行版本、health、Flyway V115、Nginx、公开 smoke、页面路由 200、匿名系统 API JSON 401 和稳定窗口均通过。无受权平台浏览器会话，真实独立 Client 调用与视觉验收仍待完成；生产未修改。
 - TASK-306 / FEAT-186 / INT-021 的删除授权候选缺口已修复：提交 `96c97bbc` 按 DevAutopilot `product_manager` 资源角色暴露并接受 `runtime.record.delete`，developer 即使直接提交也失败关闭。本地 backend 运行包含该提交的 `2.8.61-dev.26809b8 / 26809b8a07b7`，healthy/restart=0，完整 `./stack verify` 通过；受权页面已回读大乔PM候选有 delete、哪吒候选无 delete。实际授权尚未由用户确认，5 条旧任务未删除、单任务未重建，UAT/生产未修改。
 - TASK-302 / FEAT-183 受信应用保存 500 已修复：UAT `2.8.61-beta.21` 只读日志确认 PostgreSQL JDBC 不支持把 `timestamptz` 通过 `ResultSet#getObject(..., Instant.class)` 直接转换为 `Instant`，保存后的立即回读因此抛错并回滚事务。提交 `d9f7bc00` 改用 `getTimestamp(...).toInstant()`，并新增“保存后立即回读”回归；定向 4 项与 production package 通过。因本地 `main` 随后合入独立鉴权提交，backend 最终从当时最新 `main@26809b8a07b7` 重建为 `2.8.61-dev.26809b8`，其中包含本修复；healthy/restart=0，匿名受信应用接口按预期为 JSON 401，完整 `./stack verify` 通过且启动后无同类异常。当前没有可复用的平台管理员登录态，授权态页面保存待运营人员复测；本轮仅只读检查 UAT，未推送、未打 tag、未构建或发布 UAT。
 
