@@ -6,7 +6,7 @@ status: implemented
 primary_project: agentcici
 task_ids: TASK-307
 related_integrations: INT-022
-updated_at: 2026-08-14T09:45:00+08:00
+updated_at: 2026-08-14T01:45:00Z
 updated_by: codex
 ---
 

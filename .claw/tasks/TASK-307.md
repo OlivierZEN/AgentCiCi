@@ -4,7 +4,7 @@ task_id: TASK-307
 feature_id: FEAT-187
 integration_id: INT-022
 status: review
-updated_at: 2026-08-14T09:45:00+08:00
+updated_at: 2026-08-14T01:45:00Z
 updated_by: codex
 owner_role: integration-agent
 spec_path: docs/specs/FEAT-187-devautopilot-name-based-task-transfer.md
