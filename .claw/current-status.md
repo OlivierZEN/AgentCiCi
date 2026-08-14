@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-14T04:01:00Z
+updated_at: 2026-08-14T04:07:30Z
 updated_by: codex
 phase: review
 active_task: TASK-302
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-302 / FEAT-183 受信应用保存 500 已修复：UAT `2.8.61-beta.21` 只读日志确认 PostgreSQL JDBC 不支持把 `timestamptz` 通过 `ResultSet#getObject(..., Instant.class)` 直接转换为 `Instant`，保存后的立即回读因此抛错并回滚事务。提交 `d9f7bc00` 改用 `getTimestamp(...).toInstant()`，并新增“保存后立即回读”回归；定向 4 项与 production package 通过。backend 已从本地 `main@d9f7bc009aab` 重建为 `2.8.61-dev.d9f7bc0`，healthy/restart=0，匿名受信应用接口按预期为 JSON 401，启动后无同类异常。当前没有可复用的平台管理员登录态，授权态页面保存待运营人员复测；本轮仅只读检查 UAT，未推送、未打 tag、未构建或发布 UAT。
+- TASK-302 / FEAT-183 受信应用保存 500 已修复：UAT `2.8.61-beta.21` 只读日志确认 PostgreSQL JDBC 不支持把 `timestamptz` 通过 `ResultSet#getObject(..., Instant.class)` 直接转换为 `Instant`，保存后的立即回读因此抛错并回滚事务。提交 `d9f7bc00` 改用 `getTimestamp(...).toInstant()`，并新增“保存后立即回读”回归；定向 4 项与 production package 通过。因本地 `main` 随后合入独立鉴权提交，backend 最终从当时最新 `main@26809b8a07b7` 重建为 `2.8.61-dev.26809b8`，其中包含本修复；healthy/restart=0，匿名受信应用接口按预期为 JSON 401，完整 `./stack verify` 通过且启动后无同类异常。当前没有可复用的平台管理员登录态，授权态页面保存待运营人员复测；本轮仅只读检查 UAT，未推送、未打 tag、未构建或发布 UAT。
 
 - TASK-302 / FEAT-183 受信应用登记表单已补齐应用代码实时校验反馈：空格、长度、首字符和非法字符均显示具体原因，截图中的 `ccsales web` 会明确提示改用 `ccsales-web`；错误字段同步暴露 `aria-invalid` 与说明关联，保存按钮继续与同一校验规则保持一致。提交 `2daa18ef` 已进入本地 `main`，前端 49 文件/275 项、production build、域名门禁和完整 `./stack verify` 通过；`cici-frontend` 运行 `2.8.61-dev.2daa18e`、healthy/restart=0，目标路由 200，部署制品已回读提示文案。浏览器无运营平台登录态，授权态视觉交互仍待运营人员验收；UAT/生产未修改。
 

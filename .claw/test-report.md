@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-14T04:01:00Z
+updated_at: 2026-08-14T04:07:30Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-14T04:01:00Z
+last_run_at: 2026-08-14T04:07:30Z
 last_run_status: passed_with_authorized_visual_pending
 ---
 
@@ -15,7 +15,7 @@ last_run_status: passed_with_authorized_visual_pending
 - 根因证据：UAT `2.8.61-beta.21` 只读日志连续三次记录 `conversion to class java.time.Instant from timestamptz not supported`，异常位于 `EcosystemApplicationTrustService.mapRow`，发生在 `upsert` 写入后的 `requireByAppCode` 回读阶段；事务回滚与页面 500 一致。
 - 后端定向：`mvn -Dtest=EcosystemApplicationTrustServiceTest test`，4 项通过；新增用例覆盖受信应用保存后以 `Timestamp` 回读 `created_at` / `updated_at` 并转换为 `Instant`。
 - 生产包：`mvn -DskipTests package` 通过；`git diff --check` 通过。
-- 本地主线与运行：功能提交 `d9f7bc009aab` 已进入本地 `main`；backend 运行 `2.8.61-dev.d9f7bc0`，镜像 revision `d9f7bc009aab`，healthy/restart=0，匿名受信应用接口返回 `401 application/json`，启动后未出现同类时间转换异常。其他状态服务和产品未重建。
+- 本地主线与运行：功能提交 `d9f7bc009aab` 已进入本地 `main`；因随后合入独立鉴权提交，backend 最终从当时最新 `main@26809b8a07b7` 构建并运行 `2.8.61-dev.26809b8`，其中包含本修复。镜像 revision 与运行版本一致，healthy/restart=0，匿名受信应用接口返回 `401 application/json`，启动后未出现同类时间转换异常。其他状态服务和产品未重建。
 - 完整本地技术门禁：`cc-local-stack ./stack verify` 通过域名扫描、数据库隔离、TLS、OIDC、应用健康/版本和匿名授权边界。全仓 `validate-state.py .claw` 仍因既有历史规格 front matter/status、旧时间格式、终态任务仍在 Active Tasks 与归档数量债务返回 1；输出未报告 TASK-302、FEAT-183 或本轮三个状态文件的新错误，本轮未越界清理历史治理债务。
 - 验收边界：当前无可复用的平台管理员登录态，授权态页面真实保存待运营人员复测；UAT 仅做只读诊断，未发生发布或配置变更。
 - 状态：`passed_with_authorized_visual_pending`。

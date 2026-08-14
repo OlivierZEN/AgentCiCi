@@ -4,7 +4,7 @@ task_id: TASK-302
 feature_id: FEAT-183
 integration_id: INT-019
 status: review
-updated_at: 2026-08-14T04:01:00Z
+updated_at: 2026-08-14T04:07:30Z
 updated_by: codex
 owner_role: fullstack-agent
 spec_path: docs/specs/FEAT-183-system-api-catalog.md
@@ -69,7 +69,7 @@ spec_path: docs/specs/FEAT-183-system-api-catalog.md
 - UAT `2.8.61-beta.21` 只读异常栈证明保存失败发生在写入后的立即回读：PostgreSQL JDBC 42.7.5 不支持把 `timestamptz` 通过 `ResultSet#getObject(column, Instant.class)` 直接转换为 `Instant`，事务因此回滚；表单值与数据库迁移不是根因。
 - `EcosystemApplicationTrustService` 改用 JDBC 标准 `getTimestamp(column)`，再显式调用 `Timestamp#toInstant`；`created_at` 与 `updated_at` 使用同一映射，业务字段、鉴权、审计和保存逻辑不变。
 - 回归测试实际执行 `upsert` 的“写入后立即回读”路径，并让 RowMapper 消费 PostgreSQL 时间戳；定向 4 项与 production package 通过。
-- 功能提交 `d9f7bc009aab` 已进入本地 `main`。`cici-backend` 从该提交重建为 `2.8.61-dev.d9f7bc0`，healthy/restart=0，运行版本与镜像 revision 一致，匿名受信应用接口为 JSON 401，启动后无同类时间转换异常。
+- 功能提交 `d9f7bc009aab` 已进入本地 `main`。因随后合入独立鉴权提交，`cici-backend` 最终从当时最新 `main@26809b8a07b7` 重建为 `2.8.61-dev.26809b8`，其中包含本修复；healthy/restart=0，运行版本与镜像 revision 一致，匿名受信应用接口为 JSON 401，完整 `./stack verify` 通过且启动后无同类时间转换异常。
 - 当前没有可复用的平台管理员登录态，未伪造平台 Token，因此授权态真实保存待运营人员在 `cici.localhost` 复测。本轮用户明确暂停 UAT 发布；仅执行 UAT 只读日志和健康检查，未 push、未 tag、未构建或部署 UAT。
 
 ## 目录加载缺陷修复
