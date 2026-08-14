@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-14T05:07:00Z
+updated_at: 2026-08-14T06:25:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-14T05:07:00Z
-last_run_status: passed_with_authorized_visual_pending
+last_run_at: 2026-08-14T06:25:00Z
+last_run_status: passed_local_draft_confirmation_gate
 ---
 
 # Test Report
+
+## 2026-08-14 TASK-307 产品经理按名称自动识别并确认式转派
+
+- 后端定向：`mvn -q -Dtest=DevAutopilotDeveloperAssignmentServiceTest,SematticeProjectDeliveryTransferToolServiceTest test` 通过；`mvn -q -DskipTests package` 通过。
+- 提供方验证：Semattice `go test ./...` 通过，受治理 transfer 保持 owner-only 更新、revision/audit/idempotency，并保留任务所属数据组织。
+- 真实登录会话：输入“把鲁班的任务都转交给哪吒”后，界面自动识别 Developer Profile，返回鲁班→哪吒、1 项待开始任务及精确确认口令；未发送确认口令，未产生 owner 写入。
+- 本地开发环境：AgentCiCi backend `2.8.61-dev.9cce47c`、Semattice `1.0.3-dev.81685db`，均 healthy/restart=0；`cc-local-stack ./stack verify` 通过。
+- 验收边界：当前未由组织管理员为产品经理 SERVICE 同步 `runtime.record.transfer`，因此真实转派尚未执行；开发者 SERVICE 不可获得该 scope。UAT/生产未修改。
 
 ## 2026-08-14 TASK-306 产品经理受治理删除闭环
 
