@@ -306,7 +306,7 @@ public class AgentServicePrincipalExecutionService {
     private static String requiredAppRole(List<String> scopes, String purpose) {
         List<String> normalized = normalizeScopes(scopes);
         String safe = safePurpose(purpose);
-        if (normalized.contains("runtime.record.delete")) return APP_ROLE_ADMIN;
+        if (normalized.contains("runtime.record.delete") || normalized.contains("runtime.record.transfer")) return APP_ROLE_ADMIN;
         if (safe.endsWith("_review")) return APP_ROLE_REVIEWER;
         if (normalized.contains("runtime.record.create") || normalized.contains("runtime.record.update")) return APP_ROLE_CONTRIBUTOR;
         return APP_ROLE_VIEWER;

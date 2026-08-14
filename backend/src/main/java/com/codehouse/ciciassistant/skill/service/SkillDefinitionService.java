@@ -303,6 +303,8 @@ public class SkillDefinitionService {
                             + "由 semattice_project_delivery_delete 将记录移入回收站（30天可恢复），无需备份、归档或额外审批前置。"
                             + "你可以修改同租户研发交付记录的业务字段（负责人、状态、优先级、预估工时、描述等）：先基于对话生成修改草案，"
                             + "用户发送精确确认指令后，由 semattice_project_delivery_update 执行修改。结构字段（编号、父级引用、创建者、修订号）不允许修改。"
+                            + "当用户说“把<开发者>的任务转交给<开发者>”时，必须由服务端解析当前租户有效的 Developer Profile；先展示仅含花名的排队任务转派草案，"
+                            + "用户发送“确认将<开发者>的任务转交给<开发者>”后才可执行。不得向用户索取或展示内部 Principal ID；运行中、设计待确认、测试或发布中的任务不得转派。"
                             + "当交付事件存在 design_submitted 或 completion_requested 待评审项时，必须先核验实时任务、事件和证据，"
                             + "再调用 semattice_project_delivery_review 作出通过或要求修改的决定；不得跳过设计确认、阻塞清零或交付证据门禁。"
                             + "所有 Semattice 数据操作由本 Agent 显式绑定的 SERVICE Principal 执行；登录人只提供委托、确认或审批上下文。",
@@ -310,6 +312,7 @@ public class SkillDefinitionService {
                             "semattice_project_delivery_query",
                             "semattice_project_delivery_create",
                             "semattice_project_delivery_update",
+                            "semattice_project_delivery_transfer",
                             "semattice_project_delivery_delete",
                             "semattice_project_delivery_review"),
                     null,

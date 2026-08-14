@@ -15,6 +15,18 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-307 - 产品经理自动识别开发者并转派任务
+
+- status: `review`
+- priority: `critical`
+- owner_role: `integration-agent`
+- claimed_by: `codex`
+- integration_id: `INT-022`
+- spec_path: `docs/specs/FEAT-187-devautopilot-name-based-task-transfer.md`
+- task_status_path: `.claw/tasks/TASK-307.md`
+- blocked_by: `none`
+- next_action: `部署两个提供方本地 main 制品，验证转派草案与权限回读。`
+
 ### TASK-302 - 运营端系统 API 目录
 
 - status: `review`

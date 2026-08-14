@@ -24,6 +24,7 @@ public class ServicePrincipalService {
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final char[] ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".toCharArray();
     private static final String RECORD_DELETE_SCOPE = "runtime.record.delete";
+    private static final String RECORD_TRANSFER_SCOPE = "runtime.record.transfer";
 
     private final JdbcTemplate jdbcTemplate;
     private final UserRepository userRepository;
@@ -459,7 +460,7 @@ public class ServicePrincipalService {
 
     private List<String> allowedScopesFor(boolean devAutopilotProductManager) {
         if (devAutopilotProductManager) return sematticeAllowedScopes;
-        return sematticeAllowedScopes.stream().filter(scope -> !RECORD_DELETE_SCOPE.equals(scope)).toList();
+        return sematticeAllowedScopes.stream().filter(scope -> !RECORD_DELETE_SCOPE.equals(scope) && !RECORD_TRANSFER_SCOPE.equals(scope)).toList();
     }
 
     private void audit(String companyId, String actorPrincipalId, String action, String principalId, String detail) {

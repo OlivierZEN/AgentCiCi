@@ -16,7 +16,26 @@ public class DevAutopilotDeveloperAssignmentService {
     }
 
     public Optional<DeveloperAssignment> select(String companyId, String routingKey) {
-        List<DeveloperAssignment> developers = jdbcTemplate.query("""
+        List<DeveloperAssignment> developers = activeDevelopers(companyId);
+        if (developers.isEmpty()) {
+            return Optional.empty();
+        }
+        int index = Math.floorMod((routingKey == null ? "" : routingKey).hashCode(), developers.size());
+        return Optional.of(developers.get(index));
+    }
+
+    /** Resolves a user-facing Developer Profile name without exposing its internal principal ID. */
+    public Optional<DeveloperAssignment> resolveActiveByDisplayName(String companyId, String displayName) {
+        String normalized = displayName == null ? "" : displayName.trim();
+        if (normalized.isBlank()) return Optional.empty();
+        List<DeveloperAssignment> matches = activeDevelopers(companyId).stream()
+                .filter(item -> item.displayName().equalsIgnoreCase(normalized))
+                .toList();
+        return matches.size() == 1 ? Optional.of(matches.getFirst()) : Optional.empty();
+    }
+
+    private List<DeveloperAssignment> activeDevelopers(String companyId) {
+        return jdbcTemplate.query("""
                 SELECT resource.external_id, resource.display_name
                 FROM tenant_application_activation activation
                 JOIN tenant_application_resource resource
@@ -33,11 +52,6 @@ public class DevAutopilotDeveloperAssignmentService {
                   AND activation.actual_state = 'ACTIVE'
                 ORDER BY resource.external_id
                 """, (rs, rowNum) -> new DeveloperAssignment(rs.getString(1), rs.getString(2)), companyId);
-        if (developers.isEmpty()) {
-            return Optional.empty();
-        }
-        int index = Math.floorMod((routingKey == null ? "" : routingKey).hashCode(), developers.size());
-        return Optional.of(developers.get(index));
     }
 
     public record DeveloperAssignment(String principalId, String displayName) { }

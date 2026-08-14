@@ -34,6 +34,7 @@ import com.codehouse.ciciassistant.ops.service.AuditService;
 import com.codehouse.ciciassistant.kb.service.KbAccessControlService;
 import com.codehouse.ciciassistant.security.service.SafetyGatewayService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryDeleteToolService;
+import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryTransferToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryWriteToolService;
 import com.codehouse.ciciassistant.skill.service.SkillPromptAssembler;
@@ -499,8 +500,13 @@ public class ChatOrchestratorService {
                     messages, companyId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
         }
         Optional<String> forcedProjectDeliveryWriteAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty()
+                : appendForcedSematticeProjectDeliveryTransferAnswer(
+                messages, companyId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
+        if (forcedProjectDeliveryWriteAnswer.isEmpty()) {
+            forcedProjectDeliveryWriteAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty()
                 : appendForcedSematticeProjectDeliveryDeleteAnswer(
                 messages, companyId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
+        }
         if (forcedProjectDeliveryWriteAnswer.isEmpty() && !modeDecision.suppressesTools() && !planExec.active()) {
             forcedProjectDeliveryWriteAnswer = appendForcedSematticeProjectDeliveryWriteAnswer(
                     messages, companyId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
@@ -797,8 +803,13 @@ public class ChatOrchestratorService {
                             messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
                 }
                 Optional<String> forcedProjectDeliveryWriteAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty()
+                        : appendForcedSematticeProjectDeliveryTransferAnswer(
+                        messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
+                if (forcedProjectDeliveryWriteAnswer.isEmpty()) {
+                    forcedProjectDeliveryWriteAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty()
                         : appendForcedSematticeProjectDeliveryDeleteAnswer(
                         messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
+                }
                 if (forcedProjectDeliveryWriteAnswer.isEmpty() && !modeDecision.suppressesTools() && !planExec.active()) {
                     forcedProjectDeliveryWriteAnswer = appendForcedSematticeProjectDeliveryWriteAnswer(
                             messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
@@ -1592,6 +1603,33 @@ public class ChatOrchestratorService {
                 confirmed.get().toArguments(TOOL_RESULT_OBJECT_MAPPER),
                 "auto_semattice_delivery_delete_");
         return Optional.of(formatProjectDeliveryDeleteResult(toolResult));
+    }
+
+    /** Name-based task transfer is deterministic so the model never sees internal principal IDs. */
+    private Optional<String> appendForcedSematticeProjectDeliveryTransferAnswer(
+            List<Map<String, Object>> messages, String companyId, String userId, String sessionId,
+            ResolvedSkillContext skillContext, SseEmitter emitter,
+            List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces, String runId, String question) {
+        if (skillContext == null || !skillContext.allowedToolNames().contains(SematticeProjectDeliveryTransferToolService.TOOL_NAME)) return Optional.empty();
+        Optional<SematticeProjectDeliveryTransferToolService.TransferIntent> confirmed = SematticeProjectDeliveryTransferToolService.confirmedIntent(question);
+        Optional<SematticeProjectDeliveryTransferToolService.TransferIntent> draft = confirmed.isPresent() ? Optional.empty() : SematticeProjectDeliveryTransferToolService.draftIntent(question);
+        if (confirmed.isEmpty() && draft.isEmpty()) return Optional.empty();
+        var intent = confirmed.orElseGet(draft::get);
+        String arguments;
+        try {
+            arguments = TOOL_RESULT_OBJECT_MAPPER.writeValueAsString(Map.of("mode", confirmed.isPresent() ? "execute" : "draft", "from", intent.from(), "to", intent.to()));
+        } catch (Exception ex) { return Optional.of("无法生成任务转派草案，未修改任务。"); }
+        String result = executeAndAppendSyntheticToolCall(messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId,
+                SematticeProjectDeliveryTransferToolService.TOOL_NAME, arguments, "auto_semattice_delivery_transfer_");
+        try {
+            JsonNode value = TOOL_RESULT_OBJECT_MAPPER.readTree(result);
+            String status = value.path("status").asText();
+            String from = value.path("from").asText(intent.from()), to = value.path("to").asText(intent.to());
+            List<String> tasks = new ArrayList<>(); value.path("tasks").forEach(item -> tasks.add(item.asText()));
+            if ("DRAFT".equals(status)) return Optional.of(tasks.isEmpty() ? "“" + from + "”当前没有可安全转派的排队任务。" : "已识别开发者“" + from + "”和“" + to + "”。将转派 " + tasks.size() + " 项排队任务：" + String.join("；", tasks) + "。确认无误后，请回复：`确认将" + from + "的任务转交给" + to + "`。运行中的任务不会转派。");
+            if ("SUCCESS".equals(status)) return Optional.of("已将 " + tasks.size() + " 项排队任务从“" + from + "”转交给“" + to + "”，新的开发者可按自身实例容量排队受理。");
+            return Optional.of(value.path("message").asText("未转派任务，请确认开发者状态和任务阶段。"));
+        } catch (Exception ex) { return Optional.of("未转派任务：回执解析失败。"); }
     }
 
     static String formatProjectDeliveryDeleteResult(String toolResult) {

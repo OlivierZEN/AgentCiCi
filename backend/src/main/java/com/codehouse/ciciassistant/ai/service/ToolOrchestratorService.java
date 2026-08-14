@@ -12,6 +12,7 @@ import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryDeleteToolS
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryReviewToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryWriteToolService;
+import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryTransferToolService;
 import com.codehouse.ciciassistant.skill.service.SkillApiToolService;
 import com.codehouse.ciciassistant.tool.codeinterpreter.SandboxCodeInterpreterService;
 import com.codehouse.ciciassistant.tool.managedweb.ManagedWebToolService;
@@ -58,6 +59,7 @@ public class ToolOrchestratorService {
     private final SematticeProjectDeliveryWriteToolService sematticeProjectDeliveryWriteToolService;
     private final SematticeProjectDeliveryReviewToolService sematticeProjectDeliveryReviewToolService;
     private SematticeProjectDeliveryDeleteToolService sematticeProjectDeliveryDeleteToolService;
+    private SematticeProjectDeliveryTransferToolService sematticeProjectDeliveryTransferToolService;
     private final SafetyGatewayService safetyGatewayService;
     private final ObjectMapper objectMapper;
     private AssistantScheduleToolService assistantScheduleToolService;
@@ -109,6 +111,12 @@ public class ToolOrchestratorService {
     void setSematticeProjectDeliveryDeleteToolService(
             SematticeProjectDeliveryDeleteToolService sematticeProjectDeliveryDeleteToolService) {
         this.sematticeProjectDeliveryDeleteToolService = sematticeProjectDeliveryDeleteToolService;
+    }
+
+    @Autowired(required = false)
+    void setSematticeProjectDeliveryTransferToolService(
+            SematticeProjectDeliveryTransferToolService sematticeProjectDeliveryTransferToolService) {
+        this.sematticeProjectDeliveryTransferToolService = sematticeProjectDeliveryTransferToolService;
     }
 
     /**
@@ -337,6 +345,11 @@ public class ToolOrchestratorService {
                     ? "{\"status\":\"failed\",\"error\":{\"code\":\"DELETE_TOOL_UNAVAILABLE\"}}"
                     : sematticeProjectDeliveryDeleteToolService.dispatch(
                             companyId, userId, currentAgentId, safeArgumentsJson);
+        }
+        if (SematticeProjectDeliveryTransferToolService.TOOL_NAME.equals(canonicalToolName)) {
+            return sematticeProjectDeliveryTransferToolService == null
+                    ? "{\"status\":\"FAILED\",\"message\":\"转派服务未就绪。\"}"
+                    : sematticeProjectDeliveryTransferToolService.dispatch(companyId, userId, currentAgentId, safeArgumentsJson);
         }
         if (CloudccOpenApiService.toolName().equals(canonicalToolName)) {
             return safeToolResult(companyId, userId, canonicalToolName,
