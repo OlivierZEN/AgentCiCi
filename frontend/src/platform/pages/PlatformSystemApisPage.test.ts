@@ -6,6 +6,7 @@ import {
   systemApiCatalogFailureMessage,
   systemApiKeycloakVerdict,
   systemApiRequestPrelude,
+  trustedApplicationAppCodeError,
   type SystemApi,
 } from "./PlatformSystemApisPage";
 
@@ -51,6 +52,23 @@ describe("system API catalog transport", () => {
   it("preserves a structured backend error message", () => {
     expect(systemApiCatalogFailureMessage(503, "Semattice 目录暂不可用", "{}"))
       .toBe("Semattice 目录暂不可用");
+  });
+});
+
+describe("trusted application form validation", () => {
+  it("explains how to replace spaces in an application code", () => {
+    expect(trustedApplicationAppCodeError("ccsales web"))
+      .toBe("应用代码不能包含空格，请使用连字符（-）分隔，例如 ccsales-web。");
+  });
+
+  it("explains the remaining application code constraints", () => {
+    expect(trustedApplicationAppCodeError("1sales"))
+      .toBe("应用代码必须以小写字母开头。");
+    expect(trustedApplicationAppCodeError("sales_web"))
+      .toBe("应用代码只能使用小写字母、数字和连字符（-）。");
+    expect(trustedApplicationAppCodeError("a"))
+      .toBe("应用代码长度需为 2–64 个字符。");
+    expect(trustedApplicationAppCodeError("ccsales-web")).toBe("");
   });
 });
 

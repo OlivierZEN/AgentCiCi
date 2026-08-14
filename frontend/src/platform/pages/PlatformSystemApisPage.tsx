@@ -98,6 +98,23 @@ export function systemApiCatalogFailureMessage(status: number, message: string |
   return `系统 API 目录加载失败（HTTP ${status}）。请稍后重试。`;
 }
 
+export function trustedApplicationAppCodeError(value: string): string {
+  if (!value) return "";
+  if (/\s/.test(value)) {
+    return "应用代码不能包含空格，请使用连字符（-）分隔，例如 ccsales-web。";
+  }
+  if (value.length < 2 || value.length > 64) {
+    return "应用代码长度需为 2–64 个字符。";
+  }
+  if (!/^[a-z]/.test(value)) {
+    return "应用代码必须以小写字母开头。";
+  }
+  if (!/^[a-z0-9-]+$/.test(value)) {
+    return "应用代码只能使用小写字母、数字和连字符（-）。";
+  }
+  return "";
+}
+
 export function filterSystemApis(apis: SystemApi[], query: string, category: string, risk: string) {
   const needle = query.trim().toLocaleLowerCase("zh-CN");
   return apis.filter((api) => {
@@ -305,6 +322,15 @@ export default function PlatformSystemApisPage() {
   const selectedApi = provider?.apis.find((item) => item.id === apiId);
   const categories = useMemo(() => Array.from(new Set(provider?.apis.map((api) => api.category) ?? [])).sort(), [provider]);
   const filteredApis = useMemo(() => filterSystemApis(provider?.apis ?? [], query, category, risk), [provider, query, category, risk]);
+  const applicationCodeError = applicationForm ? trustedApplicationAppCodeError(applicationForm.appCode) : "";
+  const applicationFormValid = Boolean(
+    applicationForm
+      && applicationForm.appCode
+      && !applicationCodeError
+      && applicationForm.displayName.trim()
+      && applicationForm.keycloakClientId.trim()
+      && applicationForm.allowedScopes.length > 0,
+  );
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -432,13 +458,26 @@ export default function PlatformSystemApisPage() {
             <div className="tenant-lifecycle__modal-body">
               <p className="skills-data-table__summary">这里只登记公开标识与授权范围，不保存 Keycloak Client Secret。应用代码来自平台治理，不由运行时请求传入。</p>
               <div className="platform-console__form-grid system-api-application-form">
-                <label><span>应用代码</span><input value={applicationForm.appCode} disabled={applications.some((item) => item.appCode === applicationForm.appCode)} onChange={(event) => setApplicationForm((current) => current ? { ...current, appCode: event.target.value.toLowerCase() } : current)} placeholder="internal-workbench" /><small>小写字母开头，可使用数字和连字符。</small></label>
+                <label>
+                  <span>应用代码</span>
+                  <input
+                    value={applicationForm.appCode}
+                    disabled={applications.some((item) => item.appCode === applicationForm.appCode)}
+                    aria-invalid={Boolean(applicationCodeError)}
+                    aria-describedby="system-api-application-code-help"
+                    onChange={(event) => setApplicationForm((current) => current ? { ...current, appCode: event.target.value.toLowerCase() } : current)}
+                    placeholder="internal-workbench"
+                  />
+                  <small id="system-api-application-code-help" className={applicationCodeError ? "system-api-field-message is-error" : "system-api-field-message"} role={applicationCodeError ? "alert" : undefined}>
+                    {applicationCodeError || "必填。以小写字母开头，可使用数字和连字符（-），长度 2–64 个字符。"}
+                  </small>
+                </label>
                 <label><span>应用名称</span><input value={applicationForm.displayName} onChange={(event) => setApplicationForm((current) => current ? { ...current, displayName: event.target.value } : current)} placeholder="内部工作台" /></label>
                 <label className="tenant-lifecycle__field--full"><span>Keycloak Client ID</span><input value={applicationForm.keycloakClientId} onChange={(event) => setApplicationForm((current) => current ? { ...current, keycloakClientId: event.target.value } : current)} placeholder="internal-workbench" /><small>必须与 Access Token 的 azp 声明完全一致，并为该 Client 配置 agentcici-api Audience。</small></label>
                 <fieldset className="system-api-scope-options tenant-lifecycle__field--full"><legend>允许 Scope</legend>{["organization.read", "organization.context"].map((scope) => <label key={scope}><input type="checkbox" checked={applicationForm.allowedScopes.includes(scope)} onChange={(event) => setApplicationForm((current) => current ? { ...current, allowedScopes: event.target.checked ? [...current.allowedScopes, scope] : current.allowedScopes.filter((item) => item !== scope) } : current)} /><span><code>{scope}</code><small>{scope === "organization.read" ? "查询当前用户可访问公司" : "校验并建立公司调用上下文"}</small></span></label>)}</fieldset>
               </div>
             </div>
-            <div className="tenant-lifecycle__modal-foot"><button type="button" className="platform-button platform-button--secondary" onClick={() => setApplicationForm(null)} disabled={applicationBusy}>取消</button><button type="button" className="platform-button platform-button--primary" onClick={() => void saveApplication()} disabled={applicationBusy || !/^[a-z][a-z0-9-]{1,63}$/.test(applicationForm.appCode.trim()) || !applicationForm.displayName.trim() || !applicationForm.keycloakClientId.trim() || applicationForm.allowedScopes.length === 0}>{applicationBusy ? "保存中…" : "保存应用"}</button></div>
+            <div className="tenant-lifecycle__modal-foot"><button type="button" className="platform-button platform-button--secondary" onClick={() => setApplicationForm(null)} disabled={applicationBusy}>取消</button><button type="button" className="platform-button platform-button--primary" onClick={() => void saveApplication()} disabled={applicationBusy || !applicationFormValid}>{applicationBusy ? "保存中…" : "保存应用"}</button></div>
           </div>
         </div>
       ) : null}

@@ -20030,6 +20030,21 @@ td.skills-data-table__actions > * {
   line-height: 1.45;
 }
 
+.system-api-application-form input[aria-invalid="true"] {
+  border-color: var(--platform-danger);
+  background: var(--platform-danger-soft);
+}
+
+.system-api-application-form input[aria-invalid="true"]:focus-visible {
+  border-color: var(--platform-danger);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--platform-danger) 16%, transparent);
+}
+
+.system-api-application-form .system-api-field-message.is-error {
+  color: var(--platform-danger);
+  font-weight: 650;
+}
+
 .system-api-scope-options {
   min-width: 0;
   margin: 0;
