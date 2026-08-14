@@ -10,6 +10,14 @@ last_run_status: passed_with_authorized_visual_pending
 
 # Test Report
 
+## 2026-08-14 TASK-306 产品经理受治理删除闭环
+
+- 授权同步入口：组织管理员在“机器主体”明确确认“同步交付授权”两次，均返回“研发交付授权模板已同步”。服务端只重新应用当前团队的固定授权模板，未创建成员、轮换密钥或改动业务记录。
+- 回收站实证：产品经理 SERVICE 已逐条删除 5 个已确认 ID，所有返回均包含原 ID、`revision=2`、回收站语义与独立关联号；未在任一失败后继续后续写入。
+- 重建实证：`REQ-6F34ECF3` 已仅创建 `019ffeb0-88a0-739f-afcb-6e667e9d2572`，P2、鲁班、队列第 1 项、待开始、实际消耗 0.0h；任务详情显示功能验证与实现设计、代码开发、本地测试与开发环境验证、发布 UAT、UAT 验证、用户验收六阶段。
+- 代码验证：后端定向 5 个测试类通过；管理端定向 2 个测试文件/5 项和 production build 通过，只有既有 chunk-size warning。backend package 已在本地镜像构建中通过。
+- 本地开发环境：backend `2.8.61-dev.23ec0a6`、frontend `2.8.61-dev.aafbdbb`，均 healthy/restart=0；完整 `cc-local-stack ./stack verify` 通过。UAT/生产未修改。
+
 ## 2026-08-14 TASK-302 受信应用运营界面可读性修整
 
 - 前端实现：目录表格使用专属固定列宽及最右独立动作列，`编辑` 和 `启用/停用` 在桌面端不再被裁切；新增与编辑 modal 统一字段和 Scope 选项高度，表单主输入为 16px、标签和说明为 14px，原有保存、停用、Scope 和审计逻辑未改。

@@ -3,8 +3,8 @@ kind: task-status
 task_id: TASK-306
 feature_id: FEAT-186
 integration_id: INT-021
-status: implementing
-updated_at: 2026-08-14T04:15:00Z
+status: done
+updated_at: 2026-08-14T05:13:00Z
 updated_by: codex
 owner_role: backend-agent
 spec_path: docs/specs/FEAT-186-governed-delivery-delete-route.md
@@ -27,5 +27,8 @@ spec_path: docs/specs/FEAT-186-governed-delivery-delete-route.md
 - `mvn -q -DskipTests package` 通过。
 - 角色化候选 scope 已随本地 backend `2.8.61-dev.26809b8 / 26809b8a07b7` 运行，healthy、restart=0，完整 `./stack verify` 通过。
 - 受权页面已回读大乔PM候选包含 delete、哪吒候选不包含 delete；未替用户勾选或提交。
-- 人工显式授权、真实旧任务回收站删除和单任务重建仍待完成。
-- 当前本地模板升级需要通过该入口重新下发，平台账号登录边界不能由组织管理员绕过。
+- 产品经理已获 `runtime.record.delete`；开发者候选未包含该 scope。
+- 组织管理员在“机器主体”明确确认“同步交付授权”两次，均返回成功提示；同步只重应用 `devautopilot.authorization.v2`，成员、密钥和业务记录未变更。
+- 5 条历史任务均通过产品经理 SERVICE 移入 Semattice 回收站，均回读为 `revision=2` 与独立关联号。
+- 需求 `REQ-6F34ECF3` 已重新生成并确认一条阶段化任务 `019ffeb0-88a0-739f-afcb-6e667e9d2572`，分配给鲁班，状态为待开始。
+- AgentCiCi 本地 backend/frontend 分别运行包含授权同步的 `23ec0a6` / `aafbdbb`；完整 `./stack verify` 通过。UAT/生产未修改。

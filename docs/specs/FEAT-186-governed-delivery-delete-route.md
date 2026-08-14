@@ -2,11 +2,11 @@
 kind: feature-spec
 feature_id: FEAT-186
 title: 研发交付记录的受治理精确删除路由
-status: implemented
+status: completed
 primary_project: agentcici
 task_ids: TASK-306
 related_integrations: INT-021
-updated_at: 2026-08-14T04:05:00Z
+updated_at: 2026-08-14T05:13:00Z
 updated_by: codex
 ---
 
@@ -41,3 +41,9 @@ updated_by: codex
 ## 回滚
 
 回滚确定性路由和本地分发后，删除重新失败关闭；已移入回收站的记录仍由 Semattice 管理，可在 30 天内通过正式恢复能力恢复，不直接写数据库。
+
+## 本地闭环证据
+
+- AgentCiCi `23ec0a6` 增加组织管理员明确确认的授权模板同步入口，`aafbdbb` 修复成功提示被静默刷新清除的问题；两次同步均成功，且没有改动成员、密钥或业务记录。
+- 用户授权后，产品经理 SERVICE 分别将 `019ffde1-7b82-7f33-93c3-985921aca699`、`019ffde1-7b83-71f9-bd88-51f48bc2f38c`、`019ffde1-7b83-71a1-8d10-fb69614eb9b2`、`019ffde1-7b83-7194-8416-0268542b1ef6`、`019ffde1-7b83-71bb-bf39-810c0539f263` 移入回收站；每条均返回相同记录 ID、revision 2 和独立关联号。
+- 随后 `REQ-6F34ECF3` 仅生成任务 `019ffeb0-88a0-739f-afcb-6e667e9d2572`，由鲁班受理并按六阶段推进；完整本地 `./stack verify` 通过。UAT/生产未修改。
