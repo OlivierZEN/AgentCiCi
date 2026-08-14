@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-14T02:20:00Z
+updated_at: 2026-08-14T03:40:22Z
 updated_by: codex
 phase: review
 active_task: TASK-302
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-302 / FEAT-183 受信应用登记表单已补齐应用代码实时校验反馈：空格、长度、首字符和非法字符均显示具体原因，截图中的 `ccsales web` 会明确提示改用 `ccsales-web`；错误字段同步暴露 `aria-invalid` 与说明关联，保存按钮继续与同一校验规则保持一致。提交 `2daa18ef` 已进入本地 `main`，前端 49 文件/275 项、production build、域名门禁和完整 `./stack verify` 通过；`cici-frontend` 运行 `2.8.61-dev.2daa18e`、healthy/restart=0，目标路由 200，部署制品已回读提示文案。浏览器无运营平台登录态，授权态视觉交互仍待运营人员验收；UAT/生产未修改。
 
 - TASK-303 / TASK-304 / TASK-305 已随远程 `main@626f7e22c774` 发布 UAT `2.8.61-beta.21`。backend/frontend ACR index digest 为 `sha256:ab37b2621ce9800070bf05d3307ba531b46363a0d94a32b69539b1d15731b8d4` / `sha256:c9e24c55c92b8ede42d96c6c3c839d11a62a3cdfde9d50380c7f6575525fc291`；完整备份 `/data/apps/agentcici/backups/20260814T021238Z-before-2.8.61-beta.21` 已校验，应用回滚目标 beta.20。仅重建 backend/frontend，四个状态服务 ID 不变；六容器 healthy/restart=0，health、最新五条 Flyway、Nginx、六项公网 smoke、匿名平台集成 JSON 401 和稳定窗口通过。部署 JS 已回读最长 60 分钟及 `3600000`。未配置或执行真实 60 分钟厂商任务，生产未修改。
 

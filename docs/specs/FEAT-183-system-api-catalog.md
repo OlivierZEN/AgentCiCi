@@ -6,7 +6,7 @@ status: in_implementation
 primary_project: agentcici
 task_ids: TASK-302
 related_integrations: INT-019
-updated_at: 2026-08-14T00:29:24Z
+updated_at: 2026-08-14T03:40:22Z
 updated_by: codex
 ---
 
@@ -60,6 +60,7 @@ updated_by: codex
 8. 只有平台登记为 ACTIVE、Scope 匹配且 Keycloak `azp` 精确命中的内部应用可使用 HUMAN 生态端点；未知、停用、Audience 不匹配或未绑定 HUMAN 账号的 Token 一律失败关闭。
 9. 公司 API 文档分别给出独立应用直调、AgentCiCi 自身前端和机器应用流程，明确 `access_token` 可调用、`id_token` 不可调用、公司级请求必须携带 `X-Company-Id`。
 10. 受信应用登记、停用与 Scope 变更必须由平台角色执行并记录审计；不得在业务源码中硬编码环境域名、Client Secret 或允许 Client 列表。
+11. 受信应用表单必须对无效应用代码给出具体、可操作的内联原因；空格输入需明确建议改用连字符，不能只通过禁用保存按钮表达失败。
 
 ## 回滚
 
@@ -71,3 +72,4 @@ updated_by: codex
 - Keycloak HUMAN 直调、受信 Client 治理、公司目录/上下文 API、系统 API 调用文档和运营端管理 UI 已完成，任务进入 review。
 - 功能提交 `e90a2d2b` 与 HTTP 方法错误修复 `9f58d972` 已进入 AgentCiCi 本地 `main`；统一开发环境运行 `2.8.61-dev.9f58d97`，V115、健康、版本、匿名 401、错误方法 405、页面路由和完整 `./stack verify` 均已回读通过。
 - Keycloak 直调增量已发布 UAT `2.8.61-beta.20 / 1b6bb8f1974a`；V115、运行版本、制品 digest、健康、状态服务不重启、页面/匿名鉴权边界和稳定窗口均通过，生产未修改。进入 done 前仍需使用一个真实新登记 Keycloak Client 完成登录、公司列表、公司上下文及后续 `X-Company-Id` 业务调用验收。
+- 受信应用应用代码的实时错误反馈已由本地 `main@2daa18ef` 实现并部署到 `cici.localhost`；空格、长度、首字符和字符集均有具体提示，前端全量测试、production build、运行制品回读和完整本地栈验证通过。UAT/生产未修改。

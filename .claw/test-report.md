@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-14T02:20:00Z
+updated_at: 2026-08-14T03:40:22Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-14T02:20:00Z
-last_run_status: passed_with_uat_business_acceptance_pending
+last_run_at: 2026-08-14T03:40:22Z
+last_run_status: passed_with_authorized_visual_pending
 ---
 
 # Test Report
+
+## 2026-08-14 TASK-302 受信应用代码校验反馈
+
+- 交互：`ccsales web` 即时提示“应用代码不能包含空格，请使用连字符（-）分隔，例如 ccsales-web”；长度、首字符和非法字符分别返回具体原因，保存门禁复用同一校验结果。
+- 可访问性：错误输入设置 `aria-invalid=true`，通过 `aria-describedby` 关联内联帮助，并以 `role=alert` 暴露动态错误。
+- 前端：定向 `PlatformSystemApisPage.test.ts` 1 文件/10 项、全量 49 文件/275 项、`npm run build` 和 `git diff --check` 通过；构建仅保留既有 chunk-size warning。
+- 本地主线与运行：功能提交 `2daa18ef4df8` 已进入本地 `main`；`cici-frontend` 从该提交构建为 `2.8.61-dev.2daa18e`，容器 healthy/restart=0，目标路由 200，部署 JS 含新增提示。
+- 完整门禁：`./stack verify` 通过域名、共享数据库隔离、TLS、OIDC、应用健康/版本和匿名鉴权边界。浏览器实际访问受保护路由后进入平台登录页，未绕过登录，因此授权态视觉交互待运营人员验收；UAT/生产未修改。
+- 状态：`passed_with_authorized_visual_pending`。
 
 ## 2026-08-14 TASK-303 / TASK-304 / TASK-305 UAT `2.8.61-beta.21`
 

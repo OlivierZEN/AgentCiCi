@@ -4,7 +4,7 @@ task_id: TASK-302
 feature_id: FEAT-183
 integration_id: INT-019
 status: review
-updated_at: 2026-08-14T00:29:24Z
+updated_at: 2026-08-14T03:40:22Z
 updated_by: codex
 owner_role: fullstack-agent
 spec_path: docs/specs/FEAT-183-system-api-catalog.md
@@ -56,6 +56,13 @@ spec_path: docs/specs/FEAT-183-system-api-catalog.md
 - `https://cici.localhost/platform/system-apis` 返回 200；匿名读取 `/api/platform/system-apis` 返回 401；部署 JS 制品包含系统 API 菜单与权限边界文案。
 - `cc-local-stack ./stack verify` 最终通过，覆盖共享数据库隔离、TLS 边缘、OIDC、应用健康/版本和匿名鉴权边界。
 - 浏览器无运营平台登录态，真实平台账号下的最终视觉/交互验收待人工完成，因此任务保持 `review`。
+
+## 受信应用表单校验反馈
+
+- 应用代码在输入时即时校验空格、2–64 字符长度、小写字母首字符及允许字符集；空格错误明确建议使用连字符并给出 `ccsales-web` 示例，不再只表现为保存按钮不可用。
+- 错误输入使用主题危险色完整边框和内联文案，并通过 `aria-invalid`、`aria-describedby` 与 `role=alert` 暴露给辅助技术；保存按钮复用同一校验结果，避免提示与提交门禁漂移。
+- 功能提交 `2daa18ef4df8` 已进入本地 `main`。前端定向 1 文件/10 项、全量 49 文件/275 项、production build 与 `git diff --check` 通过。
+- `cici-frontend` 已从该提交构建为 `2.8.61-dev.2daa18e`，healthy/restart=0；目标路由 200，部署 JS 已回读空格错误提示，完整 `./stack verify` 通过。当前浏览器无运营平台登录态，授权态视觉交互未冒充验收；UAT/生产未修改。
 
 ## 目录加载缺陷修复
 
