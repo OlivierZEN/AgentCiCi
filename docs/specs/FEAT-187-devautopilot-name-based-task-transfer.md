@@ -6,7 +6,7 @@ status: implemented
 primary_project: agentcici
 task_ids: TASK-307
 related_integrations: INT-022
-updated_at: 2026-08-14T01:45:00Z
+updated_at: 2026-08-14T06:38:00Z
 updated_by: codex
 ---
 
@@ -24,6 +24,12 @@ updated_by: codex
 - 草案不写入，且不显示内部主体 ID。
 - 确认后只转派排队任务，并要求 owner/revision 的实时回读。
 - 产品经理有独立 transfer 权限，开发者没有。
+
+## 故障修复
+
+精确确认属于受治理写操作，必须在任意通用运行模式、执行计划或模型自由回复之前被识别并路由到服务端 transfer Service。不得在 transfer 调用后降级为只读查询或由模型补充内部 Principal ID。
+
+当 `runtime.record.transfer` 未生效时，结果必须明确说明缺少该 scope 且未修改任务；不得返回泛化的“转派请求无效”。当结果声明转派成功时，必须包含 Semattice 返回并经读取验证的 `owner_principal_id` 与 `revision` 收据；无有效收据的成功文案一律拒绝输出。
 
 ## 回滚
 

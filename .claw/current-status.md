@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-14T06:25:00Z
+updated_at: 2026-08-14T06:38:00Z
 updated_by: codex
 phase: review
 active_task: TASK-307
-next_action: "由组织管理员显式同步产品经理 SERVICE 的 runtime.record.transfer scope；随后用户以精确确认口令执行一次受治理的任务转派，并回读 Semattice owner、revision 与审计。"
+next_action: "若产品经理 SERVICE 的 runtime.record.transfer 已完成同步，用户可重发精确确认口令；否则先由组织管理员同步该 scope。成功必须回读 Semattice owner、revision 与审计。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-307 / FEAT-187 / INT-022 已完成本地实现与草案验收：产品经理可从当前 tenant 的 DevAutopilot Developer Profile 自动解析“鲁班”“哪吒”，而不再要求人员 ID；“把鲁班的任务都转交给哪吒”只列出 1 项可转派的待开始任务并要求精确确认，运行中任务不转派。AgentCiCi backend 运行 `2.8.61-dev.9cce47c`、Semattice 运行 `1.0.3-dev.81685db`，均 healthy/restart=0，完整 `./stack verify` 通过。验证未输入确认口令，owner 未改；真实写入仍受产品经理专属 `runtime.record.transfer` scope 和最终人工确认双门禁约束，开发者无此授权。UAT/生产未修改。
+- TASK-307 / FEAT-187 / INT-022 已修复确认式转派的降级失败：截图中的精确确认曾调用 transfer Tool 后又落入通用查询/模型回复，因此既未写入、又错误要求人员 ID。提交 `d2047edf` 让精确确认优先走确定性服务端转派；缺少 `runtime.record.transfer` 时直接返回 scope 缺失且“未修改任务”，成功仅在 Semattice 回读 owner/revision 后声明；收据门禁禁止无回读的“已转交”文案。定向测试、package、`git diff --check` 和完整 `cc-local-stack ./stack verify` 通过；backend 运行 `2.8.61-dev.d2047ed`，Semattice `1.0.3-dev.81685db`，均 healthy/restart=0。浏览器控制端没有可用已登录会话，未重放最终确认，任务 owner 未改；UAT/生产未修改。
 - TASK-302 / FEAT-183 受信内部应用运营界面已完成桌面端可读性修整：应用目录改为固定列宽和独立操作列，完整展示“编辑/停用”，避免继承通用目录最小列宽后裁切；登记/编辑弹窗加宽为稳定工作区，统一字段、辅助说明和 Scope 选项高度，并将表单主体提升至 14–16px。提交 `8522fefb` 已进入本地及远程 `main`；前端定向 10 项、全量 49 文件/275 项、production build、`cici.localhost` 路由和完整 `./stack verify` 通过。前端镜像从本地 main 构建为 `2.8.61-dev.8522fef`，healthy/restart=0。可控浏览器仅有平台登录页，未伪造授权态截图。
 - TASK-302 / FEAT-183 已发布 UAT `2.8.61-beta.22 / 8522fefb52a2`：backend/frontend ACR index digest 为 `sha256:29e7449a0c88ff50ad17fb759091cc9b98a0cd95193fde8ebc59f6073337b145` / `sha256:96fb8e0040837e0067ae5fe57fb7b88167a0987ea814683bf52c3bc046915fe2`，未更新 `latest`。完整备份 `/data/apps/agentcici/backups/20260814T050143Z-before-2.8.61-beta.22` 已完成 PostgreSQL、KB/Qdrant tar、beta.21 旧镜像 gzip 和 SHA-256 清单校验，回滚目标 beta.21。仅重建 backend/frontend；状态服务保持运行。运行版本、health、Flyway V115、Nginx、公开 smoke、页面路由 200、匿名系统 API JSON 401 和稳定窗口均通过。无受权平台浏览器会话，真实独立 Client 调用与视觉验收仍待完成；生产未修改。
 - TASK-306 / FEAT-186 / INT-021 已完成本地删除与重建闭环：大乔PM获得 delete、开发者仍失败关闭；组织管理员通过明确确认的“同步交付授权”两次重应用 `devautopilot.authorization.v2`，成员、密钥和业务记录未变。5 条历史任务已逐条移入 Semattice 回收站并回读 revision 2，随后 `REQ-6F34ECF3` 仅生成任务 `019ffeb0-88a0-739f-afcb-6e667e9d2572`，分配鲁班、待开始、六阶段门禁齐全。backend/frontend 分别运行 `23ec0a6` / `aafbdbb`，健康且 restart=0，完整 `./stack verify` 通过；UAT/生产未修改。

@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-14T05:07:00Z
+updated_at: 2026-08-14T06:38:00Z
 updated_by: codex
 board_status: active
 ---
@@ -25,7 +25,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - spec_path: `docs/specs/FEAT-187-devautopilot-name-based-task-transfer.md`
 - task_status_path: `.claw/tasks/TASK-307.md`
 - blocked_by: `none`
-- next_action: `部署两个提供方本地 main 制品，验证转派草案与权限回读。`
+- next_action: `若产品经理 SERVICE 已同步 runtime.record.transfer，重发精确确认口令并回读 Semattice owner/revision；否则由组织管理员先同步该 scope。`
 
 ### TASK-302 - 运营端系统 API 目录
 

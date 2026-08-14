@@ -1,14 +1,21 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-14T06:25:00Z
+updated_at: 2026-08-14T06:38:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-14T06:25:00Z
-last_run_status: passed_local_draft_confirmation_gate
+last_run_at: 2026-08-14T06:38:00Z
+last_run_status: passed_local_transfer_fallback_repair
 ---
 
 # Test Report
+
+## 2026-08-14 TASK-307 确认式转派降级修复
+
+- 故障证据：精确确认已调用 `semattice_project_delivery_transfer`，但旧编排随后调用只读 query 并把模型回复发送给用户；因此既没有写入，也错误索要 Principal ID。
+- 修复验证：`mvn -q -Dtest=SematticeProjectDeliveryTransferToolServiceTest,DeliveryWriteReceiptGuardTest test`、`mvn -q -DskipTests package` 与 `git diff --check` 均通过。定向用例覆盖缺少 `runtime.record.transfer` 时的明确失败提示，以及 transfer 成功必须拥有真实回读收据。
+- 本地开发环境：backend 从 AgentCiCi 本地 `main@d2047edfa615` 构建为 `2.8.61-dev.d2047ed`；backend 与 Semattice 均 healthy、restart=0，完整 `cc-local-stack ./stack verify` 通过。
+- 验收边界：浏览器控制端没有可用已登录会话，未重发最终确认，也未修改任务 owner。若 scope 未同步，系统会明确失败关闭；scope 同步后须由用户重新发送精确确认，成功结果必须显示 Semattice owner/revision 回读。UAT/生产未修改。
 
 ## 2026-08-14 TASK-307 产品经理按名称自动识别并确认式转派
 
