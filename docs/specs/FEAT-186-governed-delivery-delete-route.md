@@ -23,6 +23,7 @@ updated_by: codex
 - 实际执行主体必须是当前 Agent 绑定且状态有效的产品经理 SERVICE；HUMAN 只提供确认上下文。
 - `runtime.record.delete` 只允许出现在 DevAutopilot `product_manager` SERVICE 的可选范围中；developer 等其他机器主体即使直接调用授权接口也必须被拒绝。
 - 平台 SERVICE 最大许可清单负责令牌签发上限，DevAutopilot 产品经理模板负责初始权限；两者都必须显式包含 delete，且不能据此扩大其他角色权限。
+- Semattice 必须应用 `devautopilot.authorization.v2`：只有 `product_manager` 获得交付对象的 delete 原子权限与 delete 数据范围，其他固定角色继续失败关闭。
 - 删除只调用 Semattice `runtime.record.delete`，语义为移入回收站，30 天内可恢复；禁止数据库直写和物理删除。
 - 只有 Semattice 返回相同 `record_id`、`lifecycle_state=trashed`、递增 revision、关联号并完成回读，才允许回复成功。
 - 查不到、同名多条、revision 冲突、scope/PDP 拒绝或回执不完整时失败关闭，不继续处理后续记录。
