@@ -13,6 +13,8 @@ public interface UserAccountRepository extends JpaRepository<UserAccountEntity, 
 
     Optional<UserAccountEntity> findByEmailIgnoreCase(String email);
 
+    Optional<UserAccountEntity> findByPublicIdIgnoreCase(String publicId);
+
     @Query("""
             select account
             from UserAccountEntity account

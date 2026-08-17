@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-14T11:17:51Z
+updated_at: 2026-08-17T02:27:24Z
 updated_by: codex
-phase: review
-active_task: TASK-309
-next_action: "TASK-309 已在 DevAutopilot 推进到 UAT待发布；等待用户另行授权 UAT，未经授权不发布。"
+phase: implementation
+active_task: TASK-310
+next_action: "按已确认 FEAT-189 实现 Owner 身份预检、明确复用/新建模式和渐进式租户开通弹窗；完成测试后提交本地 main 并更新 cici.localhost。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- TASK-310 / FEAT-189 已获用户确认并进入实现：租户开通先解析或选择全局 Owner 身份，再创建租户成员关系；已有账号通过公共编号显式复用，新账号先做手机号/邮箱占用预检，双账号冲突失败关闭，并以幂等键保护最终创建。平台弹窗采用“租户信息 → Owner 身份 → 确认摘要”渐进式桌面流程；不自动合并账号、不覆盖既有手机号/邮箱/密码/Keycloak 身份，UAT/生产不在本任务授权范围。
 
 - TASK-309 / FEAT-188 已完成本地实现与开发环境验收：主线提交 `a9d838b6`、`b7e03a56`、`aaf9706b`；V116/V117 成功，页面为 `2.8.61-dev.aaf9706`，backend/frontend healthy、restart=0，完整 stack verify 通过。已登录桌面页面验证两图上传、缩略图、删除、替换及提示同步；非 vision 模型按预期返回 409，当前页保留草稿，刷新证明失败消息未落库。后端 47 项定向、package、前端 50 文件/278 项和 build 通过；后端全量套件仍受既有共享测试库 V81 checksum 漂移与既有断言债务影响，未 repair。DevAutopilot 已登记 commit/test_report 和 1.0 agent-hour，依次完成 implementation_completed、local_test_passed，当前为 UAT待发布；UAT/生产未修改。
 

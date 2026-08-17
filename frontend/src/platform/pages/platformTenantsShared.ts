@@ -106,11 +106,14 @@ export type SematticeProvisioning = {
 
 export type TenantProvisionPayload = {
   tenantName: string;
-  ownerMobile: string;
+  ownerMode: "EXISTING" | "NEW";
+  ownerAccountPublicId?: string | null;
+  ownerMobile?: string | null;
   ownerDisplayName?: string | null;
   ownerEmail?: string | null;
   initialPassword?: string | null;
   provisionNote?: string | null;
+  idempotencyKey: string;
 };
 
 export type TenantProvisionResult = {
@@ -121,6 +124,21 @@ export type TenantProvisionResult = {
   ownerAccountId: string;
   reusedExistingAccount: boolean;
   ownerActivationRequired: boolean;
+  ownerResolution: string;
+};
+
+export type TenantOwnerResolution = {
+  resolution: "NEW_ACCOUNT" | "EXISTING_ACCOUNT" | "IDENTIFIER_CONFLICT" | "ACCOUNT_BLOCKED" | "NOT_FOUND";
+  canProceed: boolean;
+  accountPublicId?: string | null;
+  displayName?: string | null;
+  maskedMobile?: string | null;
+  maskedEmail?: string | null;
+  identityStatus: "ACTIVE" | "BOUND" | "PENDING_ACTIVATION" | "NEEDS_RECONCILIATION" | "NOT_APPLICABLE";
+  activeTenantCount: number;
+  matchBasis: string[];
+  unifiedIdentityEnabled: boolean;
+  message: string;
 };
 
 type LegacyCompanyIdentity = {
@@ -255,4 +273,23 @@ export async function createTenant(token: string, payload: TenantProvisionPayloa
     throw new Error(body?.message ?? `HTTP ${response.status}`);
   }
   return normalizeCompanyIdentity(body.data);
+}
+
+export async function resolveTenantOwner(payload: {
+  ownerMobile?: string | null;
+  ownerEmail?: string | null;
+  ownerPublicId?: string | null;
+}): Promise<TenantOwnerResolution> {
+  const response = await authFetch(LS_PLATFORM_TOKEN, `${PLATFORM_API_BASE}/tenants/owner-resolutions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  const { body } = await safeFetchJson<TenantOwnerResolution>(response);
+  if (!response.ok || !body?.success || !body.data) {
+    throw new Error(body?.message ?? `HTTP ${response.status}`);
+  }
+  return body.data;
 }

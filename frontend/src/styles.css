@@ -17344,6 +17344,278 @@ td.skills-data-table__actions > * {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.tenant-lifecycle__modal--provision {
+  width: min(780px, 100%);
+  min-height: min(590px, calc(100vh - 48px));
+  max-height: min(820px, calc(100vh - 48px));
+}
+
+.tenant-lifecycle__modal--provision .tenant-lifecycle__modal-head,
+.tenant-lifecycle__modal--provision .tenant-lifecycle__modal-foot {
+  padding-inline: 26px;
+}
+
+.tenant-lifecycle__modal--provision .tenant-lifecycle__modal-body {
+  padding: 24px 26px 28px;
+}
+
+.tenant-provision__steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-bottom: 1px solid rgba(196, 177, 145, 0.5);
+  background: var(--platform-panel-2);
+}
+
+.tenant-provision__step {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 58px;
+  color: var(--platform-muted);
+  font-size: 13px;
+}
+
+.tenant-provision__step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  width: 1px;
+  height: 24px;
+  background: var(--platform-line);
+}
+
+.tenant-provision__step span {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--platform-line-strong);
+  border-radius: 50%;
+  background: var(--platform-surface);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.tenant-provision__step.is-current,
+.tenant-provision__step.is-complete {
+  color: var(--platform-heading);
+}
+
+.tenant-provision__step.is-current span,
+.tenant-provision__step.is-complete span {
+  border-color: var(--platform-accent);
+  background: var(--platform-accent);
+  color: #fff;
+}
+
+.tenant-provision__body {
+  align-content: start;
+}
+
+.tenant-provision__section {
+  display: grid;
+  gap: 22px;
+}
+
+.tenant-provision__section-head {
+  display: grid;
+  gap: 6px;
+}
+
+.tenant-provision__section-head h3,
+.tenant-provision__section-head p,
+.tenant-provision__resolution p,
+.tenant-provision__new-check p {
+  margin: 0;
+}
+
+.tenant-provision__section-head h3 {
+  color: var(--platform-heading);
+  font-size: 19px;
+  line-height: 1.35;
+}
+
+.tenant-provision__section-head p {
+  max-width: 680px;
+  color: var(--platform-muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.tenant-provision__mode {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.tenant-provision__mode button {
+  display: grid;
+  gap: 5px;
+  min-height: 74px;
+  padding: 14px 16px;
+  border: 1px solid var(--platform-line);
+  border-radius: 10px;
+  background: var(--platform-surface);
+  color: var(--platform-heading);
+  text-align: left;
+  box-shadow: none;
+}
+
+.tenant-provision__mode button:hover,
+.tenant-provision__mode button:focus-visible {
+  border-color: var(--platform-line-strong);
+  transform: none;
+}
+
+.tenant-provision__mode button.is-active {
+  border-color: var(--platform-accent);
+  background: var(--platform-accent-soft);
+}
+
+.tenant-provision__mode strong {
+  font-size: 14px;
+}
+
+.tenant-provision__mode span {
+  color: var(--platform-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.tenant-provision__lookup,
+.tenant-provision__lookup label {
+  display: grid;
+  gap: 7px;
+}
+
+.tenant-provision__lookup label > span {
+  color: var(--platform-muted);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.tenant-provision__lookup-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.tenant-provision__lookup-line .platform-button {
+  min-width: 112px;
+}
+
+.tenant-provision__new-check {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(196, 177, 145, 0.5);
+  color: var(--platform-muted);
+  font-size: 12px;
+}
+
+.tenant-provision__resolution {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--platform-line-strong);
+  border-radius: 10px;
+  background: var(--platform-panel-2);
+}
+
+.tenant-provision__resolution--success {
+  border-color: color-mix(in srgb, var(--platform-success) 48%, var(--platform-line));
+  background: var(--platform-success-soft);
+}
+
+.tenant-provision__resolution--danger {
+  border-color: color-mix(in srgb, var(--platform-danger) 48%, var(--platform-line));
+  background: var(--platform-danger-soft);
+}
+
+.tenant-provision__resolution > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.tenant-provision__resolution > div:first-child strong {
+  color: var(--platform-heading);
+  font-size: 14px;
+}
+
+.tenant-provision__resolution p {
+  color: var(--platform-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.tenant-provision__resolution dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  border-top: 1px solid rgba(196, 177, 145, 0.52);
+  border-left: 1px solid rgba(196, 177, 145, 0.52);
+}
+
+.tenant-provision__resolution dl div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-right: 1px solid rgba(196, 177, 145, 0.52);
+  border-bottom: 1px solid rgba(196, 177, 145, 0.52);
+}
+
+.tenant-provision__resolution dt {
+  color: var(--platform-muted);
+  font-size: 11px;
+}
+
+.tenant-provision__resolution dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--platform-heading);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tenant-provision__resolution code {
+  color: var(--platform-accent-strong);
+  font-size: 11px;
+}
+
+.tenant-provision__summary {
+  border-top: 1px solid var(--platform-line);
+}
+
+.tenant-provision__summary > div {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 18px;
+  padding: 13px 2px;
+  border-bottom: 1px solid var(--platform-line);
+}
+
+.tenant-provision__summary span {
+  color: var(--platform-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tenant-provision__summary strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--platform-heading);
+  font-size: 13px;
+}
+
 .tenant-lifecycle__confirm-line {
   display: grid;
   grid-template-columns: 82px minmax(0, 1fr) auto;

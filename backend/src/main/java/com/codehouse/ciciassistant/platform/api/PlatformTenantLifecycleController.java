@@ -6,6 +6,7 @@ import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.codehouse.ciciassistant.platform.service.PlatformTenantLifecycleService;
 import com.codehouse.ciciassistant.platform.service.PlatformTenantOwnerRecoveryService;
 import com.codehouse.ciciassistant.platform.service.PlatformTenantOwnerIdentityService;
+import com.codehouse.ciciassistant.platform.service.PlatformTenantOwnerResolutionService;
 import com.codehouse.ciciassistant.platform.service.DevAutopilotTenantApplicationService;
 import com.codehouse.ciciassistant.semattice.SematticeProvisioningClient;
 import com.codehouse.ciciassistant.semattice.SematticeProvisioningService;
@@ -39,6 +40,7 @@ public class PlatformTenantLifecycleController {
     private final DevAutopilotTenantApplicationService devAutopilotApplications;
     private final PlatformTenantOwnerRecoveryService ownerRecoveryService;
     private final PlatformTenantOwnerIdentityService ownerIdentityService;
+    private final PlatformTenantOwnerResolutionService ownerResolutionService;
     private final DevAutopilotIntakeReconciliationService intakeReconciliations;
 
     public PlatformTenantLifecycleController(PlatformTenantLifecycleService tenantLifecycleService,
@@ -47,6 +49,7 @@ public class PlatformTenantLifecycleController {
                                              DevAutopilotTenantApplicationService devAutopilotApplications,
                                              PlatformTenantOwnerRecoveryService ownerRecoveryService,
                                              PlatformTenantOwnerIdentityService ownerIdentityService,
+                                             PlatformTenantOwnerResolutionService ownerResolutionService,
                                              DevAutopilotIntakeReconciliationService intakeReconciliations) {
         this.tenantLifecycleService = tenantLifecycleService;
         this.sematticeProvisioningClient = sematticeProvisioningClient;
@@ -54,6 +57,7 @@ public class PlatformTenantLifecycleController {
         this.devAutopilotApplications = devAutopilotApplications;
         this.ownerRecoveryService = ownerRecoveryService;
         this.ownerIdentityService = ownerIdentityService;
+        this.ownerResolutionService = ownerResolutionService;
         this.intakeReconciliations = intakeReconciliations;
     }
 
@@ -69,14 +73,29 @@ public class PlatformTenantLifecycleController {
         return ApiResponse.ok(tenantLifecycleService.createTenant(
                 new PlatformTenantLifecycleService.TenantProvisionCommand(
                         request.tenantName(),
+                        request.ownerMode(),
+                        request.ownerAccountPublicId(),
                         request.ownerMobile(),
                         request.ownerDisplayName(),
                         request.ownerEmail(),
                         request.initialPassword(),
-                        request.provisionNote()
+                        request.provisionNote(),
+                        request.idempotencyKey()
                 ),
                 actorId(),
                 actorRole()));
+    }
+
+    @PostMapping("/owner-resolutions")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
+    public ApiResponse<PlatformTenantOwnerResolutionService.OwnerResolutionView> resolveOwner(
+            @Valid @RequestBody ResolveTenantOwnerRequest request) {
+        return ApiResponse.ok(ownerResolutionService.resolve(
+                new PlatformTenantOwnerResolutionService.OwnerResolutionCommand(
+                        request.ownerMobile(),
+                        request.ownerEmail(),
+                        request.ownerPublicId()
+                )));
     }
 
     @PostMapping("/{companyId}/owner-recoveries")
@@ -338,14 +357,30 @@ public class PlatformTenantLifecycleController {
 
     public record CreateTenantRequest(
             @NotBlank String tenantName,
-            @NotBlank
-            @Pattern(regexp = "^1\\d{10}$", message = "must be an 11-digit mainland China mobile number")
+            String ownerMode,
+            String ownerAccountPublicId,
             String ownerMobile,
             String ownerDisplayName,
             String ownerEmail,
             String initialPassword,
-            String provisionNote
+            String provisionNote,
+            @Pattern(regexp = "^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$") String idempotencyKey
     ) {
+    }
+
+    public record ResolveTenantOwnerRequest(
+            String ownerMobile,
+            String ownerEmail,
+            String ownerPublicId
+    ) {
+        @AssertTrue(message = "mobile, email or public ID is required")
+        public boolean hasIdentifier() {
+            return hasText(ownerMobile) || hasText(ownerEmail) || hasText(ownerPublicId);
+        }
+
+        private static boolean hasText(String value) {
+            return value != null && !value.isBlank();
+        }
     }
 
     public record OwnerRecoveryRequest(

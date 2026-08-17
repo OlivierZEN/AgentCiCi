@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-14T11:17:51Z
+updated_at: 2026-08-17T02:27:24Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,18 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-310 - 新租户 Owner 全局身份复用
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-189-reusable-tenant-owner-identity.md`
+- task_status_path: `.claw/tasks/TASK-310.md`
+- blocked_by: `none`
+- scope_files: `Owner 身份解析、租户开通模式与幂等、平台渐进式开通弹窗、测试与本地环境验证`
+- next_action: `实现后端身份预检和明确复用/新建模式，再完成平台弹窗与本地验收。`
 
 ### TASK-309 - 对话框连续粘贴图片附件
 

@@ -6,6 +6,7 @@ import com.codehouse.ciciassistant.auth.domain.UserAccountEntity;
 import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.auth.service.CompanyProvisioningService;
 import com.codehouse.ciciassistant.auth.service.KeycloakIdentityProvisioningService;
+import com.codehouse.ciciassistant.common.error.ConflictException;
 import com.codehouse.ciciassistant.common.security.SecretKeyMatcher;
 import com.codehouse.ciciassistant.kb.service.VectorDeleteResult;
 import com.codehouse.ciciassistant.kb.service.VectorStoreAuditResult;
@@ -270,6 +271,8 @@ public class PlatformTenantLifecycleService {
     private final CompanyRepository companyRepository;
     private final CompanyProvisioningService companyProvisioningService;
     private final KeycloakIdentityProvisioningService keycloakIdentityProvisioningService;
+    private final PlatformTenantOwnerResolutionService ownerResolutionService;
+    private final PlatformTenantProvisioningIdempotencyService tenantProvisioningIdempotencyService;
     private final CompanyRetentionPolicyRepository retentionPolicyRepository;
     private final CompanyPurgeJobRepository purgeJobRepository;
     private final CompanyExportJobRepository exportJobRepository;
@@ -286,6 +289,8 @@ public class PlatformTenantLifecycleService {
     public PlatformTenantLifecycleService(CompanyRepository companyRepository,
                                           CompanyProvisioningService companyProvisioningService,
                                           KeycloakIdentityProvisioningService keycloakIdentityProvisioningService,
+                                          PlatformTenantOwnerResolutionService ownerResolutionService,
+                                          PlatformTenantProvisioningIdempotencyService tenantProvisioningIdempotencyService,
                                           CompanyRetentionPolicyRepository retentionPolicyRepository,
                                           CompanyPurgeJobRepository purgeJobRepository,
                                           CompanyExportJobRepository exportJobRepository,
@@ -301,6 +306,8 @@ public class PlatformTenantLifecycleService {
         this.companyRepository = companyRepository;
         this.companyProvisioningService = companyProvisioningService;
         this.keycloakIdentityProvisioningService = keycloakIdentityProvisioningService;
+        this.ownerResolutionService = ownerResolutionService;
+        this.tenantProvisioningIdempotencyService = tenantProvisioningIdempotencyService;
         this.retentionPolicyRepository = retentionPolicyRepository;
         this.purgeJobRepository = purgeJobRepository;
         this.exportJobRepository = exportJobRepository;
@@ -326,36 +333,69 @@ public class PlatformTenantLifecycleService {
     @Transactional
     public TenantProvisionView createTenant(TenantProvisionCommand command, String actorId, String actorRole) {
         String tenantName = requireText(command.tenantName(), "租户名称不能为空");
-        String ownerMobile = requireMobile(command.ownerMobile());
+        OwnerMode ownerMode = OwnerMode.parse(command.ownerMode());
+        String ownerMobile = trimToNull(command.ownerMobile());
         String ownerEmail = trimToNull(command.ownerEmail());
         if (ownerEmail != null && !ownerEmail.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
             throw new IllegalArgumentException("邮箱格式不正确");
         }
         boolean unifiedIdentityEnabled = keycloakIdentityProvisioningService.isEnabled();
-        if (unifiedIdentityEnabled && ownerEmail == null) {
-            throw new IllegalArgumentException("统一认证启用时 Owner 邮箱不能为空");
+        String idempotencyKey = normalizeIdempotencyKey(command.idempotencyKey());
+        String fingerprint = tenantProvisioningFingerprint(command, ownerMode, tenantName, ownerMobile, ownerEmail);
+        tenantProvisioningIdempotencyService.lock(idempotencyKey);
+        TenantProvisionView replay = tenantProvisioningIdempotencyService.findReplay(idempotencyKey, fingerprint);
+        if (replay != null) {
+            return replay;
         }
 
-        UserAccountEntity existingAccount = companyProvisioningService.findMobileAccount(ownerMobile).orElse(null);
-        if (existingAccount == null && !unifiedIdentityEnabled) {
+        PlatformTenantOwnerResolutionService.ResolvedOwner resolved = resolveOwner(command, ownerMode, ownerMobile, ownerEmail);
+        if (resolved.resolution() == PlatformTenantOwnerResolutionService.Resolution.IDENTIFIER_CONFLICT
+                || resolved.resolution() == PlatformTenantOwnerResolutionService.Resolution.ACCOUNT_BLOCKED
+                || resolved.resolution() == PlatformTenantOwnerResolutionService.Resolution.NOT_FOUND) {
+            throw new ConflictException(resolved.message());
+        }
+        boolean reusedExistingAccount = resolved.resolution()
+                == PlatformTenantOwnerResolutionService.Resolution.EXISTING_ACCOUNT;
+        if (ownerMode == OwnerMode.NEW && reusedExistingAccount) {
+            throw new ConflictException("检测到已注册用户，请改为复用已有用户后再开通租户。");
+        }
+        if (ownerMode == OwnerMode.EXISTING && !reusedExistingAccount) {
+            throw new ConflictException("未找到可复用的已有用户，请重新查询或改为创建新用户。");
+        }
+        if (!reusedExistingAccount) {
+            ownerMobile = requireMobile(ownerMobile);
+            if (unifiedIdentityEnabled && ownerEmail == null) {
+                throw new IllegalArgumentException("统一认证启用时新 Owner 邮箱不能为空");
+            }
+        }
+        if (!reusedExistingAccount && !unifiedIdentityEnabled) {
             String initialPassword = requireText(command.initialPassword(), "首次 Owner 账号需要初始密码");
             if (initialPassword.length() < 8) {
                 throw new IllegalArgumentException("初始密码至少需要 8 位");
             }
         }
 
+        tenantProvisioningIdempotencyService.start(idempotencyKey, fingerprint);
         CompanyEntity org = companyProvisioningService.createCompany(tenantName);
-        UserAccountEntity account = existingAccount != null
-                ? existingAccount
+        UserAccountEntity account = reusedExistingAccount
+                ? resolved.account()
                 : companyProvisioningService.createMobileAccount(ownerMobile, command.ownerDisplayName(), ownerEmail);
-        if (existingAccount == null && !unifiedIdentityEnabled) {
+        if (!reusedExistingAccount && !unifiedIdentityEnabled) {
             companyProvisioningService.assignPasswordCredential(account, command.initialPassword().trim());
         }
-        KeycloakIdentityProvisioningService.ProvisionResult identity = unifiedIdentityEnabled
+        boolean existingActiveIdentity = reusedExistingAccount
+                && ownerResolutionService.resolve(new PlatformTenantOwnerResolutionService.OwnerResolutionCommand(
+                        null,
+                        null,
+                        account.getPublicId()
+                )).identityStatus().equals("ACTIVE");
+        KeycloakIdentityProvisioningService.ProvisionResult identity = unifiedIdentityEnabled && !existingActiveIdentity
                 ? keycloakIdentityProvisioningService.ensureHumanIdentity(account)
                 : null;
         UserEntity owner = companyProvisioningService.createOwnerMembership(org, account, command.ownerDisplayName());
-        if (identity != null) {
+        if (existingActiveIdentity) {
+            owner.setMemberStatus(UserEntity.STATUS_ACTIVE);
+        } else if (identity != null) {
             owner.setMemberStatus(identity.activationRequired()
                     ? UserEntity.STATUS_PENDING_ACTIVATION
                     : UserEntity.STATUS_ACTIVE);
@@ -369,17 +409,67 @@ public class PlatformTenantLifecycleService {
                 "platform.tenant.create",
                 "tenant",
                 org.getId(),
-                buildTenantCreateAuditDetail(account, existingAccount != null, command.provisionNote()));
-        return new TenantProvisionView(
+                buildTenantCreateAuditDetail(account, reusedExistingAccount, command.provisionNote()));
+        TenantProvisionView result = new TenantProvisionView(
                 org.getId(),
                 org.getName(),
                 org.getStatus(),
                 owner.getId(),
                 account.getId(),
-                existingAccount != null,
-                identity != null && identity.activationRequired()
+                reusedExistingAccount,
+                identity != null && identity.activationRequired(),
+                reusedExistingAccount ? "EXISTING" : "NEW"
         );
+        tenantProvisioningIdempotencyService.complete(idempotencyKey, result);
+        return result;
     }
+
+    private PlatformTenantOwnerResolutionService.ResolvedOwner resolveOwner(
+            TenantProvisionCommand command,
+            OwnerMode ownerMode,
+            String ownerMobile,
+            String ownerEmail) {
+        if (ownerMode == OwnerMode.EXISTING) {
+            return ownerResolutionService.resolveOwner(new PlatformTenantOwnerResolutionService.OwnerResolutionCommand(
+                    null,
+                    null,
+                    requireText(command.ownerAccountPublicId(), "复用已有用户时公共编号不能为空")
+            ));
+        }
+        return ownerResolutionService.resolveOwner(new PlatformTenantOwnerResolutionService.OwnerResolutionCommand(
+                ownerMobile,
+                ownerEmail,
+                null
+        ));
+    }
+
+    private String normalizeIdempotencyKey(String value) {
+        String normalized = trimToNull(value);
+        if (normalized == null) {
+            return "legacy-tenant-create-" + UUID.randomUUID();
+        }
+        if (!normalized.matches("^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$")) {
+            throw new IllegalArgumentException("幂等键格式不正确");
+        }
+        return normalized;
+    }
+
+    private String tenantProvisioningFingerprint(TenantProvisionCommand command,
+                                                 OwnerMode ownerMode,
+                                                 String tenantName,
+                                                 String ownerMobile,
+                                                 String ownerEmail) {
+        return sha256(String.join("\n",
+                tenantName,
+                ownerMode.name(),
+                ownerMobile == null ? "" : ownerMobile,
+                ownerEmail == null ? "" : ownerEmail.toLowerCase(),
+                trimToNull(command.ownerAccountPublicId()) == null ? "" : command.ownerAccountPublicId().trim().toUpperCase(),
+                trimToNull(command.ownerDisplayName()) == null ? "" : command.ownerDisplayName().trim(),
+                trimToNull(command.provisionNote()) == null ? "" : command.provisionNote().trim()
+        ));
+    }
+
 
     @Transactional
     public TenantRetentionDetailView getRetentionDetail(String companyId) {
@@ -1443,11 +1533,14 @@ public class PlatformTenantLifecycleService {
 
     public record TenantProvisionCommand(
             String tenantName,
+            String ownerMode,
+            String ownerAccountPublicId,
             String ownerMobile,
             String ownerDisplayName,
             String ownerEmail,
             String initialPassword,
-            String provisionNote
+            String provisionNote,
+            String idempotencyKey
     ) {
     }
 
@@ -1476,8 +1569,24 @@ public class PlatformTenantLifecycleService {
             String ownerMemberId,
             String ownerAccountId,
             boolean reusedExistingAccount,
-            boolean ownerActivationRequired
+            boolean ownerActivationRequired,
+            String ownerResolution
     ) {
+    }
+
+    private enum OwnerMode {
+        EXISTING,
+        NEW,
+        AUTO;
+
+        private static OwnerMode parse(String value) {
+            String normalized = value == null || value.isBlank() ? "AUTO" : value.trim().toUpperCase();
+            try {
+                return OwnerMode.valueOf(normalized);
+            } catch (IllegalArgumentException exception) {
+                throw new IllegalArgumentException("Owner 模式必须是 EXISTING、NEW 或 AUTO");
+            }
+        }
     }
 
     public record RetentionPolicyView(
