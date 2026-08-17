@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-17T03:24:24Z
+updated_at: 2026-08-17T09:11:54Z
 updated_by: codex
-phase: implementation
+phase: review
 active_task: TASK-311
-next_action: "本地实现与环境已验证；按 Semattice 提供方先行顺序完成 UAT schema/release，再发布 AgentCiCi 并执行真实运营开通。"
+next_action: "UAT 2.8.61-beta.25 技术门禁已通过；由受权平台管理员选定测试租户，完成已有 Owner 复用和 DevAutopilot 首次开通/同键恢复业务验收。"
 read_next:
   goals: false
   decisions: false
@@ -22,9 +22,9 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-311 / FEAT-190 / INT-024` 已完成本地实现与正式开发环境验收：DevAutopilot activation 使用持久化阶段、独立失败记录、5 分钟执行租约和同键恢复。真实 PostgreSQL 16 已验证 V118→V119、首次授权失败持久化、同键恢复和资源不重复；首次部署发现的 V117.1 顺序冲突已不通过 `outOfOrder` 绕过，而是永久前移至 V119。AgentCiCi 本地 `main@0c56f468b8f8` 已构建为 `2.8.61-dev.0c56f46`，backend/frontend healthy、restart=0，V118/V119 成功，完整 `./stack verify` 通过；已登录页面回读同一版本且现有租户为“运行中 / 初始化已完成”。下一步是 Semattice 先行 UAT schema/release，再发布 AgentCiCi 并执行真实 HUMAN 开通/重试；生产不修改。
+- `TASK-311 / FEAT-190 / INT-024` 已随 UAT `2.8.61-beta.25 / cc0e8078f5f5` 完成技术发布验收：Semattice 提供方已先行运行 `1.0.5-beta.2 / 0be03d018ecd`，schema `22/22 ready`；AgentCiCi V118/V119、镜像 revision、完整备份校验、六容器 healthy/restart=0、JSON 401/403、Nginx、公开 smoke 与 10 分钟错误日志均通过。真实 HMAC 授权模板调用会写入租户授权事实，本轮未伪造测试租户；待受权平台管理员执行首次开通或同键恢复业务验收。生产未修改。
 
-- TASK-310 / FEAT-189 已完成本地实现并进入 review：租户开通先解析或选择全局 Owner 身份，再创建租户成员关系；已有账号通过公共编号显式复用，新账号先做手机号/邮箱占用预检，双账号冲突失败关闭，并以幂等键保护最终创建。平台弹窗采用“租户信息 → Owner 身份 → 确认摘要”三步流程，不自动合并或覆盖既有身份。提交 `4e11acc1` 已进入本地 `main`；backend/frontend 运行 `2.8.61-dev.4e11acc`，V118、11 项后端定向测试/package、前端 50 文件/279 项/build、healthy/restart=0 和完整 stack verify 通过。后端全量仍被既有共享测试库 V81 checksum 漂移阻断；可控浏览器只有平台登录页，授权态业务开通待运营人员复核。UAT/生产未修改。
+- TASK-310 / FEAT-189 已随 `2.8.61-beta.25` 进入 UAT：租户开通先解析或选择全局 Owner 身份，再创建租户成员关系；已有账号通过公共编号显式复用，新账号先做手机号/邮箱占用预检，双账号冲突失败关闭，并以幂等键保护最终创建。UAT 已回读 V118、目标镜像/commit、健康和匿名身份解析 API JSON 401；授权态已有用户复用、新用户预检、冲突提示与最终开通仍待平台管理员复核。生产未修改。
 
 - TASK-309 / FEAT-188 已完成本地实现与开发环境验收：主线提交 `a9d838b6`、`b7e03a56`、`aaf9706b`；V116/V117 成功，页面为 `2.8.61-dev.aaf9706`，backend/frontend healthy、restart=0，完整 stack verify 通过。已登录桌面页面验证两图上传、缩略图、删除、替换及提示同步；非 vision 模型按预期返回 409，当前页保留草稿，刷新证明失败消息未落库。后端 47 项定向、package、前端 50 文件/278 项和 build 通过；后端全量套件仍受既有共享测试库 V81 checksum 漂移与既有断言债务影响，未 repair。DevAutopilot 已登记 commit/test_report 和 1.0 agent-hour，依次完成 implementation_completed、local_test_passed，当前为 UAT待发布；UAT/生产未修改。
 

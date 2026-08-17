@@ -1,14 +1,24 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-17T03:20:00Z
+updated_at: 2026-08-17T09:11:54Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-17T03:20:00Z
-last_run_status: passed_task_311_local_candidate_with_known_full_suite_debt
+last_run_at: 2026-08-17T09:11:54Z
+last_run_status: passed_agentcici_2_8_61_beta_25_uat_technical_gate
 ---
 
 # Test Report
+
+## 2026-08-17 AgentCiCi UAT `2.8.61-beta.25`
+
+- 状态：`passed_agentcici_2_8_61_beta_25_uat_technical_gate`。
+- 冻结关系：远程 `main`、annotated tag `2.8.61-beta.25^{}` 与运行 commit 均为 `cc0e8078f5f5`；该候选包含 TASK-310 Owner 身份复用和 TASK-311 可恢复开通。
+- 提供方门禁：Semattice UAT 为 `1.0.5-beta.2 / 0be03d018ecd`，`/healthz` 回读 schema `current=22 / required=22 / ready=true`；内部授权模板无签名 POST 为 `403 application/json / UNAUTHORIZED`，不是 404 或 SPA HTML。
+- 制品与迁移：backend/frontend 均使用不可变 beta.25 镜像，image label 版本与 revision 一致；Flyway V118、V119 为 success。完整备份 `20260817T034412Z-before-2.8.61-beta.25` 的 Compose、PostgreSQL、KB、Qdrant、beta.24 前后端镜像、旧容器指纹均通过 `SHA256SUMS`。
+- 运行稳定：仅应用容器处于 beta.25；database、Redis、RabbitMQ、Qdrant 保持 10 天运行。六容器 healthy/restart=0，backend health=UP，Nginx 校验通过；10 分钟 backend/frontend/Semattice 错误计数均为 0。
+- 公网与鉴权：UAT 首页、Keycloak discovery、Semattice health/version、DevAutopilot integrated health 全部通过；匿名 Owner 解析与 DevAutopilot activation 均为 JSON 401，Semattice 授权模板为 JSON 403。
+- 验收边界：真实 HMAC 授权模板调用会写入指定租户的授权事实。本轮未指定 UAT 测试租户，未伪造 HUMAN 会话或制造业务写入；首次开通、失败后同键恢复、模板摘要和资源不重复仍待受权平台管理员验收。生产未修改。
 
 ## 2026-08-17 TASK-311 DevAutopilot 可恢复开通本地候选验证
 

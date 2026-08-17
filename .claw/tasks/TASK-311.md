@@ -3,11 +3,11 @@ kind: task-status
 task_id: TASK-311
 feature_id: FEAT-190
 integration_id: INT-024
-status: in_progress
+status: review
 priority: critical
 owner_role: integration-agent
 claimed_by: codex
-updated_at: 2026-08-17T03:24:24Z
+updated_at: 2026-08-17T09:11:54Z
 updated_by: codex
 ---
 
@@ -32,4 +32,6 @@ updated_by: codex
 - 本地 `main@0c56f468b8f8` 已通过真实 PostgreSQL 16 的 V118→V119 升级、失败持久化与同键恢复回归，没有启用 Flyway `outOfOrder`。
 - 本地开发测试环境已从该 `main` 构建并通过完整 `./stack verify`：AgentCiCi `2.8.61-dev.0c56f46`，V118/V119 均成功，backend/frontend healthy 且 restart=0。
 - 已登录运营页面回读同一版本，现有租户 DevAutopilot 为“运行中 / 初始化已完成”；未为造失败场景重复修改已开通业务数据。
-- 待按提供方先行顺序完成 Semattice UAT schema/release 门禁，再发布 AgentCiCi UAT 候选并执行真实 HUMAN 开通/重试。
+- Semattice 已先行发布 UAT `1.0.5-beta.2 / 0be03d018ecd`，运行 schema 为 `22/22 ready`；内部授权模板无签名请求为 JSON 403。
+- AgentCiCi UAT `2.8.61-beta.25 / cc0e8078f5f5` 已回读 V118/V119、镜像 revision、备份清单、健康、重启次数、JSON 401/403、公开 smoke 和 10 分钟错误日志稳定窗口。
+- 真实 HMAC 授权模板调用会写入租户授权事实；当前未指定验收租户，因此未制造业务数据。待受权平台管理员执行首次开通或同键恢复并回读 ACTIVE、模板摘要和资源不重复。

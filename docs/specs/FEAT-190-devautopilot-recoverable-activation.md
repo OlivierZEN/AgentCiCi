@@ -2,11 +2,11 @@
 kind: feature-spec
 feature_id: FEAT-190
 title: DevAutopilot 可恢复租户开通 Saga
-status: implementing
+status: implemented
 primary_project: agentcici
 task_ids: TASK-311
 related_integrations: INT-024
-updated_at: 2026-08-17T03:10:00Z
+updated_at: 2026-08-17T09:11:54Z
 updated_by: codex
 ---
 
@@ -45,3 +45,7 @@ updated_by: codex
 ## 回滚
 
 回滚应用代码不会删除 activation、PM 资源、Semattice metadata 或授权事实。处于 FAILED 的记录继续失败关闭；恢复必须通过正式 reconcile，不直写数据库。
+
+## 发布进展
+
+- 2026-08-17：AgentCiCi `2.8.61-beta.25 / cc0e8078f5f5` 已通过 UAT 技术门禁；Semattice 提供方为 `1.0.5-beta.2 / 0be03d018ecd`，schema `22/22 ready`。真实首次开通或同键恢复仍需受权平台管理员选定 UAT 租户后执行。

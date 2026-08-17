@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-17T02:52:17Z
+updated_at: 2026-08-17T09:11:54Z
 updated_by: codex
 board_status: active
 ---
@@ -17,7 +17,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-311 - DevAutopilot 可恢复租户开通
 
-- status: `in_progress`
+- status: `review`
 - priority: `critical`
 - owner_role: `integration-agent`
 - claimed_by: `codex`
@@ -25,7 +25,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - spec_path: `docs/specs/FEAT-190-devautopilot-recoverable-activation.md`
 - task_status_path: `.claw/tasks/TASK-311.md`
 - blocked_by: `none`
-- next_action: `本地 main 与开发环境已验证；按 Semattice 提供方先行顺序完成 UAT schema/release，再发布 AgentCiCi 并执行真实运营开通。`
+- completion_evidence: `2.8.61-beta.25 / cc0e8078f5f5；Semattice 1.0.5-beta.2 schema 22/22 ready；V118/V119、备份校验、六容器 healthy/restart=0、JSON 401/403、公开 smoke 与稳定日志通过`
+- next_action: `由受权平台管理员选定测试租户执行首次开通或同键恢复，回读 ACTIVE、Semattice 授权模板和资源不重复。`
 
 ### TASK-310 - 新租户 Owner 全局身份复用
 
@@ -38,7 +39,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - scope_files: `Owner 身份解析、租户开通模式与幂等、平台渐进式开通弹窗、测试与本地环境验证`
 - completion_evidence: `4e11acc1；后端 11 项定向测试/package、前端 50 文件/279 项/build、V118、2.8.61-dev.4e11acc、healthy/restart=0、完整 stack verify 通过`
-- next_action: `由已登录平台管理员复核三步弹窗的已有用户复用、新用户预检、标识冲突和最终开通；UAT/生产未授权。`
+- next_action: `UAT 2.8.61-beta.25 已通过技术门禁；由已登录平台管理员复核三步弹窗的已有用户复用、新用户预检、标识冲突和最终开通。`
 
 ### TASK-309 - 对话框连续粘贴图片附件
 

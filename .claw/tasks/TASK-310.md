@@ -3,7 +3,7 @@ kind: task-status
 task_id: TASK-310
 feature_id: FEAT-189
 status: review
-updated_at: 2026-08-17T02:52:17Z
+updated_at: 2026-08-17T09:11:54Z
 updated_by: codex
 owner_role: fullstack-agent
 spec_path: docs/specs/FEAT-189-reusable-tenant-owner-identity.md
@@ -29,5 +29,5 @@ spec_path: docs/specs/FEAT-189-reusable-tenant-owner-identity.md
 
 ## 当前状态
 
-- 实现提交 `4e11acc1` 已进入本地 `main`；backend/frontend 已从该提交构建并运行 `2.8.61-dev.4e11acc`，V118、健康、重启次数与完整 stack verify 均通过。
-- 可控浏览器只能进入运营平台登录边界，未伪造平台管理员登录态；授权态的已有用户复用、新用户预检、冲突提示与最终开通仍待运营人员复核。
+- 实现提交 `4e11acc1` 已包含于 UAT `2.8.61-beta.25 / cc0e8078f5f5`；V118、镜像 revision、备份、健康、重启次数、匿名身份解析 API JSON 401 与公开 smoke 均通过。
+- 未伪造平台管理员登录态或创建测试租户；授权态的已有用户复用、新用户预检、冲突提示与最终开通仍待运营人员复核。生产未修改。

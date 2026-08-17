@@ -1,12 +1,19 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-14T09:20:00Z
+updated_at: 2026-08-17T09:11:54Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-17 TASK-310 / TASK-311 UAT `2.8.61-beta.25`
+
+- 冻结 Git tag/commit 为 `2.8.61-beta.25 / cc0e8078f5f5`；backend/frontend digest 分别为 `sha256:6685f273eaf74a09a7c3ef0082f308b208d7e5f44a96cee888259593a7657d24`、`sha256:f7eec819048d7678a94af44ce527a7482273a722af1ac05429297b87ff162b3a`，镜像 label 与运行版本一致。
+- 完整备份 `/data/apps/agentcici/backups/20260817T034412Z-before-2.8.61-beta.25` 包含 Compose、受管环境、PostgreSQL、KB、Qdrant、beta.24 前后端镜像、旧容器指纹和 SHA-256 清单；清单逐项通过。即时应用回滚目标为 `2.8.61-beta.24`，数据库 migration 采用向前修复，不反向删除 V118/V119。
+- 仅 backend/frontend 使用 beta.25；database、Redis、RabbitMQ、Qdrant 的容器 ID 保持 `d14ef639f035`、`db0945fd318c`、`4166b9909101`、`26aec0ef3a29`。六容器 healthy/restart=0，health=UP，V118/V119、Nginx、公开 smoke、JSON 401/403 与 10 分钟错误日志稳定窗口通过。
+- Semattice 提供方先行为 `1.0.5-beta.2 / 0be03d018ecd`，schema `22/22 ready`；本轮未在未指定租户上执行会写授权事实的 HMAC 模板调用。受权业务开通/恢复验收待完成，生产未修改。
 
 ## 2026-08-14 TASK-308 本地开发环境
 
