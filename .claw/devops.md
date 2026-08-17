@@ -1,12 +1,19 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-17T09:43:30Z
+updated_at: 2026-08-17T11:01:08Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-17 TASK-314 UAT `2.8.61-beta.27`
+
+- 冻结 Git tag/commit 为 `2.8.61-beta.27 / e8dc3b3ad891`，远程 `main`、标签 peeled commit 和运行版本一致。完整备份 `/data/apps/agentcici/backups/20260817T104142Z-before-2.8.61-beta.27` 包含 beta.26 前后端镜像、Compose/受管环境、PostgreSQL、KB、Qdrant 与 SHA-256 清单，工件均非空且 `0600`。
+- 仅重建 backend/frontend；database、Redis、RabbitMQ、Qdrant 的容器 ID 哈希保持 `b5dca5759af2a9cfb0ed4285fdb3b01c9af02db33eb2bfbabfa347fe728de2bc`。六容器 healthy/restart=0，backend `/system/version=2.8.61-beta.27 / e8dc3b3ad891`、health=`UP`、Nginx 有效。
+- 平台管理员通过正式入口同步 `devautopilot.authorization.v4`，回读 4 个分配、verified/actual/stage 均成功。当前 ORG_ADMIN 的 7 对象 AI 表格读取和正式 AI 应用入口 DevAutopilot workspace 均通过；空列表表示租户尚无项目，不再是服务不可用。
+- 六项公网 smoke、匿名 401、handoff 200、10 分钟 backend severe error/frontend 5xx 为 0。回滚仅恢复备份并将 backend/frontend 切回 `2.8.61-beta.26`，不删除合法授权事实；生产未修改。
 
 ## 2026-08-17 TASK-312 UAT `2.8.61-beta.26`
 
