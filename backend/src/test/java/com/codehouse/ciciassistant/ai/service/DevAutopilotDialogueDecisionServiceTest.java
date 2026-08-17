@@ -92,6 +92,24 @@ class DevAutopilotDialogueDecisionServiceTest {
     }
 
     @Test
+    void normalizesStructuredProjectAliasWithoutReadingUserWording() throws Exception {
+        String userMessage = "我们缺一个承接销售智能应用交付的工作空间，名称是 CCSales 智能应用";
+        Map<String, Object> arguments = new java.util.LinkedHashMap<>();
+        arguments.put("action", "CREATE_DRAFT");
+        arguments.put("object_type", "PROJECT");
+        arguments.put("confidence", 0.96);
+        arguments.put("reason", "用户希望新增研发项目");
+        arguments.put("project", "CCSales 智能应用");
+
+        DialogueDecision decision = service.parse(completion(arguments),
+                List.of(Map.of("role", "user", "content", userMessage)), userMessage).orElseThrow();
+
+        assertThat(decision.name()).isEqualTo("CCSales 智能应用");
+        assertThat(service.fixedAnswer(decision)).hasValueSatisfying(answer ->
+                assertThat(answer).contains("`确认创建项目：CCSales 智能应用`"));
+    }
+
+    @Test
     void lowConfidenceDecisionUsesOneFixedClarificationAndNeverQueriesOrWrites() {
         DialogueDecision decision = new DialogueDecision(
                 "QUERY", "PROJECT", 0.51, "语义不足", "", "", "", "", "", "",

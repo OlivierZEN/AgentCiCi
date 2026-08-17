@@ -133,13 +133,20 @@ public class DevAutopilotDialogueDecisionService {
                     supplements.add(matchedSupplement.get());
                 }
             }
+            String project = text(root, "project");
+            String name = text(root, "name");
+            if ("CREATE_DRAFT".equals(action) && "PROJECT".equals(objectType) && name.isBlank()) {
+                // Some function-calling models place a newly named project in the generic project
+                // slot. This is a structured field alias, not natural-language intent routing.
+                name = project;
+            }
             return Optional.of(new DialogueDecision(
                     action,
                     objectType,
                     confidence,
                     text(root, "reason"),
-                    text(root, "name"),
-                    text(root, "project"),
+                    name,
+                    project,
                     text(root, "requirement"),
                     text(root, "title"),
                     text(root, "classification_reason"),
@@ -362,11 +369,13 @@ public class DevAutopilotDialogueDecisionService {
 
                 action 语义：
                 - CREATE_DRAFT：用户真实意图是新增项目、需求、任务、缺陷或变更，只生成草案，绝不执行写入。
-                - QUERY：用户要读取或汇总现有研发交付事实。
+                - QUERY：用户要读取现有 Semattice 研发业务记录的当前值、清单或汇总。
                 - DELETE_DRAFT：用户要删除某条现有研发记录，只生成待确认草案。
                 - TRANSFER_DRAFT：用户要把排队任务从一名开发者转给另一名开发者，只生成待确认草案。
                 - CANCEL_DRAFT：用户明确取消当前待确认草案。
                 - OTHER：以上均不是用户真实意图，交回普通对话。
+
+                询问某次操作为什么失败、系统如何工作、应该怎样表达命令、假设性举例或一般建议属于 OTHER，除非用户同时明确要求读取现有 Semattice 业务记录的当前值。不要为了回答解释性问题而选择 QUERY。
 
                 对 CREATE_DRAFT：
                 - object_type 必须是 PROJECT、REQUIREMENT、TASK、DEFECT 或 CHANGE。
