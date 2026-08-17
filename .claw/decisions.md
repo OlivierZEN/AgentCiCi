@@ -1,12 +1,25 @@
 ---
 kind: decisions
 version: 3
-updated_at: 2026-05-14T04:25:00Z
+updated_at: 2026-08-17T09:59:48Z
 updated_by: ai
 status: active
 ---
 
 # Decisions
+
+## DEC-055 Internal tenant applications use an immutable governed catalog
+
+- Status: accepted
+- Date: 2026-08-17T09:59:48Z
+- Decision: separate installable internal tenant applications from trusted ecosystem API clients. Model each application with an immutable `app_code`, immutable published versions, declared dependencies and a restricted initialization manifest. Tenant activation remains an auditable control-plane fact and can execute only platform capabilities, published dependency capabilities or a standard provider lifecycle callback.
+- Why this won:
+  - A Keycloak Client allowlist answers who may call an API; it cannot safely represent product installation, version pinning, dependencies, tenant resources or long-running recovery.
+  - Immutable versions and dependency snapshots keep every tenant activation reproducible and auditable.
+  - Restricted initialization primitives allow most new applications to join without AgentCiCi-specific UI code while preventing arbitrary URL, script, SQL and cross-database execution.
+  - Keeping existing DevAutopilot activation data and write paths compatible reduces migration risk while the generic control plane is proven.
+- Environment rule: manifests store only logical binding and route keys. Origins, hosts, ports and credentials remain deployment-managed configuration and never enter business source, frontend artifacts or catalog records.
+- Rollout rule: phase one delivers catalog, publication gates and dynamic reads. Generic provider execution replaces product-specific orchestration only after a second application proves the standard lifecycle contract end to end.
 
 ## DEC-054 Top-level company identity
 

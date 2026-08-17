@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-17T09:43:30Z
+updated_at: 2026-08-17T09:59:48Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,18 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-313 - 受治理的内部租户应用注册中心
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-191-governed-internal-tenant-application-registry.md`
+- task_status_path: `.claw/tasks/TASK-313.md`
+- blocked_by: `none`
+- scope_files: `内部应用目录/版本/依赖模型、平台治理 API、租户应用动态聚合、运营页面、测试与本地环境验证`
+- next_action: `实现 V120、目录治理 API 和动态租户应用读模型。`
 
 ### TASK-312 - 登录中转页移除手动触发区
 

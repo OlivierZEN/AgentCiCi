@@ -1,32 +1,51 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, Bot, Boxes, CheckCircle2, CircleDashed, Database, Mail, ShieldCheck, UserRound } from "lucide-react";
+import { AlertTriangle, AppWindow, Bot, Boxes, CheckCircle2, CircleDashed, Database, Mail, ShieldCheck, UserRound, Workflow } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { PLATFORM_API_BASE } from "../../constants";
 import { safeFetchJson } from "../../utils/http";
 import {
   TenantDetail,
-  fetchSematticeProvisioning,
   isPlatformCompanyId,
   fetchTenantDetail,
   readPlatformToken,
-  statusLabel,
 } from "./platformTenantsShared";
 
-type SematticeProvisioningState = "NOT_PROVISIONED" | "PROVISIONING" | "PROVISIONED" | "FAILED";
 export type DevAutopilotApplication = {
+  appCode?: string;
+  displayName?: string;
+  summary?: string;
+  iconKey?: string;
+  ownerTeam?: string;
+  tenantMode?: string;
+  catalogStatus?: string;
+  defaultVersion?: string | null;
+  installedVersion?: string | null;
   enabled: boolean;
   initializationReady?: boolean;
+  activationSupported?: boolean;
   templateVersion?: string | null;
   desiredState: string;
   actualState: string;
+  healthState?: string;
   sematticeTenantId?: string | null;
   metadataVersionId?: string | null;
   activationStage?: string | null;
   failedStage?: string | null;
   lastErrorCode?: string | null;
   attemptCount?: number;
-  resources: Array<{ logicalRole: string; resourceType: string; resourceAlias: string; displayName: string; lifecycleState: string; primary: boolean }>;
+  resources?: Array<{ logicalRole: string; resourceType: string; resourceAlias: string; displayName: string; lifecycleState: string; primary: boolean }>;
+  dependencies?: Array<{ appCode: string; versionConstraint: string; dependencyType: string; activationPolicy: string; actualState: string; required: boolean; satisfied: boolean }>;
+  actions?: string[];
+  managementRoute?: string;
+};
+
+export type TenantApplicationCatalog = {
+  companyId: string;
+  companyStatus: string;
+  enabledCount: number;
+  pendingCount: number;
+  applications: DevAutopilotApplication[];
 };
 
 export function devAutopilotActivationKey(companyId: string): string {
@@ -39,7 +58,32 @@ function devAutopilotStateLabel(state?: string): string {
     case "SUSPENDED": return "已暂停";
     case "PROVISIONING": return "开通中";
     case "FAILED": return "开通失败";
+    case "BLOCKED": return "依赖阻断";
+    case "NOT_ENABLED": return "未开通";
     default: return "未开通";
+  }
+}
+
+export function applicationStateLabel(state?: string): string {
+  return devAutopilotStateLabel(state);
+}
+
+export function applicationIconKind(iconKey?: string): "bot" | "boxes" | "workflow" | "application" {
+  if (iconKey === "bot") return "bot";
+  if (iconKey === "boxes") return "boxes";
+  if (iconKey === "workflow") return "workflow";
+  return "application";
+}
+
+export function applicationActionLabel(action: string, application: DevAutopilotApplication): string {
+  switch (action) {
+    case "ACTIVATE": return `开通 ${application.displayName ?? "应用"}`;
+    case "CONTINUE": return application.actualState === "FAILED" ? "重试开通" : "继续开通";
+    case "RECONCILE": return application.initializationReady ? "同步标准模板" : "补齐初始化";
+    case "SUSPEND": return "暂停应用";
+    case "RESUME": return "恢复运行";
+    case "OPEN": return "进入生命周期管理";
+    default: return action;
   }
 }
 
@@ -82,19 +126,6 @@ export function isValidIntakeReconciliationInput(sessionId: string, recordId: st
     && /^[0-9a-fA-F-]{36}$/.test(recordId.trim());
 }
 
-function sematticeStateLabel(state: SematticeProvisioningState): string {
-  switch (state) {
-    case "PROVISIONING":
-      return "开通中";
-    case "PROVISIONED":
-      return "运行中";
-    case "FAILED":
-      return "开通失败";
-    default:
-      return "未开通";
-  }
-}
-
 export default function PlatformTenantApplicationsPage() {
   const token = readPlatformToken();
   const navigate = useNavigate();
@@ -103,8 +134,7 @@ export default function PlatformTenantApplicationsPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [sematticeProvisioningState, setSematticeProvisioningState] = useState<SematticeProvisioningState>("NOT_PROVISIONED");
-  const [devAutopilot, setDevAutopilot] = useState<DevAutopilotApplication | null>(null);
+  const [applicationCatalog, setApplicationCatalog] = useState<TenantApplicationCatalog | null>(null);
   const [ownerIdentity, setOwnerIdentity] = useState<TenantOwnerIdentity | null>(null);
   const [ownerModalOpen, setOwnerModalOpen] = useState(false);
   const [ownerConfirmation, setOwnerConfirmation] = useState("");
@@ -124,11 +154,10 @@ export default function PlatformTenantApplicationsPage() {
       return;
     }
     if (!token) return;
-    void Promise.all([fetchTenantDetail(token, companyId), fetchSematticeProvisioning(token, companyId), fetchDevAutopilot(token, companyId), fetchOwnerIdentity(token, companyId)])
-      .then(([tenantDetail, provisioning, application, identity]) => {
+    void Promise.all([fetchTenantDetail(token, companyId), fetchTenantApplicationCatalog(token, companyId), fetchOwnerIdentity(token, companyId)])
+      .then(([tenantDetail, catalog, identity]) => {
         setDetail(tenantDetail);
-        setSematticeProvisioningState(provisioning.state === "RESERVED" ? "PROVISIONING" : provisioning.state);
-        setDevAutopilot(application);
+        setApplicationCatalog(catalog);
         setOwnerIdentity(identity);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "加载租户应用失败"));
@@ -177,6 +206,11 @@ export default function PlatformTenantApplicationsPage() {
     globalThis.requestAnimationFrame(() => intakeTriggerRef.current?.focus());
   }
 
+  async function refreshApplications() {
+    if (!token || !companyId) return;
+    setApplicationCatalog(await fetchTenantApplicationCatalog(token, companyId));
+  }
+
   async function reconcileOwnerIdentity() {
     if (!companyId || !ownerIdentity || ownerConfirmation !== ownerIdentity.publicId) return;
     setOwnerBusy(true);
@@ -207,11 +241,11 @@ export default function PlatformTenantApplicationsPage() {
   }
 
   async function provisionSemattice() {
-    if (!companyId || !detail || sematticeProvisioningState === "PROVISIONING") return;
+    const semattice = applicationCatalog?.applications.find((application) => application.appCode === "semattice");
+    if (!companyId || !detail || semattice?.actualState === "PROVISIONING") return;
     setBusy(true);
     setError("");
     setMessage("");
-    setSematticeProvisioningState("PROVISIONING");
     try {
       const idempotencyKey = `platform-${companyId}-${globalThis.crypto?.randomUUID?.() ?? Date.now()}`;
       const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(companyId)}/semattice-provisionings`, {
@@ -231,10 +265,10 @@ export default function PlatformTenantApplicationsPage() {
       if (!response.ok || !body?.success) {
         throw new Error(body?.message ?? `HTTP ${response.status}`);
       }
-      setSematticeProvisioningState("PROVISIONED");
+      await refreshApplications();
       setMessage("Semattice 已开通，并已完成企业身份绑定。");
     } catch (err) {
-      setSematticeProvisioningState("FAILED");
+      try { await refreshApplications(); } catch { /* keep the last safe snapshot */ }
       setError(err instanceof Error ? err.message : "Semattice 开通失败");
     } finally {
       setBusy(false);
@@ -242,7 +276,7 @@ export default function PlatformTenantApplicationsPage() {
   }
 
   async function activateDevAutopilot() {
-    if (!companyId || !devAutopilot) return;
+    if (!companyId) return;
     setBusy(true); setError(""); setMessage("");
     try {
       const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(companyId)}/applications/devautopilot/activations`, {
@@ -251,10 +285,10 @@ export default function PlatformTenantApplicationsPage() {
       });
       const { body } = await safeFetchJson(response);
       if (!response.ok || !body?.success) throw new Error(body?.message ?? `HTTP ${response.status}`);
-      setDevAutopilot(body.data as DevAutopilotApplication);
+      await refreshApplications();
       setMessage("DevAutopilot 已开通，已自动初始化研发产品经理智能体及其受控机器主体。开发者由租户管理员按需新增。");
     } catch (err) {
-      try { setDevAutopilot(await fetchDevAutopilot(token ?? "", companyId)); } catch { /* keep the last safe snapshot */ }
+      try { await refreshApplications(); } catch { /* keep the last safe snapshot */ }
       setError(err instanceof Error ? err.message : "DevAutopilot 开通失败");
     } finally { setBusy(false); }
   }
@@ -266,7 +300,7 @@ export default function PlatformTenantApplicationsPage() {
       const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(companyId)}/applications/devautopilot/${action}`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
       const { body } = await safeFetchJson(response);
       if (!response.ok || !body?.success) throw new Error(body?.message ?? `HTTP ${response.status}`);
-      setDevAutopilot(body.data as DevAutopilotApplication);
+      await refreshApplications();
       setMessage(action === "suspensions" ? "DevAutopilot 已暂停，运行时入口已关闭。" : "DevAutopilot 已恢复运行。");
     } catch (err) { setError(err instanceof Error ? err.message : "生命周期操作失败"); } finally { setBusy(false); }
   }
@@ -278,7 +312,7 @@ export default function PlatformTenantApplicationsPage() {
       const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(companyId)}/applications/devautopilot/initializations`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
       const { body } = await safeFetchJson(response);
       if (!response.ok || !body?.success) throw new Error(body?.message ?? `HTTP ${response.status}`);
-      setDevAutopilot(body.data as DevAutopilotApplication);
+      await refreshApplications();
       setMessage("DevAutopilot 标准模板已同步：Semattice 业务对象、产品经理智能体及其受控机器主体已就绪。");
     } catch (err) { setError(err instanceof Error ? err.message : "DevAutopilot 初始化补齐失败"); } finally { setBusy(false); }
   }
@@ -302,6 +336,27 @@ export default function PlatformTenantApplicationsPage() {
       setError(err instanceof Error ? err.message : "历史受理记录校准失败");
     } finally {
       setIntakeBusy(false);
+    }
+  }
+
+  async function runApplicationAction(application: DevAutopilotApplication, action: string) {
+    if (action === "OPEN" && application.managementRoute) {
+      navigate(application.managementRoute);
+      return;
+    }
+    if (application.appCode === "semattice" && action === "ACTIVATE") {
+      await provisionSemattice();
+      return;
+    }
+    if (application.appCode !== "devautopilot") return;
+    if (action === "ACTIVATE" || action === "CONTINUE") {
+      await activateDevAutopilot();
+    } else if (action === "RECONCILE") {
+      await reconcileDevAutopilotInitialization();
+    } else if (action === "SUSPEND") {
+      await changeDevAutopilotState("suspensions");
+    } else if (action === "RESUME") {
+      await changeDevAutopilotState("resumptions");
     }
   }
 
@@ -397,109 +452,53 @@ export default function PlatformTenantApplicationsPage() {
                     <p className="skills-data-table__summary">每个应用独立开通、独立运行，并拥有自身的生命周期管理页面。</p>
                   </div>
                   <div className="tenant-applications__count" aria-label="应用开通汇总">
-                    <span>已开通 <strong>{1 + (sematticeProvisioningState === "PROVISIONED" ? 1 : 0) + (devAutopilot?.enabled ? 1 : 0)}</strong></span>
-                    <span>待处理 <strong>{(sematticeProvisioningState === "PROVISIONING" ? 1 : 0) + (devAutopilot?.actualState === "PROVISIONING" ? 1 : 0)}</strong></span>
+                    <span>已开通 <strong>{applicationCatalog?.enabledCount ?? 0}</strong></span>
+                    <span>待处理 <strong>{applicationCatalog?.pendingCount ?? 0}</strong></span>
                   </div>
                 </div>
 
                 <div className="tenant-applications__grid">
-                  <article
-                    className="tenant-application-card tenant-application-card--agentcici tenant-application-card--interactive"
-                    aria-labelledby="agentcici-application-title"
-                    role="link"
-                    tabIndex={0}
-                    onClick={() => navigate(`/platform/tenants/${encodeURIComponent(detail.tenant.companyId)}/applications/agentcici`)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        navigate(`/platform/tenants/${encodeURIComponent(detail.tenant.companyId)}/applications/agentcici`);
-                      }
-                    }}
-                  >
-                    <div className="tenant-application-card__head">
-                      <span className="tenant-application-card__icon" aria-hidden="true"><Bot size={22} strokeWidth={1.8} /></span>
-                      <div className="tenant-application-card__title">
-                        <h4 id="agentcici-application-title">AgentCiCi 智能体平台</h4>
-                        <p>租户默认开通的智能体运行与治理应用</p>
-                      </div>
-                      <span className="tenant-application-card__state tenant-application-card__state--healthy"><CheckCircle2 size={14} aria-hidden="true" />运行中</span>
-                    </div>
-                    <dl className="tenant-application-card__facts">
-                      <div><dt>租户标识</dt><dd>{detail.tenant.companyId}</dd></div>
-                      <div><dt>成员</dt><dd>{detail.tenant.memberCount}</dd></div>
-                      <div><dt>应用状态</dt><dd>{statusLabel(detail.tenant.status)}</dd></div>
-                      <div><dt>开通方式</dt><dd>租户基础应用</dd></div>
-                    </dl>
-                    <div className="tenant-application-card__foot">
-                      <span>进入 AgentCiCi 应用生命周期管理</span>
-                    </div>
-                  </article>
-
-                  <article className="tenant-application-card tenant-application-card--semattice" aria-labelledby="semattice-application-title">
-                    <div className="tenant-application-card__head">
-                      <span className="tenant-application-card__icon tenant-application-card__icon--semantic" aria-hidden="true"><Boxes size={22} strokeWidth={1.7} /></span>
-                      <div className="tenant-application-card__title">
-                        <h4 id="semattice-application-title">Semattice 业务数据与语义运行底座</h4>
-                        <p>面向智能体的业务数据与语义运行底座</p>
-                      </div>
-                      <span className={`tenant-application-card__state tenant-application-card__state--${sematticeProvisioningState.toLowerCase()}`}>
-                        {sematticeProvisioningState === "PROVISIONING" ? <CircleDashed size={14} aria-hidden="true" /> : <Database size={14} aria-hidden="true" />}
-                        {sematticeStateLabel(sematticeProvisioningState)}
-                      </span>
-                    </div>
-                    <dl className="tenant-application-card__facts">
-                      <div><dt>租户标识</dt><dd>{detail.tenant.companyId}</dd></div>
-                      <div><dt>开户来源</dt><dd>AgentCiCi 运营端</dd></div>
-                      <div><dt>身份校验</dt><dd>AgentCiCi 受控校验</dd></div>
-                      <div><dt>接入方式</dt><dd>HTTP API · MCP · CLI</dd></div>
-                    </dl>
-                    <div className="tenant-application-card__foot tenant-application-card__foot--action">
-                      <span><ShieldCheck size={14} aria-hidden="true" />生命周期由 Semattice 应用独立管理</span>
-                      <button
-                        type="button"
-                        className="platform-button platform-button--primary tenant-application-card__primary-action"
-                        onClick={() => void provisionSemattice()}
-                        disabled={busy || sematticeProvisioningState === "PROVISIONING" || sematticeProvisioningState === "PROVISIONED" || detail.tenant.status !== "ACTIVE"}
-                      >
-                        {sematticeProvisioningState === "PROVISIONING" ? "正在开通" : sematticeProvisioningState === "PROVISIONED" ? "已开通" : "开通 Semattice"}
-                      </button>
-                    </div>
-                  </article>
-
-                  <article className="tenant-application-card tenant-application-card--semattice" aria-labelledby="devautopilot-application-title">
-                    <div className="tenant-application-card__head">
-                      <span className="tenant-application-card__icon" aria-hidden="true"><Bot size={22} strokeWidth={1.8} /></span>
-                      <div className="tenant-application-card__title">
-                        <h4 id="devautopilot-application-title">DevAutopilot 研发交付系统</h4>
-                        <p>开通即初始化产品经理智能体，开发者由租户管理员按需新增</p>
-                      </div>
-                      <span className={`tenant-application-card__state tenant-application-card__state--${devAutopilot?.actualState === "ACTIVE" ? "healthy" : devAutopilot?.actualState?.toLowerCase() ?? "not_provisioned"}`}><CheckCircle2 size={14} aria-hidden="true" />{devAutopilotStateLabel(devAutopilot?.actualState)}</span>
-                    </div>
-                    {devAutopilot?.enabled ? <>
-                      <dl className="tenant-application-card__facts">
-                        <div><dt>模板版本</dt><dd>{devAutopilot.templateVersion}</dd></div><div><dt>租户标识</dt><dd>{detail.tenant.companyId}</dd></div>
-                        <div><dt>数据底座</dt><dd>Semattice（已绑定）</dd></div><div><dt>初始化状态</dt><dd>{devAutopilotInitializationReady(devAutopilot) ? "已完成" : devAutopilot.activationStage ?? "待补齐"}</dd></div>
-                        {devAutopilot.failedStage ? <div><dt>失败阶段</dt><dd>{devAutopilot.failedStage}</dd></div> : null}
-                        {devAutopilot.lastErrorCode ? <div><dt>错误代码</dt><dd>{devAutopilot.lastErrorCode}</dd></div> : null}
-                      </dl>
-                      <div className="tenant-application-card__foot tenant-application-card__foot--action">
-                        <span><ShieldCheck size={14} aria-hidden="true" />{devAutopilot.actualState === "FAILED" ? "已保留成功阶段；重试将从失败阶段继续，不重复已完成步骤" : devAutopilot.actualState === "PROVISIONING" ? "开通阶段已持久化；执行中或可在租约释放后继续" : devAutopilotInitializationReady(devAutopilot) ? "关闭仅暂停本租户运行入口，不删除数据" : "历史开通记录缺少标准资源，需要补齐初始化"}</span>
-                        <div className="tenant-application-card__actions">
-                          {devAutopilot.actualState === "FAILED" || devAutopilot.actualState === "PROVISIONING" ? (
-                            <button type="button" className="platform-button platform-button--primary tenant-application-card__primary-action" disabled={busy} onClick={() => void activateDevAutopilot()}>{devAutopilot.actualState === "FAILED" ? "重试开通" : "继续开通"}</button>
-                          ) : <>
-                            <button ref={intakeTriggerRef} type="button" className="platform-button platform-button--secondary" disabled={busy} onClick={() => setIntakeModalOpen(true)}>校准历史受理</button>
-                            {devAutopilotInitializationReady(devAutopilot) ? <button type="button" className="platform-button platform-button--secondary" disabled={busy} onClick={() => void reconcileDevAutopilotInitialization()}>同步标准模板</button> : null}
-                            <button type="button" className="platform-button platform-button--primary tenant-application-card__primary-action" disabled={busy} onClick={() => void (devAutopilotInitializationReady(devAutopilot) ? changeDevAutopilotState(devAutopilot.actualState === "SUSPENDED" ? "resumptions" : "suspensions") : reconcileDevAutopilotInitialization())}>{devAutopilotInitializationReady(devAutopilot) ? (devAutopilot.actualState === "SUSPENDED" ? "恢复运行" : "暂停应用") : "补齐初始化"}</button>
-                          </>}
+                  {(applicationCatalog?.applications ?? []).map((application) => {
+                    const actions = application.actions ?? [];
+                    const displayActions = actions.filter((action) => action !== "OPEN" || application.appCode === "agentcici");
+                    const requiredDependency = application.dependencies?.find((dependency) => dependency.required);
+                    const stateTone = application.actualState === "ACTIVE" ? "healthy" : application.actualState?.toLowerCase() ?? "not_enabled";
+                    const iconKind = applicationIconKind(application.iconKey);
+                    return (
+                      <article key={application.appCode} className={`tenant-application-card tenant-application-card--${application.appCode ?? "registered"}`} aria-labelledby={`${application.appCode}-application-title`}>
+                        <div className="tenant-application-card__head">
+                          <span className={`tenant-application-card__icon${iconKind === "boxes" ? " tenant-application-card__icon--semantic" : ""}`} aria-hidden="true">
+                            {iconKind === "bot" ? <Bot size={22} strokeWidth={1.8} /> : iconKind === "boxes" ? <Boxes size={22} strokeWidth={1.7} /> : iconKind === "workflow" ? <Workflow size={22} strokeWidth={1.7} /> : <AppWindow size={22} strokeWidth={1.7} />}
+                          </span>
+                          <div className="tenant-application-card__title">
+                            <h4 id={`${application.appCode}-application-title`}>{application.displayName}</h4>
+                            <p>{application.summary}</p>
+                          </div>
+                          <span className={`tenant-application-card__state tenant-application-card__state--${stateTone}`}>
+                            {application.actualState === "PROVISIONING" ? <CircleDashed size={14} aria-hidden="true" /> : application.appCode === "semattice" ? <Database size={14} aria-hidden="true" /> : <CheckCircle2 size={14} aria-hidden="true" />}
+                            {applicationStateLabel(application.actualState)}
+                          </span>
                         </div>
-                      </div>
-                      <p className="skills-data-table__summary">研发产品经理智能体与其机器主体由模板创建，名称和负责人可由该租户的 ORG_ADMIN 在 AgentCiCi 管理端调整；开发者由租户按需新增。</p>
-                    </> : <div className="tenant-application-card__foot tenant-application-card__foot--action">
-                      <span>需先开通 Semattice；开通后自动创建标准产品经理智能体与机器主体。</span>
-                      <button type="button" className="platform-button platform-button--primary tenant-application-card__primary-action" disabled={busy || sematticeProvisioningState !== "PROVISIONED"} onClick={() => void activateDevAutopilot()}>开通 DevAutopilot</button>
-                    </div>}
-                  </article>
+                        <dl className="tenant-application-card__facts">
+                          <div><dt>目录版本</dt><dd>{application.defaultVersion ?? "未发布"}</dd></div>
+                          <div><dt>租户标识</dt><dd>{detail.tenant.companyId}</dd></div>
+                          <div><dt>应用归属</dt><dd>{application.ownerTeam ?? "平台内部应用"}</dd></div>
+                          <div><dt>初始化状态</dt><dd>{application.initializationReady ? "已完成" : application.activationStage ?? "未开始"}</dd></div>
+                          {requiredDependency ? <div><dt>强依赖</dt><dd>{requiredDependency.appCode} · {requiredDependency.satisfied ? "已就绪" : "未就绪"}</dd></div> : null}
+                          {application.failedStage ? <div><dt>失败阶段</dt><dd>{application.failedStage}</dd></div> : null}
+                          {application.lastErrorCode ? <div><dt>错误代码</dt><dd>{application.lastErrorCode}</dd></div> : null}
+                        </dl>
+                        <div className="tenant-application-card__foot tenant-application-card__foot--action">
+                          <span><ShieldCheck size={14} aria-hidden="true" />{application.healthState === "BLOCKED" ? "强依赖未就绪，当前不能开通" : application.activationSupported === false ? "目录已发布，标准生命周期执行器将在下一阶段接管开通" : application.enabled ? "暂停只关闭本租户运行入口，不删除业务数据" : "开通将固定当前目录版本并记录完整操作审计"}</span>
+                          <div className="tenant-application-card__actions">
+                            {application.appCode === "devautopilot" && application.enabled ? <button ref={intakeTriggerRef} type="button" className="platform-button platform-button--secondary" disabled={busy} onClick={() => setIntakeModalOpen(true)}>校准历史受理</button> : null}
+                            {displayActions.map((action, index) => <button key={action} type="button" className={`platform-button ${index === displayActions.length - 1 ? "platform-button--primary" : "platform-button--secondary"}`} disabled={busy || detail.tenant.status !== "ACTIVE"} onClick={() => void runApplicationAction(application, action)}>{applicationActionLabel(action, application)}</button>)}
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+                  {applicationCatalog && applicationCatalog.applications.length === 0 ? <div className="tenant-applications__empty"><strong>当前没有已发布的租户应用</strong><span>请先在运营管理的租户应用目录中登记、验证并发布应用版本。</span></div> : null}
                 </div>
               </section>
             </div>
@@ -604,11 +603,11 @@ export default function PlatformTenantApplicationsPage() {
   );
 }
 
-async function fetchDevAutopilot(token: string, companyId: string): Promise<DevAutopilotApplication> {
-  const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(companyId)}/applications/devautopilot`, { headers: { Authorization: `Bearer ${token}` } });
+export async function fetchTenantApplicationCatalog(token: string, companyId: string): Promise<TenantApplicationCatalog> {
+  const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(companyId)}/applications`, { headers: { Authorization: `Bearer ${token}` } });
   const { body } = await safeFetchJson(response);
   if (!response.ok || !body?.success) throw new Error(body?.message ?? `HTTP ${response.status}`);
-  return body.data as DevAutopilotApplication;
+  return body.data as TenantApplicationCatalog;
 }
 
 export async function fetchOwnerIdentity(token: string, companyId: string): Promise<TenantOwnerIdentity | null> {

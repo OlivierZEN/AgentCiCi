@@ -76,3 +76,22 @@ describe("platform system API navigation", () => {
     expect(isPlatformNavigationItemActive(systemApiItems[0], pathname)).toBe(true);
   });
 });
+
+describe("platform tenant application catalog navigation", () => {
+  const capabilityItems = PLATFORM_NAVIGATION_GROUPS.find((group) => group.id === "capability")?.items ?? [];
+  const applicationItems = capabilityItems.filter((item) => item.to === "/platform/internal-applications");
+
+  it("exposes one governed internal application catalog entry", () => {
+    expect(applicationItems).toEqual([
+      {
+        to: "/platform/internal-applications",
+        label: "租户应用目录",
+        activePrefixes: ["/platform/internal-applications"],
+      },
+    ]);
+  });
+
+  it("keeps the entry active on application detail routes", () => {
+    expect(isPlatformNavigationItemActive(applicationItems[0], "/platform/internal-applications/devautopilot")).toBe(true);
+  });
+});

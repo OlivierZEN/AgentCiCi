@@ -8,6 +8,7 @@ import com.codehouse.ciciassistant.platform.service.PlatformTenantOwnerRecoveryS
 import com.codehouse.ciciassistant.platform.service.PlatformTenantOwnerIdentityService;
 import com.codehouse.ciciassistant.platform.service.PlatformTenantOwnerResolutionService;
 import com.codehouse.ciciassistant.platform.service.DevAutopilotTenantApplicationService;
+import com.codehouse.ciciassistant.platform.service.TenantApplicationCatalogService;
 import com.codehouse.ciciassistant.semattice.SematticeProvisioningClient;
 import com.codehouse.ciciassistant.semattice.SematticeProvisioningService;
 import com.codehouse.ciciassistant.semattice.DevAutopilotIntakeReconciliationService;
@@ -38,6 +39,7 @@ public class PlatformTenantLifecycleController {
     private final SematticeProvisioningClient sematticeProvisioningClient;
     private final SematticeProvisioningService sematticeProvisioningService;
     private final DevAutopilotTenantApplicationService devAutopilotApplications;
+    private final TenantApplicationCatalogService tenantApplications;
     private final PlatformTenantOwnerRecoveryService ownerRecoveryService;
     private final PlatformTenantOwnerIdentityService ownerIdentityService;
     private final PlatformTenantOwnerResolutionService ownerResolutionService;
@@ -47,6 +49,7 @@ public class PlatformTenantLifecycleController {
                                              SematticeProvisioningClient sematticeProvisioningClient,
                                              SematticeProvisioningService sematticeProvisioningService,
                                              DevAutopilotTenantApplicationService devAutopilotApplications,
+                                             TenantApplicationCatalogService tenantApplications,
                                              PlatformTenantOwnerRecoveryService ownerRecoveryService,
                                              PlatformTenantOwnerIdentityService ownerIdentityService,
                                              PlatformTenantOwnerResolutionService ownerResolutionService,
@@ -55,6 +58,7 @@ public class PlatformTenantLifecycleController {
         this.sematticeProvisioningClient = sematticeProvisioningClient;
         this.sematticeProvisioningService = sematticeProvisioningService;
         this.devAutopilotApplications = devAutopilotApplications;
+        this.tenantApplications = tenantApplications;
         this.ownerRecoveryService = ownerRecoveryService;
         this.ownerIdentityService = ownerIdentityService;
         this.ownerResolutionService = ownerResolutionService;
@@ -154,6 +158,12 @@ public class PlatformTenantLifecycleController {
     public ApiResponse<DevAutopilotTenantApplicationService.View> getDevAutopilotApplication(
             @PathVariable @Pattern(regexp = "^org[a-z0-9]{17}$") String companyId) {
         return ApiResponse.ok(devAutopilotApplications.get(companyId));
+    }
+
+    @GetMapping("/{companyId}/applications")
+    public ApiResponse<TenantApplicationCatalogService.CatalogView> listTenantApplications(
+            @PathVariable @Pattern(regexp = "^org[a-z0-9]{17}$") String companyId) {
+        return ApiResponse.ok(tenantApplications.list(companyId));
     }
 
     @PostMapping("/{companyId}/applications/devautopilot/activations")

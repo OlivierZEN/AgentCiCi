@@ -1,0 +1,168 @@
+package com.codehouse.ciciassistant.platform.api;
+
+import com.codehouse.ciciassistant.auth.RequirePlatformRole;
+import com.codehouse.ciciassistant.auth.RoleCodes;
+import com.codehouse.ciciassistant.common.api.ApiResponse;
+import com.codehouse.ciciassistant.platform.service.InternalApplicationRegistryService;
+import com.codehouse.ciciassistant.tenant.TenantContext;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import java.util.List;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/platform/internal-applications")
+@RequirePlatformRole
+public class PlatformInternalApplicationController {
+
+    private final InternalApplicationRegistryService registry;
+
+    public PlatformInternalApplicationController(InternalApplicationRegistryService registry) {
+        this.registry = registry;
+    }
+
+    @GetMapping
+    public ApiResponse<List<InternalApplicationRegistryService.ApplicationSummaryView>> list() {
+        return ApiResponse.ok(registry.list());
+    }
+
+    @GetMapping("/{appCode}")
+    public ApiResponse<InternalApplicationRegistryService.ApplicationDetailView> get(
+            @PathVariable @Pattern(regexp = "^[a-z][a-z0-9-]{1,63}$") String appCode) {
+        return ApiResponse.ok(registry.get(appCode));
+    }
+
+    @PostMapping
+    @RequirePlatformRole(RoleCodes.PLATFORM_ADMIN)
+    public ApiResponse<InternalApplicationRegistryService.ApplicationDetailView> create(
+            @Valid @RequestBody ApplicationRequest request) {
+        return ApiResponse.ok(registry.create(request.toCommand(), actorId(), actorRole()),
+                "Internal application draft created");
+    }
+
+    @PutMapping("/{appCode}")
+    @RequirePlatformRole(RoleCodes.PLATFORM_ADMIN)
+    public ApiResponse<InternalApplicationRegistryService.ApplicationDetailView> update(
+            @PathVariable @Pattern(regexp = "^[a-z][a-z0-9-]{1,63}$") String appCode,
+            @Valid @RequestBody ApplicationRequest request) {
+        return ApiResponse.ok(registry.update(appCode, request.toCommand(), actorId(), actorRole()),
+                "Internal application updated");
+    }
+
+    @PostMapping("/{appCode}/versions")
+    @RequirePlatformRole(RoleCodes.PLATFORM_ADMIN)
+    public ApiResponse<InternalApplicationRegistryService.VersionView> createVersion(
+            @PathVariable @Pattern(regexp = "^[a-z][a-z0-9-]{1,63}$") String appCode,
+            @Valid @RequestBody VersionRequest request) {
+        return ApiResponse.ok(registry.createVersion(appCode, request.toCommand(), actorId(), actorRole()),
+                "Internal application version draft created");
+    }
+
+    @PostMapping("/{appCode}/versions/{version}/validations")
+    @RequirePlatformRole(RoleCodes.PLATFORM_ADMIN)
+    public ApiResponse<InternalApplicationRegistryService.ValidationView> validateVersion(
+            @PathVariable @Pattern(regexp = "^[a-z][a-z0-9-]{1,63}$") String appCode,
+            @PathVariable @Pattern(regexp = "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)$") String version) {
+        return ApiResponse.ok(registry.validateVersion(appCode, version, actorId(), actorRole()),
+                "Internal application version validated");
+    }
+
+    @PostMapping("/{appCode}/versions/{version}/publications")
+    @RequirePlatformRole(RoleCodes.PLATFORM_ADMIN)
+    public ApiResponse<InternalApplicationRegistryService.ApplicationDetailView> publishVersion(
+            @PathVariable @Pattern(regexp = "^[a-z][a-z0-9-]{1,63}$") String appCode,
+            @PathVariable @Pattern(regexp = "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)$") String version) {
+        return ApiResponse.ok(registry.publishVersion(appCode, version, actorId(), actorRole()),
+                "Internal application version published");
+    }
+
+    @PatchMapping("/{appCode}/status")
+    @RequirePlatformRole(RoleCodes.PLATFORM_ADMIN)
+    public ApiResponse<InternalApplicationRegistryService.ApplicationDetailView> changeStatus(
+            @PathVariable @Pattern(regexp = "^[a-z][a-z0-9-]{1,63}$") String appCode,
+            @Valid @RequestBody StatusRequest request) {
+        return ApiResponse.ok(registry.changeStatus(appCode, request.status(), actorId(), actorRole()),
+                "Internal application status updated");
+    }
+
+    private String actorId() {
+        return TenantContext.getUserId().orElse("platform");
+    }
+
+    private String actorRole() {
+        return TenantContext.getRoles().stream()
+                .filter(RoleCodes::isPlatformRole)
+                .findFirst()
+                .orElse(RoleCodes.PLATFORM_ADMIN);
+    }
+
+    public record ApplicationRequest(
+            @NotBlank @Pattern(regexp = "^[a-z][a-z0-9-]{1,63}$") String appCode,
+            @NotBlank @Size(max = 128) String displayName,
+            @NotBlank @Size(max = 500) String summary,
+            @NotBlank @Size(max = 64) String iconKey,
+            @NotBlank @Size(max = 128) String ownerTeam,
+            @NotBlank String tenantMode,
+            @Size(max = 64) String trustedAppCode,
+            @NotBlank String launchMode,
+            @Size(max = 128) String launchRouteKey) {
+
+        private InternalApplicationRegistryService.ApplicationCommand toCommand() {
+            return new InternalApplicationRegistryService.ApplicationCommand(
+                    appCode, displayName, summary, iconKey, ownerTeam, tenantMode,
+                    trustedAppCode, launchMode, launchRouteKey);
+        }
+    }
+
+    public record VersionRequest(
+            @NotBlank @Pattern(regexp = "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)$") String version,
+            @Size(max = 128) String providerBindingKey,
+            @NotBlank String initializationEngine,
+            @Size(max = 32) List<@Valid StepRequest> steps,
+            @Size(max = 32) List<@Valid DependencyRequest> dependencies) {
+
+        private InternalApplicationRegistryService.VersionCommand toCommand() {
+            return new InternalApplicationRegistryService.VersionCommand(
+                    version,
+                    providerBindingKey,
+                    initializationEngine,
+                    steps == null ? List.of() : steps.stream().map(StepRequest::toCommand).toList(),
+                    dependencies == null ? List.of() : dependencies.stream().map(DependencyRequest::toCommand).toList());
+        }
+    }
+
+    public record StepRequest(
+            @NotBlank @Size(max = 128) String code,
+            @NotBlank String type,
+            @NotBlank @Size(max = 128) String capability,
+            @NotBlank @Size(max = 128) String contractVersion) {
+
+        private InternalApplicationRegistryService.StepCommand toCommand() {
+            return new InternalApplicationRegistryService.StepCommand(code, type, capability, contractVersion);
+        }
+    }
+
+    public record DependencyRequest(
+            @NotBlank @Pattern(regexp = "^[a-z][a-z0-9-]{1,63}$") String appCode,
+            @NotBlank @Size(max = 64) String versionConstraint,
+            @NotBlank String dependencyType,
+            @NotBlank String activationPolicy) {
+
+        private InternalApplicationRegistryService.DependencyCommand toCommand() {
+            return new InternalApplicationRegistryService.DependencyCommand(
+                    appCode, versionConstraint, dependencyType, activationPolicy);
+        }
+    }
+
+    public record StatusRequest(@NotBlank String status) {
+    }
+}
