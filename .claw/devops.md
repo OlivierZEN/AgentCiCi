@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-17T14:41:01Z
+updated_at: 2026-08-17T15:37:19Z
 updated_by: codex
 status: active
 ---
@@ -10,10 +10,10 @@ status: active
 
 ## 2026-08-17 TASK-315 本地开发环境
 
-- AgentCiCi backend/frontend 从本地 `main@e083fb87f732` 构建为 `2.8.61-dev.e083fb8`，镜像 ID 分别为 `sha256:8b51c211faba800576d3fbe3518de6468b80ccf947e3c1c2f03ac4c511ded5e8`、`sha256:c7c8faf0a73a3ffa8ea0707c3078a209ff477c3e41e6e5da182f6c3c03192725`，label version/revision 与提交一致。
+- AgentCiCi backend/frontend 从本地 `main@cc4312edde85` 构建为 `2.8.61-dev.cc4312e`，镜像 ID 分别为 `sha256:440528145bcd3fa823f397d3cd1cacd676a237f2c1499dbb9de0fbd7e6daf1ae`、`sha256:defee9069ee87ea5e935e9f989f28b961b913477ca8a409001ebb3d39f703e32`，label version/revision 与提交一致。
 - backend/frontend 均 healthy、restart=0；内部 `/system/version`、`/actuator/health=UP`、正式入口 200、匿名 API JSON 401 和完整 `cc-local-stack ./stack verify` 均通过。Flyway schema 保持 V121，启动无 ERROR。
 - 受管 `./stack up` 也重建了当前本地 Semattice 与 DevAutopilot 制品；两者健康、restart=0，未改变源码、数据契约、远端、ACR、UAT 或生产。
-- 可控 Chrome 的既有 `/app` 会话刷新后进入统一登录页；未绕过认证或执行真实对话/写入。真实固定模型对话验收待已登录业务用户完成。
+- 已登录 Chrome `/app` 刷新后回读 `2.8.61-dev.cc4312e` 与产品经理入口；未代用户发送消息或执行写入。真实 Provider 非写入协议探测已通过，页面固定格式仍待用户验收。
 
 ## 2026-08-17 TASK-313 本地开发环境
 

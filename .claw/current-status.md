@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-17T14:41:01Z
+updated_at: 2026-08-17T15:37:19Z
 updated_by: codex
 phase: review
 active_task: TASK-315
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-315 / FEAT-192` 已进入 review：提交 `e083fb87` 将 DevAutopilot 产品经理的创建、查询、删除、转派和取消路由改为当前模型强制结构化语义判定；固定确认协议继续确定性解析，明确草案/澄清由服务端标准渲染，判定失败关闭，回执门禁只检查研发完成声明及真实 Semattice 回读，不再读取用户问题关键词。8 个定向测试类共 75 项、production package 与 diff check 通过；backend/frontend 从本地 `main@e083fb87f732` 构建为 `2.8.61-dev.e083fb8`，healthy/restart=0，完整 `./stack verify` 通过。可控 Chrome 会话刷新后进入统一登录页，未绕过认证或发送会写业务数据的确认；真实固定模型对话待登录用户验收。远端 main、UAT、生产未修改。
+- `TASK-315 / FEAT-192` 已修复首轮本地验收回归：真实 Trace 证明 `deepseek-v4-flash-0731` 在 0 Token 时拒绝了思考模式下的命名 `tool_choice`，并非用户语义不清。提交 `f121d20c` 改为唯一工具的思考兼容 `auto` 判定，缺少协议时再关闭思考做一次命名工具重试；`cc4312ed` 放宽无关字段必填、规范化结构化项目字段别名，并明确解释操作失败属于普通对话而非业务数据查询。真实 Provider 非写入探测已得到隐含创建 `CREATE_DRAFT/PROJECT` 与否定解释 `OTHER`；8 个定向测试类共 78 项及 package 通过。backend/frontend 从本地 `main@cc4312edde85` 运行 `2.8.61-dev.cc4312e`，healthy/restart=0，完整 `./stack verify` 通过，已登录 Chrome 回读版本成功但未代用户发送消息。页面业务验收仍待用户执行；远端 main、UAT、生产未修改。
 
 - `TASK-302 / FEAT-183` 已将系统 API 首页的治理入口从“接入应用”统一为“受信应用”，目标页标题、无障碍标签和空态同步采用同一对象名；“登记应用”“编辑受信应用”等动作词保持不变。代码提交 `a81e3b72` 已进入本地 `main`；前端定向 10 项、全量 52 文件/287 项、production build 与 `git diff --check` 通过。本地前端从包含该提交的最新代码主线 `2188e576` 构建为 `2.8.61-dev.2188e57`，目标路由 200、Nginx 有效、healthy/restart=0，部署 JS 已回读“受信应用”；此后的 main 变更仅为状态文档，不影响制品。浏览器正确进入平台登录边界，授权态视觉回读待平台管理员登录后完成；远端、UAT、生产未修改。
 

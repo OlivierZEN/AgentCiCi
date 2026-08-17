@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-192
 title: DevAutopilot 产品经理结构化语义判定与标准输出
-status: review
+status: implemented
 owner_role: backend-agent
 task_ids: TASK-315
 related_decisions: "自然语言由模型理解；固定协议由服务端解析；明确结果由服务端标准渲染"
 related_issues: ISSUE-2026-08-17-devautopilot-keyword-routing
-updated_at: 2026-08-17T14:41:01Z
+updated_at: 2026-08-17T15:37:19Z
 updated_by: codex
 ---
 
@@ -22,6 +22,7 @@ UAT 的产品经理对“创建一个项目：CCSales智能应用”没有调用
 - 回执门禁先按用户问题中的写入词和对象词判断是否启用，导致不同表达可能绕过同一安全边界。
 - 草案正文由模型自由生成；即使语义判断一致，标题、字段顺序和确认口令也可能变化，模型曾输出服务端不接受的无冒号确认文本。
 - 模型遗漏结构化标记时，旧逻辑会再用关键词和 Markdown 正则从可见文本反推业务字段，既不完备也不能证明字段来自同一结构化决策。
+- 首轮改造在思考模式模型上强制命名 `tool_choice`；百炼会在模型推理前拒绝该组合，Trace 表现为 0 input/output Token，与模型语义能力无关。
 
 ## 设计原则
 
@@ -34,7 +35,7 @@ UAT 的产品经理对“创建一个项目：CCSales智能应用”没有调用
 
 ## 结构化判定契约
 
-模型必须调用唯一函数 `resolve_devautopilot_dialogue`，调用固定为 `temperature=0`、禁用并行 Tool，并由 `tool_choice` 强制选择。结果包含：
+模型必须调用唯一函数 `resolve_devautopilot_dialogue`，调用固定为 `temperature=0`、禁用并行 Tool。首轮使用思考模式兼容的唯一工具 `auto` 选择并严格验证返回；若未返回唯一目标函数，则关闭思考模式做一次命名工具协议重试，仍失败则关闭本轮。结果包含：
 
 - `action`：`CREATE_DRAFT`、`QUERY`、`DELETE_DRAFT`、`TRANSFER_DRAFT`、`CANCEL_DRAFT`、`OTHER`。
 - `object_type`：项目、需求、任务、缺陷、变更、工时、交付事件或未知。
@@ -42,6 +43,7 @@ UAT 的产品经理对“创建一个项目：CCSales智能应用”没有调用
 - 项目名称、父项目/父需求、标题，以及需求/缺陷/变更专业整理字段。
 - 删除目标、转出/转入开发者等动作特定字段。
 - `original_report` 与 `user_supplements` 必须逐字对应真实用户消息；服务端按会话原文校验，不接受模型补造。
+- 只把动作核心字段设为全局必填；其余字段按 action/object_type 校验。PROJECT 中模型若把新项目名称放入结构化 `project` 字段，服务端可将其规范化为 `name`，不得据用户自然语言补抽取。
 
 模型必须按完整语义处理否定、假设、反问、指代、上下文补充和隐含请求。出现“创建项目”不等于创建意图；未出现“创建”也不等于没有创建意图。
 

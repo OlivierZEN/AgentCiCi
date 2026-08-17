@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-17T14:41:01Z
+updated_at: 2026-08-17T15:37:19Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-17T14:41:01Z
+last_run_at: 2026-08-17T15:37:19Z
 last_run_status: passed_task_315_local_runtime_with_authenticated_dialogue_pending
 ---
 
@@ -13,13 +13,14 @@ last_run_status: passed_task_315_local_runtime_with_authenticated_dialogue_pendi
 ## 2026-08-17 TASK-315 产品经理结构化语义判定与标准输出
 
 - 状态：`passed_task_315_local_runtime_with_authenticated_dialogue_pending`。
-- 后端定向：`AliyunBailianClientTest`、`DevAutopilotDialogueDecisionServiceTest`、`DeliveryWriteReceiptGuardTest`、`ChatOrchestratorServiceModelIdentityTest`、创建/删除/转派 Tool 与历史受理校准 8 个测试类共 75 项通过，0 failure / 0 error。
-- 覆盖：当前模型强制结构化函数调用、隐含创建意图、包含“创建项目”的否定表达、固定草案字节级稳定、低置信度澄清、结构化判定后的研发查询工具裁剪、确认协议回归、无关键词问题下的伪成功阻断和 CRM 非误伤。
+- 后端定向：`AliyunBailianClientTest`、`DevAutopilotDialogueDecisionServiceTest`、`DeliveryWriteReceiptGuardTest`、`ChatOrchestratorServiceModelIdentityTest`、创建/删除/转派 Tool 与历史受理校准 8 个测试类共 78 项通过，0 failure / 0 error。
+- 覆盖：思考模型唯一工具 `auto` 判定、非思考命名工具协议重试、动作相关字段校验、结构化项目字段别名、隐含创建、否定表达、固定草案、低置信度澄清、研发查询工具裁剪、确认协议、伪成功阻断和 CRM 非误伤。
 - 构建与静态：`mvn -q -DskipTests package`、`git diff --check` 通过。
 - 全量边界：后端全量测试曾进入本机共享 PostgreSQL 不可用重试，未进入全部业务断言后手动中止；未修改或 repair 共享测试库，因此不声明全量套件通过。
-- 本地主线与运行：功能提交 `e083fb87f732` 已进入本地 `main`；backend/frontend 从该提交构建为 `2.8.61-dev.e083fb8`，镜像 ID 分别为 `sha256:8b51c211faba800576d3fbe3518de6468b80ccf947e3c1c2f03ac4c511ded5e8`、`sha256:c7c8faf0a73a3ffa8ea0707c3078a209ff477c3e41e6e5da182f6c3c03192725`，label revision 一致、healthy/restart=0。
-- 运行门禁：内部 `/system/version` 回读 `e083fb87f732`、`/actuator/health=UP`；正式入口 200、匿名 API JSON 401，完整 `cc-local-stack ./stack verify` 通过，Flyway 保持 schema V121，启动无 ERROR。
-- 浏览器边界：使用浏览器控制技能刷新既有 Chrome `/app` 会话后进入统一登录页；未读取存储、猜测凭据、绕过认证或发送会写业务数据的确认口令。真实固定模型的隐含创建、否定表达和固定输出验收待已登录业务用户完成；UAT、生产未修改。
+- 真实模型协议：本地平台现用 `deepseek-v4-flash-0731` 的非写入 Provider 探测均返回唯一 `resolve_devautopilot_dialogue` Tool；隐含创建为 `CREATE_DRAFT/PROJECT` 且名称正确，否定解释为 `OTHER`。未创建聊天或 Semattice 记录。
+- 本地主线与运行：`main@cc4312edde85` 构建为 `2.8.61-dev.cc4312e`；backend/frontend 镜像 ID 分别为 `sha256:440528145bcd3fa823f397d3cd1cacd676a237f2c1499dbb9de0fbd7e6daf1ae`、`sha256:defee9069ee87ea5e935e9f989f28b961b913477ca8a409001ebb3d39f703e32`，label revision 一致、healthy/restart=0。
+- 运行门禁：内部 `/system/version` 回读 `cc4312edde85`、`/actuator/health=UP`；正式入口 200，完整 `cc-local-stack ./stack verify` 通过，启动后无本任务相关 ERROR。
+- 浏览器边界：已登录 Chrome `/app` 回读新版本与产品经理入口；根据浏览器代表性通信边界未代用户发送消息。页面固定草案验收待用户完成；UAT、生产未修改。
 
 ## 2026-08-17 TASK-313 内部租户应用注册中心本地验证
 

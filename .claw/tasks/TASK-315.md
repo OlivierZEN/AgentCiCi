@@ -6,7 +6,7 @@ status: review
 priority: critical
 owner_role: backend-agent
 claimed_by: codex
-updated_at: 2026-08-17T14:41:01Z
+updated_at: 2026-08-17T15:37:19Z
 updated_by: codex
 ---
 
@@ -33,7 +33,8 @@ updated_by: codex
 
 - 代码审计确认旧创建/查询/转派草案及回执启用条件存在自然语言规则。
 - 新结构化判定服务、固定模板和回执门禁已完成初步实现。
-- 定向 8 个测试类共 75 项已通过，包含隐式创建、否定表达、固定格式、低置信度澄清、强制 Tool choice、二次查询工具裁剪、确认写入回归和非研发业务非误伤。
+- 用户首次页面验收证明思考模型拒绝命名 `tool_choice`，Trace 为 0 input/output Token；已改为唯一工具 `auto` 的思考判定，缺少协议时关闭思考做一次命名工具重试，并只要求动作核心字段。
+- 定向 8 个测试类共 78 项已通过，包含隐式创建、否定表达、固定格式、低置信度澄清、思考模型工具兼容与协议重试、字段别名规范化、二次查询工具裁剪、确认写入回归和非研发业务非误伤。
 - 后端 production package 与 `git diff --check` 已通过；后端全量套件受本机共享 PostgreSQL 不可用阻断，未声明全量通过。
-- 功能提交 `e083fb87f732` 已进入本地 `main`；backend/frontend 运行 `2.8.61-dev.e083fb8`，镜像 revision 一致、healthy/restart=0，内部版本与 health 回读、正式入口 200、匿名 API JSON 401 和完整 `./stack verify` 均通过。
-- 可控 Chrome 页面刷新后进入统一登录页；未读取会话存储、绕过认证或发送确认口令。真实固定模型的隐含创建、否定表达与固定草案格式仍待已登录业务用户验收，UAT/生产未修改。
+- 提交 `f121d20c`、`cc4312ed` 已进入本地 `main`；backend/frontend 运行 `2.8.61-dev.cc4312e`，镜像 revision 一致、healthy/restart=0，内部版本与 health 回读、正式入口 200 和完整 `./stack verify` 均通过。
+- 真实 Provider 非写入探测中，隐含创建返回 `CREATE_DRAFT/PROJECT/CCSales 智能应用`，否定解释返回 `OTHER`；已登录 Chrome 回读新版本，但未代用户发送页面消息。固定草案格式仍待用户验收，UAT/生产未修改。
