@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-17T02:27:24Z
+updated_at: 2026-08-17T02:52:17Z
 updated_by: codex
 board_status: active
 ---
@@ -17,7 +17,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-310 - 新租户 Owner 全局身份复用
 
-- status: `in_progress`
+- status: `review`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - claimed_by: `codex`
@@ -25,7 +25,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-310.md`
 - blocked_by: `none`
 - scope_files: `Owner 身份解析、租户开通模式与幂等、平台渐进式开通弹窗、测试与本地环境验证`
-- next_action: `实现后端身份预检和明确复用/新建模式，再完成平台弹窗与本地验收。`
+- completion_evidence: `4e11acc1；后端 11 项定向测试/package、前端 50 文件/279 项/build、V118、2.8.61-dev.4e11acc、healthy/restart=0、完整 stack verify 通过`
+- next_action: `由已登录平台管理员复核三步弹窗的已有用户复用、新用户预检、标识冲突和最终开通；UAT/生产未授权。`
 
 ### TASK-309 - 对话框连续粘贴图片附件
 

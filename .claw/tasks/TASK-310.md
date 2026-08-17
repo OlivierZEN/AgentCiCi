@@ -2,8 +2,8 @@
 kind: task-status
 task_id: TASK-310
 feature_id: FEAT-189
-status: in_progress
-updated_at: 2026-08-17T02:27:24Z
+status: review
+updated_at: 2026-08-17T02:52:17Z
 updated_by: codex
 owner_role: fullstack-agent
 spec_path: docs/specs/FEAT-189-reusable-tenant-owner-identity.md
@@ -20,13 +20,14 @@ spec_path: docs/specs/FEAT-189-reusable-tenant-owner-identity.md
 
 ## 完成条件
 
-- [ ] 已有全局账号可成为新租户 Owner，不新增账号或 Keycloak 用户。
-- [ ] 新账号、单标识命中、双标识同账号、双账号冲突、停用账号均有明确处理。
-- [ ] 同键同请求幂等返回，同键异请求失败关闭。
-- [ ] 前后端测试、构建和差异检查通过。
-- [ ] 代码提交合并本地 main，本地开发环境从该提交重建并回读。
+- [x] 已有全局账号可成为新租户 Owner，不新增账号或 Keycloak 用户。
+- [x] 新账号、单标识命中、双标识同账号、双账号冲突、停用账号均有明确处理。
+- [x] 同键同请求幂等返回，同键异请求失败关闭。
+- [x] 前后端定向测试、前端全量回归、构建和差异检查通过；后端全量的既有共享测试库阻塞已单独记录。
+- [x] 代码提交合并本地 main，本地开发环境从该提交重建并回读。
 - [ ] 受权桌面页面完成主路径验收，或明确记录登录态阻塞。
 
 ## 当前状态
 
-- 用户已确认 FEAT-189 设计，正在实现。
+- 实现提交 `4e11acc1` 已进入本地 `main`；backend/frontend 已从该提交构建并运行 `2.8.61-dev.4e11acc`，V118、健康、重启次数与完整 stack verify 均通过。
+- 可控浏览器只能进入运营平台登录边界，未伪造平台管理员登录态；授权态的已有用户复用、新用户预检、冲突提示与最终开通仍待运营人员复核。

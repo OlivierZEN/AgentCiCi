@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-189
 title: 新租户 Owner 全局身份复用
-status: approved
+status: implemented
 owner_role: fullstack-agent
 task_ids: TASK-310
 related_decisions: FEAT-024, FEAT-145, FEAT-165
 related_issues: none
-updated_at: 2026-08-17T02:27:24Z
+updated_at: 2026-08-17T02:52:17Z
 updated_by: codex
 ---
 
@@ -135,6 +135,7 @@ POST /platform/tenants
 ## 实现进展
 
 - 2026-08-17：用户确认“先确认全局身份，再创建租户成员关系”的设计，规格进入实现。
+- 2026-08-17：实现提交 `4e11acc1` 进入本地 `main`；身份解析、明确复用/新建、幂等记录、V118 和三步弹窗已完成，本地 `2.8.61-dev.4e11acc` 技术验收通过。授权态业务验收待平台管理员登录后复核，UAT/生产未修改。
 
 ## 交接说明
 

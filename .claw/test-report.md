@@ -1,14 +1,24 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-14T11:14:23Z
+updated_at: 2026-08-17T02:52:17Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-14T11:14:23Z
-last_run_status: passed_task_309_local_e2e_with_known_full_suite_debt
+last_run_at: 2026-08-17T02:52:17Z
+last_run_status: passed_task_310_local_with_authorized_visual_pending
 ---
 
 # Test Report
+
+## 2026-08-17 TASK-310 新租户 Owner 全局身份复用
+
+- 状态：`passed_task_310_local_with_authorized_visual_pending`。
+- 身份与幂等：后端定向 2 个测试类、11 项通过，覆盖同一手机号/邮箱账号复用、跨账号冲突、新账号、公共编号、已有账号统一身份协调、已激活身份不重复 provisioning，以及同键结果重放；`mvn -q -DskipTests package` 与 `git diff --check` 通过。
+- 前端：定向 4 项、全量 50 个测试文件/279 项、production build 通过，仅保留既有大 chunk warning。弹窗已改为“租户信息 → Owner 身份 → 确认开通”，已有用户默认、结果脱敏、新用户先预检、冲突不写入。
+- 后端全量边界：`mvn -q test` 的 Spring 启动型用例在断言前被共享 `agentcici_test` 既有 Flyway V81 checksum 漂移阻断（applied `2112500543`、local `379982424`）；本轮未 repair。新增定向测试无失败。
+- 本地主线与运行：提交 `4e11acc1` 已进入本地 `main`；backend/frontend 均从该提交构建为 `2.8.61-dev.4e11acc`。Flyway 从 V117 成功前进至 V118；backend/frontend 均 healthy、restart=0，backend `/system/version` 回读 commit `4e11acc14f2d`，完整 `cc-local-stack ./stack verify` 通过。
+- 浏览器边界：正式 `https://cici.localhost/platform/tenants` 正确进入运营平台登录页，console 无 error/warn；当前没有可复用的已登录平台会话，未绕过鉴权，因此授权态的已有用户复用、新用户预检、冲突提示与最终开通仍待运营人员验收。
+- 发布边界：仅更新本地开发测试环境；UAT/生产未授权、未修改。
 
 ## 2026-08-14 TASK-309 对话连续粘贴图片本地端到端验证
 

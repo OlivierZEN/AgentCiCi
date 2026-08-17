@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-17T02:27:24Z
+updated_at: 2026-08-17T02:52:17Z
 updated_by: codex
-phase: implementation
+phase: review
 active_task: TASK-310
-next_action: "按已确认 FEAT-189 实现 Owner 身份预检、明确复用/新建模式和渐进式租户开通弹窗；完成测试后提交本地 main 并更新 cici.localhost。"
+next_action: "由已登录平台管理员在 cici.localhost 复核已有用户复用、新用户预检、标识冲突和最终开通；UAT/生产未授权。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- TASK-310 / FEAT-189 已获用户确认并进入实现：租户开通先解析或选择全局 Owner 身份，再创建租户成员关系；已有账号通过公共编号显式复用，新账号先做手机号/邮箱占用预检，双账号冲突失败关闭，并以幂等键保护最终创建。平台弹窗采用“租户信息 → Owner 身份 → 确认摘要”渐进式桌面流程；不自动合并账号、不覆盖既有手机号/邮箱/密码/Keycloak 身份，UAT/生产不在本任务授权范围。
+- TASK-310 / FEAT-189 已完成本地实现并进入 review：租户开通先解析或选择全局 Owner 身份，再创建租户成员关系；已有账号通过公共编号显式复用，新账号先做手机号/邮箱占用预检，双账号冲突失败关闭，并以幂等键保护最终创建。平台弹窗采用“租户信息 → Owner 身份 → 确认摘要”三步流程，不自动合并或覆盖既有身份。提交 `4e11acc1` 已进入本地 `main`；backend/frontend 运行 `2.8.61-dev.4e11acc`，V118、11 项后端定向测试/package、前端 50 文件/279 项/build、healthy/restart=0 和完整 stack verify 通过。后端全量仍被既有共享测试库 V81 checksum 漂移阻断；可控浏览器只有平台登录页，授权态业务开通待运营人员复核。UAT/生产未修改。
 
 - TASK-309 / FEAT-188 已完成本地实现与开发环境验收：主线提交 `a9d838b6`、`b7e03a56`、`aaf9706b`；V116/V117 成功，页面为 `2.8.61-dev.aaf9706`，backend/frontend healthy、restart=0，完整 stack verify 通过。已登录桌面页面验证两图上传、缩略图、删除、替换及提示同步；非 vision 模型按预期返回 409，当前页保留草稿，刷新证明失败消息未落库。后端 47 项定向、package、前端 50 文件/278 项和 build 通过；后端全量套件仍受既有共享测试库 V81 checksum 漂移与既有断言债务影响，未 repair。DevAutopilot 已登记 commit/test_report 和 1.0 agent-hour，依次完成 implementation_completed、local_test_passed，当前为 UAT待发布；UAT/生产未修改。
 
