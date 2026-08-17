@@ -4,7 +4,7 @@ task_id: TASK-302
 feature_id: FEAT-183
 integration_id: INT-019
 status: review
-updated_at: 2026-08-14T05:07:00Z
+updated_at: 2026-08-17T10:50:16Z
 updated_by: codex
 owner_role: fullstack-agent
 spec_path: docs/specs/FEAT-183-system-api-catalog.md
@@ -78,6 +78,12 @@ spec_path: docs/specs/FEAT-183-system-api-catalog.md
 - 登记和编辑弹窗加宽为稳定桌面工作区，保持既有 modal 交互与保存逻辑；字段输入统一 52px 高度、16px 主输入字号与 14px 标签/说明字号，两个首行字段保留同高说明区，Scope 选项使用等高双列选择区，页头、正文和页脚固定为可滚动工作区。
 - 功能提交 `8522fefb52a2` 已进入 AgentCiCi 本地及远程 `main`。前端定向 10 项、全量 49 文件/275 项、production build、`git diff --check` 与完整 `cc-local-stack ./stack verify` 通过；`cici-frontend` 从本地 `main@8522fefb52a2` 构建为 `2.8.61-dev.8522fef`，目标路由为 200、healthy/restart=0、镜像 revision 一致。
 - 可控浏览器只返回平台登录页，未持有可用平台管理员会话，故不把授权态页面截图冒充为已验证；用户提供的真实保存截图是本次布局问题的复现与验收输入。
+
+## 受信应用命名统一
+
+- 系统 API 首页原“接入应用”入口改为“受信应用”，明确该入口管理持续生效的应用信任关系，而不是一次性接入流程。
+- 目标页标题、区域无障碍标签和空态同步使用“受信应用”；“登记应用”“编辑受信应用”继续表达具体动作，Client、Scope、启停与审计逻辑均未改变。
+- 提交 `a81e3b727bfb` 已进入本地 `main`。前端定向 10 项、全量 52 文件/287 项、production build 与 `git diff --check` 通过；本地前端从包含该提交的最新代码主线 `2188e5760087` 构建为 `2.8.61-dev.2188e57`，目标路由 200、Nginx 有效、healthy/restart=0，部署 JS 包含新名称；其后的 main 变更仅为状态文档，不影响制品。授权态视觉复核待平台管理员登录后完成，远端/UAT/生产未修改。
 
 ## UAT 发布 `2.8.61-beta.22`
 

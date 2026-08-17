@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-17T10:45:48Z
+updated_at: 2026-08-17T10:50:16Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-17T10:45:33Z
-last_run_status: passed_task_313_local_technical_with_authorized_visual_pending
+last_run_at: 2026-08-17T10:50:16Z
+last_run_status: passed_task_302_trusted_application_naming_local_with_authorized_visual_pending
 ---
 
 # Test Report
+
+## 2026-08-17 TASK-302 受信应用命名统一
+
+- 状态：`passed_task_302_trusted_application_naming_local_with_authorized_visual_pending`。
+- 前端验证：`PlatformSystemApisPage.test.ts` 10/10 通过；全量 52 个测试文件、287 项通过；TypeScript 与 Vite production build 通过，仅保留既有大 chunk warning；`git diff --check` 通过。
+- 状态治理：全仓 `.claw` validator 仍被既有历史规格 front matter、旧完成任务未归档等债务阻断；错误清单未指向本次 FEAT-183/TASK-302 变更，本轮未扩张范围清理历史状态。
+- 本地主线与制品：代码提交 `a81e3b727bfb` 已进入本地 `main`。为避开同工作树中其他未提交改动，前端镜像从包含该提交的最新代码主线 `2188e5760087` 的干净 Git 归档构建；镜像版本 `2.8.61-dev.2188e57`、revision `2188e5760087`。此后的 main 变更仅为状态文档，不影响制品。
+- 本地运行：仅重建 `cici-frontend`；目标路由返回 200，Nginx 校验通过，frontend healthy/restart=0，运行 JS `index-Ppo-xn5B-2.8.61-dev.2188e57.js` 已回读“受信应用”。
+- 浏览器边界：访问目标路由正确进入平台登录页，当前无平台管理员登录态，未伪造授权态视觉结论。远端 main、UAT、生产均未修改。
 
 ## 2026-08-17 TASK-313 内部租户应用注册中心本地验证
 

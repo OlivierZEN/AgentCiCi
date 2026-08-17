@@ -1,12 +1,18 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-17T09:43:30Z
+updated_at: 2026-08-17T10:50:16Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-17 TASK-302 本地开发环境
+
+- AgentCiCi frontend 从包含本任务提交 `a81e3b727bfb` 的最新代码主线 `main@2188e5760087` 的干净 Git 归档构建为 `2.8.61-dev.2188e57`，镜像 ID `sha256:01dfe0b6c6b37ff995e2f236d642ef74a9112eb13cec925e94868e7729eae6e4`；未把同工作树其他未提交文件纳入制品。此后的 main 变更仅为状态文档，不影响制品。
+- 仅 force-recreate `cici-frontend`；容器 healthy/restart=0，Nginx 有效，`https://cici.localhost/platform/system-apis` 返回 200，部署 JS 包含“受信应用”。其他服务未因本次文案调整重建。
+- 远端 main、UAT 和生产均未修改。授权态视觉回读待平台管理员登录后完成。
 
 ## 2026-08-17 TASK-312 UAT `2.8.61-beta.26`
 
