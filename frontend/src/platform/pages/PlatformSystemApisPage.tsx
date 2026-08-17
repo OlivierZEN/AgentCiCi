@@ -390,11 +390,11 @@ export default function PlatformSystemApisPage() {
       <header className="skills-catalog__header platform-page-head">
         <div className="platform-page-head__main">
           {provider || isApplications ? <button type="button" className="system-api-back" onClick={() => navigate("/platform/system-apis")}><ArrowLeft size={15} /> 系统 API</button> : null}
-          <h1 className="skills-catalog__title">{isApplications ? "受信内部应用" : provider ? provider.name : "系统 API"}</h1>
+          <h1 className="skills-catalog__title">{isApplications ? "受信应用" : provider ? provider.name : "系统 API"}</h1>
           <p className="subtle skills-catalog__subtitle">{isApplications ? "登记允许直接使用 Keycloak HUMAN Access Token 调用系统 API 的内部应用。" : provider ? provider.description : "面向内部生态应用的稳定跨应用契约目录。这里只展示经过治理、可被依赖的核心 API。"}</p>
         </div>
         <div className="platform-page-head__aside">
-          {isApplications ? <><span className="platform-inline-stat">{applications.length} 个应用</span><button type="button" className="platform-button platform-button--primary" onClick={() => editApplication()}><Plus size={15} />登记应用</button></> : <><span className="platform-inline-stat">契约 {provider?.contractVersion ?? catalog.contractVersion}</span>{!provider ? <button type="button" className="platform-button platform-button--secondary" onClick={() => navigate("/platform/system-apis/applications")}>接入应用</button> : null}<button type="button" className="platform-button platform-button--secondary" onClick={() => void loadCatalog()} disabled={loading}>刷新目录</button></>}
+          {isApplications ? <><span className="platform-inline-stat">{applications.length} 个应用</span><button type="button" className="platform-button platform-button--primary" onClick={() => editApplication()}><Plus size={15} />登记应用</button></> : <><span className="platform-inline-stat">契约 {provider?.contractVersion ?? catalog.contractVersion}</span>{!provider ? <button type="button" className="platform-button platform-button--secondary" onClick={() => navigate("/platform/system-apis/applications")}>受信应用</button> : null}<button type="button" className="platform-button platform-button--secondary" onClick={() => void loadCatalog()} disabled={loading}>刷新目录</button></>}
         </div>
       </header>
 
@@ -402,12 +402,12 @@ export default function PlatformSystemApisPage() {
       {notice ? <p className="platform-console__banner platform-console__banner--error">{notice}</p> : null}
 
       {isApplications ? (
-        <section className="skills-table-wrap system-api-application-list" aria-label="受信内部应用">
+        <section className="skills-table-wrap system-api-application-list" aria-label="受信应用">
           <div className="system-api-section-head"><div><span className="platform-section-label">应用信任目录</span><p>Client ID 必须与 Keycloak Access Token 的 azp 精确一致。停用立即阻断该应用的 HUMAN 系统 API 调用。</p></div><span>{applicationsLoading ? "读取中" : `${applications.length} 个已登记`}</span></div>
           <table className="skills-data-table system-api-application-table"><colgroup><col className="system-api-application-table__col-application" /><col className="system-api-application-table__col-client" /><col className="system-api-application-table__col-scopes" /><col className="system-api-application-table__col-status" /><col className="system-api-application-table__col-updated" /><col className="system-api-application-table__col-actions" /></colgroup><thead><tr><th scope="col">应用</th><th scope="col">Keycloak Client ID</th><th scope="col">允许 Scope</th><th scope="col">状态</th><th scope="col">最近更新</th><th scope="col">操作</th></tr></thead><tbody>
             {applications.map((application) => <tr key={application.appCode}><td><div className="skills-data-table__skill-name">{application.displayName}</div><code className="skills-data-table__skill-code">{application.appCode}</code></td><td><code className="system-api-scope">{application.keycloakClientId}</code></td><td><div className="system-api-application-scopes">{application.allowedScopes.map((scope) => <code key={scope}>{scope}</code>)}</div></td><td><span className={`system-api-status is-${application.status.toLowerCase()}`}>{application.status === "ACTIVE" ? "已启用" : "已停用"}</span></td><td><span className="system-api-application-date">{new Date(application.updatedAt).toLocaleString("zh-CN", { hour12: false })}</span></td><td><div className="system-api-row-actions"><button type="button" className="platform-table-link" onClick={() => editApplication(application)}><Pencil size={15} />编辑</button><button type="button" className="platform-table-link" disabled={applicationBusy} onClick={() => void toggleApplication(application)}>{application.status === "ACTIVE" ? "停用" : "启用"}</button></div></td></tr>)}
           </tbody></table>
-          {!applicationsLoading && applications.length === 0 ? <div className="system-api-empty"><div><strong>尚未登记内部应用</strong><p>登记 Keycloak Client 后，应用即可按允许 Scope 使用统一 Access Token 调用系统 API。</p></div></div> : null}
+          {!applicationsLoading && applications.length === 0 ? <div className="system-api-empty"><div><strong>尚未登记受信应用</strong><p>登记 Keycloak Client 后，应用即可按允许 Scope 使用统一 Access Token 调用系统 API。</p></div></div> : null}
         </section>
       ) : !providerCode ? (
         <section className="skills-table-wrap system-api-provider-list" aria-label="系统 API 提供方">
