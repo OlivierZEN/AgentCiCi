@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-192
 title: DevAutopilot 产品经理结构化语义判定与标准输出
-status: in_implementation
+status: review
 owner_role: backend-agent
 task_ids: TASK-315
 related_decisions: "自然语言由模型理解；固定协议由服务端解析；明确结果由服务端标准渲染"
 related_issues: ISSUE-2026-08-17-devautopilot-keyword-routing
-updated_at: 2026-08-17T14:29:16Z
+updated_at: 2026-08-17T14:41:01Z
 updated_by: codex
 ---
 

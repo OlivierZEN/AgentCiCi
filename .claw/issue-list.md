@@ -21,8 +21,8 @@ status: active
 - ISSUE-2026-08-17-devautopilot-keyword-routing:
   - Symptom: UAT 产品经理收到明确项目创建请求后没有写入；固定模型本地测试中，“创建项目”被回执门禁拦截，而“帮我建一个项目”反而触发只读项目查询并生成无冒号确认草案。
   - Verified root cause: 创建、事实查询和转派草案在模型前使用不完备的关键词/正则分流；草案由模型自由生成；回执门禁又按用户问题关键词决定是否启用。固定模型切换不能改变这些服务端分支。
-  - Resolution progress: TASK-315 / FEAT-192 改为当前模型强制结构化语义判定，服务端标准渲染，并让可信回执门禁不依赖用户问题关键词；本地定向回归已通过。
-  - Status: implementation in progress; UAT/production unchanged.
+  - Resolution progress: TASK-315 / FEAT-192 已以 `e083fb87` 进入本地 main 和 `2.8.61-dev.e083fb8`；当前模型强制结构化语义判定、服务端标准渲染、判定失败关闭及输出侧真实回执门禁均已通过定向与本地运行门禁。
+  - Status: resolved locally; authenticated fixed-model dialogue acceptance pending; UAT/production unchanged.
 
 - ISSUE-2026-08-12-admin-member-public-id-stale:
   - Symptom: 组织管理端添加全新成员失败，页面提示 `Global account public ID is not available`。

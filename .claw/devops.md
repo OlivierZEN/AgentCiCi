@@ -1,12 +1,19 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-17T11:49:50Z
+updated_at: 2026-08-17T14:41:01Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-17 TASK-315 本地开发环境
+
+- AgentCiCi backend/frontend 从本地 `main@e083fb87f732` 构建为 `2.8.61-dev.e083fb8`，镜像 ID 分别为 `sha256:8b51c211faba800576d3fbe3518de6468b80ccf947e3c1c2f03ac4c511ded5e8`、`sha256:c7c8faf0a73a3ffa8ea0707c3078a209ff477c3e41e6e5da182f6c3c03192725`，label version/revision 与提交一致。
+- backend/frontend 均 healthy、restart=0；内部 `/system/version`、`/actuator/health=UP`、正式入口 200、匿名 API JSON 401 和完整 `cc-local-stack ./stack verify` 均通过。Flyway schema 保持 V121，启动无 ERROR。
+- 受管 `./stack up` 也重建了当前本地 Semattice 与 DevAutopilot 制品；两者健康、restart=0，未改变源码、数据契约、远端、ACR、UAT 或生产。
+- 可控 Chrome 的既有 `/app` 会话刷新后进入统一登录页；未绕过认证或执行真实对话/写入。真实固定模型对话验收待已登录业务用户完成。
 
 ## 2026-08-17 TASK-313 本地开发环境
 
