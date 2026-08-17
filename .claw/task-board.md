@@ -15,6 +15,18 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-311 - DevAutopilot 可恢复租户开通
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `integration-agent`
+- claimed_by: `codex`
+- integration_id: `INT-024`
+- spec_path: `docs/specs/FEAT-190-devautopilot-recoverable-activation.md`
+- task_status_path: `.claw/tasks/TASK-311.md`
+- blocked_by: `none`
+- next_action: `实现持久化阶段、独立失败记录、幂等 ensure 和恢复测试。`
+
 ### TASK-309 - 对话框连续粘贴图片附件
 
 - status: `review`

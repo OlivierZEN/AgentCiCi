@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-14T11:14:23Z
+updated_at: 2026-08-17T03:20:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-14T11:14:23Z
-last_run_status: passed_task_309_local_e2e_with_known_full_suite_debt
+last_run_at: 2026-08-17T03:20:00Z
+last_run_status: passed_task_311_local_candidate_with_known_full_suite_debt
 ---
 
 # Test Report
+
+## 2026-08-17 TASK-311 DevAutopilot 可恢复开通本地候选验证
+
+- 持久化状态机：开通阶段固定为 `PROVISIONING → METADATA_READY → PRODUCT_MANAGER_READY → PRINCIPALS_READY → AUTHORIZATION_READY → ACTIVE`；5 分钟租约防止并发重复执行，失败保存 `failed_stage`、稳定错误码和尝试次数，同一幂等键从最后检查点恢复。
+- 真实 PostgreSQL 16：Flyway 从 V117 升级 V117.1 后回读全部恢复字段；首次授权故障持久为 `FAILED / AUTHORIZATION_READY / SCHEMA_MIGRATION_REQUIRED / attempt=1`，同一幂等键重试后成为 `ACTIVE / attempt=2`，元数据、产品经理主体和两项资源均未重复创建。
+- 后端定向：`DevAutopilotTenantApplicationReadinessTest`、`DevAutopilotHandoffServiceTest`、`DevAutopilotExecutionAuthorizationServiceTest`、`SematticeDevAutopilotAuthorizationClientTest` 通过；`mvn -q -DskipTests package` 通过。
+- 前端：`PlatformTenantApplicationsPage.test.ts` 7/7 通过，production build 通过，仅有既有 chunk-size warning；失败/执行中状态显示持久阶段和安全错误码，并以稳定幂等键执行重试。
+- 全量边界：`mvn test` 仍被共享 `agentcici_test` 既有 Flyway V81 checksum 漂移和无关 Tavily Secret 测试阻断；未 repair 共享测试库，定向任务回归和 clean package 均通过。
+- 状态：`passed_task_311_local_candidate_with_known_full_suite_debt`；尚未合并本地 main、更新本地开发环境或发布 UAT。
 
 ## 2026-08-14 TASK-309 对话连续粘贴图片本地端到端验证
 

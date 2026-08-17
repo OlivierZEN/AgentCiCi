@@ -49,6 +49,6 @@ class DevAutopilotHandoffServiceTest {
     private void active(String companyId) {
         when(applications.get(companyId)).thenReturn(new DevAutopilotTenantApplicationService.View(
                 companyId, true, "devautopilot.standard.v1", "ACTIVE", "ACTIVE", "tenant-1",
-                "metadata-1", "digest", true, null, List.of()));
+                "metadata-1", "digest", true, null, List.of(), "ACTIVE", null, 1));
     }
 }

@@ -22,8 +22,26 @@ export type DevAutopilotApplication = {
   actualState: string;
   sematticeTenantId?: string | null;
   metadataVersionId?: string | null;
+  activationStage?: string | null;
+  failedStage?: string | null;
+  lastErrorCode?: string | null;
+  attemptCount?: number;
   resources: Array<{ logicalRole: string; resourceType: string; resourceAlias: string; displayName: string; lifecycleState: string; primary: boolean }>;
 };
+
+export function devAutopilotActivationKey(companyId: string): string {
+  return `devautopilot-standard-v1-${companyId}`;
+}
+
+function devAutopilotStateLabel(state?: string): string {
+  switch (state) {
+    case "ACTIVE": return "运行中";
+    case "SUSPENDED": return "已暂停";
+    case "PROVISIONING": return "开通中";
+    case "FAILED": return "开通失败";
+    default: return "未开通";
+  }
+}
 
 export type TenantOwnerIdentity = {
   companyId: string;
@@ -229,13 +247,16 @@ export default function PlatformTenantApplicationsPage() {
     try {
       const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(companyId)}/applications/devautopilot/activations`, {
         method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ idempotencyKey: `devautopilot-${companyId}-${globalThis.crypto?.randomUUID?.() ?? Date.now()}` }),
+        body: JSON.stringify({ idempotencyKey: devAutopilotActivationKey(companyId) }),
       });
       const { body } = await safeFetchJson(response);
       if (!response.ok || !body?.success) throw new Error(body?.message ?? `HTTP ${response.status}`);
       setDevAutopilot(body.data as DevAutopilotApplication);
       setMessage("DevAutopilot 已开通，已自动初始化研发产品经理智能体及其受控机器主体。开发者由租户管理员按需新增。");
-    } catch (err) { setError(err instanceof Error ? err.message : "DevAutopilot 开通失败"); } finally { setBusy(false); }
+    } catch (err) {
+      try { setDevAutopilot(await fetchDevAutopilot(token ?? "", companyId)); } catch { /* keep the last safe snapshot */ }
+      setError(err instanceof Error ? err.message : "DevAutopilot 开通失败");
+    } finally { setBusy(false); }
   }
 
   async function changeDevAutopilotState(action: "suspensions" | "resumptions") {
@@ -452,19 +473,25 @@ export default function PlatformTenantApplicationsPage() {
                         <h4 id="devautopilot-application-title">DevAutopilot 研发交付系统</h4>
                         <p>开通即初始化产品经理智能体，开发者由租户管理员按需新增</p>
                       </div>
-                      <span className={`tenant-application-card__state tenant-application-card__state--${devAutopilot?.actualState === "ACTIVE" ? "healthy" : "not_provisioned"}`}><CheckCircle2 size={14} aria-hidden="true" />{devAutopilot?.actualState === "ACTIVE" ? "运行中" : devAutopilot?.actualState === "SUSPENDED" ? "已暂停" : "未开通"}</span>
+                      <span className={`tenant-application-card__state tenant-application-card__state--${devAutopilot?.actualState === "ACTIVE" ? "healthy" : devAutopilot?.actualState?.toLowerCase() ?? "not_provisioned"}`}><CheckCircle2 size={14} aria-hidden="true" />{devAutopilotStateLabel(devAutopilot?.actualState)}</span>
                     </div>
                     {devAutopilot?.enabled ? <>
                       <dl className="tenant-application-card__facts">
                         <div><dt>模板版本</dt><dd>{devAutopilot.templateVersion}</dd></div><div><dt>租户标识</dt><dd>{detail.tenant.companyId}</dd></div>
-                        <div><dt>数据底座</dt><dd>Semattice（已绑定）</dd></div><div><dt>初始化状态</dt><dd>{devAutopilotInitializationReady(devAutopilot) ? "已完成" : "待补齐"}</dd></div>
+                        <div><dt>数据底座</dt><dd>Semattice（已绑定）</dd></div><div><dt>初始化状态</dt><dd>{devAutopilotInitializationReady(devAutopilot) ? "已完成" : devAutopilot.activationStage ?? "待补齐"}</dd></div>
+                        {devAutopilot.failedStage ? <div><dt>失败阶段</dt><dd>{devAutopilot.failedStage}</dd></div> : null}
+                        {devAutopilot.lastErrorCode ? <div><dt>错误代码</dt><dd>{devAutopilot.lastErrorCode}</dd></div> : null}
                       </dl>
                       <div className="tenant-application-card__foot tenant-application-card__foot--action">
-                        <span><ShieldCheck size={14} aria-hidden="true" />{devAutopilotInitializationReady(devAutopilot) ? "关闭仅暂停本租户运行入口，不删除数据" : "历史开通记录缺少标准资源，需要补齐初始化"}</span>
+                        <span><ShieldCheck size={14} aria-hidden="true" />{devAutopilot.actualState === "FAILED" ? "已保留成功阶段；重试将从失败阶段继续，不重复已完成步骤" : devAutopilot.actualState === "PROVISIONING" ? "开通阶段已持久化；执行中或可在租约释放后继续" : devAutopilotInitializationReady(devAutopilot) ? "关闭仅暂停本租户运行入口，不删除数据" : "历史开通记录缺少标准资源，需要补齐初始化"}</span>
                         <div className="tenant-application-card__actions">
-                          <button ref={intakeTriggerRef} type="button" className="platform-button platform-button--secondary" disabled={busy} onClick={() => setIntakeModalOpen(true)}>校准历史受理</button>
-                          {devAutopilotInitializationReady(devAutopilot) ? <button type="button" className="platform-button platform-button--secondary" disabled={busy} onClick={() => void reconcileDevAutopilotInitialization()}>同步标准模板</button> : null}
-                          <button type="button" className="platform-button platform-button--primary tenant-application-card__primary-action" disabled={busy} onClick={() => void (devAutopilotInitializationReady(devAutopilot) ? changeDevAutopilotState(devAutopilot.actualState === "SUSPENDED" ? "resumptions" : "suspensions") : reconcileDevAutopilotInitialization())}>{devAutopilotInitializationReady(devAutopilot) ? (devAutopilot.actualState === "SUSPENDED" ? "恢复运行" : "暂停应用") : "补齐初始化"}</button>
+                          {devAutopilot.actualState === "FAILED" || devAutopilot.actualState === "PROVISIONING" ? (
+                            <button type="button" className="platform-button platform-button--primary tenant-application-card__primary-action" disabled={busy} onClick={() => void activateDevAutopilot()}>{devAutopilot.actualState === "FAILED" ? "重试开通" : "继续开通"}</button>
+                          ) : <>
+                            <button ref={intakeTriggerRef} type="button" className="platform-button platform-button--secondary" disabled={busy} onClick={() => setIntakeModalOpen(true)}>校准历史受理</button>
+                            {devAutopilotInitializationReady(devAutopilot) ? <button type="button" className="platform-button platform-button--secondary" disabled={busy} onClick={() => void reconcileDevAutopilotInitialization()}>同步标准模板</button> : null}
+                            <button type="button" className="platform-button platform-button--primary tenant-application-card__primary-action" disabled={busy} onClick={() => void (devAutopilotInitializationReady(devAutopilot) ? changeDevAutopilotState(devAutopilot.actualState === "SUSPENDED" ? "resumptions" : "suspensions") : reconcileDevAutopilotInitialization())}>{devAutopilotInitializationReady(devAutopilot) ? (devAutopilot.actualState === "SUSPENDED" ? "恢复运行" : "暂停应用") : "补齐初始化"}</button>
+                          </>}
                         </div>
                       </div>
                       <p className="skills-data-table__summary">研发产品经理智能体与其机器主体由模板创建，名称和负责人可由该租户的 ORG_ADMIN 在 AgentCiCi 管理端调整；开发者由租户按需新增。</p>

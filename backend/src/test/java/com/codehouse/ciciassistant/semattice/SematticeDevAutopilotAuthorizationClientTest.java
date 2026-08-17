@@ -83,4 +83,27 @@ class SematticeDevAutopilotAuthorizationClientTest {
                 .hasMessageContaining("HTTP 403 UNAUTHORIZED");
         server.verify();
     }
+
+    @Test
+    void preservesSchemaMigrationRequiredWithoutLeakingRemoteDetails() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        SematticeProvisioningClient signer = mock(SematticeProvisioningClient.class);
+        when(signer.signature(eq("agentcici"), eq("POST"),
+                eq("/internal/v1/devautopilot-authorization-templates"), anyString(), anyString(), anyString()))
+                .thenReturn("signed");
+        server.expect(requestTo("https://semattice.example.test/internal/v1/devautopilot-authorization-templates"))
+                .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"status\":\"failed\",\"error\":{\"code\":\"SCHEMA_MIGRATION_REQUIRED\",\"message\":\"internal detail\"}}"));
+        SematticeDevAutopilotAuthorizationClient client = new SematticeDevAutopilotAuthorizationClient(
+                builder, new ObjectMapper(), signer, "https://semattice.example.test/");
+
+        assertThatThrownBy(() -> client.apply("company-a", "activation-a", "key-a", List.of(
+                new SematticeDevAutopilotAuthorizationClient.Assignment("service-pm", "product_manager"))))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("HTTP 503 SCHEMA_MIGRATION_REQUIRED")
+                .hasMessageNotContaining("internal detail");
+        server.verify();
+    }
 }
