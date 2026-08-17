@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   devAutopilotInitializationReady,
+  devAutopilotActivationKey,
   fetchOwnerIdentity,
   isValidIntakeReconciliationInput,
   ownerIdentityStatus,
@@ -23,6 +24,10 @@ function application(overrides: Partial<DevAutopilotApplication>): DevAutopilotA
 }
 
 describe("DevAutopilot initialization readiness", () => {
+  it("uses one stable tenant activation key so a failed saga can resume", () => {
+    expect(devAutopilotActivationKey("org00000000000000001"))
+      .toBe("devautopilot-standard-v1-org00000000000000001");
+  });
   it("trusts the server readiness signal instead of resource-row presence", () => {
     const legacyRows = [
       { logicalRole: "product_manager", resourceType: "AGENT", resourceAlias: "pm-agent", displayName: "天工产品经理", lifecycleState: "ACTIVE", primary: true },

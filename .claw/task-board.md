@@ -15,6 +15,18 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-311 - DevAutopilot 可恢复租户开通
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `integration-agent`
+- claimed_by: `codex`
+- integration_id: `INT-024`
+- spec_path: `docs/specs/FEAT-190-devautopilot-recoverable-activation.md`
+- task_status_path: `.claw/tasks/TASK-311.md`
+- blocked_by: `none`
+- next_action: `从本地 main 构建开发环境并完成 UAT schema、候选和真实运营开通闭环。`
+
 ### TASK-310 - 新租户 Owner 全局身份复用
 
 - status: `review`

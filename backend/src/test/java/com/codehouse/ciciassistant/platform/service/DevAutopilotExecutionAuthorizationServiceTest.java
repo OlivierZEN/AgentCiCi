@@ -92,6 +92,6 @@ class DevAutopilotExecutionAuthorizationServiceTest {
                                 "ACTIVE", true, 1, 1),
                         new DevAutopilotTenantApplicationService.ResourceView(
                                 "product_manager", "SERVICE_PRINCIPAL", "pm-principal", "研发产品经理", SERVICE_ID,
-                                "ACTIVE", true, 1, 1)));
+                                "ACTIVE", true, 1, 1)), "ACTIVE", null, 1);
     }
 }

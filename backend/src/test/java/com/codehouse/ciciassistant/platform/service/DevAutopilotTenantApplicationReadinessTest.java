@@ -27,6 +27,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 class DevAutopilotTenantApplicationReadinessTest {
 
@@ -164,6 +166,31 @@ class DevAutopilotTenantApplicationReadinessTest {
         assertThat(ordered).isEqualTo(reversed).hasSizeLessThanOrEqualTo(96);
         assertThat(withDeveloper).isNotEqualTo(ordered).hasSizeLessThanOrEqualTo(96);
         assertThat(ordered).startsWith(SematticeDevAutopilotAuthorizationClient.TEMPLATE_VERSION + ":");
+    }
+
+    @Test
+    void activationStagesResumeStrictlyAfterTheLastDurableCheckpoint() {
+        assertThat(DevAutopilotTenantApplicationService.stageBefore("PROVISIONING", "METADATA_READY")).isTrue();
+        assertThat(DevAutopilotTenantApplicationService.stageBefore("METADATA_READY", "METADATA_READY")).isFalse();
+        assertThat(DevAutopilotTenantApplicationService.stageBefore("PRINCIPALS_READY", "AUTHORIZATION_READY")).isTrue();
+        assertThat(DevAutopilotTenantApplicationService.stageBefore("AUTHORIZATION_READY", "PRINCIPALS_READY")).isFalse();
+        assertThat(DevAutopilotTenantApplicationService.stageBefore("ACTIVE", "AUTHORIZATION_READY")).isFalse();
+    }
+
+    @Test
+    void preservesStableSchemaContractFailuresForRecoveryAndHumanDiagnosis() {
+        RuntimeException migrationRequired = new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                "Semattice request failed: HTTP 503 SCHEMA_MIGRATION_REQUIRED");
+        RuntimeException drift = new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                "Semattice request failed: HTTP 503 SCHEMA_MIGRATION_DRIFT");
+
+        assertThat(DevAutopilotTenantApplicationService.activationFailureCode("AUTHORIZATION_READY", migrationRequired))
+                .isEqualTo("SCHEMA_MIGRATION_REQUIRED");
+        assertThat(DevAutopilotTenantApplicationService.activationFailureCode("AUTHORIZATION_READY", drift))
+                .isEqualTo("SCHEMA_MIGRATION_DRIFT");
+        assertThat(DevAutopilotTenantApplicationService.activationFailureCode(
+                "AUTHORIZATION_READY", new IllegalStateException("remote unavailable")))
+                .isEqualTo("ACTIVATION_AUTHORIZATION_READY_FAILED");
     }
 
     private DevAutopilotTenantApplicationService service(JdbcTemplate targetJdbc,

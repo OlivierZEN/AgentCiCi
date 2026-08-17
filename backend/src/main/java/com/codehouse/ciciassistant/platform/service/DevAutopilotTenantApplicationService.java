@@ -68,41 +68,167 @@ public class DevAutopilotTenantApplicationService {
         this.developerScopes = developerScopes == null ? List.of() : developerScopes.stream().filter(v -> v != null && !v.isBlank()).map(String::trim).distinct().toList();
     }
 
-    @Transactional
     public View activate(String companyId, ActivationCommand command, String platformActor) {
         requireCompany(companyId);
         require(command.idempotencyKey(), "idempotencyKey");
         if (!KEY.matcher(command.idempotencyKey()).matches()) throw new IllegalArgumentException("invalid activation key");
+        String attemptToken = UUID.randomUUID().toString();
         var existing = find(companyId);
         if (existing != null) {
-            if (!existing.idempotencyKey().equals(command.idempotencyKey()) || !"ACTIVE".equals(existing.actualState())) throw new ConflictException("DevAutopilot activation already exists for this tenant");
-            return view(existing);
+            if (!existing.idempotencyKey().equals(command.idempotencyKey())) {
+                throw new ConflictException("DevAutopilot activation already exists for this tenant with another idempotency key");
+            }
+            if ("ACTIVE".equals(existing.actualState())) return view(existing);
         }
         var binding = provisioning.getProvisioningStatus(companyId);
         if (!"PROVISIONED".equals(binding.state()) || binding.sematticeTenantId() == null) throw new ForbiddenException("Semattice must be provisioned before enabling DevAutopilot");
-        String ownerMemberId = initialOwnerMemberId(companyId);
-        String activationId = UUID.randomUUID().toString();
-        jdbc.update("""
-                INSERT INTO tenant_application_activation(id,company_id,app_code,template_version,idempotency_key,desired_state,actual_state,semattice_tenant_id,created_by_member_id)
-                VALUES (?,?,?,?,?,'ACTIVE','PROVISIONING',?,?)
-                """, activationId, companyId, APP, SematticeDevAutopilotTemplateClient.TEMPLATE_VERSION,
-                command.idempotencyKey(), binding.sematticeTenantId(), ownerMemberId);
+        if (existing == null) {
+            String ownerMemberId = initialOwnerMemberId(companyId);
+            String activationId = UUID.randomUUID().toString();
+            int inserted = jdbc.update("""
+                    INSERT INTO tenant_application_activation(
+                        id,company_id,app_code,template_version,idempotency_key,desired_state,actual_state,
+                        semattice_tenant_id,created_by_member_id,activation_stage,attempt_count,last_attempt_at,
+                        lease_token,lease_expires_at)
+                    VALUES (?,?,?,?,?,'ACTIVE','PROVISIONING',?,?,'PROVISIONING',1,CURRENT_TIMESTAMP,?,CURRENT_TIMESTAMP + INTERVAL '5 minutes')
+                    ON CONFLICT (company_id,app_code) DO NOTHING
+                    """, activationId, companyId, APP, SematticeDevAutopilotTemplateClient.TEMPLATE_VERSION,
+                    command.idempotencyKey(), binding.sematticeTenantId(), ownerMemberId, attemptToken);
+            if (inserted != 1) {
+                Row concurrent = requireExisting(companyId);
+                if (!concurrent.idempotencyKey().equals(command.idempotencyKey())) {
+                    throw new ConflictException("DevAutopilot activation already exists for this tenant with another idempotency key");
+                }
+                throw new ConflictException("DevAutopilot activation is already in progress");
+            }
+            existing = requireExisting(companyId);
+        } else {
+            int acquired = jdbc.update("""
+                    UPDATE tenant_application_activation
+                    SET actual_state='PROVISIONING',failed_stage=NULL,last_error_code=NULL,
+                        attempt_count=attempt_count+1,last_attempt_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP,
+                        lease_token=?,lease_expires_at=CURRENT_TIMESTAMP + INTERVAL '5 minutes'
+                    WHERE id=? AND (lease_token IS NULL OR lease_expires_at < CURRENT_TIMESTAMP)
+                    """, attemptToken, existing.id());
+            if (acquired != 1) throw new ConflictException("DevAutopilot activation is already in progress");
+            existing = requireExisting(companyId);
+        }
+        String activationId = existing.id();
+        String nextStage = nextActivationStage(existing.activationStage());
         try {
-            var metadata = template.apply(companyId, command.idempotencyKey());
-            initializeProductManager(companyId, activationId, ownerMemberId);
-            reconcilePrincipalProjections(companyId, activationId, platformActor);
-            reconcileAuthorizationTemplate(companyId, activationId);
-            jdbc.update("""
-                    UPDATE tenant_application_activation SET actual_state='ACTIVE',metadata_version_id=?,metadata_digest=?,updated_at=CURRENT_TIMESTAMP WHERE id=?
-                    """,
-                    metadata.metadataVersionId(), metadata.snapshotDigest(), activationId);
+            String ownerMemberId = initialOwnerMemberId(companyId);
+            if (stageBefore(existing.activationStage(), "METADATA_READY")) {
+                nextStage = "METADATA_READY";
+                var metadata = template.apply(companyId, command.idempotencyKey());
+                validateMetadataBaseline(companyId, metadata);
+                checkpointMetadata(activationId, attemptToken, metadata);
+            }
+            Row progress = requireExisting(companyId);
+            if (stageBefore(progress.activationStage(), "PRODUCT_MANAGER_READY")) {
+                nextStage = "PRODUCT_MANAGER_READY";
+                initializeProductManager(companyId, activationId, ownerMemberId);
+                checkpointStage(activationId, attemptToken, "PRODUCT_MANAGER_READY");
+            }
+            progress = requireExisting(companyId);
+            if (stageBefore(progress.activationStage(), "PRINCIPALS_READY")) {
+                nextStage = "PRINCIPALS_READY";
+                reconcilePrincipalProjections(companyId, activationId, platformActor);
+                checkpointStage(activationId, attemptToken, "PRINCIPALS_READY");
+            }
+            progress = requireExisting(companyId);
+            if (stageBefore(progress.activationStage(), "AUTHORIZATION_READY")) {
+                nextStage = "AUTHORIZATION_READY";
+                reconcileAuthorizationTemplate(companyId, activationId);
+                checkpointStage(activationId, attemptToken, "AUTHORIZATION_READY");
+            }
             audit.log(companyId, platformActor, "PLATFORM", "tenant_application.activated", "tenant_application", activationId,
                     "DevAutopilot standard application activated");
-            return requireView(companyId);
+            int completed = jdbc.update("""
+                    UPDATE tenant_application_activation
+                    SET actual_state='ACTIVE',activation_stage='ACTIVE',failed_stage=NULL,last_error_code=NULL,
+                        lease_token=NULL,lease_expires_at=NULL,updated_at=CURRENT_TIMESTAMP
+                    WHERE id=? AND lease_token=?
+                    """, activationId, attemptToken);
+            if (completed != 1) throw new ConflictException("DevAutopilot activation lease was lost");
         } catch (RuntimeException exception) {
-            jdbc.update("UPDATE tenant_application_activation SET actual_state='FAILED',last_error_code=?,updated_at=CURRENT_TIMESTAMP WHERE id=?", "ACTIVATION_FAILED", activationId);
+            jdbc.update("""
+                    UPDATE tenant_application_activation
+                    SET actual_state='FAILED',failed_stage=?,last_error_code=?,lease_token=NULL,
+                        lease_expires_at=NULL,updated_at=CURRENT_TIMESTAMP
+                    WHERE id=? AND lease_token=?
+                    """, nextStage, activationFailureCode(nextStage, exception), activationId, attemptToken);
             throw exception;
         }
+        return requireView(companyId);
+    }
+
+    private void validateMetadataBaseline(String companyId, SematticeDevAutopilotTemplateClient.TemplateView metadata) {
+        if (!companyId.equals(metadata.companyId())
+                || metadata.objectCount() != 7
+                || metadata.fieldCount() != 86
+                || !("applied".equals(metadata.state()) || "already_applied".equals(metadata.state()))) {
+            throw new IllegalStateException("Semattice DevAutopilot metadata baseline is incomplete");
+        }
+    }
+
+    private void checkpointMetadata(String activationId, String attemptToken,
+                                    SematticeDevAutopilotTemplateClient.TemplateView metadata) {
+        int updated = jdbc.update("""
+                UPDATE tenant_application_activation
+                SET activation_stage='METADATA_READY',metadata_version_id=?,metadata_digest=?,
+                    failed_stage=NULL,last_error_code=NULL,lease_expires_at=CURRENT_TIMESTAMP + INTERVAL '5 minutes',
+                    updated_at=CURRENT_TIMESTAMP
+                WHERE id=? AND lease_token=?
+                """, metadata.metadataVersionId(), metadata.snapshotDigest(), activationId, attemptToken);
+        requireLeaseUpdate(updated);
+    }
+
+    private void checkpointStage(String activationId, String attemptToken, String stage) {
+        int updated = jdbc.update("""
+                UPDATE tenant_application_activation
+                SET activation_stage=?,failed_stage=NULL,last_error_code=NULL,
+                    lease_expires_at=CURRENT_TIMESTAMP + INTERVAL '5 minutes',updated_at=CURRENT_TIMESTAMP
+                WHERE id=? AND lease_token=?
+                """, stage, activationId, attemptToken);
+        requireLeaseUpdate(updated);
+    }
+
+    private static void requireLeaseUpdate(int updated) {
+        if (updated != 1) throw new ConflictException("DevAutopilot activation lease was lost");
+    }
+
+    static boolean stageBefore(String current, String target) {
+        return activationStageRank(current) < activationStageRank(target);
+    }
+
+    private static int activationStageRank(String stage) {
+        return switch (stage == null ? "PROVISIONING" : stage) {
+            case "PROVISIONING" -> 0;
+            case "METADATA_READY" -> 1;
+            case "PRODUCT_MANAGER_READY" -> 2;
+            case "PRINCIPALS_READY" -> 3;
+            case "AUTHORIZATION_READY" -> 4;
+            case "ACTIVE" -> 5;
+            default -> throw new IllegalStateException("Unknown DevAutopilot activation stage");
+        };
+    }
+
+    private static String nextActivationStage(String current) {
+        return switch (current == null ? "PROVISIONING" : current) {
+            case "PROVISIONING" -> "METADATA_READY";
+            case "METADATA_READY" -> "PRODUCT_MANAGER_READY";
+            case "PRODUCT_MANAGER_READY" -> "PRINCIPALS_READY";
+            case "PRINCIPALS_READY" -> "AUTHORIZATION_READY";
+            case "AUTHORIZATION_READY", "ACTIVE" -> "ACTIVE";
+            default -> "PROVISIONING";
+        };
+    }
+
+    static String activationFailureCode(String stage, RuntimeException exception) {
+        String message = exception.getMessage() == null ? "" : exception.getMessage();
+        if (message.contains("SCHEMA_MIGRATION_REQUIRED")) return "SCHEMA_MIGRATION_REQUIRED";
+        if (message.contains("SCHEMA_MIGRATION_DRIFT")) return "SCHEMA_MIGRATION_DRIFT";
+        return "ACTIVATION_" + stage + "_FAILED";
     }
 
     @Transactional(readOnly = true)
@@ -248,12 +374,7 @@ public class DevAutopilotTenantApplicationService {
 
     SematticeDevAutopilotTemplateClient.TemplateView reconcileMetadataBaseline(String companyId, String activationId) {
         var metadata = template.apply(companyId, metadataReconciliationKey(activationId));
-        if (!companyId.equals(metadata.companyId())
-                || metadata.objectCount() != 7
-                || metadata.fieldCount() != 86
-                || !("applied".equals(metadata.state()) || "already_applied".equals(metadata.state()))) {
-            throw new IllegalStateException("Semattice DevAutopilot metadata baseline is incomplete");
-        }
+        validateMetadataBaseline(companyId, metadata);
         jdbc.update("""
                 UPDATE tenant_application_activation
                 SET metadata_version_id=?,metadata_digest=?,last_error_code=NULL,updated_at=CURRENT_TIMESTAMP
@@ -601,9 +722,10 @@ public class DevAutopilotTenantApplicationService {
     private View requireView(String companyId) { return view(requireExisting(companyId)); }
     private Row find(String companyId) {
         List<Row> rows = jdbc.query("""
-                SELECT id,company_id,template_version,idempotency_key,desired_state,actual_state,semattice_tenant_id,metadata_version_id,metadata_digest,last_error_code
+                SELECT id,company_id,template_version,idempotency_key,desired_state,actual_state,semattice_tenant_id,
+                       metadata_version_id,metadata_digest,last_error_code,activation_stage,failed_stage,attempt_count
                 FROM tenant_application_activation WHERE company_id=? AND app_code='devautopilot'
-                """, (rs, n) -> new Row(rs.getString(1),rs.getString(2),rs.getString(3),rs.getString(4),rs.getString(5),rs.getString(6),rs.getString(7),rs.getString(8),rs.getString(9),rs.getString(10)), companyId);
+                """, (rs, n) -> new Row(rs.getString(1),rs.getString(2),rs.getString(3),rs.getString(4),rs.getString(5),rs.getString(6),rs.getString(7),rs.getString(8),rs.getString(9),rs.getString(10),rs.getString(11),rs.getString(12),rs.getInt(13)), companyId);
         return rows.isEmpty() ? null : rows.getFirst();
     }
     private View view(Row row) {
@@ -623,7 +745,8 @@ public class DevAutopilotTenantApplicationService {
                 ORDER BY resource.logical_role,resource.resource_type
                 """, (rs,n)->resourceView(rs), row.id());
         return new View(row.companyId(), true, row.templateVersion(), row.desiredState(), row.actualState(), row.sematticeTenantId(), row.metadataVersionId(), row.metadataDigest(),
-                initializationReady(row.companyId(), row.id()), row.lastError(), resources);
+                initializationReady(row.companyId(), row.id()), row.lastError(), resources,
+                row.activationStage(), row.failedStage(), row.attemptCount());
     }
     boolean initializationReady(String companyId, String activationId) {
         Boolean ready = jdbc.queryForObject("""
@@ -713,7 +836,7 @@ public class DevAutopilotTenantApplicationService {
         return new ResourceView(rs.getString(1), rs.getString(2), rs.getString(3), rs.getString(4),
                 rs.getString(5), rs.getString(6), rs.getBoolean(7), rs.getInt(8), rs.getLong(9));
     }
-    private record Row(String id,String companyId,String templateVersion,String idempotencyKey,String desiredState,String actualState,String sematticeTenantId,String metadataVersionId,String metadataDigest,String lastError) { }
+    private record Row(String id,String companyId,String templateVersion,String idempotencyKey,String desiredState,String actualState,String sematticeTenantId,String metadataVersionId,String metadataDigest,String lastError,String activationStage,String failedStage,int attemptCount) { }
     private record ServiceResource(String id, String externalId, String lifecycleState) { }
     private record BindingTarget(String agentId, String servicePrincipalId) { }
     public record ActivationCommand(String idempotencyKey) { }
@@ -729,7 +852,7 @@ public class DevAutopilotTenantApplicationService {
                                               String effectiveRole,
                                               String source,
                                               boolean governanceOwner) { }
-    public record View(String companyId,boolean enabled,String templateVersion,String desiredState,String actualState,String sematticeTenantId,String metadataVersionId,String metadataDigest,boolean initializationReady,String lastErrorCode,List<ResourceView> resources) {
-        static View notEnabled(String companyId) { return new View(companyId,false,null,"NOT_ENABLED","NOT_ENABLED",null,null,null,false,null,List.of()); }
+    public record View(String companyId,boolean enabled,String templateVersion,String desiredState,String actualState,String sematticeTenantId,String metadataVersionId,String metadataDigest,boolean initializationReady,String lastErrorCode,List<ResourceView> resources,String activationStage,String failedStage,int attemptCount) {
+        static View notEnabled(String companyId) { return new View(companyId,false,null,"NOT_ENABLED","NOT_ENABLED",null,null,null,false,null,List.of(),"NOT_ENABLED",null,0); }
     }
 }
