@@ -6,7 +6,7 @@ status: review
 priority: critical
 owner_role: fullstack-agent
 claimed_by: codex
-updated_at: 2026-08-17T10:45:48Z
+updated_at: 2026-08-17T10:48:29Z
 updated_by: codex
 ---
 
@@ -43,6 +43,7 @@ updated_by: codex
 - `cc-local-stack ./stack verify` 通过部署域名门禁、共享数据库隔离、TLS、OIDC、应用健康/版本与匿名鉴权边界。
 - Chrome 原运营平台页的登录态在重载后过期并跳转登录页；未读取浏览器存储或绕过认证，授权态应用中心、发布和租户应用卡片视觉验收待平台管理员登录后完成。
 - 按用户反馈将原用户界面名称“租户应用目录”统一调整为“应用中心”，保留路由、API 和内部 catalog 模型；相关 3 个测试文件、27 项通过，production build 通过。
+- 命名提交 `2188e5760087` 已进入本地 `main`；前端从该提交构建为 `2.8.61-dev.2188e57`，正式路由 HTTP 200，运行 JS 回读 9 处“应用中心”且无“租户应用目录”，容器 healthy/restart=0。
 
 ## 后续切片
 
