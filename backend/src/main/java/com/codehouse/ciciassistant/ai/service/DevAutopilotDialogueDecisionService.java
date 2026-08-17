@@ -30,6 +30,7 @@ public class DevAutopilotDialogueDecisionService {
             "CREATE_DRAFT", "QUERY", "DELETE_DRAFT", "TRANSFER_DRAFT", "CANCEL_DRAFT", "OTHER");
     private static final Set<String> OBJECT_TYPES = Set.of(
             "PROJECT", "REQUIREMENT", "TASK", "DEFECT", "CHANGE", "WORKLOG", "DELIVERY_EVENT", "UNKNOWN");
+    private static final Set<String> CORE_FIELDS = Set.of("action", "object_type", "confidence");
     private static final List<String> TEXT_FIELDS = List.of(
             "reason", "name", "project", "requirement", "title", "classification_reason",
             "pm_assessment", "priority", "severity", "environment", "expected_result", "actual_result",
@@ -401,7 +402,7 @@ public class DevAutopilotDialogueDecisionService {
                                 "type", "object",
                                 "additionalProperties", false,
                                 "properties", properties,
-                                "required", properties.keySet())));
+                                "required", List.of("action", "object_type", "confidence", "reason"))));
     }
 
     private static String rawText(JsonNode root, String field) {
@@ -410,7 +411,7 @@ public class DevAutopilotDialogueDecisionService {
     }
 
     private static boolean validShape(JsonNode root) {
-        if (!root.isObject() || root.size() != 3 + TEXT_FIELDS.size() + ARRAY_FIELDS.size()) {
+        if (!root.isObject()) {
             return false;
         }
         if (!root.path("action").isTextual()
@@ -418,11 +419,23 @@ public class DevAutopilotDialogueDecisionService {
                 || !root.path("confidence").isNumber()) {
             return false;
         }
+        Set<String> knownFields = new java.util.HashSet<>(CORE_FIELDS);
+        knownFields.addAll(TEXT_FIELDS);
+        knownFields.addAll(ARRAY_FIELDS);
+        var fieldNames = root.fieldNames();
+        while (fieldNames.hasNext()) {
+            if (!knownFields.contains(fieldNames.next())) return false;
+        }
         for (String field : TEXT_FIELDS) {
-            if (!root.path(field).isTextual()) return false;
+            if (root.has(field) && !root.path(field).isTextual()) return false;
         }
         for (String field : ARRAY_FIELDS) {
-            if (!root.path(field).isArray()) return false;
+            if (root.has(field)) {
+                if (!root.path(field).isArray()) return false;
+                for (JsonNode value : root.path(field)) {
+                    if (!value.isTextual()) return false;
+                }
+            }
         }
         return true;
     }

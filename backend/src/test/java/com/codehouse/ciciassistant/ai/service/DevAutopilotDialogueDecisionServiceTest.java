@@ -72,6 +72,26 @@ class DevAutopilotDialogueDecisionServiceTest {
     }
 
     @Test
+    void acceptsActionRelevantFieldsWithoutRequiringEveryIrrelevantDraftField() throws Exception {
+        String userMessage = "创建一个项目：autopilot测试项目3";
+        Map<String, Object> arguments = new java.util.LinkedHashMap<>();
+        arguments.put("action", "CREATE_DRAFT");
+        arguments.put("object_type", "PROJECT");
+        arguments.put("confidence", 0.98);
+        arguments.put("reason", "用户希望新增一个研发项目");
+        arguments.put("name", "autopilot测试项目3");
+
+        DialogueDecision decision = service.parse(completion(arguments),
+                List.of(Map.of("role", "user", "content", userMessage)), userMessage).orElseThrow();
+
+        assertThat(service.fixedAnswer(decision)).hasValueSatisfying(answer -> {
+            assertThat(answer).startsWith("## 研发项目创建草案");
+            assertThat(answer).contains("| 项目名称 | autopilot测试项目3 |");
+            assertThat(answer).contains("`确认创建项目：autopilot测试项目3`");
+        });
+    }
+
+    @Test
     void lowConfidenceDecisionUsesOneFixedClarificationAndNeverQueriesOrWrites() {
         DialogueDecision decision = new DialogueDecision(
                 "QUERY", "PROJECT", 0.51, "语义不足", "", "", "", "", "", "",

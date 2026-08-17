@@ -174,16 +174,57 @@ public class AliyunBailianClient {
         }
         String normalizedBaseUrl = requireBaseUrl(apiBaseUrl);
         requireInvocation(modelName, apiKey);
+        ChatCompletionResult reasoningResult = executeRequiredToolCompletion(
+                modelName, messages, tool, requiredToolName, normalizedBaseUrl, apiKey,
+                maxOutputTokens, maxResponseBytes, false);
+        if (hasOnlyRequiredToolCall(reasoningResult, requiredToolName)) {
+            return reasoningResult;
+        }
+
+        // Thinking-mode models such as DeepSeek V4 support Function Calling but reject a named
+        // tool_choice. Give them the full reasoning pass first with the sole tool on auto. If the
+        // model does not emit that protocol, retry once in non-thinking mode with a named choice.
+        List<Map<String, Object>> retryMessages = new ArrayList<>(messages);
+        int instructionIndex = !retryMessages.isEmpty()
+                && "system".equals(retryMessages.get(0).get("role")) ? 1 : 0;
+        retryMessages.add(instructionIndex, Map.of(
+                "role", "system",
+                "content", "协议重试：不要输出自然语言正文，必须调用唯一函数 "
+                        + requiredToolName + " 返回完整 JSON 参数。"));
+        ChatCompletionResult protocolRetry = executeRequiredToolCompletion(
+                modelName, retryMessages, tool, requiredToolName, normalizedBaseUrl, apiKey,
+                maxOutputTokens, maxResponseBytes, true);
+        return new ChatCompletionResult(
+                protocolRetry.role(),
+                protocolRetry.content(),
+                protocolRetry.toolCalls(),
+                protocolRetry.finishReason(),
+                reasoningResult.promptTokens() + protocolRetry.promptTokens(),
+                reasoningResult.completionTokens() + protocolRetry.completionTokens());
+    }
+
+    private ChatCompletionResult executeRequiredToolCompletion(String modelName,
+                                                                List<Map<String, Object>> messages,
+                                                                Map<String, Object> tool,
+                                                                String requiredToolName,
+                                                                String normalizedBaseUrl,
+                                                                String apiKey,
+                                                                int maxOutputTokens,
+                                                                int maxResponseBytes,
+                                                                boolean forceNamedTool) {
         Map<String, Object> payload = new HashMap<>();
         payload.put("model", modelName.trim());
         payload.put("messages", messages);
         payload.put("tools", List.of(tool));
-        payload.put("tool_choice", Map.of(
-                "type", "function",
-                "function", Map.of("name", requiredToolName)));
+        payload.put("tool_choice", forceNamedTool
+                ? Map.of("type", "function", "function", Map.of("name", requiredToolName))
+                : "auto");
         payload.put("parallel_tool_calls", false);
         payload.put("temperature", 0);
         payload.put("max_tokens", maxOutputTokens);
+        if (forceNamedTool) {
+            payload.put("enable_thinking", false);
+        }
 
         try {
             String jsonBody = objectMapper.writeValueAsString(payload);
@@ -224,6 +265,13 @@ public class AliyunBailianClient {
                     "assistant", "Model call failed: structured completion request failed.",
                     null, "stop", 0, 0);
         }
+    }
+
+    private static boolean hasOnlyRequiredToolCall(ChatCompletionResult result, String requiredToolName) {
+        return result != null
+                && result.toolCalls() != null
+                && result.toolCalls().size() == 1
+                && requiredToolName.equals(result.toolCalls().get(0).name());
     }
 
     /**
