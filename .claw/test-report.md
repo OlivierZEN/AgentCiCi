@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-17T10:28:39Z
+updated_at: 2026-08-17T10:45:48Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-17T10:28:24Z
+last_run_at: 2026-08-17T10:45:33Z
 last_run_status: passed_task_313_local_technical_with_authorized_visual_pending
 ---
 
@@ -21,6 +21,7 @@ last_run_status: passed_task_313_local_technical_with_authorized_visual_pending
 - 本地运行：backend/frontend 均为 `2.8.61-dev.1b0776e`，healthy/restart=0；后端版本和前端资源名回读 commit 一致，目录 SPA 200，匿名目录 API 401；完整 `cc-local-stack ./stack verify` 通过。
 - 浏览器边界：Chrome 原运营平台页的会话在重载后已过期，正式路由正确进入平台登录页；未读取存储、猜测密码或伪造会话。授权态目录、发布与租户动态卡片仍待平台管理员登录后复核。
 - 发布边界：仅更新本地开发测试环境；远端 main、UAT、生产均未修改。
+- 命名调整：用户界面的“租户应用目录”已统一改为“应用中心”，路由/API/内部 catalog 不变；`PlatformShell`、`PlatformInternalApplicationsPage`、`PlatformTenantApplicationsPage` 共 27 项通过，production build 通过。
 
 ## 2026-08-17 AgentCiCi UAT `2.8.61-beta.26`
 

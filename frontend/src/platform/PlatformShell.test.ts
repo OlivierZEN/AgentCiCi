@@ -85,7 +85,7 @@ describe("platform tenant application catalog navigation", () => {
     expect(applicationItems).toEqual([
       {
         to: "/platform/internal-applications",
-        label: "租户应用目录",
+        label: "应用中心",
         activePrefixes: ["/platform/internal-applications"],
       },
     ]);

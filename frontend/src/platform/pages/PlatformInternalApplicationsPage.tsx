@@ -167,7 +167,7 @@ export default function PlatformInternalApplicationsPage() {
         setDetail(null);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "租户应用目录加载失败");
+      setError(err instanceof Error ? err.message : "应用中心加载失败");
     } finally {
       setLoading(false);
     }
@@ -310,7 +310,7 @@ export default function PlatformInternalApplicationsPage() {
       <div className="admin-page skills-catalog platform-page internal-applications-page">
         <header className="skills-catalog__header platform-page-head">
           <div className="platform-page-head__main">
-            <button type="button" className="system-api-back" onClick={() => navigate("/platform/internal-applications")}><ArrowLeft size={15} /> 租户应用目录</button>
+            <button type="button" className="system-api-back" onClick={() => navigate("/platform/internal-applications")}><ArrowLeft size={15} /> 应用中心</button>
             <h1 className="skills-catalog__title">{detail.application.displayName}</h1>
             <p className="subtle skills-catalog__subtitle">{detail.application.summary}</p>
           </div>
@@ -365,12 +365,12 @@ export default function PlatformInternalApplicationsPage() {
   return (
     <div className="admin-page skills-catalog platform-page internal-applications-page">
       <header className="skills-catalog__header platform-page-head">
-        <div className="platform-page-head__main"><h1 className="skills-catalog__title">租户应用目录</h1><p className="subtle skills-catalog__subtitle">登记内部应用、发布不可变版本，并声明租户开通依赖与受控初始化契约。</p></div>
+        <div className="platform-page-head__main"><h1 className="skills-catalog__title">应用中心</h1><p className="subtle skills-catalog__subtitle">登记内部应用、发布不可变版本，并声明租户开通依赖与受控初始化契约。</p></div>
         <div className="platform-page-head__aside"><span className="platform-inline-stat">{applications.length} 个应用</span><button type="button" className="platform-button platform-button--primary" onClick={() => setApplicationModalOpen(true)}><Plus size={15} />登记应用</button></div>
       </header>
       {error ? <div className="platform-console__banner platform-console__banner--error">{error}</div> : null}
       {notice ? <div className="platform-console__banner platform-console__banner--success">{notice}</div> : null}
-      <section className="platform-console__panel internal-applications-catalog" aria-label="内部租户应用目录">
+      <section className="platform-console__panel internal-applications-catalog" aria-label="内部应用中心">
         <div className="internal-applications-toolbar">
           <label className="internal-applications-search"><Search size={16} aria-hidden="true" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索应用名称、代码或责任团队" aria-label="搜索租户应用" /></label>
           <div className="internal-applications-status-tabs" role="tablist" aria-label="应用状态筛选">{["ALL", "PUBLISHED", "DRAFT", "SUSPENDED", "RETIRED"].map((item) => <button key={item} type="button" role="tab" aria-selected={status === item} className={status === item ? "is-active" : ""} onClick={() => setStatus(item)}>{item === "ALL" ? "全部" : applicationCatalogStatusLabel(item)}</button>)}</div>

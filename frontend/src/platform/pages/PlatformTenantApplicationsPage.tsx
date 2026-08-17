@@ -498,7 +498,7 @@ export default function PlatformTenantApplicationsPage() {
                       </article>
                     );
                   })}
-                  {applicationCatalog && applicationCatalog.applications.length === 0 ? <div className="tenant-applications__empty"><strong>当前没有已发布的租户应用</strong><span>请先在运营管理的租户应用目录中登记、验证并发布应用版本。</span></div> : null}
+                  {applicationCatalog && applicationCatalog.applications.length === 0 ? <div className="tenant-applications__empty"><strong>当前没有已发布的租户应用</strong><span>请先在运营管理的应用中心登记、验证并发布应用版本。</span></div> : null}
                 </div>
               </section>
             </div>

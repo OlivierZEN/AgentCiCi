@@ -39,7 +39,7 @@ export const PLATFORM_NAVIGATION_GROUPS: PlatformNavigationGroup[] = [
       { to: "/platform/models/providers", label: "模型配置", activePrefixes: ["/platform/models"] },
       { to: "/platform/integrations", label: "平台集成" },
       { to: "/platform/tools", label: "工具目录" },
-      { to: "/platform/internal-applications", label: "租户应用目录", activePrefixes: ["/platform/internal-applications"] },
+      { to: "/platform/internal-applications", label: "应用中心", activePrefixes: ["/platform/internal-applications"] },
       {
         to: "/platform/system-apis",
         label: "系统 API",

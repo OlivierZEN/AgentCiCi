@@ -7,7 +7,7 @@ owner_role: fullstack-agent
 task_ids: TASK-313
 related_decisions: DEC-055, DEC-021, DEC-023, DEC-054
 related_issues: none
-updated_at: 2026-08-17T10:28:39Z
+updated_at: 2026-08-17T10:45:48Z
 updated_by: codex
 ---
 
@@ -39,7 +39,7 @@ updated_by: codex
 - 环境地址只使用 `provider_binding_key`、`launch_route_key` 等逻辑引用；禁止保存 Origin、Host、Client Secret 或 Token。
 - 动态租户应用聚合 API 返回已发布目录、当前租户 activation、依赖状态和可执行动作。
 - 租户应用中心改为动态渲染，保留 AgentCiCi、Semattice 和 DevAutopilot 的现有开通/暂停/恢复行为。
-- 新增“租户应用目录”运营页面，支持扫描、筛选、创建草稿和查看版本/依赖。
+- 新增“应用中心”运营页面，支持扫描、筛选、创建草稿和查看版本/依赖。
 - 新增后端、前端、迁移、鉴权和兼容回归。
 
 ### 后续切片
@@ -154,7 +154,7 @@ DRAFT → VALIDATED → PUBLISHED → DEPRECATED
 
 ## 前端信息架构
 
-- “能力治理”新增“租户应用目录”，目录页负责搜索、状态筛选、创建草稿和进入应用详情。
+- “能力治理”新增“应用中心”，页面负责搜索、状态筛选、创建草稿和进入应用详情。
 - 创建使用显式 modal，只录入基础治理字段；版本、依赖、验证和发布进入独立详情路由。
 - 租户应用中心改为动态列表。应用卡保留紧凑事实行和 1px 结构线，不嵌套卡片、不使用营销式 hero。
 - 依赖阻断、初始化失败、版本和动作由 API 决定；页面不再用固定常量计算应用数量。

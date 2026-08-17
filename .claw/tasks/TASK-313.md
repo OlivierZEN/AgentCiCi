@@ -6,7 +6,7 @@ status: review
 priority: critical
 owner_role: fullstack-agent
 claimed_by: codex
-updated_at: 2026-08-17T10:28:39Z
+updated_at: 2026-08-17T10:45:48Z
 updated_by: codex
 ---
 
@@ -17,7 +17,7 @@ updated_by: codex
 - 建立内部应用、版本和依赖目录，并 seed 现有三类租户应用。
 - 提供平台管理员目录治理 API 和发布门禁。
 - 提供租户应用动态聚合 API，兼容现有 Semattice 与 DevAutopilot 生命周期。
-- 新增运营端租户应用目录页面，并把租户应用中心切为动态读取。
+- 新增运营端“应用中心”页面，并把租户应用中心切为动态读取。
 - 完成后端、前端、迁移和本地开发测试环境验证。
 
 ## 完成条件
@@ -41,7 +41,8 @@ updated_by: codex
 - 本地 Flyway V120 成功，目录回读 `agentcici/devautopilot/semattice` 均为 `PUBLISHED / 1.0.0`；目录 SPA 为 HTTP 200，匿名目录 API 为 JSON 401。
 - backend/frontend 从本地 `main@1b0776e0a60d` 构建为 `2.8.61-dev.1b0776e`，均 healthy、restart=0；后端 `/system/version`、前端静态资源名与提交指纹一致。
 - `cc-local-stack ./stack verify` 通过部署域名门禁、共享数据库隔离、TLS、OIDC、应用健康/版本与匿名鉴权边界。
-- Chrome 原运营平台页的登录态在重载后过期并跳转登录页；未读取浏览器存储或绕过认证，授权态目录、发布和租户应用卡片视觉验收待平台管理员登录后完成。
+- Chrome 原运营平台页的登录态在重载后过期并跳转登录页；未读取浏览器存储或绕过认证，授权态应用中心、发布和租户应用卡片视觉验收待平台管理员登录后完成。
+- 按用户反馈将原用户界面名称“租户应用目录”统一调整为“应用中心”，保留路由、API 和内部 catalog 模型；相关 3 个测试文件、27 项通过，production build 通过。
 
 ## 后续切片
 
