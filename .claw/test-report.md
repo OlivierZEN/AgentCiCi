@@ -17,7 +17,8 @@ last_run_status: passed_task_311_local_candidate_with_known_full_suite_debt
 - 后端定向：`DevAutopilotTenantApplicationReadinessTest`、`DevAutopilotHandoffServiceTest`、`DevAutopilotExecutionAuthorizationServiceTest`、`SematticeDevAutopilotAuthorizationClientTest` 通过；`mvn -q -DskipTests package` 通过。
 - 前端：`PlatformTenantApplicationsPage.test.ts` 7/7 通过，production build 通过，仅有既有 chunk-size warning；失败/执行中状态显示持久阶段和安全错误码，并以稳定幂等键执行重试。
 - 全量边界：`mvn test` 仍被共享 `agentcici_test` 既有 Flyway V81 checksum 漂移和无关 Tavily Secret 测试阻断；未 repair 共享测试库，定向任务回归和 clean package 均通过。
-- 状态：`passed_task_311_local_candidate_with_known_full_suite_debt`；尚未更新本地开发环境或发布 UAT。
+- 状态：`passed_task_311_local_candidate_with_known_full_suite_debt`；本地开发环境已更新，UAT/生产尚未发布。
+- 本地运行：`main@0c56f468b8f8` 已构建为 `2.8.61-dev.0c56f46`，V118/V119 成功，backend/frontend healthy、restart=0，完整 `./stack verify` 通过；登录后运营页面回读同一版本且现有 DevAutopilot 为“运行中 / 初始化已完成”。该页面业务回读与失败恢复集成测试分开记录；UAT/生产尚未发布。
 
 ## 2026-08-17 TASK-310 新租户 Owner 全局身份复用
 

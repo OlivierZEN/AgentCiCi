@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-17T03:10:00Z
+updated_at: 2026-08-17T03:24:24Z
 updated_by: codex
 phase: implementation
 active_task: TASK-311
-next_action: "实现 DevAutopilot 分阶段可恢复开通，并在 Semattice schema 就绪后完成 UAT 真实运营开通。"
+next_action: "本地实现与环境已验证；按 Semattice 提供方先行顺序完成 UAT schema/release，再发布 AgentCiCi 并执行真实运营开通。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-311 / FEAT-190 / INT-024` 已完成本地候选实现：DevAutopilot activation 改为持久化阶段、独立失败记录、5 分钟执行租约和同键恢复；变更在独立 worktree 完成，未触碰主工作树中 TASK-310 的未提交改动。真实 PostgreSQL 首次授权失败与同键恢复测试、后端定向、package、前端 7 项与 build 均通过；待合并后的本地开发环境和 UAT 闭环。
+- `TASK-311 / FEAT-190 / INT-024` 已完成本地实现与正式开发环境验收：DevAutopilot activation 使用持久化阶段、独立失败记录、5 分钟执行租约和同键恢复。真实 PostgreSQL 16 已验证 V118→V119、首次授权失败持久化、同键恢复和资源不重复；首次部署发现的 V117.1 顺序冲突已不通过 `outOfOrder` 绕过，而是永久前移至 V119。AgentCiCi 本地 `main@0c56f468b8f8` 已构建为 `2.8.61-dev.0c56f46`，backend/frontend healthy、restart=0，V118/V119 成功，完整 `./stack verify` 通过；已登录页面回读同一版本且现有租户为“运行中 / 初始化已完成”。下一步是 Semattice 先行 UAT schema/release，再发布 AgentCiCi 并执行真实 HUMAN 开通/重试；生产不修改。
 
 - TASK-310 / FEAT-189 已完成本地实现并进入 review：租户开通先解析或选择全局 Owner 身份，再创建租户成员关系；已有账号通过公共编号显式复用，新账号先做手机号/邮箱占用预检，双账号冲突失败关闭，并以幂等键保护最终创建。平台弹窗采用“租户信息 → Owner 身份 → 确认摘要”三步流程，不自动合并或覆盖既有身份。提交 `4e11acc1` 已进入本地 `main`；backend/frontend 运行 `2.8.61-dev.4e11acc`，V118、11 项后端定向测试/package、前端 50 文件/279 项/build、healthy/restart=0 和完整 stack verify 通过。后端全量仍被既有共享测试库 V81 checksum 漂移阻断；可控浏览器只有平台登录页，授权态业务开通待运营人员复核。UAT/生产未修改。
 

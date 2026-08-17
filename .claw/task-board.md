@@ -25,7 +25,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - spec_path: `docs/specs/FEAT-190-devautopilot-recoverable-activation.md`
 - task_status_path: `.claw/tasks/TASK-311.md`
 - blocked_by: `none`
-- next_action: `从本地 main 构建开发环境并完成 UAT schema、候选和真实运营开通闭环。`
+- next_action: `本地 main 与开发环境已验证；按 Semattice 提供方先行顺序完成 UAT schema/release，再发布 AgentCiCi 并执行真实运营开通。`
 
 ### TASK-310 - 新租户 Owner 全局身份复用
 
