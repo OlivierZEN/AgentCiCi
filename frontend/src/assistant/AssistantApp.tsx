@@ -1213,23 +1213,21 @@ function LoginMode2Cube({ phase }: { phase: LoginMode2CubePhase }) {
   );
 }
 
-function AgentLoginMode2({
-  form,
+export function AgentLoginMode2({
   cubePhase,
-  entering,
+  errorMessage = "",
 }: {
-  form: ReactNode;
   cubePhase: LoginMode2CubePhase;
-  entering: boolean;
+  errorMessage?: string;
 }) {
   return (
-    <main className="login-mode2">
+    <main className="login-mode2" aria-busy={!errorMessage}>
       <section className="login-mode2__center">
         <LoginMode2Cube phase={cubePhase} />
-        {!entering ? (
-          <section className="login-mode2__form-shell" aria-label="前台账号登录">
-            {form}
-          </section>
+        {errorMessage ? (
+          <p className="login-mode2__transition-error" role="alert">
+            {errorMessage}
+          </p>
         ) : null}
       </section>
     </main>
@@ -1520,7 +1518,6 @@ export default function AssistantApp() {
   const meetingShouldSummarizeRef = useRef(false);
   const [workbenchThoughtIndex, setWorkbenchThoughtIndex] = useState(0);
   const [loginMode2CubePhase, setLoginMode2CubePhase] = useState<LoginMode2CubePhase>("brand");
-  const [loginMode2Entering, setLoginMode2Entering] = useState(false);
   const [loginSubmitting, setLoginSubmitting] = useState(false);
   const chatStreamRef = useRef<HTMLDivElement | null>(null);
   const meetingTranscriptScrollRef = useRef<HTMLDivElement | null>(null);
@@ -2290,7 +2287,6 @@ export default function AssistantApp() {
   useEffect(() => {
     if (!auth && FRONT_LOGIN_USER_MODE_CONFIG === "agent" && FRONT_LOGIN_MODE_CONFIG === "login_mode2") {
       setLoginMode2CubePhase("brand");
-      setLoginMode2Entering(false);
     }
   }, [auth]);
 
@@ -2939,7 +2935,6 @@ export default function AssistantApp() {
 
       if (FRONT_LOGIN_USER_MODE_CONFIG === "agent" && FRONT_LOGIN_MODE_CONFIG === "login_mode2") {
         setNotice("");
-        setLoginMode2Entering(true);
         setLoginMode2CubePhase("loading");
         await new Promise((resolve) => window.setTimeout(resolve, LOGIN_MODE2_ENTER_DELAY_MS));
       }
@@ -2947,7 +2942,6 @@ export default function AssistantApp() {
       await completeLogin(body.data);
     } catch (error) {
       setNotice(`登录失败：${error instanceof Error ? error.message : String(error)}`);
-      setLoginMode2Entering(false);
     } finally {
       setLoginSubmitting(false);
     }
@@ -4308,34 +4302,6 @@ export default function AssistantApp() {
     }
     stopMeetingAndSummarize();
   };
-  const agentLoginForm = (
-    <>
-      <div className="boot-login__form">
-        <p className="boot-login__notice">使用 AgentCiCi 统一账号登录。账号密码和多因素验证由统一身份中心安全处理。</p>
-      </div>
-      <div className="boot-login__actions boot-login__actions--single">
-        <button
-          type="button"
-          className="boot-login__btn boot-login__btn--primary"
-          onClick={startUnifiedLogin}
-          disabled={loginSubmitting}
-        >
-          <span className="boot-phone-icon" aria-hidden>
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none">
-              <path d="M4 12h12" stroke="white" strokeWidth="2.4" strokeLinecap="round" />
-              <path d="M12 5l8 7-8 7" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </span>
-          <span>统一账号登录</span>
-        </button>
-      </div>
-      {notice ? <p className="boot-login__notice">{notice}</p> : null}
-      <p className="boot-login__footer-link">
-        还没有账户？请联系管理员开通统一账号。
-      </p>
-    </>
-  );
-
   if (customerWorkbenchEmbedded && authStatus === "checking") {
     return (
       <main className="cici-embedded-workbench cici-embedded-workbench--loading">
@@ -4368,9 +4334,8 @@ export default function AssistantApp() {
     if (FRONT_LOGIN_MODE_CONFIG === "login_mode2") {
       return (
         <AgentLoginMode2
-          form={agentLoginForm}
           cubePhase={loginMode2CubePhase}
-          entering={loginMode2Entering}
+          errorMessage={notice.startsWith("统一登录失败：") ? notice : ""}
         />
       );
     }
@@ -4399,7 +4364,7 @@ export default function AssistantApp() {
                   <img className="boot-circle-graphic" src="/cici-circle-graphic.png" alt="" decoding="async" />
                 </div>
               </div>
-              {agentLoginForm}
+              {notice ? <p className="boot-login__notice">{notice}</p> : null}
             </div>
           </section>
         </div>

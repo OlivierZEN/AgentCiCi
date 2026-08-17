@@ -7788,7 +7788,7 @@ h1,
   width: min(560px, 100%);
   min-height: min(640px, calc(100dvh - 68px));
   display: grid;
-  grid-template-rows: auto auto;
+  grid-template-rows: auto;
   align-items: center;
   justify-items: center;
   align-content: center;
@@ -7909,16 +7909,13 @@ h1,
   transform: rotateX(-90deg) translateZ(86px);
 }
 
-.login-mode2__form-shell {
-  box-sizing: border-box;
-  width: min(420px, 100%);
-  padding: 18px;
-  border: 1px solid rgba(137, 166, 215, 0.72);
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgba(14, 27, 49, 0.96) 0%, rgba(8, 18, 34, 0.98) 100%);
-  box-shadow:
-    0 24px 64px rgba(0, 0, 0, 0.36),
-    0 0 0 1px rgba(217, 233, 255, 0.06) inset;
+.login-mode2__transition-error {
+  max-width: 420px;
+  margin: 0;
+  color: #f1c8c8;
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: center;
 }
 
 .login-mode2 .boot-login__form {
@@ -8139,11 +8136,7 @@ h1,
 
   .login-mode2__center {
     min-height: 0;
-    grid-template-rows: auto auto;
-  }
-
-  .login-mode2__form-shell {
-    width: min(420px, calc(100vw - 80px));
+    grid-template-rows: auto;
   }
 
   .login-mode2__cube-stage {

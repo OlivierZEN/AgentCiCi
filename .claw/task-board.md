@@ -15,6 +15,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-312 - 登录中转页移除手动触发区
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `frontend-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-148-app-auto-oidc-redirect.md`
+- task_status_path: `.claw/tasks/TASK-312.md`
+- blocked_by: `none`
+- next_action: `删除手动登录卡片，验证 /app 自动进入统一身份登录并完成本地开发环境验收。`
+
 ### TASK-311 - DevAutopilot 可恢复租户开通
 
 - status: `review`
