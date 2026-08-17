@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-17T09:35:00Z
+updated_at: 2026-08-17T09:43:30Z
 updated_by: codex
 board_status: active
 ---
@@ -24,8 +24,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - spec_path: `docs/specs/FEAT-148-app-auto-oidc-redirect.md`
 - task_status_path: `.claw/tasks/TASK-312.md`
 - blocked_by: `none`
-- completion_evidence: `745ee145；前端 51 文件/282 项、build；2.8.61-dev.745ee14；cici-frontend healthy/restart=0；浏览器无点击进入 SSO，旧表单和按钮均为 0`
-- next_action: `本地效果已完成；如需进入 UAT，另行冻结下一 beta 候选并执行发布门禁。`
+- completion_evidence: `2.8.61-beta.26 / a322fd91324b；完整备份；六容器 healthy/restart=0；公开 smoke/JSON 401/稳定日志；UAT 浏览器无点击进入统一身份中心，旧表单和按钮均为 0`
+- next_action: `等待用户确认 UAT 自动跳转体验；生产保持不变。`
 
 ### TASK-311 - DevAutopilot 可恢复租户开通
 

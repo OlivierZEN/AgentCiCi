@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-312
 status: review
-updated_at: 2026-08-17T09:35:00Z
+updated_at: 2026-08-17T09:43:30Z
 updated_by: codex
 assignee: codex
 owner_role: frontend-agent
@@ -14,7 +14,7 @@ spec_path: docs/specs/FEAT-148-app-auto-oidc-redirect.md
 ## Current State
 
 - Status: `review`
-- Next action: 用户确认本地效果后，另行决定是否冻结并发布下一 UAT beta；本任务未修改 UAT 或生产。
+- Next action: 用户确认 UAT beta.26 的自动跳转体验；生产保持不变。
 - Blocked: none
 
 ## Scope
@@ -37,3 +37,4 @@ spec_path: docs/specs/FEAT-148-app-auto-oidc-redirect.md
 - `cici-frontend` 从本地 `main` 构建为 `2.8.61-dev.745ee14`，镜像 revision `745ee145f53a`，healthy、restart=0。
 - `https://cici.localhost/app` 返回 200；全新未登录浏览器会话未点击即进入 `sso.localhost` OIDC 登录页。
 - 受控回调态桌面检查：主视觉存在，旧表单容器 0、按钮 0、页面正文为空，控制台 0 error / 0 warning。
+- UAT `2.8.61-beta.26 / a322fd91324b` 已完成技术发布和真实未登录浏览器自动跳转验收；完整备份、健康、匿名边界和稳定日志通过，生产未修改。

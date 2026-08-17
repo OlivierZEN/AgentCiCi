@@ -1,7 +1,7 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-17T09:11:54Z
+updated_at: 2026-08-17T09:43:30Z
 updated_by: codex
 status: active
 last_run_at: 2026-08-17T09:11:54Z
@@ -9,6 +9,15 @@ last_run_status: passed_agentcici_2_8_61_beta_25_uat_technical_gate
 ---
 
 # Test Report
+
+## 2026-08-17 AgentCiCi UAT `2.8.61-beta.26`
+
+- Source 与制品：本地/远端 `main`、annotated tag peeled commit、backend/frontend image label 及运行版本均为 `a322fd91324b`；ACR index digest 为 backend `sha256:e755bc30929beefdadd68090c6510a7717401a51223dffc04a5c9a6dd774504a`、frontend `sha256:60ee57e4bd4b3498221f590c0e6bb3dcb2178a72c6392b817d8ba826b77173d7`。
+- 发布前门禁：公开 UAT 六项只读 smoke 通过；当前 beta.25 六容器健康、前后端 restart=0；磁盘 180G、内存 25Gi 可用；受管 env 与 Docker pull 配置均为 root:root 0600。发布 dry-run 正确生成 beta.26，未更新 `latest`。
+- 备份与回滚：`/data/apps/agentcici/backups/20260817T093959Z-before-2.8.61-beta.26` 全部工件非空且 0600；PostgreSQL dump 在 PostgreSQL 容器内通过 `pg_restore -l`，KB/Qdrant tar、beta.25 镜像 gzip 和 SHA-256 清单均通过。回滚目标为 beta.25，仅重建 backend/frontend。
+- 运行验收：状态服务 ID 哈希发布前后不变；六容器 healthy/restart=0；backend health `UP`、版本/commit 回读一致；Flyway 成功校验 115 migrations 且 schema 无需迁移；Nginx 有效。公开首页、OIDC、Semattice 与 DevAutopilot health 通过，匿名管理 API 为 JSON 401，HTTP→HTTPS 301。
+- 本次业务路径：真实未登录桌面浏览器访问 `/app` 后没有任何点击即进入 UAT 统一身份中心；受控 OIDC 失败态只保留主视觉与最小错误提示，旧表单容器 0、按钮 0，浏览器 0 error / 0 warning。启动稳定窗口 backend severe=0、frontend 5xx=0。
+- 边界：本次没有跨项目契约增量、迁移或配置切换；未执行账号密码登录或租户业务写入。生产未修改。
 
 ## 2026-08-17 AgentCiCi UAT `2.8.61-beta.25`
 

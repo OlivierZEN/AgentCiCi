@@ -1,12 +1,19 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-17T09:11:54Z
+updated_at: 2026-08-17T09:43:30Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-17 TASK-312 UAT `2.8.61-beta.26`
+
+- 冻结 Git tag/commit 为 `2.8.61-beta.26 / a322fd91324b`；远端 `main`、annotated tag peeled commit 与运行 commit 一致。backend/frontend ACR index digest 分别为 `sha256:e755bc30929beefdadd68090c6510a7717401a51223dffc04a5c9a6dd774504a`、`sha256:60ee57e4bd4b3498221f590c0e6bb3dcb2178a72c6392b817d8ba826b77173d7`，未更新 `latest`。
+- 完整备份 `/data/apps/agentcici/backups/20260817T093959Z-before-2.8.61-beta.26` 包含 Compose、受管 env、PostgreSQL、KB、Qdrant、beta.25 前后端镜像、旧容器/镜像指纹、回滚说明和 SHA-256 清单；全部非空、`0600`，dump、tar、gzip 与清单校验通过。即时应用回滚目标为 `2.8.61-beta.25`。
+- 仅 force-recreate backend/frontend；database、Redis、RabbitMQ、Qdrant 容器 ID 哈希前后均为 `b5dca5759af2a9cfb0ed4285fdb3b01c9af02db33eb2bfbabfa347fe728de2bc`。六容器 healthy/restart=0，backend health=`UP`、Flyway 115 项校验且无需迁移、Nginx 有效。
+- 公开首页、匿名 401、OIDC discovery、Semattice 与 DevAutopilot health 均通过；真实未登录浏览器访问 `/app` 无需点击即进入统一身份中心。受控失败态旧表单容器 0、按钮 0，浏览器无 error/warning；启动后严重错误与 frontend 5xx 均为 0。生产未修改。
 
 ## 2026-08-17 TASK-310 / TASK-311 UAT `2.8.61-beta.25`
 

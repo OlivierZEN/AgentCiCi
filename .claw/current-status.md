@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-17T09:35:00Z
+updated_at: 2026-08-17T09:43:30Z
 updated_by: codex
 phase: review
 active_task: TASK-311
-next_action: "UAT 2.8.61-beta.25 技术门禁已通过；由受权平台管理员选定测试租户，完成已有 Owner 复用和 DevAutopilot 首次开通/同键恢复业务验收。"
+next_action: "UAT 2.8.61-beta.26 已完成登录中转自动跳转技术与浏览器验收；等待用户确认该 UAT 体验，生产保持不变。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-312 / FEAT-148` 已完成登录中转页最小化：正常未登录态移除说明卡片、手动“统一账号登录”按钮、退出提示和联系管理员文案，继续复用同源 OIDC 一次性自动跳转。提交 `745ee145` 已进入本地 `main`；前端 51 文件/282 项和 production build 通过。`cici-frontend` 运行 `2.8.61-dev.745ee14`、healthy/restart=0；真实未登录桌面会话无需点击即进入 `sso.localhost`，受控回调态截图只有主视觉，旧表单容器和按钮均为 0，控制台无 error/warning。UAT/生产未修改。
+- `TASK-312 / FEAT-148` 已发布 UAT `2.8.61-beta.26 / a322fd91324b`：远端 main、tag、镜像和运行 commit 一致；完整备份 `/data/apps/agentcici/backups/20260817T093959Z-before-2.8.61-beta.26` 校验通过，回滚目标 beta.25。仅重建 backend/frontend，状态服务 ID 不变；六容器 healthy/restart=0，health、Flyway、Nginx、公开 smoke、JSON 401 与稳定日志通过。真实未登录桌面会话无需点击即进入统一身份中心，旧表单和按钮均为 0，浏览器无 error/warning。生产未修改。
 
 - `TASK-311 / FEAT-190 / INT-024` 已随 UAT `2.8.61-beta.25 / cc0e8078f5f5` 完成技术发布验收：Semattice 提供方已先行运行 `1.0.5-beta.2 / 0be03d018ecd`，schema `22/22 ready`；AgentCiCi V118/V119、镜像 revision、完整备份校验、六容器 healthy/restart=0、JSON 401/403、Nginx、公开 smoke 与 10 分钟错误日志均通过。真实 HMAC 授权模板调用会写入租户授权事实，本轮未伪造测试租户；待受权平台管理员执行首次开通或同键恢复业务验收。生产未修改。
 
