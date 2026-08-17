@@ -31,7 +31,7 @@ class DevAutopilotActivationFlywayMigrationTest {
                 .configuration(Map.of("flyway.postgresql.transactional.lock", "false"))
                 .dataSource(jdbcUrl, username, password)
                 .locations("classpath:db/migration")
-                .target("117")
+                .target("118")
                 .load()
                 .migrate();
         Flyway.configure()
@@ -58,7 +58,7 @@ class DevAutopilotActivationFlywayMigrationTest {
         }
         try (Connection connection = DriverManager.getConnection(jdbcUrl, username, password);
              ResultSet migration = connection.createStatement().executeQuery("""
-                     SELECT success FROM flyway_schema_history WHERE version='117.1'
+                     SELECT success FROM flyway_schema_history WHERE version='119'
                      """)) {
             assertThat(migration.next()).isTrue();
             assertThat(migration.getBoolean(1)).isTrue();
