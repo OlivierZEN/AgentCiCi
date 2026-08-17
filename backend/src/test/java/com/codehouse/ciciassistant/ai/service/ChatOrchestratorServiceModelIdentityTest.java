@@ -100,6 +100,21 @@ class ChatOrchestratorServiceModelIdentityTest {
     }
 
     @Test
+    void shouldRemoveDeliveryQueryToolAfterSemanticDecision() {
+        List<Map<String, Object>> tools = List.of(
+                Map.of("type", "function", "function", Map.of("name", "semattice_project_delivery_query")),
+                Map.of("type", "function", "function", Map.of("name", "memory_remember")));
+
+        List<String> remainingNames = ChatOrchestratorService
+                .withoutTool(tools, "semattice_project_delivery_query")
+                .stream()
+                .map(tool -> String.valueOf(((Map<?, ?>) tool.get("function")).get("name")))
+                .toList();
+
+        assertThat(remainingNames).containsExactly("memory_remember");
+    }
+
+    @Test
     void shouldRequireCadenceBeforePlanningScheduleCreation() {
         assertThat(ChatOrchestratorService.scheduleCadenceClarification("我要创建一个定时任务：寻找美国 K12 教育机构"))
                 .hasValueSatisfying(value -> assertThat(value).contains("请补充执行周期"));
@@ -936,6 +951,7 @@ class ChatOrchestratorServiceModelIdentityTest {
                     billingUsageMeteringService,
                     formatter,
                     safetyGatewayService,
+                    mock(DevAutopilotDialogueDecisionService.class),
                     new AgentRuntimeConcurrencyService(),
                     agentRuntimeModeRouter,
                     agentPlanExecCanaryService,

@@ -21,9 +21,7 @@ class SematticeProjectDeliveryDeleteToolServiceTest {
     }
 
     @Test
-    void draftDeleteRequestStillRequiresExactConfirmation() {
-        assertThat(SematticeProjectDeliveryDeleteToolService.isDraftRequest("删除这条旧任务 task-1")).isTrue();
+    void naturalLanguageDeleteCannotBypassExactConfirmationProtocol() {
         assertThat(SematticeProjectDeliveryDeleteToolService.confirmedIntent("删除这条旧任务 task-1")).isEmpty();
-        assertThat(SematticeProjectDeliveryDeleteToolService.isDraftRequest("确认删除任务：task-1")).isFalse();
     }
 }

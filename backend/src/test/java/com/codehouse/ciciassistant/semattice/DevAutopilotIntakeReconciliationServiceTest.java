@@ -61,7 +61,7 @@ class DevAutopilotIntakeReconciliationServiceTest {
                         "TENANT_APP_ROLE", "APP_ADMIN", token));
 
         SematticeProjectDeliveryWriteToolService.CreateIntent intent =
-                SematticeProjectDeliveryWriteToolService.confirmedIntent(
+                SematticeProjectDeliveryWriteToolService.confirmedHistoricalIntent(
                                 "确认提交需求", messageMaps(history.subList(0, 2)), SESSION_ID, objectMapper)
                         .orElseThrow();
         Map<String, Object> currentData = genericRecordData();

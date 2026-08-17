@@ -23,24 +23,12 @@ import org.springframework.web.client.RestClient;
 
 class SematticeProjectDeliveryWriteToolServiceTest {
 
-    @Test
-    void recognizesFieldOnlyRepliesAsPendingDraftContinuations() {
-        assertThat(SematticeProjectDeliveryWriteToolService.isDraftContinuation("父项目：智能体平台")).isTrue();
-        assertThat(SematticeProjectDeliveryWriteToolService.isDraftContinuation("环境=UAT")).isTrue();
-        assertThat(SematticeProjectDeliveryWriteToolService.isDraftContinuation("查询当前所有项目")).isFalse();
-        assertThat(SematticeProjectDeliveryWriteToolService.isDraftContinuation("确认提交此缺陷")).isFalse();
-    }
-
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
     @Test
     void returnsDraftUntilExactProjectConfirmationThenCreatesWithDelegatedToken() throws Exception {
-        assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest("现在创建一个棕榈地的研发项目"))
-                .isTrue();
         assertThat(SematticeProjectDeliveryWriteToolService.confirmedIntent("确认创建项目：棕榈地"))
                 .hasValueSatisfying(intent -> assertThat(intent.operation()).isEqualTo("create_project"));
-        assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest("确认创建项目：棕榈地"))
-                .isFalse();
 
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
@@ -78,28 +66,6 @@ class SematticeProjectDeliveryWriteToolServiceTest {
     }
 
     @Test
-    void routesNaturalCreateLanguageWithoutExtractingBusinessNames() {
-        assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest(
-                "现在创建一个研发项目名称叫：AgentCiCi企业级智能体平台")).isTrue();
-        assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest(
-                "帮我创建一个新项目：AgentCiCi企业级智能体平台")).isTrue();
-        assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest(
-                "新增需求：为 AgentCiCi 企业级智能体平台提供组织级智能体治理")).isTrue();
-        assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest(
-                "帮我记录一个 Bug：确认按钮点击没有反应")).isTrue();
-        assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest(
-                "退出后又自动进入系统，没有真正注销")).isTrue();
-        assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest(
-                "我在研发交付页面点击项目筛选后，筛选面板偶尔不会展开，需要刷新页面才能恢复")).isTrue();
-        assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest(
-                "希望项目列表支持按负责人筛选")).isTrue();
-        assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest(
-                "把已确认需求的审批规则改成产品总监确认")).isTrue();
-        assertThat(SematticeProjectDeliveryWriteToolService.isDraftRequest("现在有哪些项目在执行"))
-                .isFalse();
-    }
-
-    @Test
     void confirmedRequirementIsCreatedAsConfirmedAndReadBackBeforeSuccess() throws Exception {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
@@ -130,22 +96,6 @@ class SematticeProjectDeliveryWriteToolServiceTest {
         assertThat(result.path("object_api_name").asText()).isEqualTo("dev_requirement");
         assertThat(result.path("readback_verified").asBoolean()).isTrue();
         server.verify();
-    }
-
-    @Test
-    void modelDraftPromptRequiresFullSemanticUnderstandingAndNoWrite() {
-        String prompt = SematticeProjectDeliveryWriteToolService.modelDraftPrompt();
-
-        assertThat(prompt).contains("主动分类");
-        assertThat(prompt).contains("original_report");
-        assertThat(prompt).contains("不得要求用户提供严重度、优先级、技术环境");
-        assertThat(prompt).contains("待开发者验证");
-        assertThat(prompt).contains("完整项目名称是“AgentCiCi企业级智能体平台”，不是“新”");
-        assertThat(prompt).contains("不调用任何工具，不写入 Semattice");
-        assertThat(prompt).contains("可见草稿与最后的 JSON 注释必须使用同一份结构化事实");
-        assertThat(prompt).contains("不得用“后续细化”“待进一步评估”等通用占位句");
-        assertThat(prompt).contains("确认创建项目：<完整项目名称>");
-        assertThat(prompt).contains("DEV_AUTOPILOT_INTAKE_V1");
     }
 
     @Test
@@ -229,7 +179,7 @@ class SematticeProjectDeliveryWriteToolServiceTest {
     }
 
     @Test
-    void restoresAClassifiedDefectFromVisibleDraftWhenModelOmitsMarker() {
+    void rejectsVisibleDefectDraftWhenStructuredMarkerIsMissing() {
         String original = "UAT验收：我在研发交付页面点击项目筛选后，筛选面板偶尔不会展开，需要刷新页面才能恢复。";
         List<Map<String, Object>> messages = List.of(
                 Map.of("role", "user", "content", original),
@@ -250,22 +200,12 @@ class SematticeProjectDeliveryWriteToolServiceTest {
         var confirmed = SematticeProjectDeliveryWriteToolService.confirmedIntent(
                 "确认创建", messages, "conversation-uat", objectMapper);
 
-        assertThat(confirmed).hasValueSatisfying(intent -> {
-            assertThat(intent.operation()).isEqualTo("create_defect");
-            assertThat(intent.parentReference()).isEqualTo("DAS-751707A5");
-            assertThat(intent.title()).isEqualTo("研发交付页面项目筛选面板偶发性无法展开");
-            assertThat(intent.description()).isEqualTo(original);
-            assertThat(intent.priority()).isEqualTo("P2");
-            assertThat(intent.severity()).isEqualTo("medium");
-            assertThat(intent.intake()).containsEntry("classification", "defect")
-                    .containsEntry("original_report", original)
-                    .containsEntry("user_supplements", List.of("项目：智能体平台"));
-        });
-        assertThat(SematticeProjectDeliveryWriteToolService.hasPendingIntake(messages)).isTrue();
+        assertThat(confirmed).isEmpty();
+        assertThat(SematticeProjectDeliveryWriteToolService.hasPendingIntake(messages)).isFalse();
     }
 
     @Test
-    void restoresDefectFromProductManagerIntakeDraftMarkdownTableWhenMarkerIsMissing() {
+    void rejectsMarkdownTableDraftWhenStructuredMarkerIsMissing() {
         String original = "反馈这个项目的一个问题： 当我在。登录进入系统之后，然后再点击。左下角的退出图标。系统退出到了登录过渡页面，然后通过统一登录又自动跳转进入了系统。实际上退出动作并没有注销当前用户的登录状态。";
         List<Map<String, Object>> messages = List.of(
                 Map.of("role", "assistant", "content", "已在 Semattice 创建项目：企业级智能体平台CCAgent（DAS-A2AFD106）。"),
@@ -294,24 +234,12 @@ class SematticeProjectDeliveryWriteToolServiceTest {
         var confirmed = SematticeProjectDeliveryWriteToolService.confirmedIntent(
                 "确认提交缺陷", messages, "workbench:devautopilot-pm", objectMapper);
 
-        assertThat(confirmed).hasValueSatisfying(intent -> {
-            assertThat(intent.operation()).isEqualTo("create_defect");
-            assertThat(intent.parentReference()).isEqualTo("DAS-A2AFD106");
-            assertThat(intent.title()).isEqualTo("退出登录未有效清除会话导致自动重登");
-            assertThat(intent.description()).isEqualTo(original);
-            assertThat(intent.priority()).isEqualTo("P2");
-            assertThat(intent.severity()).isEqualTo("medium");
-            assertThat(intent.environment()).isEqualTo("待开发者验证");
-            assertThat(intent.intake()).containsEntry("classification", "defect")
-                    .containsEntry("original_report", original)
-                    .containsEntry("conversation_id", "workbench:devautopilot-pm");
-        });
-        assertThat(SematticeProjectDeliveryWriteToolService.hasPendingIntake(messages)).isTrue();
+        assertThat(confirmed).isEmpty();
+        assertThat(SematticeProjectDeliveryWriteToolService.hasPendingIntake(messages)).isFalse();
     }
 
     @Test
-    @SuppressWarnings("unchecked")
-    void preservesProfessionalRequirementAnalysisAndAcceptanceFromVisibleDraft() throws Exception {
+    void rejectsProfessionalVisibleRequirementDraftWithoutStructuredMarker() {
         String original = "提个需求，我希望在当前用户与智能体的对话框中，可以通过复制粘贴的方式上传截图，可以连续粘贴多张";
         List<Map<String, Object>> messages = List.of(
                 Map.of("role", "user", "content", original),
@@ -365,34 +293,8 @@ class SematticeProjectDeliveryWriteToolServiceTest {
         var confirmed = SematticeProjectDeliveryWriteToolService.confirmedIntent(
                 "确认提交需求", messages, "workbench:devautopilot-pm", objectMapper);
 
-        assertThat(confirmed).hasValueSatisfying(intent -> {
-            assertThat(intent.operation()).isEqualTo("create_requirement");
-            assertThat(intent.parentReference()).isEqualTo("DAS-A2AFD106");
-            assertThat(intent.title()).isEqualTo("对话框支持截图粘贴上传（多张连续）");
-            assertThat(intent.description())
-                    .contains("剪贴板图片捕获事件监听")
-                    .contains("不同格式图片的兼容")
-                    .doesNotContain("新增当前系统不支持的能力");
-            assertThat(intent.acceptanceCriteria()).containsExactly(
-                    "用户在对话框内 Ctrl+V 或 Command+V 可插入本地截图",
-                    "支持连续多次粘贴操作（无次数限制）",
-                    "粘贴后即时显示缩略图预览",
-                    "提供已上传图片的管理（删除/替换）",
-                    "后台完成实际上传并关联到对话记录");
-            assertThat(intent.intake()).containsEntry("original_report", original);
-            assertThat(intent.intake()).containsEntry(
-                    "classification_reason", "新增当前系统不支持的能力，属于功能增强");
-            assertThat(intent.intake()).containsEntry("pm_assessment", intent.description());
-            assertThat((List<String>) intent.intake().get("assumptions")).containsExactly(
-                    "技术可行性：浏览器剪贴板 API 对图片访问权限范围",
-                    "性能影响：大尺寸图片或高频连续粘贴的资源占用",
-                    "兼容性：主流浏览器版本的 API 支持情况",
-                    "安全合规：图片上传是否涉及敏感内容过滤");
-        });
-        JsonNode arguments = objectMapper.readTree(confirmed.orElseThrow().toArguments(objectMapper));
-        assertThat(arguments.path("summary").asText()).contains("剪贴板图片捕获事件监听");
-        assertThat(arguments.path("acceptance_criteria").size()).isEqualTo(5);
-        assertThat(arguments.path("intake").path("assumptions").size()).isEqualTo(4);
+        assertThat(confirmed).isEmpty();
+        assertThat(SematticeProjectDeliveryWriteToolService.hasPendingIntake(messages)).isFalse();
     }
 
     @Test

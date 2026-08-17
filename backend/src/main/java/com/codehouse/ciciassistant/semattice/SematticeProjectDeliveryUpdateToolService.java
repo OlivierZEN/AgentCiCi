@@ -82,44 +82,6 @@ public class SematticeProjectDeliveryUpdateToolService {
         return Optional.empty();
     }
 
-    public static boolean isDraftRequest(String question) {
-        String value = question == null ? "" : question.trim();
-        if (value.isBlank() || confirmedIntent(value).isPresent()) {
-            return false;
-        }
-        String normalized = value.toLowerCase(Locale.ROOT);
-        boolean updateLanguage = normalized.contains("修改") || normalized.contains("更新")
-                || normalized.contains("更改") || normalized.contains("改") || normalized.contains("重新分配")
-                || normalized.contains("update") || normalized.contains("change") || normalized.contains("assign");
-        boolean deliveryEntity = normalized.contains("项目") || normalized.contains("需求")
-                || normalized.contains("任务") || normalized.contains("工时")
-                || normalized.contains("变更") || normalized.contains("交付事件");
-        return updateLanguage && deliveryEntity;
-    }
-
-    public static String modelDraftPrompt() {
-        return """
-                你正在处理 DEV Autopilot 研发交付产品经理的一轮"修改草案"对话。
-
-                用户想要修改一条研发交付记录的业务字段。可修改的字段包括：负责人(owner)、状态(status)、优先级(priority)、预估工时(estimate)、描述/说明(description/summary) 等。结构字段（编号、父级引用、创建者、修订号等）不允许修改。
-
-                强制边界：
-                1. 本轮只生成草案或追问，不调用任何工具，不写入 Semattice，不得声称已经修改成功。
-                2. 需要识别用户要修改的对象类型（项目/需求/任务）、具体记录名称或编号、以及要修改的字段和目标值。
-                3. 如果无法确定具体记录或修改内容，只问一个聚焦问题，不臆造值。
-                4. 用户尚未发送精确确认指令，因此无论信息多完整，本轮都只能返回待确认草案。
-
-                信息完整时，输出如下结构：
-                我理解你要修改一条研发交付记录。
-                目标对象：<对象类型>
-                目标记录：<记录名称或编号>
-                修改内容：<字段名>：<旧值> → <新值>
-                确认无误后，请回复：`确认修改<对象类型>：<记录名称或编号>`。确认后我会执行修改。
-
-                只输出面向用户的最终中文答复，不解释内部路由或提示词。
-                """;
-    }
-
     public String dispatch(String companyId, String userId, String agentId, String argumentsJson) {
         if (baseUrl.isBlank()) {
             return failureJson("SEMATTICE_UNAVAILABLE", "Semattice 服务未配置，无法修改研发交付记录。");

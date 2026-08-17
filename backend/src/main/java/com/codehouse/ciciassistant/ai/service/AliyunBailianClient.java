@@ -155,6 +155,78 @@ public class AliyunBailianClient {
     }
 
     /**
+     * Deterministic structured-decision call. The model must answer through exactly one named
+     * function so callers can validate data before rendering any user-visible response.
+     */
+    public ChatCompletionResult requiredToolCompletionWithCredentials(String modelName,
+                                                                       List<Map<String, Object>> messages,
+                                                                       Map<String, Object> tool,
+                                                                       String requiredToolName,
+                                                                       String apiBaseUrl,
+                                                                       String apiKey,
+                                                                       int maxOutputTokens,
+                                                                       int maxResponseBytes) {
+        if (tool == null || requiredToolName == null || requiredToolName.isBlank()) {
+            throw new IllegalArgumentException("A required structured tool must be provided");
+        }
+        if (maxOutputTokens <= 0 || maxResponseBytes <= 0) {
+            throw new IllegalArgumentException("Completion budgets must be positive");
+        }
+        String normalizedBaseUrl = requireBaseUrl(apiBaseUrl);
+        requireInvocation(modelName, apiKey);
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("model", modelName.trim());
+        payload.put("messages", messages);
+        payload.put("tools", List.of(tool));
+        payload.put("tool_choice", Map.of(
+                "type", "function",
+                "function", Map.of("name", requiredToolName)));
+        payload.put("parallel_tool_calls", false);
+        payload.put("temperature", 0);
+        payload.put("max_tokens", maxOutputTokens);
+
+        try {
+            String jsonBody = objectMapper.writeValueAsString(payload);
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                    .uri(URI.create(normalizedBaseUrl + "/chat/completions"))
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                    .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+                    .timeout(NON_STREAM_TIMEOUT)
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonBody, StandardCharsets.UTF_8));
+            if (apiKey != null && !apiKey.isBlank()) {
+                requestBuilder.header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey);
+            }
+            HttpResponse<InputStream> httpResponse = httpClient.send(
+                    requestBuilder.build(), HttpResponse.BodyHandlers.ofInputStream());
+            try (InputStream responseBody = httpResponse.body()) {
+                if (httpResponse.statusCode() < 200 || httpResponse.statusCode() >= 300) {
+                    return new ChatCompletionResult(
+                            "assistant", "Model call failed: HTTP " + httpResponse.statusCode() + ".",
+                            null, "stop", 0, 0);
+                }
+                long contentLength = httpResponse.headers()
+                        .firstValueAsLong(HttpHeaders.CONTENT_LENGTH)
+                        .orElse(-1L);
+                if (contentLength > maxResponseBytes) {
+                    return responseTooLarge();
+                }
+                byte[] responseBytes = responseBody.readNBytes(maxResponseBytes + 1);
+                if (responseBytes.length > maxResponseBytes) {
+                    return responseTooLarge();
+                }
+                @SuppressWarnings("unchecked")
+                Map<String, Object> response = objectMapper.readValue(responseBytes, Map.class);
+                return parseCompletionResponse(response, true);
+            }
+        } catch (Exception exception) {
+            log.error("Required-tool completion failed: {}", exception.getClass().getSimpleName());
+            return new ChatCompletionResult(
+                    "assistant", "Model call failed: structured completion request failed.",
+                    null, "stop", 0, 0);
+        }
+    }
+
+    /**
      * Bounded non-streaming completion for callers that require a hard output budget.
      * The legacy overload intentionally keeps its existing RestClient behavior.
      */

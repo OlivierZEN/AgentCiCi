@@ -25,7 +25,6 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class SematticeProjectDeliveryTransferToolService {
     public static final String TOOL_NAME = "semattice_project_delivery_transfer";
-    private static final Pattern REQUEST = Pattern.compile("(?:^|[，,。\\s])(?:把|将)(.+?)(?:的)?任务(?:都|全部)?转交给(.+?)\\s*$");
     private static final Pattern CONFIRM = Pattern.compile("^\\s*(?:请)?(?:确认|确定)将?(.+?)(?:的)?任务(?:都|全部)?转交给(.+?)\\s*$");
     private static final List<String> TRANSFERABLE_STATUSES = List.of("待开始", "已批准待执行");
     private final RestClient client;
@@ -41,11 +40,9 @@ public class SematticeProjectDeliveryTransferToolService {
         this.baseUrl = baseUrl == null ? "" : baseUrl.replaceAll("/+$", "");
     }
 
-    public static Optional<TransferIntent> draftIntent(String text) { return parse(text, REQUEST); }
-    public static Optional<TransferIntent> confirmedIntent(String text) { return parse(text, CONFIRM); }
-    private static Optional<TransferIntent> parse(String text, Pattern pattern) {
-        Matcher match = pattern.matcher(normalizeInstruction(text));
-        if (!(pattern == REQUEST ? match.find() : match.matches())) return Optional.empty();
+    public static Optional<TransferIntent> confirmedIntent(String text) {
+        Matcher match = CONFIRM.matcher(normalizeInstruction(text));
+        if (!match.matches()) return Optional.empty();
         String from = match.group(1).trim(), to = match.group(2).trim();
         return from.isBlank() || to.isBlank() || from.equals(to) ? Optional.empty() : Optional.of(new TransferIntent(from, to));
     }

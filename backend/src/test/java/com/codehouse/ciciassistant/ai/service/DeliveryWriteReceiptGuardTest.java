@@ -22,6 +22,15 @@ class DeliveryWriteReceiptGuardTest {
     }
 
     @Test
+    void receiptGuardDoesNotDependOnNaturalLanguageIntentKeywords() {
+        assertThat(DeliveryWriteReceiptGuard.enforce(
+                "就照前面说的办吧",
+                "已在 Semattice 创建项目：CCSales 智能应用（DAS-FALSE）。",
+                List.of()))
+                .startsWith("本轮没有获得 Semattice");
+    }
+
+    @Test
     void replacesClaimWhenToolTraceIsFailedOrMalformed() {
         AgentRunTraceService.ToolCallTraceInput failed = trace(
                 "semattice_project_delivery_create",
@@ -92,6 +101,9 @@ class DeliveryWriteReceiptGuardTest {
         assertThat(DeliveryWriteReceiptGuard.enforce(
                 "总结今天的会议", "总结已完成。", List.of()))
                 .isEqualTo("总结已完成。");
+        assertThat(DeliveryWriteReceiptGuard.enforce(
+                "帮我安排明天的会议", "已创建日程：明天 10:00 产品例会。", List.of()))
+                .isEqualTo("已创建日程：明天 10:00 产品例会。");
     }
 
     @Test
@@ -106,31 +118,6 @@ class DeliveryWriteReceiptGuardTest {
                 "缺陷已整理并提交。正在等待工具调用回执以返回正式记录编号。",
                 List.of()))
                 .startsWith("本轮没有获得 Semattice");
-    }
-
-    @Test
-    void recognizesARecentPendingDefectDraftForFieldContinuationRouting() {
-        assertThat(ChatOrchestratorService.hasPendingDeliveryDraft(List.of(
-                Map.of("role", "assistant", "content", "## 缺陷提交草案\n请补充父项目信息"),
-                Map.of("role", "user", "content", "父项目：智能体平台"))))
-                .isTrue();
-        assertThat(ChatOrchestratorService.hasPendingDeliveryDraft(List.of(
-                Map.of("role", "assistant", "content",
-                        "## 缺陷受理草稿（Dev Autopilot）\n如需提交请回复：确认提交缺陷"))))
-                .isTrue();
-        assertThat(ChatOrchestratorService.hasPendingDeliveryDraft(List.of(
-                Map.of("role", "assistant", "content", "当前研发项目列表"))))
-                .isFalse();
-        assertThat(ChatOrchestratorService.hasPendingDeliveryDraft(List.of(
-                Map.of("role", "assistant", "content",
-                        "请确认提交。<!-- DEV_AUTOPILOT_INTAKE_V1 {\"classification\":\"defect\"} -->"))))
-                .isTrue();
-        assertThat(ChatOrchestratorService.hasPendingDeliveryDraft(List.of(
-                Map.of("role", "assistant", "content",
-                        "请确认提交。<!-- DEV_AUTOPILOT_INTAKE_V1 {\"classification\":\"defect\"} -->"),
-                Map.of("role", "user", "content", "确认提交"),
-                Map.of("role", "assistant", "content", "已在 Semattice 创建缺陷：退出登录异常。"))))
-                .isFalse();
     }
 
     private static AgentRunTraceService.ToolCallTraceInput trace(String name, String result, boolean success) {

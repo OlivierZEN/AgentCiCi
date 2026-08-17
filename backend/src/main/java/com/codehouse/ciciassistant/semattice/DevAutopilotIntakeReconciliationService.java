@@ -97,7 +97,7 @@ public class DevAutopilotIntakeReconciliationService {
         }
         RecoveredConfirmation recovered = recoverConfirmation(companyId, sessionId, recordId);
         SematticeProjectDeliveryWriteToolService.CreateIntent intent =
-                SematticeProjectDeliveryWriteToolService.confirmedIntent(
+                SematticeProjectDeliveryWriteToolService.confirmedHistoricalIntent(
                                 recovered.confirmation(), recovered.messagesBeforeConfirmation(), sessionId, objectMapper)
                         .orElseThrow(() -> new ResponseStatusException(
                                 HttpStatus.UNPROCESSABLE_ENTITY, "无法从已确认草稿恢复结构化受理内容"));

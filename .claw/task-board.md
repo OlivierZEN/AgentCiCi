@@ -15,6 +15,18 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-315 - 产品经理结构化语义判定与标准输出
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `backend-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-192-devautopilot-semantic-dialogue-decision.md`
+- task_status_path: `.claw/tasks/TASK-315.md`
+- blocked_by: `none`
+- scope_files: `研发交付对话结构化语义判定、固定草案/澄清模板、确认协议、可信回执门禁、测试与本地环境验证`
+- next_action: `完成全量回归、主线归并并从本地 main 重建 cici backend/frontend，执行真实模型对话验收。`
+
 ### TASK-313 - 受治理的内部租户应用注册中心
 
 - status: `review`

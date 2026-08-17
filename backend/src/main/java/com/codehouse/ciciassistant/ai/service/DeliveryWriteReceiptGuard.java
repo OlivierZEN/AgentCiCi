@@ -3,7 +3,6 @@ package com.codehouse.ciciassistant.ai.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -27,18 +26,20 @@ final class DeliveryWriteReceiptGuard {
             "semattice_dev_defect_update"
     );
     private static final Pattern SUCCESS_CLAIM = Pattern.compile(
-            "(?:已经|已|成功)(?:在\\s*Semattice\\s*)?(?:创建|记录|提交|写入|更新|修改|删除|关闭|重开|分派|转派|转交|保存|登记|处理完成)"
-                    + "|(?:已经|已)(?:在\\s*Semattice\\s*)?[^。；\\n]{0,24}(?:创建|记录|提交|写入|更新|修改|删除|关闭|重开|分派|转派|转交|保存|登记)"
-                    + "|(?:创建|记录|提交|写入|更新|修改|删除|关闭|重开|分派|转派|转交|保存|登记)(?:成功|完成)",
+            "(?:已经|已|成功)(?:在\\s*Semattice\\s*)?(?:创建|记录|提交|写入|更新|修改|删除|关闭|重开|分派|转派|转交|保存|登记)[^。；\\n]{0,12}(?:项目|需求|任务|缺陷|变更|工时|交付事件|研发交付记录)"
+                    + "|(?:已经|已|成功)在\\s*Semattice\\s*(?:创建|记录|提交|写入|更新|修改|删除|关闭|重开|分派|转派|转交|保存|登记)"
+                    + "|(?:项目|需求|任务|缺陷|变更|工时|交付事件|研发交付记录)[^。；\\n]{0,16}(?:已经|已|成功)[^。；\\n]{0,10}(?:创建|记录|提交|写入|更新|修改|删除|关闭|重开|分派|转派|转交|保存|登记)"
+                    + "|(?:项目|需求|任务|缺陷|变更|工时|交付事件|研发交付记录)[^。；\\n]{0,12}(?:创建|记录|提交|写入|更新|修改|删除|关闭|重开|分派|转派|转交|保存|登记)(?:成功|完成)"
+                    + "|(?:已经|已)将[^。；\\n]{0,24}(?:任务|研发交付记录)[^。；\\n]{0,16}(?:转派|转交|移入|删除)",
             Pattern.CASE_INSENSITIVE);
 
     private DeliveryWriteReceiptGuard() {
     }
 
-    static String enforce(String question,
+    static String enforce(String ignoredQuestion,
                           String answer,
                           List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces) {
-        if (!isDeliveryWriteIntent(question) || answer == null || !containsCompletedSuccessClaim(answer)) {
+        if (answer == null || !containsCompletedSuccessClaim(answer)) {
             return answer;
         }
         if (hasLiveRecordReceipt(toolCallTraces)) {
@@ -46,21 +47,6 @@ final class DeliveryWriteReceiptGuard {
         }
         return "本轮没有获得 Semattice 的真实写入成功回执，因此尚未创建、记录或修改任何研发交付数据。"
                 + "请核对对象能力和必填信息后重试；只有返回实际记录 ID 的操作才算成功。";
-    }
-
-    static boolean isDeliveryWriteIntent(String question) {
-        String normalized = question == null ? "" : question.trim().toLowerCase(Locale.ROOT);
-        if (normalized.isBlank()) {
-            return false;
-        }
-        boolean writeVerb = containsAny(normalized,
-                "创建", "新建", "新增", "记录", "登记", "提交", "写入", "更新", "修改",
-                "删除", "关闭", "重开", "分派", "指派", "转派", "转交", "create", "add", "record", "submit",
-                "update", "delete", "close", "reopen", "assign");
-        boolean deliveryEntity = containsAny(normalized,
-                "研发项目", "项目", "需求", "任务", "缺陷", "bug", "defect", "工时", "变更",
-                "交付事件", "project", "requirement", "task", "worklog", "change");
-        return writeVerb && deliveryEntity;
     }
 
     static boolean hasLiveRecordReceipt(List<AgentRunTraceService.ToolCallTraceInput> traces) {

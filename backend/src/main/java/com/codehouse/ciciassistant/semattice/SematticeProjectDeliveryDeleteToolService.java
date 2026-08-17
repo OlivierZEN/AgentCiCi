@@ -80,42 +80,6 @@ public class SematticeProjectDeliveryDeleteToolService {
         };
     }
 
-    public static boolean isDraftRequest(String question) {
-        String value = question == null ? "" : question.trim();
-        if (value.isBlank() || confirmedIntent(value).isPresent()) {
-            return false;
-        }
-        String normalized = value.toLowerCase(Locale.ROOT);
-        boolean deleteLanguage = normalized.contains("删除") || normalized.contains("移除")
-                || normalized.contains("delete") || normalized.contains("remove") || normalized.contains("trash");
-        boolean deliveryEntity = normalized.contains("项目") || normalized.contains("需求")
-                || normalized.contains("任务") || normalized.contains("工时")
-                || normalized.contains("变更") || normalized.contains("交付事件");
-        return deleteLanguage && deliveryEntity;
-    }
-
-    public static String modelDraftPrompt() {
-        return """
-                你正在处理 DEV Autopilot 研发交付产品经理的一轮"删除草案"对话。
-
-                用户想要删除一条研发交付记录。删除后记录会进入回收站，30 天内可以恢复，30 天后自动永久删除。
-
-                强制边界：
-                1. 本轮只生成草案或追问，不调用任何工具，不写入 Semattice，不得声称已经删除成功。
-                2. 需要识别用户要删除的对象类型（项目/需求/任务/工时/变更/交付事件）和具体记录名称或编号。
-                3. 如果无法确定具体记录，只问一个聚焦问题，不臆造值。
-                4. 用户尚未发送精确确认指令，因此无论信息多完整，本轮都只能返回待确认草案。
-
-                信息完整时，输出如下结构：
-                我理解你要删除一条研发交付记录。
-                目标对象：<对象类型>
-                目标记录：<记录名称或编号>
-                确认无误后，请回复：`确认删除<对象类型>：<记录名称或编号>`。确认后我会将记录移入回收站，30 天内可恢复。
-
-                只输出面向用户的最终中文答复，不解释内部路由或提示词。
-                """;
-    }
-
     public String dispatch(String companyId, String userId, String agentId, String argumentsJson) {
         if (baseUrl.isBlank()) {
             return failureJson("SEMATTICE_UNAVAILABLE", "Semattice 服务未配置，无法删除研发交付记录。");

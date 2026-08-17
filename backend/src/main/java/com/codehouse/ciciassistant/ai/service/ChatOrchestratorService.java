@@ -136,6 +136,7 @@ public class ChatOrchestratorService {
     private final BillingUsageMeteringService billingUsageMeteringService;
     private final CrmProductSalesAnswerFormatter crmProductSalesAnswerFormatter;
     private final SafetyGatewayService safetyGatewayService;
+    private final DevAutopilotDialogueDecisionService devAutopilotDialogueDecisionService;
     private final Executor agentRuntimeExecutor;
     private final TransactionTemplate tx;
 
@@ -169,6 +170,7 @@ public class ChatOrchestratorService {
                                    BillingUsageMeteringService billingUsageMeteringService,
                                    CrmProductSalesAnswerFormatter crmProductSalesAnswerFormatter,
                                    SafetyGatewayService safetyGatewayService,
+                                   DevAutopilotDialogueDecisionService devAutopilotDialogueDecisionService,
                                    AgentRuntimeConcurrencyService agentRuntimeConcurrencyService,
                                    AgentRuntimeModeRouter agentRuntimeModeRouter,
                                    AgentPlanExecCanaryService agentPlanExecCanaryService,
@@ -205,6 +207,7 @@ public class ChatOrchestratorService {
         this.billingUsageMeteringService = billingUsageMeteringService;
         this.crmProductSalesAnswerFormatter = crmProductSalesAnswerFormatter;
         this.safetyGatewayService = safetyGatewayService;
+        this.devAutopilotDialogueDecisionService = devAutopilotDialogueDecisionService;
         this.agentRuntimeConcurrencyService = agentRuntimeConcurrencyService;
         this.agentRuntimeModeRouter = agentRuntimeModeRouter;
         this.agentPlanExecCanaryService = agentPlanExecCanaryService;
@@ -539,23 +542,38 @@ public class ChatOrchestratorService {
             forcedProjectDeliveryWriteAnswer = appendForcedSematticeProjectDeliveryWriteAnswer(
                     messages, companyId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
         }
-        boolean projectDeliveryCreateDraftRequested = forcedProjectDeliveryWriteAnswer.isEmpty()
+        boolean deliveryDecisionRequired = forcedProjectDeliveryWriteAnswer.isEmpty()
                 && !modeDecision.suppressesTools() && !planExec.active()
-                && appendSematticeProjectDeliveryCreateDraftPrompt(messages, skillContext, question);
+                && isDevAutopilotDeliveryDialogue(skillContext);
+        Optional<DevAutopilotDialogueDecisionService.DialogueDecision> deliveryDecision =
+                deliveryDecisionRequired
+                        ? resolveDevAutopilotDialogueDecision(
+                                messages, skillContext, modelName, modelCredentials, modelCallTraces)
+                        : Optional.empty();
+        Optional<String> fixedDeliveryAnswer = deliveryDecisionRequired && deliveryDecision.isEmpty()
+                ? Optional.of(deliverySemanticDecisionUnavailableAnswer())
+                : deliveryDecision.flatMap(decision -> appendSemanticTransferDraftAnswer(
+                        messages, companyId, userId, sessionId, skillContext, null,
+                        toolCallTraces, runId, decision)
+                        .or(() -> fixedDevAutopilotDialogueAnswer(skillContext, decision)));
         boolean forcedProjectDeliveryQuery = forcedProjectDeliveryWriteAnswer.isEmpty()
-                && !projectDeliveryCreateDraftRequested && !modeDecision.suppressesTools() && !planExec.active()
+                && fixedDeliveryAnswer.isEmpty() && isSemanticDeliveryQuery(deliveryDecision)
                 && appendForcedSematticeProjectDeliveryToolResult(
-                messages, companyId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
+                messages, companyId, userId, sessionId, skillContext, null, toolCallTraces, runId);
         Optional<String> forcedCrmProductSalesAnswer = forcedProjectDeliveryWriteAnswer.isPresent()
-                || projectDeliveryCreateDraftRequested || modeDecision.suppressesTools() || planExec.active() ? Optional.empty() : appendForcedCrmProductSalesToolResult(
+                || fixedDeliveryAnswer.isPresent() || forcedProjectDeliveryQuery
+                || modeDecision.suppressesTools() || planExec.active() ? Optional.empty() : appendForcedCrmProductSalesToolResult(
                 messages, companyId, userId, sessionId, skillContext, toolCallTraces, runId, question);
         Optional<String> scheduleCadenceClarification = scheduleCadenceClarification(question);
         int maxToolRounds = modeDecision.mode() == AgentRuntimeModeRouter.Mode.LEGACY_REACT
                 ? resolveMaxToolRounds(skillContext.maxToolCalls())
                 : Math.min(resolveMaxToolRounds(skillContext.maxToolCalls()), modeDecision.budget().maxToolRounds());
-        String answer = forcedProjectDeliveryWriteAnswer.orElseGet(() -> forcedCrmProductSalesAnswer.orElseGet(() -> scheduleCadenceClarification.orElseGet(() -> runToolLoop(
-                modelName, messages, forcedProjectDeliveryQuery || projectDeliveryCreateDraftRequested ? List.of() : tools, companyId, userId, sessionId,
-                showThinking, skillContext, maxToolRounds, modelCredentials, modelCallTraces, toolCallTraces, runId))));
+        List<Map<String, Object>> semanticSafeTools = deliveryDecision.isPresent()
+                ? withoutTool(tools, SematticeProjectDeliveryToolService.TOOL_NAME)
+                : tools;
+        String answer = forcedProjectDeliveryWriteAnswer.orElseGet(() -> fixedDeliveryAnswer.orElseGet(() -> forcedCrmProductSalesAnswer.orElseGet(() -> scheduleCadenceClarification.orElseGet(() -> runToolLoop(
+                modelName, messages, forcedProjectDeliveryQuery ? List.of() : semanticSafeTools, companyId, userId, sessionId,
+                showThinking, skillContext, maxToolRounds, modelCredentials, modelCallTraces, toolCallTraces, runId)))));
         answer = DeliveryWriteReceiptGuard.enforce(safeQuestion, answer, toolCallTraces);
         try {
             agentPlanExecCanaryService.completeSynthesis(planExec, clipForTrace(answer, 1024));
@@ -865,24 +883,39 @@ public class ChatOrchestratorService {
                     forcedProjectDeliveryWriteAnswer = appendForcedSematticeProjectDeliveryWriteAnswer(
                             messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
                 }
-                boolean projectDeliveryCreateDraftRequested = forcedProjectDeliveryWriteAnswer.isEmpty()
+                boolean deliveryDecisionRequired = forcedProjectDeliveryWriteAnswer.isEmpty()
                         && !modeDecision.suppressesTools() && !planExec.active()
-                        && appendSematticeProjectDeliveryCreateDraftPrompt(messages, skillContext, question);
+                        && isDevAutopilotDeliveryDialogue(skillContext);
+                Optional<DevAutopilotDialogueDecisionService.DialogueDecision> deliveryDecision =
+                        deliveryDecisionRequired
+                                ? resolveDevAutopilotDialogueDecision(
+                                        messages, skillContext, modelName, modelCredentials, modelCallTraces)
+                                : Optional.empty();
+                Optional<String> fixedDeliveryAnswer = deliveryDecisionRequired && deliveryDecision.isEmpty()
+                        ? Optional.of(deliverySemanticDecisionUnavailableAnswer())
+                        : deliveryDecision.flatMap(decision -> appendSemanticTransferDraftAnswer(
+                                messages, companyId, userId, sessionId, skillContext, emitter,
+                                toolCallTraces, runId, decision)
+                                .or(() -> fixedDevAutopilotDialogueAnswer(skillContext, decision)));
                 boolean forcedProjectDeliveryQuery = forcedProjectDeliveryWriteAnswer.isEmpty()
-                        && !projectDeliveryCreateDraftRequested && !modeDecision.suppressesTools() && !planExec.active()
+                        && fixedDeliveryAnswer.isEmpty() && isSemanticDeliveryQuery(deliveryDecision)
                         && appendForcedSematticeProjectDeliveryToolResult(
-                        messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
+                        messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId);
                 Optional<String> forcedCrmProductSalesAnswer = forcedProjectDeliveryWriteAnswer.isPresent()
-                        || projectDeliveryCreateDraftRequested || modeDecision.suppressesTools() || planExec.active() ? Optional.empty() : appendForcedCrmProductSalesToolResult(
+                        || fixedDeliveryAnswer.isPresent() || forcedProjectDeliveryQuery
+                        || modeDecision.suppressesTools() || planExec.active() ? Optional.empty() : appendForcedCrmProductSalesToolResult(
                         messages, companyId, userId, sessionId, skillContext, toolCallTraces, runId, question);
                 Optional<String> scheduleCadenceClarification = scheduleCadenceClarification(question);
                 int maxToolRounds = modeDecision.mode() == AgentRuntimeModeRouter.Mode.LEGACY_REACT
                         ? resolveMaxToolRounds(skillContext.maxToolCalls())
                         : Math.min(resolveMaxToolRounds(skillContext.maxToolCalls()), modeDecision.budget().maxToolRounds());
+                List<Map<String, Object>> semanticSafeTools = deliveryDecision.isPresent()
+                        ? withoutTool(tools, SematticeProjectDeliveryToolService.TOOL_NAME)
+                        : tools;
                 boolean pendingApprovalsUsed = forcedProjectDeliveryWriteAnswer.isEmpty()
-                        && !projectDeliveryCreateDraftRequested && forcedCrmProductSalesAnswer.isEmpty() && scheduleCadenceClarification.isEmpty()
+                        && fixedDeliveryAnswer.isEmpty() && forcedCrmProductSalesAnswer.isEmpty() && scheduleCadenceClarification.isEmpty()
                         && resolveToolCalls(
-                        modelName, messages, forcedProjectDeliveryQuery ? List.of() : tools, companyId, userId, sessionId,
+                        modelName, messages, forcedProjectDeliveryQuery ? List.of() : semanticSafeTools, companyId, userId, sessionId,
                         showThinking, skillContext, emitter, maxToolRounds, modelCredentials, modelCallTraces,
                         toolCallTraces, runId);
                 if (pendingApprovalsUsed) {
@@ -904,6 +937,8 @@ public class ChatOrchestratorService {
                 String finalText;
                 if (forcedProjectDeliveryWriteAnswer.isPresent()) {
                     finalText = forcedProjectDeliveryWriteAnswer.get();
+                } else if (fixedDeliveryAnswer.isPresent()) {
+                    finalText = fixedDeliveryAnswer.get();
                 } else if (forcedCrmProductSalesAnswer.isPresent()) {
                     finalText = forcedCrmProductSalesAnswer.get();
                 } else if (scheduleCadenceClarification.isPresent()) {
@@ -1570,9 +1605,9 @@ public class ChatOrchestratorService {
             ResolvedSkillContext skillContext,
             SseEmitter emitter,
             List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces,
-            String runId,
-            String question) {
-        if (!isSematticeProjectDeliveryFactQuestion(skillContext, question)) {
+            String runId) {
+        if (skillContext == null
+                || !skillContext.allowedToolNames().contains(SematticeProjectDeliveryToolService.TOOL_NAME)) {
             return false;
         }
         executeAndAppendSyntheticToolCall(
@@ -1671,20 +1706,19 @@ public class ChatOrchestratorService {
             List<Map<String, Object>> messages, String companyId, String userId, String sessionId,
             ResolvedSkillContext skillContext, SseEmitter emitter,
             List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces, String runId, String question) {
-        Optional<SematticeProjectDeliveryTransferToolService.TransferIntent> confirmed = SematticeProjectDeliveryTransferToolService.confirmedIntent(question);
-        Optional<SematticeProjectDeliveryTransferToolService.TransferIntent> draft = confirmed.isPresent() ? Optional.empty() : SematticeProjectDeliveryTransferToolService.draftIntent(question);
-        if (confirmed.isEmpty() && draft.isEmpty()) return Optional.empty();
+        Optional<SematticeProjectDeliveryTransferToolService.TransferIntent> confirmed =
+                SematticeProjectDeliveryTransferToolService.confirmedIntent(question);
+        if (confirmed.isEmpty()) return Optional.empty();
         if (skillContext == null
                 || (!skillContext.allowedToolNames().contains(SematticeProjectDeliveryTransferToolService.TOOL_NAME)
                 && !skillContext.skillCodes().contains("semattice-project-delivery-management"))) {
-            return confirmed.isPresent()
-                    ? Optional.of("未转派任务：当前产品经理未启用受治理的任务转派能力，未修改任务。")
-                    : Optional.empty();
+            return Optional.of("未转派任务：当前产品经理未启用受治理的任务转派能力，未修改任务。");
         }
-        var intent = confirmed.orElseGet(draft::get);
+        var intent = confirmed.get();
         String arguments;
         try {
-            arguments = TOOL_RESULT_OBJECT_MAPPER.writeValueAsString(Map.of("mode", confirmed.isPresent() ? "execute" : "draft", "from", intent.from(), "to", intent.to()));
+            arguments = TOOL_RESULT_OBJECT_MAPPER.writeValueAsString(
+                    Map.of("mode", "execute", "from", intent.from(), "to", intent.to()));
         } catch (Exception ex) { return Optional.of("无法生成任务转派草案，未修改任务。"); }
         String result;
         try {
@@ -1698,10 +1732,169 @@ public class ChatOrchestratorService {
             String status = value.path("status").asText();
             String from = value.path("from").asText(intent.from()), to = value.path("to").asText(intent.to());
             List<String> tasks = new ArrayList<>(); value.path("tasks").forEach(item -> tasks.add(item.asText()));
-            if ("DRAFT".equals(status)) return Optional.of(tasks.isEmpty() ? "“" + from + "”当前没有可安全转派的排队任务。" : "已识别开发者“" + from + "”和“" + to + "”。将转派 " + tasks.size() + " 项排队任务：" + String.join("；", tasks) + "。确认无误后，请回复：`确认将" + from + "的任务转交给" + to + "`。运行中的任务不会转派。");
             if ("SUCCESS".equals(status)) return Optional.of("已将 " + tasks.size() + " 项排队任务从“" + from + "”转交给“" + to + "”；Semattice 已回读新的负责人和 revision，新的开发者可按自身实例容量排队受理。");
             return Optional.of(value.path("message").asText("未转派任务，请确认开发者状态和任务阶段。"));
         } catch (Exception ex) { return Optional.of("未转派任务：回执解析失败。"); }
+    }
+
+    private Optional<DevAutopilotDialogueDecisionService.DialogueDecision> resolveDevAutopilotDialogueDecision(
+            List<Map<String, Object>> messages,
+            ResolvedSkillContext skillContext,
+            String modelName,
+            ModelCallCredentials credentials,
+            List<AgentRunTraceService.ModelCallTraceInput> modelCallTraces) {
+        if (skillContext == null || credentials == null) {
+            return Optional.empty();
+        }
+        if (!isDevAutopilotDeliveryDialogue(skillContext)) {
+            return Optional.empty();
+        }
+        String currentQuestion = messages.stream()
+                .filter(message -> "user".equals(message.get("role")))
+                .map(message -> String.valueOf(message.getOrDefault("content", "")))
+                .reduce((first, second) -> second)
+                .orElse("");
+        DevAutopilotDialogueDecisionService.DecisionResult result =
+                devAutopilotDialogueDecisionService.decide(
+                        modelName, messages, currentQuestion, credentials.apiBaseUrl(), credentials.apiKey());
+        modelCallTraces.add(new AgentRunTraceService.ModelCallTraceInput(
+                "delivery_semantic_decision",
+                modelName,
+                result.status(),
+                result.startedAt(),
+                result.endedAt(),
+                elapsedMs(result.startedAt(), result.endedAt()),
+                0,
+                result.decision().isPresent() ? 1 : 0,
+                result.promptTokens(),
+                result.completionTokens(),
+                "研发交付对话已由当前模型完成结构化语义判定。"));
+        return result.decision();
+    }
+
+    private static boolean isDevAutopilotDeliveryDialogue(ResolvedSkillContext skillContext) {
+        return skillContext != null
+                && (skillContext.allowedToolNames().contains(SematticeProjectDeliveryWriteToolService.TOOL_NAME)
+                || skillContext.allowedToolNames().contains(SematticeProjectDeliveryToolService.TOOL_NAME)
+                || skillContext.allowedToolNames().contains(SematticeProjectDeliveryDeleteToolService.TOOL_NAME)
+                || skillContext.allowedToolNames().contains(SematticeProjectDeliveryTransferToolService.TOOL_NAME)
+                || skillContext.skillCodes().contains("semattice-project-delivery-management"));
+    }
+
+    private static String deliverySemanticDecisionUnavailableAnswer() {
+        return "## 无法判定本轮研发意图\n\n"
+                + "- 判定状态：结构化语义结果不可用\n"
+                + "- 数据查询：未执行\n"
+                + "- 数据写入：未执行\n\n"
+                + "请重试本轮描述；系统不会在无法可靠理解整体语义时猜测你的操作意图。";
+    }
+
+    static List<Map<String, Object>> withoutTool(List<Map<String, Object>> tools, String excludedToolName) {
+        if (tools == null || tools.isEmpty() || excludedToolName == null || excludedToolName.isBlank()) {
+            return tools == null ? List.of() : tools;
+        }
+        return tools.stream()
+                .filter(tool -> {
+                    Object function = tool.get("function");
+                    return !(function instanceof Map<?, ?> functionMap)
+                            || !excludedToolName.equals(String.valueOf(functionMap.get("name")));
+                })
+                .toList();
+    }
+
+    private static boolean isSemanticDeliveryQuery(
+            Optional<DevAutopilotDialogueDecisionService.DialogueDecision> decision) {
+        return decision.filter(value -> "QUERY".equals(value.action()) && value.confidence() >= 0.70).isPresent();
+    }
+
+    private Optional<String> fixedDevAutopilotDialogueAnswer(
+            ResolvedSkillContext skillContext,
+            DevAutopilotDialogueDecisionService.DialogueDecision decision) {
+        if (skillContext == null || decision == null) {
+            return Optional.empty();
+        }
+        if ("CREATE_DRAFT".equals(decision.action())
+                && !skillContext.allowedToolNames().contains(SematticeProjectDeliveryWriteToolService.TOOL_NAME)) {
+            return Optional.of(deliveryCapabilityUnavailableAnswer("研发记录创建"));
+        }
+        if ("DELETE_DRAFT".equals(decision.action())
+                && !skillContext.allowedToolNames().contains(SematticeProjectDeliveryDeleteToolService.TOOL_NAME)) {
+            return Optional.of(deliveryCapabilityUnavailableAnswer("研发记录删除"));
+        }
+        if ("QUERY".equals(decision.action())
+                && !skillContext.allowedToolNames().contains(SematticeProjectDeliveryToolService.TOOL_NAME)) {
+            return Optional.of(deliveryCapabilityUnavailableAnswer("研发交付查询"));
+        }
+        return devAutopilotDialogueDecisionService.fixedAnswer(decision);
+    }
+
+    private static String deliveryCapabilityUnavailableAnswer(String capability) {
+        return "## 研发能力不可用\n\n"
+                + "- 判定结果：" + capability + "\n"
+                + "- 能力状态：当前产品经理未启用\n"
+                + "- 数据查询：未执行\n"
+                + "- 数据写入：未执行";
+    }
+
+    private Optional<String> appendSemanticTransferDraftAnswer(
+            List<Map<String, Object>> messages,
+            String companyId,
+            String userId,
+            String sessionId,
+            ResolvedSkillContext skillContext,
+            SseEmitter emitter,
+            List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces,
+            String runId,
+            DevAutopilotDialogueDecisionService.DialogueDecision decision) {
+        if (!"TRANSFER_DRAFT".equals(decision.action()) || decision.confidence() < 0.70) {
+            return Optional.empty();
+        }
+        if (decision.sourceDeveloper().isBlank() || decision.targetDeveloper().isBlank()) {
+            return devAutopilotDialogueDecisionService.fixedAnswer(decision)
+                    .or(() -> Optional.of("## 需要补充信息\n\n- 判定状态：需要澄清\n- 数据写入：未执行\n\n请补充任务的当前开发者和目标开发者。"));
+        }
+        if (skillContext == null
+                || (!skillContext.allowedToolNames().contains(SematticeProjectDeliveryTransferToolService.TOOL_NAME)
+                && !skillContext.skillCodes().contains("semattice-project-delivery-management"))) {
+            return Optional.of(deliveryCapabilityUnavailableAnswer("任务转派"));
+        }
+        try {
+            String arguments = TOOL_RESULT_OBJECT_MAPPER.writeValueAsString(Map.of(
+                    "mode", "draft",
+                    "from", decision.sourceDeveloper(),
+                    "to", decision.targetDeveloper()));
+            String result = executeAndAppendSyntheticToolCall(
+                    messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId,
+                    SematticeProjectDeliveryTransferToolService.TOOL_NAME, arguments,
+                    "auto_semattice_delivery_transfer_draft_");
+            JsonNode value = TOOL_RESULT_OBJECT_MAPPER.readTree(result);
+            if (!"DRAFT".equals(value.path("status").asText())) {
+                return Optional.of(value.path("message").asText("未生成任务转派草案，未修改任务。"));
+            }
+            String from = value.path("from").asText(decision.sourceDeveloper());
+            String to = value.path("to").asText(decision.targetDeveloper());
+            List<String> tasks = new ArrayList<>();
+            value.path("tasks").forEach(item -> tasks.add(item.asText()));
+            if (tasks.isEmpty()) {
+                return Optional.of("## 任务转派检查结果\n\n- 当前开发者：" + from
+                        + "\n- 目标开发者：" + to
+                        + "\n- 可转派的排队任务：0\n- 数据写入：未执行");
+            }
+            return Optional.of("## 任务转派草案\n\n"
+                    + "| 字段 | 内容 |\n|---|---|\n"
+                    + "| 当前开发者 | " + from + " |\n"
+                    + "| 目标开发者 | " + to + " |\n"
+                    + "| 排队任务数 | " + tasks.size() + " |\n"
+                    + "| 排队任务 | " + String.join("；", tasks) + " |\n\n"
+                    + "- 当前状态：等待确认\n- 数据写入：未执行\n"
+                    + "- 运行中任务：不会转派\n\n"
+                    + "确认无误后，请回复：`确认将" + from + "的任务转交给" + to + "`");
+        } catch (RuntimeException exception) {
+            return Optional.of("未生成任务转派草案："
+                    + SematticeProjectDeliveryTransferToolService.failureMessage(exception));
+        } catch (Exception exception) {
+            return Optional.of("未生成任务转派草案：回执解析失败，未修改任务。");
+        }
     }
 
     static String formatProjectDeliveryDeleteResult(String toolResult) {
@@ -1725,61 +1918,6 @@ public class ChatOrchestratorService {
         } catch (Exception exception) {
             return "未删除研发交付记录：Semattice 回执解析失败，不能确认删除成功。请稍后重试。";
         }
-    }
-
-    /**
-     * A broad server-side route prevents create requests from being mistaken for live-data queries;
-     * the model itself receives the full conversation and owns all semantic field understanding.
-     */
-    private boolean appendSematticeProjectDeliveryCreateDraftPrompt(
-            List<Map<String, Object>> messages,
-            ResolvedSkillContext skillContext,
-            String question) {
-        boolean draftRequest = SematticeProjectDeliveryWriteToolService.isDraftRequest(question);
-        boolean draftContinuation = (SematticeProjectDeliveryWriteToolService.isDraftContinuation(question)
-                || SematticeProjectDeliveryWriteToolService.hasPendingIntake(messages))
-                && hasPendingDeliveryDraft(messages);
-        if (skillContext == null
-                || !skillContext.allowedToolNames().contains(SematticeProjectDeliveryWriteToolService.TOOL_NAME)
-                || (!draftRequest && !draftContinuation)) {
-            return false;
-        }
-        messages.add(Map.of(
-                "role", "system",
-                "content", SematticeProjectDeliveryWriteToolService.modelDraftPrompt()
-        ));
-        return true;
-    }
-
-    static boolean hasPendingDeliveryDraft(List<Map<String, Object>> messages) {
-        if (messages == null || messages.isEmpty()) {
-            return false;
-        }
-        int start = Math.max(0, messages.size() - 12);
-        for (int index = messages.size() - 1; index >= start; index--) {
-            Object content = messages.get(index).get("content");
-            if (!(content instanceof String text)) {
-                continue;
-            }
-            String normalized = text.replaceAll("\\s+", "");
-            if (normalized.contains("已在Semattice创建")
-                    || normalized.contains("本次受理已取消")
-                    || normalized.contains("研发事项已取消")) {
-                return false;
-            }
-            if (normalized.contains("DEV_AUTOPILOT_INTAKE_V1")
-                    || normalized.contains("研发事项受理")
-                    || normalized.contains("缺陷受理草稿")
-                    || normalized.contains("需求受理草稿")
-                    || normalized.contains("变更受理草稿")
-                    || normalized.contains("缺陷提交草案")
-                    || normalized.contains("待补充：父项目")
-                    || normalized.contains("请补充父项目信息")
-                    || normalized.contains("确认提交缺陷：项目=")) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private static String formatProjectDeliveryWriteResult(String toolResult) {
@@ -1818,23 +1956,6 @@ public class ChatOrchestratorService {
         } catch (Exception exception) {
             return "未创建研发交付记录：Semattice 回执解析失败，不能确认创建成功。请稍后重试。";
         }
-    }
-
-    static boolean isSematticeProjectDeliveryFactQuestion(ResolvedSkillContext skillContext, String question) {
-        if (skillContext == null
-                || !skillContext.allowedToolNames().contains(SematticeProjectDeliveryToolService.TOOL_NAME)) {
-            return false;
-        }
-        String normalized = question == null ? "" : question.trim().toLowerCase(Locale.ROOT);
-        if (normalized.isBlank()) {
-            return false;
-        }
-        return normalized.contains("项目") || normalized.contains("需求") || normalized.contains("任务")
-                || normalized.contains("工时") || normalized.contains("进度") || normalized.contains("变更")
-                || normalized.contains("迭代") || normalized.contains("交付") || normalized.contains("执行中")
-                || normalized.contains("进行中") || normalized.contains("project") || normalized.contains("requirement")
-                || normalized.contains("缺陷") || normalized.contains("bug") || normalized.contains("defect")
-                || normalized.contains("task") || normalized.contains("worklog") || normalized.contains("change");
     }
 
     private Optional<PendingEmailState> pendingEmailFromState(String companyId, String sessionId) {

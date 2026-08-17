@@ -54,7 +54,7 @@ public class SematticeProjectDeliveryWriteToolService {
             "^\\s*(?:请)?(?:确认|确定)(?:提交|登记|创建|记录)?(?:研发事项|需求|缺陷|变更)?[。！!]?\\s*$",
             Pattern.CASE_INSENSITIVE);
     private static final Pattern INTAKE_MARKER = Pattern.compile(
-            "<!--\\s*DEV_AUTOPILOT_INTAKE_V1\\s*(\\{.*?})\\s*-->", Pattern.DOTALL);
+            "<!--\\s*DEV_AUTOPILOT_INTAKE_V1\\s*(\\{.*})\\s*-->", Pattern.DOTALL);
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
@@ -112,49 +112,24 @@ public class SematticeProjectDeliveryWriteToolService {
     }
 
     /**
-     * Broadly routes a possible create request to the model. This method deliberately does not
-     * extract names, titles, or parent references; business semantics belong to the model turn.
+     * Compatibility parser for the separately authorized historical-reconciliation job only.
+     * Live chat confirmation must use {@link #confirmedIntent(String, List, String, ObjectMapper)}
+     * and therefore cannot execute from an unstructured visible draft.
      */
-    public static boolean isDraftRequest(String question) {
-        String value = question == null ? "" : question.trim();
-        if (value.isBlank() || confirmedIntent(value).isPresent()) {
-            return false;
+    static Optional<CreateIntent> confirmedHistoricalIntent(String question,
+                                                             List<Map<String, Object>> messages,
+                                                             String conversationId,
+                                                             ObjectMapper objectMapper) {
+        Optional<CreateIntent> exact = confirmedIntent(question);
+        if (exact.isPresent()) {
+            return exact;
         }
-        String normalized = value.toLowerCase(Locale.ROOT);
-        boolean createLanguage = normalized.contains("创建") || normalized.contains("新建")
-                || normalized.contains("新增") || normalized.contains("建立")
-                || normalized.contains("提交") || normalized.contains("记录") || normalized.contains("登记")
-                || normalized.contains("希望") || normalized.contains("想要") || normalized.contains("建议")
-                || normalized.contains("报错") || normalized.contains("无法") || normalized.contains("不能")
-                || normalized.contains("不会") || normalized.contains("不生效") || normalized.contains("卡住")
-                || normalized.contains("崩溃") || normalized.contains("闪退")
-                || normalized.contains("不应该") || normalized.contains("应该") || normalized.contains("没有")
-                || normalized.contains("异常") || normalized.contains("失败") || normalized.contains("错误")
-                || normalized.contains("调整") || normalized.contains("修改") || normalized.contains("改成")
-                || normalized.contains("优化") || normalized.contains("增加")
-                || normalized.contains("create") || normalized.contains("add") || normalized.contains("submit")
-                || normalized.contains("record");
-        boolean deliveryEntity = normalized.contains("项目") || normalized.contains("需求")
-                || normalized.contains("任务") || normalized.contains("缺陷") || normalized.contains("bug")
-                || normalized.contains("变更") || normalized.contains("功能") || normalized.contains("页面")
-                || normalized.contains("系统") || normalized.contains("产品") || normalized.contains("登录")
-                || normalized.contains("退出") || normalized.contains("按钮") || normalized.contains("流程")
-                || normalized.contains("能力") || normalized.contains("操作") || normalized.contains("使用")
-                || normalized.contains("defect") || normalized.contains("project")
-                || normalized.contains("requirement") || normalized.contains("change") || normalized.contains("task");
-        return createLanguage && deliveryEntity;
-    }
-
-    /** Recognizes a field-only reply that completes a pending delivery draft in chat history. */
-    public static boolean isDraftContinuation(String question) {
-        String normalized = question == null ? "" : question.trim().toLowerCase(Locale.ROOT);
-        if (normalized.isBlank() || confirmedIntent(normalized).isPresent()) {
-            return false;
+        if (!CONFIRM_PENDING_INTAKE.matcher(question == null ? "" : question.trim()).matches()) {
+            return Optional.empty();
         }
-        return normalized.matches("^(?:父项目|项目编号|项目名称|项目|标题|描述|严重度|优先级|环境|复现步骤|预期结果|实际结果)\\s*[：:=].+")
-                || normalized.matches("^(?:父项目|项目)(?:是|为|叫).+")
-                || normalized.startsWith("补充：")
-                || normalized.startsWith("补充:");
+        List<Map<String, Object>> activeMessages = activeIntakeWindow(messages);
+        return historicalVisibleIntake(activeMessages, objectMapper)
+                .flatMap(intake -> intake.toCreateIntent(conversationId));
     }
 
     public static boolean hasPendingIntake(List<Map<String, Object>> messages) {
@@ -189,7 +164,7 @@ public class SematticeProjectDeliveryWriteToolService {
                 return !latest.path("cancelled").asBoolean(false);
             }
         }
-        return visiblePendingIntake(activeMessages, objectMapper).isPresent();
+        return false;
     }
 
     private static boolean isTerminalIntakeAnswer(String content) {
@@ -197,45 +172,6 @@ public class SematticeProjectDeliveryWriteToolService {
         return normalized.contains("已在 Semattice 创建")
                 || normalized.contains("本次受理已取消")
                 || normalized.contains("研发事项已取消");
-    }
-
-    /** Model-only contract for understanding an unconfirmed delivery create request. */
-    public static String modelDraftPrompt() {
-        return """
-                你正在处理 DEV Autopilot 研发交付产品经理的一轮“研发事项受理”对话。
-
-                你面对的是普通产品使用者。先基于完整用户消息和会话上下文主动识别事项类型，再完成专业整理；不能要求用户自己选择对象类型或填写研发专业问卷。
-
-                强制边界：
-                1. 本轮只生成草案或追问，不调用任何工具，不写入 Semattice，不得声称已经创建成功。
-                2. 主动分类：新增当前不存在的能力或业务结果是 requirement；已有能力偏离正常预期是 defect；调整已确认需求、范围、规则或交付方案是 change。
-                3. `original_report` 必须逐字等于首次提出本事项的完整用户消息；`user_supplements` 每项也必须逐字等于后续真实用户消息，不得润色、摘要或补造用户原话。
-                4. 产品经理负责推断专业字段。不得要求用户提供严重度、优先级、技术环境、完整复现步骤、预期结果、根因、测试方案或部署信息。缺陷字段不确定时写“待开发者验证”并放入 assumptions。
-                5. 只有分类、父项目/父需求或用户真正期望无法判断时，才问一个业务语言的聚焦问题。不要一次列多个问题。
-                6. 信息充分时展示分类依据、专业整理和待开发者验证项，请用户只回复“确认提交需求”“确认提交缺陷”“确认提交变更”或“确认提交”。
-                7. 用户取消时明确回复已取消；不得保留可确认状态。
-                8. 可见草稿与最后的 JSON 注释必须使用同一份结构化事实：分类理由单独进入 `classification_reason`；可见的分析要点必须逐条完整进入 `pm_assessment`，不得混入分类理由；可见的验收标准必须逐条完整进入 `acceptance_criteria`，可见的影响分析必须逐条完整进入 `impact_analysis`，待开发者验证项必须完整进入 `assumptions`。不得用“后续细化”“待进一步评估”等通用占位句替换已经生成的具体内容。
-
-                如果是创建项目，严格按以下中文结构输出，其中占位符必须替换为你理解出的完整项目名称：
-                我理解你要创建一个研发项目。
-                拟创建项目：<完整项目名称>
-                初始状态：规划中｜健康度：待评估｜进度：0%｜版本：v0.1.0
-                确认无误后，请回复：`确认创建项目：<完整项目名称>`。确认后我会返回 Semattice 的实际项目编号。
-
-                如果是创建任务，先识别父需求和完整任务标题；信息完整时给出草案，并以 `确认创建任务：需求=<父需求编号或标题>；标题=<完整任务标题>` 作为唯一确认文本。
-
-                需求、缺陷或变更草案必须在回复最后附加一条 HTML 注释，页面不会向用户展示，但服务端会验证。不要使用 Markdown 代码块。JSON 必须是单个合法对象：
-                <!-- DEV_AUTOPILOT_INTAKE_V1 {"classification":"requirement|defect|change","classification_reason":"事项分类理由","project":"父项目编号或名称","requirement":"变更的父需求编号或标题，其他类型为空","title":"专业标题","original_report":"首次用户消息逐字原文","pm_assessment":"仅包含产品经理分析要点，不重复分类理由","priority":"P0|P1|P2|P3","severity":"critical|high|medium|low，非缺陷用空字符串","environment":"缺陷环境或待开发者验证","reproduction_steps":["缺陷复现线索"],"expected_result":"缺陷预期或空字符串","actual_result":"缺陷实际或空字符串","acceptance_criteria":["需求验收标准"],"impact_analysis":["变更影响"],"user_supplements":["后续用户消息逐字原文"],"assumptions":["待开发者验证的假设"],"clarification_question":"仍需用户回答的唯一问题，无则空字符串","ready_for_confirmation":true,"cancelled":false} -->
-
-                类型特定要求：
-                - requirement 必须有 project、title、pm_assessment、priority 和至少一条 acceptance_criteria。
-                - defect 必须有 project、title、pm_assessment、priority、severity、environment、至少一条 reproduction_steps、expected_result 和 actual_result；无法确认的工程细节使用“待开发者验证”，不能向用户索要专业字段。
-                - change 必须有 requirement、title、pm_assessment、priority 和至少一条 impact_analysis；project 可留空并由父需求解析。
-                - 需要澄清时 `ready_for_confirmation=false` 且 `clarification_question` 非空；取消时 `cancelled=true` 且 `ready_for_confirmation=false`。
-
-                例如，用户说“帮我创建一个新项目：AgentCiCi企业级智能体平台”，完整项目名称是“AgentCiCi企业级智能体平台”，不是“新”。
-                只输出面向用户的最终中文答复和最后的不可见注释，不解释内部路由、正则或提示词。
-                """;
     }
 
     public String dispatch(String companyId, String userId, String agentId, String argumentsJson) {
@@ -707,10 +643,7 @@ public class SematticeProjectDeliveryWriteToolService {
                 .filter(message -> "user".equals(String.valueOf(message.get("role"))))
                 .map(message -> String.valueOf(message.getOrDefault("content", "")))
                 .toList();
-        if (latest.isPresent()) {
-            return IntakeDraft.parse(latest.get(), userMessages, objectMapper);
-        }
-        return visiblePendingIntake(activeMessages, objectMapper);
+        return latest.flatMap(node -> IntakeDraft.parse(node, userMessages, objectMapper));
     }
 
     /** Limits draft recovery to the current intake after the latest completed or cancelled item. */
@@ -728,93 +661,54 @@ public class SematticeProjectDeliveryWriteToolService {
         return List.copyOf(messages);
     }
 
-    /**
-     * Recovers a governed intake when a model produced the user-visible confirmation draft but
-     * omitted the invisible JSON marker. The fallback never executes from a bare user message:
-     * it requires a classified assistant draft that explicitly asks for confirmation, preserves
-     * the verbatim user report, and fills uncertain engineering details as developer verification.
-     */
-    private static Optional<IntakeDraft> visiblePendingIntake(
+    /** Parses only persisted legacy drafts for the explicit reconciliation workflow. */
+    private static Optional<IntakeDraft> historicalVisibleIntake(
             List<Map<String, Object>> messages, ObjectMapper objectMapper) {
         if (messages == null || messages.isEmpty()) {
             return Optional.empty();
         }
-        String draft = "";
-        for (int index = messages.size() - 1; index >= 0; index--) {
-            Map<String, Object> message = messages.get(index);
-            if (!"assistant".equals(String.valueOf(message.get("role")))) {
-                continue;
-            }
-            String content = String.valueOf(message.getOrDefault("content", ""));
-            if (isTerminalIntakeAnswer(content)) {
-                return Optional.empty();
-            }
-            String compact = content.replaceAll("\\s+", "");
-            boolean classifiedDraft = compact.contains("缺陷创建草案")
-                    || compact.contains("缺陷受理草稿")
-                    || compact.contains("缺陷受理摘要")
-                    || compact.contains("缺陷内容摘要")
-                    || compact.contains("需求创建草案")
-                    || compact.contains("需求受理草稿")
-                    || compact.contains("需求受理摘要")
-                    || compact.contains("需求内容摘要")
-                    || compact.contains("变更创建草案")
-                    || compact.contains("变更受理草稿")
-                    || compact.contains("变更受理摘要")
-                    || compact.contains("变更内容摘要");
-            boolean asksConfirmation = compact.contains("确认创建") || compact.contains("确认提交");
-            if (classifiedDraft && asksConfirmation) {
-                draft = content;
-                break;
-            }
-        }
+        String draft = messages.stream()
+                .filter(message -> "assistant".equals(String.valueOf(message.get("role"))))
+                .map(message -> String.valueOf(message.getOrDefault("content", "")))
+                .reduce((first, second) -> second)
+                .orElse("");
         if (draft.isBlank()) {
             return Optional.empty();
         }
-
         List<String> userMessages = messages.stream()
                 .filter(message -> "user".equals(String.valueOf(message.get("role"))))
                 .map(message -> String.valueOf(message.getOrDefault("content", "")))
-                .toList();
-        String original = userMessages.stream()
                 .filter(message -> !CONFIRM_PENDING_INTAKE.matcher(message.trim()).matches())
-                .filter(message -> !isDraftContinuation(message))
-                .filter(SematticeProjectDeliveryWriteToolService::isDraftRequest)
-                .findFirst()
-                .orElse("");
-        if (original.isBlank()) {
+                .toList();
+        if (userMessages.isEmpty()) {
             return Optional.empty();
         }
-        List<String> supplements = userMessages.stream()
-                .dropWhile(message -> !message.equals(original))
-                .skip(1)
-                .filter(message -> !CONFIRM_PENDING_INTAKE.matcher(message.trim()).matches())
-                .toList();
-
+        String original = userMessages.get(0);
+        List<String> supplements = userMessages.size() > 1
+                ? List.copyOf(userMessages.subList(1, userMessages.size())) : List.of();
         String compact = draft.replace("**", "").replace("`", "");
         String classification = compact.contains("缺陷") ? "defect"
-                : compact.contains("变更") ? "change" : compact.contains("需求") ? "requirement" : "";
-        String title = firstLabeledValue(compact, "缺陷标题", "需求标题", "变更标题", "标题");
-        String project = normalizeParentReference(firstLabeledValue(compact, "关联项目", "父项目", "项目"));
-        String requirement = normalizeParentReference(firstLabeledValue(compact, "关联需求", "父需求", "需求"));
-        String priority = firstMatch(compact, "(?i)\\b(P[0-3])\\b").toUpperCase(Locale.ROOT);
-        String severity = firstMatch(compact, "(?i)\\b(critical|high|medium|low)\\b").toLowerCase(Locale.ROOT);
-        String environment = firstLabeledValue(compact, "测试环境", "预计环境", "环境");
-        if (title.isBlank() || classification.isBlank()) {
+                : compact.contains("变更") ? "change"
+                : compact.contains("需求") ? "requirement" : "";
+        String title = firstHistoricalLabeledValue(compact, "缺陷标题", "需求标题", "变更标题", "标题");
+        String project = normalizeHistoricalParent(firstHistoricalLabeledValue(
+                compact, "关联项目", "父项目", "项目"));
+        String requirement = normalizeHistoricalParent(firstHistoricalLabeledValue(
+                compact, "关联需求", "父需求", "需求"));
+        if (classification.isBlank() || title.isBlank()) {
             return Optional.empty();
         }
-        if (priority.isBlank()) {
-            priority = "P2";
-        }
-        if ("defect".equals(classification) && severity.isBlank()) {
-            severity = "medium";
-        }
-        if ("defect".equals(classification) && environment.isBlank()) {
-            environment = "待开发者验证";
-        }
+        String priority = firstHistoricalMatch(compact, "(?i)\\b(P[0-3])\\b").toUpperCase(Locale.ROOT);
+        String severity = firstHistoricalMatch(compact, "(?i)\\b(critical|high|medium|low)\\b")
+                .toLowerCase(Locale.ROOT);
+        String environment = firstHistoricalLabeledValue(compact, "测试环境", "预计环境", "环境");
+        priority = priority.isBlank() ? "P2" : priority;
+        severity = "defect".equals(classification) && severity.isBlank() ? "medium" : severity;
+        environment = "defect".equals(classification) && environment.isBlank()
+                ? "待开发者验证" : environment;
 
-        String classificationReason = firstLabeledValue(compact, "分类理由", "分类依据");
-        List<String> analysisPoints = sectionBulletItems(draft, "分析要点", "产品经理分析");
+        String classificationReason = firstHistoricalLabeledValue(compact, "分类理由", "分类依据");
+        List<String> analysisPoints = historicalSectionItems(draft, "分析要点", "产品经理分析");
         String defaultAssessment = switch (classification) {
             case "defect" -> "产品经理根据用户原始描述识别为已有能力偏离正常预期，分类为缺陷";
             case "change" -> "产品经理根据用户原始描述识别为对已确认范围或规则的调整，分类为变更";
@@ -823,31 +717,28 @@ public class SematticeProjectDeliveryWriteToolService {
         String assessment = analysisPoints.isEmpty()
                 ? (classificationReason.isBlank() ? defaultAssessment : classificationReason)
                 : String.join("；", analysisPoints);
-        List<String> parsedReproduction = sectionBulletItems(draft, "复现步骤", "复现线索");
         List<String> reproduction = "defect".equals(classification)
-                ? (parsedReproduction.isEmpty()
-                    ? List.of("由全栈开发者基于用户原始描述复现并验证") : parsedReproduction)
+                ? nonEmpty(historicalSectionItems(draft, "复现步骤", "复现线索"),
+                        List.of("由全栈开发者基于用户原始描述复现并验证"))
                 : List.of();
-        String parsedExpected = firstLabeledValue(compact, "预期结果");
         String expected = "defect".equals(classification)
-                ? (parsedExpected.isBlank() ? "功能应符合用户正常使用预期，具体结果由全栈开发者验证" : parsedExpected)
+                ? nonBlank(firstHistoricalLabeledValue(compact, "预期结果"),
+                        "功能应符合用户正常使用预期，具体结果由全栈开发者验证")
                 : "";
-        String parsedActual = firstLabeledValue(compact, "实际结果");
-        String actual = "defect".equals(classification) ? (parsedActual.isBlank() ? original : parsedActual) : "";
-        List<String> parsedAcceptance = sectionBulletItems(draft, "验收标准", "验收条件");
+        String actual = "defect".equals(classification)
+                ? nonBlank(firstHistoricalLabeledValue(compact, "实际结果"), original) : "";
         List<String> acceptance = "requirement".equals(classification)
-                ? (parsedAcceptance.isEmpty()
-                    ? List.of("由产品经理与全栈开发者基于用户原始描述细化并验证验收标准") : parsedAcceptance)
+                ? nonEmpty(historicalSectionItems(draft, "验收标准", "验收条件"),
+                        List.of("由产品经理与全栈开发者基于用户原始描述验证业务结果"))
                 : List.of();
-        List<String> parsedImpact = sectionBulletItems(draft, "影响分析", "影响范围");
         List<String> impact = "change".equals(classification)
-                ? (parsedImpact.isEmpty()
-                    ? List.of("由产品经理与全栈开发者评估受影响范围并完成验证") : parsedImpact)
+                ? nonEmpty(historicalSectionItems(draft, "影响分析", "影响范围"),
+                        List.of("由产品经理与全栈开发者评估受影响范围并完成验证"))
                 : List.of();
-        List<String> verificationItems = sectionTableItems(draft, "待开发者验证项", "开发者验证项");
-        List<String> assumptions = verificationItems.isEmpty()
-                ? List.of("工程细节由全栈开发者在源代码、开发环境和测试环境中验证")
-                : verificationItems;
+        List<String> assumptions = historicalTableItems(draft, "待开发者验证项", "开发者验证项");
+        if (assumptions.isEmpty()) {
+            assumptions = List.of("工程细节由全栈开发者验证");
+        }
 
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("version", "DEV_AUTOPILOT_INTAKE_V1");
@@ -870,18 +761,36 @@ public class SematticeProjectDeliveryWriteToolService {
         payload.put("user_supplements", supplements);
         payload.put("assumptions", assumptions);
         payload.put("developer_verification_pending", true);
-
-        return Optional.of(new IntakeDraft(classification, project, requirement, title, original,
-                assessment, priority, severity, environment, reproduction, expected, actual,
-                acceptance, impact, supplements, assumptions, payload));
+        return Optional.of(new IntakeDraft(
+                classification, project, requirement, title, original, assessment, priority, severity,
+                environment, reproduction, expected, actual, acceptance, impact, supplements,
+                assumptions, payload));
     }
 
-    private static String firstMatch(String value, String regex) {
+    private static String firstHistoricalMatch(String value, String regex) {
         Matcher matcher = Pattern.compile(regex).matcher(value == null ? "" : value);
         return matcher.find() ? normalizeText(matcher.group(1)) : "";
     }
 
-    private static List<String> sectionBulletItems(String value, String... sectionNames) {
+    private static String firstHistoricalLabeledValue(String value, String... labels) {
+        String source = value == null ? "" : value;
+        for (String label : labels) {
+            String quoted = Pattern.quote(label);
+            String tableValue = firstHistoricalMatch(source,
+                    "(?m)^\\s*\\|\\s*" + quoted + "\\s*\\|\\s*([^\\n|]+)");
+            if (!tableValue.isBlank()) {
+                return tableValue;
+            }
+            String proseValue = firstHistoricalMatch(source,
+                    "(?m)^\\s*(?:[-*]\\s*)?" + quoted + "\\s*[：:]\\s*([^\\n|]+)");
+            if (!proseValue.isBlank()) {
+                return proseValue;
+            }
+        }
+        return "";
+    }
+
+    private static List<String> historicalSectionItems(String value, String... sectionNames) {
         if (value == null || value.isBlank()) {
             return List.of();
         }
@@ -889,7 +798,7 @@ public class SematticeProjectDeliveryWriteToolService {
         List<String> items = new ArrayList<>();
         boolean inSection = false;
         for (String rawLine : value.split("\\R")) {
-            String line = stripMarkdown(rawLine);
+            String line = rawLine.replace("**", "").replace("`", "").trim();
             String heading = line.replaceFirst("^#{1,6}\\s*", "")
                     .replaceFirst("[：:]$", "").trim();
             if (names.contains(heading)) {
@@ -903,91 +812,61 @@ public class SematticeProjectDeliveryWriteToolService {
                 break;
             }
             Matcher bullet = Pattern.compile("^(?:[-*•]|\\d+[.)、])\\s*(.+)$").matcher(line);
-            if (bullet.matches()) {
-                String item = normalizeText(bullet.group(1));
-                if (isSemanticText(item)) {
-                    items.add(item);
-                }
+            if (bullet.matches() && isSemanticText(bullet.group(1))) {
+                items.add(normalizeText(bullet.group(1)));
             }
         }
         return List.copyOf(items);
     }
 
-    private static List<String> sectionTableItems(String value, String... sectionNames) {
-        if (value == null || value.isBlank()) {
-            return List.of();
-        }
+    private static List<String> historicalTableItems(String value, String... sectionNames) {
         Set<String> names = Set.of(sectionNames);
         List<String> items = new ArrayList<>();
         boolean inSection = false;
-        for (String rawLine : value.split("\\R")) {
-            String line = stripMarkdown(rawLine);
+        for (String rawLine : value == null ? new String[0] : value.split("\\R")) {
+            String line = rawLine.replace("**", "").replace("`", "").trim();
             String heading = line.replaceFirst("^#{1,6}\\s*", "")
                     .replaceFirst("[：:]$", "").trim();
             if (names.contains(heading)) {
                 inSection = true;
                 continue;
             }
-            if (!inSection) {
-                continue;
-            }
-            if (line.matches("^#{1,6}\\s+.+")) {
-                break;
-            }
-            if (!line.startsWith("|") || !line.endsWith("|")) {
-                continue;
-            }
+            if (!inSection) continue;
+            if (line.matches("^#{1,6}\\s+.+")) break;
+            if (!line.startsWith("|") || !line.endsWith("|")) continue;
             String[] cells = line.substring(1, line.length() - 1).split("\\|");
-            if (cells.length < 2) {
-                continue;
-            }
+            if (cells.length < 2) continue;
             String label = normalizeText(cells[0]);
             String detail = normalizeText(cells[1]);
-            if (!isSemanticText(label) || !isSemanticText(detail)
-                    || "问题".equals(label) || "说明".equals(detail)) {
-                continue;
+            if (isSemanticText(label) && isSemanticText(detail)
+                    && !"问题".equals(label) && !"说明".equals(detail)) {
+                items.add(label + "：" + detail);
             }
-            items.add(label + "：" + detail);
         }
         return List.copyOf(items);
     }
 
-    private static String stripMarkdown(String value) {
-        return value == null ? "" : value.replace("**", "").replace("`", "").trim();
-    }
-
-    /** Rejects Markdown separators and punctuation-only pseudo values from semantic business arrays. */
-    private static boolean isSemanticText(String value) {
-        String normalized = normalizeText(value);
-        return !normalized.isBlank() && Pattern.compile("[\\p{L}\\p{N}]").matcher(normalized).find();
-    }
-
-    /** Reads either a prose label (`标题：...`) or a Markdown table row (`| 标题 | ... |`). */
-    private static String firstLabeledValue(String value, String... labels) {
-        String source = value == null ? "" : value;
-        for (String label : labels) {
-            String quoted = Pattern.quote(label);
-            String tableValue = firstMatch(source,
-                    "(?m)^\\s*\\|\\s*" + quoted + "\\s*\\|\\s*([^\\n|]+)");
-            if (!tableValue.isBlank()) {
-                return tableValue;
-            }
-            String proseValue = firstMatch(source,
-                    "(?m)^\\s*(?:[-*]\\s*)?" + quoted + "\\s*[：:]\\s*([^\\n|]+)");
-            if (!proseValue.isBlank()) {
-                return proseValue;
-            }
-        }
-        return "";
-    }
-
-    private static String normalizeParentReference(String value) {
+    private static String normalizeHistoricalParent(String value) {
         String normalized = normalizeText(value);
         Matcher code = Pattern.compile("(?i)\\b(DAS-[A-Z0-9]+)\\b").matcher(normalized);
         if (code.find()) {
             return code.group(1).toUpperCase(Locale.ROOT);
         }
         return normalizeText(normalized.replaceFirst("[（(].*$", ""));
+    }
+
+    private static String nonBlank(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value;
+    }
+
+    private static <T> List<T> nonEmpty(List<T> value, List<T> fallback) {
+        return value == null || value.isEmpty() ? fallback : value;
+    }
+
+    /** Rejects Markdown separators and punctuation-only pseudo values from semantic business arrays. */
+    private static boolean isSemanticText(String value) {
+        String normalized = normalizeText(value);
+        return !normalized.isBlank() && Pattern.compile("[\\p{L}\\p{N}]").matcher(normalized).find();
     }
 
     private record IntakeDraft(String classification,

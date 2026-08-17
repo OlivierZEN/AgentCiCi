@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-17T11:49:50Z
+updated_at: 2026-08-17T14:29:16Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-17T11:49:50Z
-last_run_status: passed_task_313_provider_lifecycle_local_with_authorized_business_acceptance_pending
+last_run_at: 2026-08-17T14:29:16Z
+last_run_status: passed_task_315_targeted_and_package_runtime_pending
 ---
 
 # Test Report
+
+## 2026-08-17 TASK-315 产品经理结构化语义判定与标准输出
+
+- 状态：`passed_task_315_targeted_and_package_runtime_pending`。
+- 后端定向：`AliyunBailianClientTest`、`DevAutopilotDialogueDecisionServiceTest`、`DeliveryWriteReceiptGuardTest`、`ChatOrchestratorServiceModelIdentityTest`、创建/删除/转派 Tool 与历史受理校准 8 个测试类共 75 项通过，0 failure / 0 error。
+- 覆盖：当前模型强制结构化函数调用、隐含创建意图、包含“创建项目”的否定表达、固定草案字节级稳定、低置信度澄清、结构化判定后的研发查询工具裁剪、确认协议回归、无关键词问题下的伪成功阻断和 CRM 非误伤。
+- 构建与静态：`mvn -q -DskipTests package`、`git diff --check` 通过。
+- 全量边界：后端全量测试曾进入本机共享 PostgreSQL 不可用重试，未进入全部业务断言后手动中止；未修改或 repair 共享测试库，因此不声明全量套件通过。
+- 运行边界：本地主线归并和 `https://cici.localhost/` 更新、版本回读、健康检查与真实固定模型对话验证仍待完成；UAT、生产未修改。
 
 ## 2026-08-17 TASK-313 内部租户应用注册中心本地验证
 

@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-17T11:49:50Z
+updated_at: 2026-08-17T14:20:00Z
 updated_by: codex
 phase: review
-active_task: TASK-313
-next_action: "由已登录平台管理员以真实内部应用创建并测试运行连接，发布带依赖版本，再为测试租户执行开通并核对 Provider 与 operation/step 审计。"
+active_task: TASK-315
+next_action: "完成结构化语义判定全量回归，合并本地 main，并从该提交重建 cici.localhost 后执行真实模型对话验收。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- `TASK-315 / FEAT-192` 正在修复 DevAutopilot 产品经理对话的自然语言规则分流：创建、事实查询和转派草案改为当前模型强制结构化语义判定，明确结果由服务端固定模板输出；固定确认协议和 Semattice 写后回读保持确定性治理，可信回执门禁不再读取用户问题关键词。初步定向 7 个测试类已通过；本地 main、开发环境和真实模型验收尚未完成，UAT/生产未修改。
 
 - `TASK-302 / FEAT-183` 已将系统 API 首页的治理入口从“接入应用”统一为“受信应用”，目标页标题、无障碍标签和空态同步采用同一对象名；“登记应用”“编辑受信应用”等动作词保持不变。代码提交 `a81e3b72` 已进入本地 `main`；前端定向 10 项、全量 52 文件/287 项、production build 与 `git diff --check` 通过。本地前端从包含该提交的最新代码主线 `2188e576` 构建为 `2.8.61-dev.2188e57`，目标路由 200、Nginx 有效、healthy/restart=0，部署 JS 已回读“受信应用”；此后的 main 变更仅为状态文档，不影响制品。浏览器正确进入平台登录边界，授权态视觉回读待平台管理员登录后完成；远端、UAT、生产未修改。
 

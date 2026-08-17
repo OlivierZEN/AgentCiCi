@@ -16,6 +16,46 @@ import org.springframework.web.client.RestClient;
 class AliyunBailianClientTest {
 
     @Test
+    void requiredToolCompletionForcesOneZeroTemperatureStructuredDecision() throws Exception {
+        ObjectMapper objectMapper = new ObjectMapper();
+        AtomicReference<String> requestBody = new AtomicReference<>();
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/chat/completions", exchange -> {
+            requestBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            byte[] response = """
+                    {"choices":[{"message":{"role":"assistant","content":"","tool_calls":[{"id":"decision-1","type":"function","function":{"name":"resolve_devautopilot_dialogue","arguments":"{\\\"action\\\":\\\"OTHER\\\"}"}}]},"finish_reason":"tool_calls"}]}
+                    """.getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(200, response.length);
+            try (var body = exchange.getResponseBody()) {
+                body.write(response);
+            }
+        });
+        server.start();
+        try {
+            String baseUrl = "http://127.0.0.1:" + server.getAddress().getPort();
+            AliyunBailianClient client = new AliyunBailianClient(RestClient.builder(), objectMapper);
+            Map<String, Object> tool = Map.of("type", "function", "function", Map.of(
+                    "name", "resolve_devautopilot_dialogue",
+                    "parameters", Map.of("type", "object")));
+
+            AliyunBailianClient.ChatCompletionResult result =
+                    client.requiredToolCompletionWithCredentials(
+                            "semantic-model", List.of(Map.of("role", "user", "content", "任意自然语言")),
+                            tool, "resolve_devautopilot_dialogue", baseUrl, "test-key", 128, 8_192);
+
+            JsonNode sent = objectMapper.readTree(requestBody.get());
+            assertThat(sent.path("temperature").asInt()).isZero();
+            assertThat(sent.path("parallel_tool_calls").asBoolean()).isFalse();
+            assertThat(sent.path("tool_choice").path("function").path("name").asText())
+                    .isEqualTo("resolve_devautopilot_dialogue");
+            assertThat(result.toolCalls()).singleElement()
+                    .satisfies(call -> assertThat(call.name()).isEqualTo("resolve_devautopilot_dialogue"));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
     void boundedCompletionSendsOutputBudgetAndRejectsResponseBeforeJsonParsing() throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
         AtomicReference<String> requestBody = new AtomicReference<>();
