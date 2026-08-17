@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-148
 title: 应用未登录态自动跳转 OIDC
-status: in_progress
+status: verified
 owner_role: frontend-agent
 task_ids: TASK-255, TASK-312
 related_decisions: FEAT-136 Keycloak 统一身份认证
 related_issues: /app 未登录态停留在统一登录中间页
-updated_at: 2026-08-17T17:30:00+08:00
+updated_at: 2026-08-17T09:35:00Z
 updated_by: codex
 ---
 
@@ -37,5 +37,6 @@ updated_by: codex
 
 ## 实现进展
 
-- 当前状态：TASK-312 正在移除历史手动回退卡片并补充页面结构回归。
+- 当前状态：TASK-312 已完成并进入本地 `main`；页面结构回归、前端全量测试、生产构建和本地浏览器验收通过。
 - 无会话应用页继续直接进入既有 OIDC 入口；OIDC/CloudCC 回调票据保持专用处理，正常中转态不再提供手动触发入口。
+- 本地 `cici.localhost` 未登录桌面会话无需点击即进入 `sso.localhost`；中转页截图只保留主视觉，旧表单容器和按钮均为 0。

@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-17T09:11:54Z
+updated_at: 2026-08-17T09:35:00Z
 updated_by: codex
 board_status: active
 ---
@@ -17,14 +17,15 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-312 - 登录中转页移除手动触发区
 
-- status: `in_progress`
+- status: `review`
 - priority: `high`
 - owner_role: `frontend-agent`
 - claimed_by: `codex`
 - spec_path: `docs/specs/FEAT-148-app-auto-oidc-redirect.md`
 - task_status_path: `.claw/tasks/TASK-312.md`
 - blocked_by: `none`
-- next_action: `删除手动登录卡片，验证 /app 自动进入统一身份登录并完成本地开发环境验收。`
+- completion_evidence: `745ee145；前端 51 文件/282 项、build；2.8.61-dev.745ee14；cici-frontend healthy/restart=0；浏览器无点击进入 SSO，旧表单和按钮均为 0`
+- next_action: `本地效果已完成；如需进入 UAT，另行冻结下一 beta 候选并执行发布门禁。`
 
 ### TASK-311 - DevAutopilot 可恢复租户开通
 

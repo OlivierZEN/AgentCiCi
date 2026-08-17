@@ -2962,3 +2962,11 @@ last_run_status: passed_agentcici_2_8_61_beta_25_uat_technical_gate
 - 运行态：backend、frontend 及依赖服务健康，V115 `ecosystem trusted application` 迁移成功；`/platform/system-apis` 和 `/platform/system-apis/applications` 为 200，匿名公司目录/上下文为 JSON 401，误用 GET 调用公司上下文为 JSON 405。
 - 全栈门禁：环境域名源码扫描与 `./stack verify` 均通过，覆盖共享数据库隔离、TLS 边缘、OIDC、应用健康/版本和匿名鉴权边界。
 - 未验证边界：当前没有可用于验收的独立 Keycloak Client 与 HUMAN 用户凭据，未执行真实成功登录、公司列表/上下文和后续 `X-Company-Id` 调用；授权态运营 UI 视觉验收亦待平台运营账号完成。本次未修改 UAT/生产。
+
+## 2026-08-17 TASK-312 登录中转页自动跳转与结构精简
+
+- 代码与结构：正常 `login_mode2` 中转态不再渲染说明卡片、手动登录按钮、退出提示或联系管理员文案；保留既有主视觉和同源 `/auth/oidc/login` 一次性自动跳转，统一登录完成失败时仅显示无按钮的最小错误提示。
+- 自动化：`oidcAutoRedirect.test.ts` 与 `AssistantLoginTransition.test.tsx` 共 7/7 通过；前端全量 51 个测试文件、282 项通过；`npm run build` 通过，仅保留既有大 chunk warning。
+- 本地主线与制品：提交 `745ee145f53a15d76aecebf5ff3cf056d54d6b7f` 已进入本地 `main`；仅重建 `cici-frontend`，运行版本 `2.8.61-dev.745ee14`、revision `745ee145f53a`、镜像 ID `sha256:461dd5628d41c16b68e93aed83a2c3469c1d313cba15aa997ec3a60d1961c05c`，healthy、restart=0。
+- 路由与真实浏览器：`https://cici.localhost/app` 返回 200；全新未登录桌面会话没有任何点击即跳转到 `sso.localhost` OIDC 登录页。带本地无效完成票据的受控中转态用于视觉检查，主视觉存在、旧表单容器 0、按钮 0、正文为空，控制台 0 error / 0 warning。
+- 影响边界：backend、Nginx 和其他产品容器未重建且继续 healthy/restart=0；UAT、生产、ACR、Git tag 和远端 `main` 均未修改。

@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-312
-status: in_progress
-updated_at: 2026-08-17T17:30:00+08:00
+status: review
+updated_at: 2026-08-17T09:35:00Z
 updated_by: codex
 assignee: codex
 owner_role: frontend-agent
@@ -13,8 +13,8 @@ spec_path: docs/specs/FEAT-148-app-auto-oidc-redirect.md
 
 ## Current State
 
-- Status: `in_progress`
-- Next action: 删除当前登录中转页的说明卡片和按钮，验证进入 `/app` 后自动发起统一登录。
+- Status: `review`
+- Next action: 用户确认本地效果后，另行决定是否冻结并发布下一 UAT beta；本任务未修改 UAT 或生产。
 - Blocked: none
 
 ## Scope
@@ -29,3 +29,11 @@ spec_path: docs/specs/FEAT-148-app-auto-oidc-redirect.md
 - `/app` 无有效会话时无需点击即可进入统一身份登录。
 - 回调票据继续由专用流程消费，失败时显示无手动按钮的最小错误提示。
 - 定向测试、前端全量测试、生产构建、本地主线和 `cici.localhost` 桌面路由验证通过。
+
+## Evidence
+
+- 本地主线代码提交：`745ee145f53a15d76aecebf5ff3cf056d54d6b7f`。
+- 定向测试 7/7、前端全量 51 文件/282 项和 production build 通过。
+- `cici-frontend` 从本地 `main` 构建为 `2.8.61-dev.745ee14`，镜像 revision `745ee145f53a`，healthy、restart=0。
+- `https://cici.localhost/app` 返回 200；全新未登录浏览器会话未点击即进入 `sso.localhost` OIDC 登录页。
+- 受控回调态桌面检查：主视觉存在，旧表单容器 0、按钮 0、页面正文为空，控制台 0 error / 0 warning。
