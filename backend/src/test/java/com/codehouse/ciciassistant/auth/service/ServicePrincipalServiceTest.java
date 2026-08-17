@@ -31,13 +31,35 @@ class ServicePrincipalServiceTest {
     private final UserRepository users = mock(UserRepository.class);
     private final KeycloakIdentityProvisioningService keycloak = mock(KeycloakIdentityProvisioningService.class);
     private final PlatformAuditService audit = mock(PlatformAuditService.class);
+    private final SematticePrincipalProjectionClient projections = mock(SematticePrincipalProjectionClient.class);
     private ServicePrincipalService service;
 
     @BeforeEach
     void setUp() {
-        service = new ServicePrincipalService(jdbc, users, keycloak, audit, mock(SematticePrincipalProjectionClient.class),
+        service = new ServicePrincipalService(jdbc, users, keycloak, audit, projections,
                 List.of("identity.principal.sync", "runtime.record.read", "runtime.record.update"),
                 List.of("identity.principal.sync", "runtime.record.read", "runtime.record.update", "runtime.record.delete"));
+    }
+
+    @Test
+    void synchronizesOnlyAnActiveHumanFromTheCurrentTenant() {
+        UserEntity member = activeMember("human-admin");
+        when(users.findByCompany_IdAndAccount_IdAndMemberStatus(
+                "company-a", "human-admin", UserEntity.STATUS_ACTIVE)).thenReturn(Optional.of(member));
+
+        service.synchronizeHumanProjection("company-a", "human-admin");
+
+        verify(projections).syncHuman(member);
+    }
+
+    @Test
+    void rejectsHumanProjectionOutsideTheCurrentTenant() {
+        when(users.findByCompany_IdAndAccount_IdAndMemberStatus(
+                "company-a", "human-other", UserEntity.STATUS_ACTIVE)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.synchronizeHumanProjection("company-a", "human-other"))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessageContaining("当前组织有效成员");
     }
 
     @Test

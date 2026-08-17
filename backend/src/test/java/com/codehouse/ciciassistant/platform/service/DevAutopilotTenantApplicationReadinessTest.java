@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
@@ -166,6 +167,70 @@ class DevAutopilotTenantApplicationReadinessTest {
         assertThat(ordered).isEqualTo(reversed).hasSizeLessThanOrEqualTo(96);
         assertThat(withDeveloper).isNotEqualTo(ordered).hasSizeLessThanOrEqualTo(96);
         assertThat(ordered).startsWith(SematticeDevAutopilotAuthorizationClient.TEMPLATE_VERSION + ":");
+    }
+
+    @Test
+    void authorizationAssignmentsIncludeActiveTenantAndExplicitApplicationAdministrators() {
+        when(jdbc.query(contains("SELECT DISTINCT member.account_id"), any(RowMapper.class),
+                eq("activation-a"), eq("company-a"))).thenReturn(List.of(
+                new SematticeDevAutopilotAuthorizationClient.Assignment("human-owner", "application_admin"),
+                new SematticeDevAutopilotAuthorizationClient.Assignment("human-org-admin", "application_admin"),
+                new SematticeDevAutopilotAuthorizationClient.Assignment("human-explicit-admin", "application_admin")));
+        when(jdbc.query(contains("SELECT external_id,logical_role"), any(RowMapper.class),
+                eq("activation-a"))).thenReturn(List.of(
+                new SematticeDevAutopilotAuthorizationClient.Assignment("service-pm", "product_manager"),
+                new SematticeDevAutopilotAuthorizationClient.Assignment("service-developer", "developer")));
+
+        var assignments = service.authorizationAssignments("company-a", "activation-a");
+
+        assertThat(assignments).extracting(SematticeDevAutopilotAuthorizationClient.Assignment::principalId)
+                .containsExactly("human-explicit-admin", "human-org-admin", "human-owner", "service-developer", "service-pm");
+        verify(jdbc).query(org.mockito.ArgumentMatchers.argThat(sql -> sql.contains("member.member_status='ACTIVE'")
+                        && sql.contains("member.role_code IN ('OWNER','ORG_ADMIN')")
+                        && sql.contains("app_access.role_code='APP_ADMIN'")
+                        && sql.contains("app_access.status='ACTIVE'")),
+                any(RowMapper.class), eq("activation-a"), eq("company-a"));
+    }
+
+    @Test
+    void authorizationAssignmentsFailClosedWithoutAnActiveHumanAdministrator() {
+        when(jdbc.query(contains("SELECT DISTINCT member.account_id"), any(RowMapper.class),
+                eq("activation-a"), eq("company-a"))).thenReturn(List.of());
+
+        assertThatThrownBy(() -> service.authorizationAssignments("company-a", "activation-a"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("DevAutopilot application administrator is unavailable");
+    }
+
+    @Test
+    void authorizationReconciliationProjectsEveryHumanAdministratorBeforeApplyingTheTemplate() {
+        JdbcTemplate authorizationJdbc = mock(JdbcTemplate.class);
+        ServicePrincipalService principals = mock(ServicePrincipalService.class);
+        SematticeDevAutopilotAuthorizationClient authorization = mock(SematticeDevAutopilotAuthorizationClient.class);
+        DevAutopilotTenantApplicationService authorizationService = new DevAutopilotTenantApplicationService(
+                authorizationJdbc, mock(CompanyRepository.class), mock(SematticeProvisioningService.class),
+                mock(SematticeDevAutopilotTemplateClient.class), authorization, principals,
+                mock(AgentDefinitionService.class), mock(DevAutopilotProductManagerAgentPublisher.class),
+                mock(AgentServicePrincipalExecutionService.class), mock(PlatformAuditService.class),
+                List.of("runtime.record.read"), List.of("runtime.record.read"));
+        when(authorizationJdbc.query(contains("SELECT DISTINCT member.account_id"), any(RowMapper.class),
+                eq("activation-a"), eq("company-a"))).thenReturn(List.of(
+                new SematticeDevAutopilotAuthorizationClient.Assignment("human-owner", "application_admin"),
+                new SematticeDevAutopilotAuthorizationClient.Assignment("human-org-admin", "application_admin")));
+        when(authorizationJdbc.query(contains("SELECT external_id,logical_role"), any(RowMapper.class),
+                eq("activation-a"))).thenReturn(List.of(
+                new SematticeDevAutopilotAuthorizationClient.Assignment("service-pm", "product_manager")));
+        when(authorization.apply(eq("company-a"), eq("activation-a"), anyString(), any())).thenReturn(
+                new SematticeDevAutopilotAuthorizationClient.AuthorizationView(
+                        "company-a", "tenant-a", SematticeDevAutopilotAuthorizationClient.TEMPLATE_VERSION,
+                        "a".repeat(64), 4, 4, 7, 3, true, "applied"));
+
+        authorizationService.reconcileAuthorizationTemplate("company-a", "activation-a");
+
+        InOrder order = inOrder(principals, authorization);
+        order.verify(principals).synchronizeHumanProjection("company-a", "human-org-admin");
+        order.verify(principals).synchronizeHumanProjection("company-a", "human-owner");
+        order.verify(authorization).apply(eq("company-a"), eq("activation-a"), anyString(), any());
     }
 
     @Test

@@ -360,6 +360,14 @@ public class ServicePrincipalService {
                 String.valueOf(principal.get("lifecycleStatus")));
     }
 
+    /** Strictly project an active tenant-local HUMAN before assigning a managed Semattice role. */
+    public void synchronizeHumanProjection(String companyId, String principalId) {
+        UserEntity member = userRepository.findByCompany_IdAndAccount_IdAndMemberStatus(
+                        required(companyId, "companyId"), required(principalId, "principalId"), UserEntity.STATUS_ACTIVE)
+                .orElseThrow(() -> new ForbiddenException("Semattice HUMAN 主体必须是当前组织有效成员"));
+        projections.syncHuman(member);
+    }
+
     private void synchronizeProjectionSafely(String companyId, String principalId, String actorPrincipalId) {
         try {
             synchronizeProjection(companyId, principalId, actorPrincipalId);
