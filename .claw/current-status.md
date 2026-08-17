@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-17T09:59:48Z
+updated_at: 2026-08-17T10:28:39Z
 updated_by: codex
-phase: implementation
+phase: review
 active_task: TASK-313
-next_action: "实现 FEAT-191 的 V120 内部应用目录、平台治理 API 与动态租户应用读模型；不修改 UAT/生产。"
+next_action: "由已登录平台管理员复核租户应用目录、版本/依赖发布和租户应用中心动态卡片；通用 Provider 生命周期执行器另建后续切片。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-313 / FEAT-191` 已获用户设计确认并进入实现：第一期在 AgentCiCi 建立内部应用、版本、依赖、发布门禁和动态租户应用中心；保留 DevAutopilot 既有可恢复 Saga 写链路，不修改 Semattice/DevAutopilot 子仓，不触碰 UAT/生产。
+- `TASK-313 / FEAT-191` 第一期已进入 review：提交 `1b0776e0` 在 AgentCiCi 建立内部应用、不可变版本、依赖和发布门禁，seed 三个既有应用，并提供目录治理 API、租户动态聚合 API、运营目录页面和动态应用中心；DevAutopilot 既有可恢复 Saga 写链路保持兼容。后端定向测试/package、前端 52 文件/287 项/build、V120、三个 seed、匿名 401、运行版本 `2.8.61-dev.1b0776e`、backend/frontend healthy/restart=0 和完整 `./stack verify` 通过。可控浏览器会话已过期，授权态目录/发布/租户卡片视觉验收待平台管理员登录后完成；通用 Provider 生命周期执行器属于后续切片。UAT/生产未修改。
 
 - `TASK-312 / FEAT-148` 已发布 UAT `2.8.61-beta.26 / a322fd91324b`：远端 main、tag、镜像和运行 commit 一致；完整备份 `/data/apps/agentcici/backups/20260817T093959Z-before-2.8.61-beta.26` 校验通过，回滚目标 beta.25。仅重建 backend/frontend，状态服务 ID 不变；六容器 healthy/restart=0，health、Flyway、Nginx、公开 smoke、JSON 401 与稳定日志通过。真实未登录桌面会话无需点击即进入统一身份中心，旧表单和按钮均为 0，浏览器无 error/warning。生产未修改。
 

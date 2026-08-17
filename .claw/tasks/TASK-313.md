@@ -2,11 +2,11 @@
 kind: task-status
 task_id: TASK-313
 feature_id: FEAT-191
-status: in_progress
+status: review
 priority: critical
 owner_role: fullstack-agent
 claimed_by: codex
-updated_at: 2026-08-17T09:59:48Z
+updated_at: 2026-08-17T10:28:39Z
 updated_by: codex
 ---
 
@@ -37,3 +37,12 @@ updated_by: codex
 - 前端全量 `52` 个测试文件、`287` 个测试通过，TypeScript 与 Vite production build 通过。
 - 仓库全量后端测试启动后受既有测试数据库 V81 checksum 漂移及既有 Ontology AI mock 失败阻断；运行至中止时为 `551` tests、`19` failures、`157` errors、`5` skipped。本任务定向测试不受影响，未执行 Flyway repair。
 - `.claw` 全仓校验器受既有历史格式债务阻断；输出未报告 FEAT-191 或 TASK-313，本任务文件 front matter 符合当前 schema。未借机改写历史任务与规格。
+- 实现提交 `1b0776e0a60d` 已直接进入 AgentCiCi 本地 `main`；远端 `main`、UAT 与生产均未修改。
+- 本地 Flyway V120 成功，目录回读 `agentcici/devautopilot/semattice` 均为 `PUBLISHED / 1.0.0`；目录 SPA 为 HTTP 200，匿名目录 API 为 JSON 401。
+- backend/frontend 从本地 `main@1b0776e0a60d` 构建为 `2.8.61-dev.1b0776e`，均 healthy、restart=0；后端 `/system/version`、前端静态资源名与提交指纹一致。
+- `cc-local-stack ./stack verify` 通过部署域名门禁、共享数据库隔离、TLS、OIDC、应用健康/版本与匿名鉴权边界。
+- Chrome 原运营平台页的登录态在重载后过期并跳转登录页；未读取浏览器存储或绕过认证，授权态目录、发布和租户应用卡片视觉验收待平台管理员登录后完成。
+
+## 后续切片
+
+- 通用 `tenant_application_operation` 持久化步骤执行器、Provider 标准生命周期回调、租户版本升级和自动依赖计划不属于本次第一期；新增应用本期可完成受治理登记、验证、发布并动态进入租户应用中心，但只有现有三类适配器具备实际开通动作。

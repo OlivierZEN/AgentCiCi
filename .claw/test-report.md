@@ -1,14 +1,26 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-17T09:43:30Z
+updated_at: 2026-08-17T10:28:39Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-17T09:11:54Z
-last_run_status: passed_agentcici_2_8_61_beta_25_uat_technical_gate
+last_run_at: 2026-08-17T10:28:24Z
+last_run_status: passed_task_313_local_technical_with_authorized_visual_pending
 ---
 
 # Test Report
+
+## 2026-08-17 TASK-313 内部租户应用注册中心本地验证
+
+- 状态：`passed_task_313_local_technical_with_authorized_visual_pending`。
+- 后端：`InternalApplicationRegistryServiceTest` 与 `TenantApplicationCatalogServiceTest` 定向通过，production package 通过；覆盖非法环境地址、语义版本约束、依赖版本满足、依赖阻断和既有三应用兼容投影。
+- 前端：全量 52 个测试文件、287 项通过；TypeScript 与 Vite production build 通过，仅有既有大 chunk warning。新增目录导航、应用代码/版本校验和动态卡片回归。
+- 全量边界：后端全量运行至中止时为 551 tests、19 failures、157 errors、5 skipped；Spring 启动型用例主要受共享 `agentcici_test` V81 checksum 漂移阻断，另有既有 Ontology AI mock 断言失败。本轮未 repair 数据库，定向测试与 package 无失败。
+- 状态文件：全仓 `.claw` validator 被既有历史规格 front matter、旧任务归档等债务阻断，未报告 FEAT-191/TASK-313；本轮未扩张范围修复历史状态。
+- 本地主线与迁移：提交 `1b0776e0a60d` 已进入本地 `main`；Flyway V120 `success=true`，`agentcici/devautopilot/semattice` seed 均为 `PUBLISHED / 1.0.0`。
+- 本地运行：backend/frontend 均为 `2.8.61-dev.1b0776e`，healthy/restart=0；后端版本和前端资源名回读 commit 一致，目录 SPA 200，匿名目录 API 401；完整 `cc-local-stack ./stack verify` 通过。
+- 浏览器边界：Chrome 原运营平台页的会话在重载后已过期，正式路由正确进入平台登录页；未读取存储、猜测密码或伪造会话。授权态目录、发布与租户动态卡片仍待平台管理员登录后复核。
+- 发布边界：仅更新本地开发测试环境；远端 main、UAT、生产均未修改。
 
 ## 2026-08-17 AgentCiCi UAT `2.8.61-beta.26`
 
