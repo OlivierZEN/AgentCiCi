@@ -4,6 +4,7 @@ import com.codehouse.ciciassistant.auth.RequirePlatformRole;
 import com.codehouse.ciciassistant.auth.RoleCodes;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.codehouse.ciciassistant.platform.service.InternalApplicationRegistryService;
+import com.codehouse.ciciassistant.platform.service.InternalApplicationProviderConnectionService;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -25,9 +26,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class PlatformInternalApplicationController {
 
     private final InternalApplicationRegistryService registry;
+    private final InternalApplicationProviderConnectionService providerConnections;
 
-    public PlatformInternalApplicationController(InternalApplicationRegistryService registry) {
+    public PlatformInternalApplicationController(InternalApplicationRegistryService registry,
+                                                 InternalApplicationProviderConnectionService providerConnections) {
         this.registry = registry;
+        this.providerConnections = providerConnections;
     }
 
     @GetMapping
@@ -92,6 +96,50 @@ public class PlatformInternalApplicationController {
             @Valid @RequestBody StatusRequest request) {
         return ApiResponse.ok(registry.changeStatus(appCode, request.status(), actorId(), actorRole()),
                 "Internal application status updated");
+    }
+
+    @GetMapping("/{appCode}/connections")
+    @RequirePlatformRole(RoleCodes.PLATFORM_ADMIN)
+    public ApiResponse<List<InternalApplicationProviderConnectionService.ConnectionView>> listConnections(
+            @PathVariable @Pattern(regexp = "^[a-z][a-z0-9-]{1,63}$") String appCode) {
+        return ApiResponse.ok(providerConnections.list(appCode));
+    }
+
+    @PostMapping("/{appCode}/connections")
+    @RequirePlatformRole(RoleCodes.PLATFORM_ADMIN)
+    public ApiResponse<InternalApplicationProviderConnectionService.ConnectionView> createConnectionRevision(
+            @PathVariable @Pattern(regexp = "^[a-z][a-z0-9-]{1,63}$") String appCode,
+            @Valid @RequestBody ProviderConnectionRequest request) {
+        return ApiResponse.ok(providerConnections.createRevision(
+                appCode, request.toCommand(), actorId(), actorRole()),
+                "Provider connection revision created");
+    }
+
+    @PostMapping("/{appCode}/connections/{bindingKey}/tests")
+    @RequirePlatformRole(RoleCodes.PLATFORM_ADMIN)
+    public ApiResponse<InternalApplicationProviderConnectionService.ConnectionTestView> testConnection(
+            @PathVariable @Pattern(regexp = "^[a-z][a-z0-9-]{1,63}$") String appCode,
+            @PathVariable @Pattern(regexp = "^[a-z][a-z0-9._-]{1,127}$") String bindingKey) {
+        return ApiResponse.ok(providerConnections.test(appCode, bindingKey, actorId(), actorRole()),
+                "Provider connection test completed");
+    }
+
+    @PostMapping("/{appCode}/connections/{bindingKey}/activations")
+    @RequirePlatformRole(RoleCodes.PLATFORM_ADMIN)
+    public ApiResponse<InternalApplicationProviderConnectionService.ConnectionView> activateConnection(
+            @PathVariable @Pattern(regexp = "^[a-z][a-z0-9-]{1,63}$") String appCode,
+            @PathVariable @Pattern(regexp = "^[a-z][a-z0-9._-]{1,127}$") String bindingKey) {
+        return ApiResponse.ok(providerConnections.activate(appCode, bindingKey, actorId(), actorRole()),
+                "Provider connection activated");
+    }
+
+    @PostMapping("/{appCode}/connections/{bindingKey}/disabling")
+    @RequirePlatformRole(RoleCodes.PLATFORM_ADMIN)
+    public ApiResponse<InternalApplicationProviderConnectionService.ConnectionView> disableConnection(
+            @PathVariable @Pattern(regexp = "^[a-z][a-z0-9-]{1,63}$") String appCode,
+            @PathVariable @Pattern(regexp = "^[a-z][a-z0-9._-]{1,127}$") String bindingKey) {
+        return ApiResponse.ok(providerConnections.disable(appCode, bindingKey, actorId(), actorRole()),
+                "Provider connection disabled");
     }
 
     private String actorId() {
@@ -164,5 +212,31 @@ public class PlatformInternalApplicationController {
     }
 
     public record StatusRequest(@NotBlank String status) {
+    }
+
+    public record ProviderConnectionRequest(
+            @NotBlank @Pattern(regexp = "^[a-z][a-z0-9._-]{1,127}$") String bindingKey,
+            @NotBlank @Size(max = 128) String displayName,
+            @NotBlank @Pattern(regexp = "^[a-z][a-z0-9_-]{1,63}$") String environmentKey,
+            @NotBlank String networkScope,
+            @NotBlank @Size(max = 1024) String baseUrl,
+            @NotBlank @Size(max = 64) String contractVersion,
+            @NotBlank String authType,
+            @Size(max = 128) String secretRef,
+            @NotBlank @Size(max = 256) String healthPath,
+            @NotBlank @Size(max = 256) String activatePath,
+            @Size(max = 256) String reconcilePath,
+            @Size(max = 256) String suspendPath,
+            @Size(max = 256) String resumePath,
+            @Size(max = 256) String upgradePath,
+            Integer timeoutMs,
+            Integer maxAttempts) {
+
+        private InternalApplicationProviderConnectionService.ConnectionCommand toCommand() {
+            return new InternalApplicationProviderConnectionService.ConnectionCommand(
+                    bindingKey, displayName, environmentKey, networkScope, baseUrl, contractVersion,
+                    authType, secretRef, healthPath, activatePath, reconcilePath, suspendPath,
+                    resumePath, upgradePath, timeoutMs, maxAttempts);
+        }
     }
 }

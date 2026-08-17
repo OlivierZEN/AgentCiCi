@@ -21,15 +21,18 @@ public class TenantApplicationCatalogService {
     private final InternalApplicationRegistryService registry;
     private final SematticeProvisioningService sematticeProvisioning;
     private final DevAutopilotTenantApplicationService devAutopilot;
+    private final GenericTenantApplicationLifecycleService genericLifecycle;
 
     public TenantApplicationCatalogService(CompanyRepository companies,
                                            InternalApplicationRegistryService registry,
                                            SematticeProvisioningService sematticeProvisioning,
-                                           DevAutopilotTenantApplicationService devAutopilot) {
+                                           DevAutopilotTenantApplicationService devAutopilot,
+                                           GenericTenantApplicationLifecycleService genericLifecycle) {
         this.companies = companies;
         this.registry = registry;
         this.sematticeProvisioning = sematticeProvisioning;
         this.devAutopilot = devAutopilot;
+        this.genericLifecycle = genericLifecycle;
     }
 
     @Transactional(readOnly = true)
@@ -46,12 +49,21 @@ public class TenantApplicationCatalogService {
         Map<String, RuntimeSnapshot> runtime = runtimeSnapshots(company);
         List<ApplicationView> applications = new ArrayList<>();
         for (InternalApplicationRegistryService.ApplicationSummaryView application : catalog) {
-            RuntimeSnapshot snapshot = runtime.getOrDefault(application.appCode(), RuntimeSnapshot.notEnabled());
+            RuntimeSnapshot snapshot = runtime.get(application.appCode());
+            if (snapshot == null) {
+                GenericTenantApplicationLifecycleService.RuntimeView generic =
+                        genericLifecycle.runtime(companyId, application.appCode());
+                snapshot = new RuntimeSnapshot(
+                        generic.enabled(), generic.installedVersion(), generic.desiredState(), generic.actualState(),
+                        generic.healthState(), generic.initializationReady(), generic.activationStage(),
+                        generic.failedStage(), generic.lastErrorCode(), generic.attemptCount());
+            }
             InternalApplicationRegistryService.VersionView version = defaultVersion(application);
             List<DependencyView> dependencies = dependencies(version, runtime);
             boolean dependencyBlocked = dependencies.stream()
                     .anyMatch(item -> item.required() && !item.satisfied());
-            List<String> actions = actions(application, snapshot, dependencyBlocked);
+            boolean supported = activationSupported(application, version);
+            List<String> actions = actions(application, snapshot, dependencyBlocked, supported);
             String healthState = dependencyBlocked ? "BLOCKED" : snapshot.healthState();
             applications.add(new ApplicationView(
                     application.appCode(),
@@ -68,7 +80,7 @@ public class TenantApplicationCatalogService {
                     snapshot.actualState(),
                     healthState,
                     snapshot.initializationReady(),
-                    activationSupported(application.appCode()),
+                    supported,
                     dependencies,
                     snapshot.activationStage(),
                     snapshot.failedStage(),
@@ -161,7 +173,8 @@ public class TenantApplicationCatalogService {
 
     private List<String> actions(InternalApplicationRegistryService.ApplicationSummaryView application,
                                  RuntimeSnapshot runtime,
-                                 boolean dependencyBlocked) {
+                                 boolean dependencyBlocked,
+                                 boolean activationSupported) {
         LinkedHashSet<String> actions = new LinkedHashSet<>();
         if ("agentcici".equals(application.appCode())) {
             actions.add("OPEN");
@@ -195,14 +208,36 @@ public class TenantApplicationCatalogService {
             actions.add("OPEN");
             return List.copyOf(actions);
         }
-        if (runtime.enabled()) {
-            actions.add("OPEN");
+        if (!activationSupported) {
+            return List.copyOf(actions);
+        }
+        if (!runtime.enabled()) {
+            if (!dependencyBlocked && !"PROVISIONING".equals(runtime.actualState())) actions.add("ACTIVATE");
+        } else if ("SUSPENDED".equals(runtime.actualState())) {
+            actions.add("RESUME");
+        } else {
+            actions.add("RECONCILE");
+            actions.add("SUSPEND");
         }
         return List.copyOf(actions);
     }
 
-    private static boolean activationSupported(String appCode) {
-        return Set.of("agentcici", "semattice", "devautopilot").contains(appCode);
+    private boolean activationSupported(
+            InternalApplicationRegistryService.ApplicationSummaryView application,
+            InternalApplicationRegistryService.VersionView version) {
+        if (Set.of("agentcici", "semattice", "devautopilot").contains(application.appCode())) {
+            return true;
+        }
+        return version != null && version.providerBindingKey() != null
+                && providerConnectionSupported(application.appCode(), version.providerBindingKey());
+    }
+
+    private boolean providerConnectionSupported(String appCode, String bindingKey) {
+        try {
+            return genericLifecycle.connectionSupported(appCode, bindingKey);
+        } catch (RuntimeException exception) {
+            return false;
+        }
     }
 
     private static String managementRoute(String companyId, String appCode) {

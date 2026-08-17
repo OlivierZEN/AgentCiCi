@@ -317,6 +317,28 @@ export default function PlatformTenantApplicationsPage() {
     } catch (err) { setError(err instanceof Error ? err.message : "DevAutopilot 初始化补齐失败"); } finally { setBusy(false); }
   }
 
+  async function executeGenericApplicationOperation(application: DevAutopilotApplication, action: string) {
+    if (!companyId || !application.appCode) return;
+    setBusy(true); setError(""); setMessage("");
+    try {
+      const idempotencyKey = `platform-${action.toLowerCase()}-${globalThis.crypto?.randomUUID?.() ?? Date.now()}`;
+      const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(companyId)}/applications/${encodeURIComponent(application.appCode)}/operations`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ operationType: action, idempotencyKey }),
+      });
+      const { body } = await safeFetchJson(response);
+      if (!response.ok || !body?.success) throw new Error(body?.message ?? `HTTP ${response.status}`);
+      const result = body.data as { status?: string; errorCode?: string } | undefined;
+      if (result?.status !== "SUCCEEDED") throw new Error(result?.errorCode ?? "应用生命周期操作失败");
+      await refreshApplications();
+      setMessage(`${application.displayName ?? application.appCode} ${action === "ACTIVATE" ? "已完成初始化并开通" : action === "SUSPEND" ? "已暂停" : action === "RESUME" ? "已恢复" : "已完成状态协调"}。`);
+    } catch (err) {
+      try { await refreshApplications(); } catch { /* keep the last safe snapshot */ }
+      setError(err instanceof Error ? err.message : "应用生命周期操作失败");
+    } finally { setBusy(false); }
+  }
+
   async function reconcileDevAutopilotIntake() {
     if (!companyId || !isValidIntakeReconciliationInput(intakeSessionId, intakeRecordId)) return;
     setIntakeBusy(true); setError(""); setMessage("");
@@ -348,7 +370,10 @@ export default function PlatformTenantApplicationsPage() {
       await provisionSemattice();
       return;
     }
-    if (application.appCode !== "devautopilot") return;
+    if (application.appCode !== "devautopilot") {
+      await executeGenericApplicationOperation(application, action);
+      return;
+    }
     if (action === "ACTIVATE" || action === "CONTINUE") {
       await activateDevAutopilot();
     } else if (action === "RECONCILE") {

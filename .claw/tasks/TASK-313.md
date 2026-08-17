@@ -2,11 +2,11 @@
 kind: task-status
 task_id: TASK-313
 feature_id: FEAT-191
-status: review
+status: in_progress
 priority: critical
 owner_role: fullstack-agent
 claimed_by: codex
-updated_at: 2026-08-17T10:48:29Z
+updated_at: 2026-08-17T11:09:36Z
 updated_by: codex
 ---
 
@@ -19,6 +19,7 @@ updated_by: codex
 - 提供租户应用动态聚合 API，兼容现有 Semattice 与 DevAutopilot 生命周期。
 - 新增运营端“应用中心”页面，并把租户应用中心切为动态读取。
 - 完成后端、前端、迁移和本地开发测试环境验证。
+- 根据用户验收修订：新增真实运行连接、连接测试/启用、版本绑定、依赖选择器和通用 Provider 生命周期执行。
 
 ## 完成条件
 
@@ -45,6 +46,8 @@ updated_by: codex
 - 按用户反馈将原用户界面名称“租户应用目录”统一调整为“应用中心”，保留路由、API 和内部 catalog 模型；相关 3 个测试文件、27 项通过，production build 通过。
 - 命名提交 `2188e5760087` 已进入本地 `main`；前端从该提交构建为 `2.8.61-dev.2188e57`，正式路由 HTTP 200，运行 JS 回读 9 处“应用中心”且无“租户应用目录”，容器 healthy/restart=0。
 
-## 后续切片
+## 本轮重开范围
 
-- 通用 `tenant_application_operation` 持久化步骤执行器、Provider 标准生命周期回调、租户版本升级和自动依赖计划不属于本次第一期；新增应用本期可完成受治理登记、验证、发布并动态进入租户应用中心，但只有现有三类适配器具备实际开通动作。
+- 用户确认运营控制台可以由超级管理员配置真实服务地址；连接作为独立部署拓扑对象，不写入不可变应用版本。
+- 落地连接/修订模型、测试与启用 API、应用详情运行连接工作区、版本和依赖选择器。
+- 落地通用 `tenant_application_operation` 步骤执行器及 Provider 标准生命周期回调，保持现有三类专用适配器兼容。

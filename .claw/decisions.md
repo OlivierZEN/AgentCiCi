@@ -1,8 +1,8 @@
 ---
 kind: decisions
 version: 3
-updated_at: 2026-08-17T09:59:48Z
-updated_by: ai
+updated_at: 2026-08-17T11:09:36Z
+updated_by: codex
 status: active
 ---
 
@@ -18,8 +18,9 @@ status: active
   - Immutable versions and dependency snapshots keep every tenant activation reproducible and auditable.
   - Restricted initialization primitives allow most new applications to join without AgentCiCi-specific UI code while preventing arbitrary URL, script, SQL and cross-database execution.
   - Keeping existing DevAutopilot activation data and write paths compatible reduces migration risk while the generic control plane is proven.
-- Environment rule: manifests store only logical binding and route keys. Origins, hosts, ports and credentials remain deployment-managed configuration and never enter business source, frontend artifacts or catalog records.
-- Rollout rule: phase one delivers catalog, publication gates and dynamic reads. Generic provider execution replaces product-specific orchestration only after a second application proves the standard lifecycle contract end to end.
+- Amendment 2026-08-17: the platform operations console is an authorized deployment-topology control plane. Super administrators may configure real origins, hosts, ports and lifecycle paths in a separate, revisioned provider-connection model. Immutable application versions continue to store only logical binding and route keys; frontend artifacts never hardcode environment addresses, and reusable credentials remain external Secret references.
+- Environment rule: browser forms may submit authorized runtime topology through same-origin platform APIs, but browsers never call Provider addresses directly. Every connection change, test, activation and resolved operation revision is audited.
+- Rollout rule: after phase-one catalog and dynamic reads, TASK-313 is reopened to deliver provider connections and generic lifecycle execution while preserving the existing DevAutopilot/Semattice adapters.
 
 ## DEC-054 Top-level company identity
 

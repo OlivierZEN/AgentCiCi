@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AppWindow, ArrowLeft, GitBranch, Plus, Search, ShieldCheck, X } from "lucide-react";
+import { Activity, AppWindow, ArrowLeft, Cable, CheckCircle2, GitBranch, Plus, Search, ShieldCheck, X } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { PLATFORM_API_BASE } from "../../constants";
 import { safeFetchJson } from "../../utils/http";
@@ -61,6 +61,39 @@ type InternalApplicationDetail = {
   versions: ApplicationVersion[];
 };
 
+type ProviderConnectionRevision = {
+  id: string;
+  revisionNumber: number;
+  baseUrl: string;
+  contractVersion: string;
+  authType: string;
+  secretRef?: string | null;
+  healthPath: string;
+  activatePath?: string | null;
+  reconcilePath?: string | null;
+  suspendPath?: string | null;
+  resumePath?: string | null;
+  upgradePath?: string | null;
+  timeoutMs: number;
+  maxAttempts: number;
+  testStatus: string;
+  lastTestedAt?: string | null;
+  lastTestHttpStatus?: number | null;
+  lastTestLatencyMs?: number | null;
+  lastTestErrorCode?: string | null;
+};
+
+type ProviderConnection = {
+  bindingKey: string;
+  appCode: string;
+  displayName: string;
+  environmentKey: string;
+  networkScope: string;
+  status: string;
+  activeRevisionId?: string | null;
+  revisions: ProviderConnectionRevision[];
+};
+
 type ApplicationForm = {
   appCode: string;
   displayName: string;
@@ -81,6 +114,25 @@ type VersionForm = {
   dependencies: ApplicationDependency[];
 };
 
+type ConnectionForm = {
+  bindingKey: string;
+  displayName: string;
+  environmentKey: string;
+  networkScope: string;
+  baseUrl: string;
+  contractVersion: string;
+  authType: string;
+  secretRef: string;
+  healthPath: string;
+  activatePath: string;
+  reconcilePath: string;
+  suspendPath: string;
+  resumePath: string;
+  upgradePath: string;
+  timeoutMs: number;
+  maxAttempts: number;
+};
+
 const EMPTY_APPLICATION: ApplicationForm = {
   appCode: "",
   displayName: "",
@@ -99,6 +151,25 @@ const EMPTY_VERSION: VersionForm = {
   initializationEngine: "NONE",
   steps: [],
   dependencies: [],
+};
+
+const EMPTY_CONNECTION: ConnectionForm = {
+  bindingKey: "",
+  displayName: "",
+  environmentKey: "default",
+  networkScope: "PUBLIC_HTTPS",
+  baseUrl: "",
+  contractVersion: "v1",
+  authType: "NONE",
+  secretRef: "",
+  healthPath: "/internal/tenant-lifecycle/v1/health",
+  activatePath: "/internal/tenant-lifecycle/v1/activations",
+  reconcilePath: "/internal/tenant-lifecycle/v1/reconciliations",
+  suspendPath: "/internal/tenant-lifecycle/v1/suspensions",
+  resumePath: "/internal/tenant-lifecycle/v1/resumptions",
+  upgradePath: "/internal/tenant-lifecycle/v1/upgrades",
+  timeoutMs: 10000,
+  maxAttempts: 2,
 };
 
 export function validApplicationCode(value: string): boolean {
@@ -128,11 +199,42 @@ export function versionStatusLabel(status: string): string {
   }
 }
 
+export function providerConnectionStatusLabel(status: string): string {
+  if (status === "ACTIVE") return "已启用";
+  if (status === "DISABLED") return "已停用";
+  return "草稿";
+}
+
+export function suggestedDependencyConstraint(defaultVersion?: string | null): string {
+  return defaultVersion && validSemanticVersion(defaultVersion) ? `>=${defaultVersion}` : ">=1.0.0";
+}
+
 function statusTone(status: string): string {
   if (status === "PUBLISHED") return "healthy";
   if (status === "SUSPENDED" || status === "DEPRECATED") return "pending";
   if (status === "RETIRED" || status === "REVOKED") return "danger";
   return "draft";
+}
+
+function connectionRevisionToForm(connection: ProviderConnection, revision: ProviderConnectionRevision): ConnectionForm {
+  return {
+    bindingKey: connection.bindingKey,
+    displayName: connection.displayName,
+    environmentKey: connection.environmentKey,
+    networkScope: connection.networkScope,
+    baseUrl: revision.baseUrl,
+    contractVersion: revision.contractVersion,
+    authType: revision.authType,
+    secretRef: revision.secretRef ?? "",
+    healthPath: revision.healthPath,
+    activatePath: revision.activatePath ?? "",
+    reconcilePath: revision.reconcilePath ?? "",
+    suspendPath: revision.suspendPath ?? "",
+    resumePath: revision.resumePath ?? "",
+    upgradePath: revision.upgradePath ?? "",
+    timeoutMs: revision.timeoutMs,
+    maxAttempts: revision.maxAttempts,
+  };
 }
 
 export default function PlatformInternalApplicationsPage() {
@@ -141,6 +243,7 @@ export default function PlatformInternalApplicationsPage() {
   const { appCode } = useParams();
   const [applications, setApplications] = useState<InternalApplicationSummary[]>([]);
   const [detail, setDetail] = useState<InternalApplicationDetail | null>(null);
+  const [connections, setConnections] = useState<ProviderConnection[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
@@ -149,11 +252,15 @@ export default function PlatformInternalApplicationsPage() {
   const [status, setStatus] = useState("ALL");
   const [applicationModalOpen, setApplicationModalOpen] = useState(false);
   const [versionModalOpen, setVersionModalOpen] = useState(false);
+  const [connectionModalOpen, setConnectionModalOpen] = useState(false);
+  const [workspaceTab, setWorkspaceTab] = useState<"versions" | "connections">("versions");
   const [applicationForm, setApplicationForm] = useState<ApplicationForm>(EMPTY_APPLICATION);
   const [versionForm, setVersionForm] = useState<VersionForm>(EMPTY_VERSION);
+  const [connectionForm, setConnectionForm] = useState<ConnectionForm>(EMPTY_CONNECTION);
   const [confirmation, setConfirmation] = useState<{ type: "publish" | "status"; version?: string; status?: string } | null>(null);
   const firstApplicationField = useRef<HTMLInputElement | null>(null);
   const firstVersionField = useRef<HTMLInputElement | null>(null);
+  const firstConnectionField = useRef<HTMLInputElement | null>(null);
 
   async function load() {
     if (!token) return;
@@ -161,7 +268,14 @@ export default function PlatformInternalApplicationsPage() {
     setError("");
     try {
       if (appCode) {
-        setDetail(await fetchApplicationDetail(token, appCode));
+        const [nextDetail, nextConnections, nextApplications] = await Promise.all([
+          fetchApplicationDetail(token, appCode),
+          fetchProviderConnections(token, appCode),
+          fetchInternalApplications(token),
+        ]);
+        setDetail(nextDetail);
+        setConnections(nextConnections);
+        setApplications(nextApplications);
       } else {
         setApplications(await fetchInternalApplications(token));
         setDetail(null);
@@ -183,6 +297,10 @@ export default function PlatformInternalApplicationsPage() {
     if (versionModalOpen) globalThis.requestAnimationFrame(() => firstVersionField.current?.focus());
   }, [versionModalOpen]);
 
+  useEffect(() => {
+    if (connectionModalOpen) globalThis.requestAnimationFrame(() => firstConnectionField.current?.focus());
+  }, [connectionModalOpen]);
+
   const filteredApplications = useMemo(() => {
     const keyword = query.trim().toLowerCase();
     return applications.filter((application) => {
@@ -203,6 +321,12 @@ export default function PlatformInternalApplicationsPage() {
     if (busy) return;
     setVersionModalOpen(false);
     setVersionForm(EMPTY_VERSION);
+  }
+
+  function closeConnectionModal() {
+    if (busy) return;
+    setConnectionModalOpen(false);
+    setConnectionForm(EMPTY_CONNECTION);
   }
 
   async function createApplication(event: FormEvent) {
@@ -250,6 +374,52 @@ export default function PlatformInternalApplicationsPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "应用版本创建失败");
     } finally { setBusy(false); }
+  }
+
+  async function createConnectionRevision(event: FormEvent) {
+    event.preventDefault();
+    if (!token || !appCode || !connectionForm.bindingKey.trim() || !connectionForm.baseUrl.trim()) return;
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const response = await fetch(`${PLATFORM_API_BASE}/internal-applications/${encodeURIComponent(appCode)}/connections`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...connectionForm,
+          secretRef: connectionForm.authType === "NONE" ? null : connectionForm.secretRef.trim(),
+          reconcilePath: connectionForm.reconcilePath.trim() || null,
+          suspendPath: connectionForm.suspendPath.trim() || null,
+          resumePath: connectionForm.resumePath.trim() || null,
+          upgradePath: connectionForm.upgradePath.trim() || null,
+        }),
+      });
+      const { body } = await safeFetchJson(response);
+      if (!response.ok || !body?.success) throw new Error(body?.message ?? `HTTP ${response.status}`);
+      closeConnectionModal();
+      setWorkspaceTab("connections");
+      setNotice(`运行连接 ${connectionForm.bindingKey} 已创建新修订，请测试后启用。`);
+      await load();
+    } catch (err) { setError(err instanceof Error ? err.message : "运行连接修订创建失败"); }
+    finally { setBusy(false); }
+  }
+
+  async function runConnectionAction(bindingKey: string, action: "tests" | "activations" | "disabling") {
+    if (!token || !appCode) return;
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const response = await fetch(`${PLATFORM_API_BASE}/internal-applications/${encodeURIComponent(appCode)}/connections/${encodeURIComponent(bindingKey)}/${action}`, {
+        method: "POST", headers: { Authorization: `Bearer ${token}` },
+      });
+      const { body } = await safeFetchJson(response);
+      if (!response.ok || !body?.success) throw new Error(body?.message ?? `HTTP ${response.status}`);
+      const result = body.data as { status?: string; errorCode?: string } | undefined;
+      if (action === "tests" && result?.status !== "PASSED") {
+        throw new Error(result?.errorCode ?? "连接测试未通过");
+      }
+      setNotice(action === "tests" ? `运行连接 ${bindingKey} 测试通过。` : action === "activations" ? `运行连接 ${bindingKey} 已启用。` : `运行连接 ${bindingKey} 已停用。`);
+      await load();
+    } catch (err) { setError(err instanceof Error ? err.message : "运行连接操作失败"); }
+    finally { setBusy(false); }
   }
 
   async function validateVersion(version: string) {
@@ -317,6 +487,7 @@ export default function PlatformInternalApplicationsPage() {
           <div className="platform-page-head__aside">
             <span className={`internal-application-status internal-application-status--${statusTone(detail.application.catalogStatus)}`}>{applicationCatalogStatusLabel(detail.application.catalogStatus)}</span>
             {detail.application.catalogStatus === "PUBLISHED" ? <button type="button" className="platform-button platform-button--secondary" onClick={() => setConfirmation({ type: "status", status: "SUSPENDED" })}>暂停目录</button> : detail.application.catalogStatus === "SUSPENDED" ? <button type="button" className="platform-button platform-button--primary" onClick={() => setConfirmation({ type: "status", status: "PUBLISHED" })}>恢复目录</button> : null}
+            <button type="button" className="platform-button platform-button--secondary" onClick={() => setConnectionModalOpen(true)} disabled={detail.application.catalogStatus === "RETIRED"}><Cable size={15} />新建连接</button>
             <button type="button" className="platform-button platform-button--primary" onClick={() => setVersionModalOpen(true)} disabled={detail.application.catalogStatus === "RETIRED"}><Plus size={15} />新建版本</button>
           </div>
         </header>
@@ -335,7 +506,12 @@ export default function PlatformInternalApplicationsPage() {
           </dl>
         </section>
 
-        <section className="platform-console__panel internal-application-versions" aria-labelledby="internal-application-versions-title">
+        <nav className="internal-application-workspace-tabs" aria-label="应用治理工作区">
+          <button type="button" className={workspaceTab === "versions" ? "is-active" : ""} aria-current={workspaceTab === "versions" ? "page" : undefined} onClick={() => setWorkspaceTab("versions")}><GitBranch size={15} />版本与依赖</button>
+          <button type="button" className={workspaceTab === "connections" ? "is-active" : ""} aria-current={workspaceTab === "connections" ? "page" : undefined} onClick={() => setWorkspaceTab("connections")}><Cable size={15} />运行连接 <span>{connections.length}</span></button>
+        </nav>
+
+        {workspaceTab === "versions" ? <section className="platform-console__panel internal-application-versions" aria-labelledby="internal-application-versions-title">
           <div className="internal-applications-section-head">
             <div><p className="platform-section-label">不可变发布单元</p><h2 id="internal-application-versions-title" className="platform-console__heading">版本与依赖</h2></div>
             <span>{detail.versions.length} 个版本</span>
@@ -354,9 +530,51 @@ export default function PlatformInternalApplicationsPage() {
               {!detail.versions.length ? <tr><td colSpan={5} className="internal-applications-empty-row">尚未创建版本。应用只有发布有效版本后才会进入租户应用中心。</td></tr> : null}
             </tbody>
           </table>
-        </section>
+        </section> : null}
 
-        {versionModalOpen ? createPortal(<VersionModal form={versionForm} setForm={setVersionForm} busy={busy} firstField={firstVersionField} onClose={closeVersionModal} onSubmit={createVersion} onAddStep={addStep} onAddDependency={addDependency} />, document.body) : null}
+        {workspaceTab === "connections" ? <section className="platform-console__panel internal-application-connections" aria-labelledby="internal-application-connections-title">
+          <div className="internal-applications-section-head">
+            <div><p className="platform-section-label">部署拓扑控制面</p><h2 id="internal-application-connections-title" className="platform-console__heading">运行连接</h2><p className="subtle">真实地址只存在于受管连接修订；应用版本引用连接键，浏览器不会直接调用 Provider。</p></div>
+            <button type="button" className="platform-button platform-button--primary" onClick={() => setConnectionModalOpen(true)}><Plus size={15} />新建连接修订</button>
+          </div>
+          <div className="internal-application-connection-list">
+            {connections.map((connection) => {
+              const latest = connection.revisions[0];
+              const active = connection.revisions.find((revision) => revision.id === connection.activeRevisionId);
+              return <article key={connection.bindingKey} className="internal-application-connection">
+                <header>
+                  <span className="internal-application-connection__icon"><Cable size={18} /></span>
+                  <div><strong>{connection.displayName}</strong><code>{connection.bindingKey}</code></div>
+                  <span className={`internal-application-status internal-application-status--${connection.status === "ACTIVE" ? "healthy" : connection.status === "DISABLED" ? "danger" : "draft"}`}>{providerConnectionStatusLabel(connection.status)}</span>
+                </header>
+                {latest ? <dl>
+                  <div><dt>环境</dt><dd>{connection.environmentKey}</dd></div>
+                  <div><dt>网络范围</dt><dd>{connection.networkScope === "PUBLIC_HTTPS" ? "公网 HTTPS" : "平台内部网络"}</dd></div>
+                  <div><dt>当前修订</dt><dd>r{latest.revisionNumber}{active ? ` · 活动 r${active.revisionNumber}` : ""}</dd></div>
+                  <div><dt>服务地址</dt><dd className="internal-application-connection__url" title={latest.baseUrl}>{latest.baseUrl}</dd></div>
+                  <div><dt>生命周期契约</dt><dd>{latest.contractVersion}</dd></div>
+                  <div><dt>鉴权</dt><dd>{latest.authType === "NONE" ? "无需鉴权" : `${latest.authType} · ${latest.secretRef}`}</dd></div>
+                  <div><dt>连接测试</dt><dd>{latest.testStatus === "PASSED" ? <span className="internal-application-connection__test is-passed"><CheckCircle2 size={14} />通过 · {latest.lastTestLatencyMs ?? 0} ms</span> : latest.testStatus === "FAILED" ? <span className="internal-application-connection__test is-failed">失败 · {latest.lastTestErrorCode}</span> : "尚未测试"}</dd></div>
+                  <div><dt>策略</dt><dd>{latest.timeoutMs / 1000}s 超时 · 最多 {latest.maxAttempts} 次</dd></div>
+                </dl> : null}
+                <footer>
+                  <button type="button" className="platform-button platform-button--secondary" disabled={busy || !latest} onClick={() => {
+                    if (!latest) return;
+                    setConnectionForm(connectionRevisionToForm(connection, latest));
+                    setConnectionModalOpen(true);
+                  }}>创建新修订</button>
+                  <button type="button" className="platform-button platform-button--secondary" disabled={busy || !latest} onClick={() => void runConnectionAction(connection.bindingKey, "tests")}><Activity size={14} />测试连接</button>
+                  {latest?.testStatus === "PASSED" && connection.activeRevisionId !== latest.id ? <button type="button" className="platform-button platform-button--primary" disabled={busy} onClick={() => void runConnectionAction(connection.bindingKey, "activations")}>启用 r{latest.revisionNumber}</button> : null}
+                  {connection.status === "ACTIVE" ? <button type="button" className="platform-button platform-button--secondary" disabled={busy} onClick={() => void runConnectionAction(connection.bindingKey, "disabling")}>停用连接</button> : null}
+                </footer>
+              </article>;
+            })}
+            {!connections.length ? <div className="internal-application-connection-empty"><Cable size={24} /><strong>尚未配置运行连接</strong><span>先登记 Provider 的真实地址和生命周期接口，测试通过并启用后，应用版本才能引用。</span><button type="button" className="platform-button platform-button--primary" onClick={() => setConnectionModalOpen(true)}>新建运行连接</button></div> : null}
+          </div>
+        </section> : null}
+
+        {versionModalOpen ? createPortal(<VersionModal form={versionForm} setForm={setVersionForm} busy={busy} firstField={firstVersionField} connections={connections} applications={applications.filter((application) => application.appCode !== appCode && application.catalogStatus === "PUBLISHED")} onClose={closeVersionModal} onSubmit={createVersion} onAddStep={addStep} onAddDependency={addDependency} />, document.body) : null}
+        {connectionModalOpen ? createPortal(<ConnectionModal form={connectionForm} setForm={setConnectionForm} busy={busy} firstField={firstConnectionField} onClose={closeConnectionModal} onSubmit={createConnectionRevision} />, document.body) : null}
         {confirmation ? createPortal(<ConfirmationModal confirmation={confirmation} application={detail.application} busy={busy} onClose={() => !busy && setConfirmation(null)} onConfirm={() => void executeConfirmation()} />, document.body) : null}
       </div>
     );
@@ -416,15 +634,67 @@ function ApplicationModal({ form, setForm, busy, firstField, onClose, onSubmit }
   </form></div>;
 }
 
-function VersionModal({ form, setForm, busy, firstField, onClose, onSubmit, onAddStep, onAddDependency }: { form: VersionForm; setForm: React.Dispatch<React.SetStateAction<VersionForm>>; busy: boolean; firstField: React.RefObject<HTMLInputElement | null>; onClose: () => void; onSubmit: (event: FormEvent) => void; onAddStep: () => void; onAddDependency: () => void }) {
+function VersionModal({ form, setForm, busy, firstField, connections, applications, onClose, onSubmit, onAddStep, onAddDependency }: { form: VersionForm; setForm: React.Dispatch<React.SetStateAction<VersionForm>>; busy: boolean; firstField: React.RefObject<HTMLInputElement | null>; connections: ProviderConnection[]; applications: InternalApplicationSummary[]; onClose: () => void; onSubmit: (event: FormEvent) => void; onAddStep: () => void; onAddDependency: () => void }) {
+  const activeConnections = connections.filter((connection) => connection.status === "ACTIVE" && connection.activeRevisionId);
   return <div className="tenant-lifecycle__modal-backdrop platform-modal-scope" role="presentation" onMouseDown={(event) => event.currentTarget === event.target && onClose()}><form className="tenant-lifecycle__modal internal-application-version-modal" role="dialog" aria-modal="true" aria-labelledby="internal-application-version-title" onSubmit={onSubmit}>
     <div className="tenant-lifecycle__modal-head"><div><p className="platform-section-label">不可变发布单元</p><h2 id="internal-application-version-title" className="platform-console__heading">创建应用版本</h2></div><button type="button" className="tenant-lifecycle__modal-close" onClick={onClose} disabled={busy} aria-label="关闭"><X size={17} /></button></div>
     <div className="tenant-lifecycle__modal-body internal-application-version-form">
-      <div className="internal-application-version-basics"><label><span>语义版本</span><input ref={firstField} value={form.version} onChange={(event) => setForm((current) => ({ ...current, version: event.target.value }))} placeholder="1.0.0" aria-invalid={!validSemanticVersion(form.version)} required /></label><label><span>初始化引擎</span><select value={form.initializationEngine} onChange={(event) => setForm((current) => ({ ...current, initializationEngine: event.target.value, steps: event.target.value === "NONE" ? [] : current.steps }))}><option value="NONE">NONE · 无初始化</option><option value="SAGA_V1">SAGA_V1 · 受控步骤</option></select></label><label><span>Provider 逻辑连接（可选）</span><input value={form.providerBindingKey} onChange={(event) => setForm((current) => ({ ...current, providerBindingKey: event.target.value.toLowerCase() }))} placeholder="例如 sales-workbench.lifecycle" /><small>只允许逻辑键，真实服务地址由部署配置持有。</small></label></div>
-      <section className="internal-application-version-section"><div className="internal-application-version-section__head"><div><strong>初始化步骤</strong><span>仅允许平台能力、依赖能力和 Provider 标准回调。</span></div><button type="button" onClick={onAddStep} disabled={form.initializationEngine === "NONE"}><Plus size={14} />添加步骤</button></div>{form.steps.map((step, index) => <div className="internal-application-version-row internal-application-version-row--step" key={`${index}-${step.code}`}><input value={step.code} onChange={(event) => setForm((current) => ({ ...current, steps: current.steps.map((item, itemIndex) => itemIndex === index ? { ...item, code: event.target.value.toLowerCase() } : item) }))} placeholder="步骤代码" required /><select value={step.type} onChange={(event) => setForm((current) => ({ ...current, steps: current.steps.map((item, itemIndex) => itemIndex === index ? { ...item, type: event.target.value } : item) }))}><option value="PROVIDER_CALLBACK">Provider 回调</option><option value="PLATFORM_CAPABILITY">平台能力</option><option value="DEPENDENCY_CAPABILITY">依赖能力</option></select><input value={step.capability} onChange={(event) => setForm((current) => ({ ...current, steps: current.steps.map((item, itemIndex) => itemIndex === index ? { ...item, capability: event.target.value.toLowerCase() } : item) }))} placeholder="能力标识" required /><input value={step.contractVersion} onChange={(event) => setForm((current) => ({ ...current, steps: current.steps.map((item, itemIndex) => itemIndex === index ? { ...item, contractVersion: event.target.value.toLowerCase() } : item) }))} placeholder="v1" required /><button type="button" aria-label="删除步骤" onClick={() => setForm((current) => ({ ...current, steps: current.steps.filter((_, itemIndex) => itemIndex !== index) }))}><X size={15} /></button></div>)}{form.initializationEngine === "SAGA_V1" && !form.steps.length ? <p className="internal-application-version-empty">SAGA_V1 至少需要一个受控步骤。</p> : null}</section>
-      <section className="internal-application-version-section"><div className="internal-application-version-section__head"><div><strong>应用依赖</strong><span>强依赖默认必须先开通，自动开通只声明允许，不会静默执行。</span></div><button type="button" onClick={onAddDependency}><Plus size={14} />添加依赖</button></div>{form.dependencies.map((dependency, index) => <div className="internal-application-version-row internal-application-version-row--dependency" key={`${index}-${dependency.appCode}`}><input value={dependency.appCode} onChange={(event) => setForm((current) => ({ ...current, dependencies: current.dependencies.map((item, itemIndex) => itemIndex === index ? { ...item, appCode: event.target.value.toLowerCase() } : item) }))} placeholder="依赖应用代码" required /><input value={dependency.versionConstraint} onChange={(event) => setForm((current) => ({ ...current, dependencies: current.dependencies.map((item, itemIndex) => itemIndex === index ? { ...item, versionConstraint: event.target.value } : item) }))} placeholder=">=1.0.0" required /><select value={dependency.dependencyType} onChange={(event) => setForm((current) => ({ ...current, dependencies: current.dependencies.map((item, itemIndex) => itemIndex === index ? { ...item, dependencyType: event.target.value } : item) }))}><option value="REQUIRED_RUNTIME">运行强依赖</option><option value="REQUIRED_ACTIVATION">开通强依赖</option><option value="OPTIONAL">可选依赖</option></select><select value={dependency.activationPolicy} onChange={(event) => setForm((current) => ({ ...current, dependencies: current.dependencies.map((item, itemIndex) => itemIndex === index ? { ...item, activationPolicy: event.target.value } : item) }))}><option value="REQUIRE_EXISTING">要求已开通</option><option value="AUTO_PROVISION_ALLOWED">允许联动计划</option></select><button type="button" aria-label="删除依赖" onClick={() => setForm((current) => ({ ...current, dependencies: current.dependencies.filter((_, itemIndex) => itemIndex !== index) }))}><X size={15} /></button></div>)}</section>
+      <div className="internal-application-version-basics">
+        <label><span>语义版本</span><input ref={firstField} value={form.version} onChange={(event) => setForm((current) => ({ ...current, version: event.target.value }))} placeholder="1.0.0" aria-invalid={!validSemanticVersion(form.version)} required /></label>
+        <label><span>初始化方式</span><select value={form.initializationEngine} onChange={(event) => setForm((current) => ({ ...current, initializationEngine: event.target.value, providerBindingKey: event.target.value === "NONE" ? "" : current.providerBindingKey, steps: event.target.value === "NONE" ? [] : current.steps }))}><option value="NONE">无需初始化</option><option value="SAGA_V1">标准 Provider 生命周期</option></select></label>
+        <label><span>运行连接</span><select value={form.providerBindingKey} disabled={form.initializationEngine === "NONE"} required={form.initializationEngine === "SAGA_V1"} onChange={(event) => {
+          const selected = activeConnections.find((connection) => connection.bindingKey === event.target.value);
+          const revision = selected?.revisions.find((item) => item.id === selected.activeRevisionId);
+          setForm((current) => ({ ...current, providerBindingKey: event.target.value, initializationEngine: event.target.value ? "SAGA_V1" : current.initializationEngine, steps: event.target.value && !current.steps.length ? [{ code: "activation", type: "PROVIDER_CALLBACK", capability: "tenant.activate", contractVersion: revision?.contractVersion ?? "v1" }] : current.steps.map((step) => ({ ...step, contractVersion: revision?.contractVersion ?? step.contractVersion })) }));
+        }}><option value="">请选择已测试并启用的连接</option>{activeConnections.map((connection) => <option value={connection.bindingKey} key={connection.bindingKey}>{connection.displayName} · {connection.environmentKey}</option>)}</select><small>{activeConnections.length ? "版本只保存连接键；实际地址按当前环境的活动修订解析。" : "请先到“运行连接”创建、测试并启用连接。"}</small></label>
+      </div>
+      <section className="internal-application-version-section"><div className="internal-application-version-section__head"><div><strong>初始化步骤</strong><span>新应用只执行受管 Provider 回调；平台后端负责幂等、重试和审计。</span></div><button type="button" onClick={onAddStep} disabled={form.initializationEngine === "NONE" || !form.providerBindingKey}><Plus size={14} />添加步骤</button></div>
+        {form.steps.length ? <div className="internal-application-version-row-head internal-application-version-row-head--step"><span>步骤代码</span><span>执行类型</span><span>能力标识</span><span>契约版本</span><span /></div> : null}
+        {form.steps.map((step, index) => <div className="internal-application-version-row internal-application-version-row--step" key={`${index}-${step.code}`}><input aria-label={`步骤 ${index + 1} 代码`} value={step.code} onChange={(event) => setForm((current) => ({ ...current, steps: current.steps.map((item, itemIndex) => itemIndex === index ? { ...item, code: event.target.value.toLowerCase() } : item) }))} placeholder="activation" required /><select aria-label={`步骤 ${index + 1} 类型`} value={step.type} disabled><option value="PROVIDER_CALLBACK">Provider 回调</option></select><input aria-label={`步骤 ${index + 1} 能力标识`} value={step.capability} onChange={(event) => setForm((current) => ({ ...current, steps: current.steps.map((item, itemIndex) => itemIndex === index ? { ...item, capability: event.target.value.toLowerCase() } : item) }))} placeholder="tenant.activate" required /><input aria-label={`步骤 ${index + 1} 契约版本`} value={step.contractVersion} readOnly /><button type="button" aria-label="删除步骤" onClick={() => setForm((current) => ({ ...current, steps: current.steps.filter((_, itemIndex) => itemIndex !== index) }))}><X size={15} /></button></div>)}
+        {form.initializationEngine === "SAGA_V1" && !form.steps.length ? <p className="internal-application-version-empty">请选择运行连接，并至少声明一个 Provider 回调步骤。</p> : null}
+      </section>
+      <section className="internal-application-version-section"><div className="internal-application-version-section__head"><div><strong>应用依赖</strong><span>从已发布应用中选择；强依赖在开通前必须处于 ACTIVE。</span></div><button type="button" onClick={onAddDependency} disabled={!applications.length}><Plus size={14} />添加依赖</button></div>
+        {form.dependencies.length ? <div className="internal-application-version-row-head internal-application-version-row-head--dependency"><span>依赖应用</span><span>版本约束</span><span>依赖类型</span><span>开通策略</span><span /></div> : null}
+        {form.dependencies.map((dependency, index) => <div className="internal-application-version-row internal-application-version-row--dependency" key={`${index}-${dependency.appCode}`}><select aria-label={`依赖 ${index + 1} 应用`} value={dependency.appCode} required onChange={(event) => {
+          const selected = applications.find((application) => application.appCode === event.target.value);
+          setForm((current) => ({ ...current, dependencies: current.dependencies.map((item, itemIndex) => itemIndex === index ? { ...item, appCode: event.target.value, versionConstraint: selected ? suggestedDependencyConstraint(selected.defaultVersion) : item.versionConstraint } : item) }));
+        }}><option value="">请选择依赖应用</option>{applications.map((application) => <option value={application.appCode} key={application.appCode} disabled={form.dependencies.some((item, itemIndex) => itemIndex !== index && item.appCode === application.appCode)}>{application.displayName} · {application.appCode} · {application.defaultVersion}</option>)}</select><input aria-label={`依赖 ${index + 1} 版本约束`} value={dependency.versionConstraint} onChange={(event) => setForm((current) => ({ ...current, dependencies: current.dependencies.map((item, itemIndex) => itemIndex === index ? { ...item, versionConstraint: event.target.value } : item) }))} placeholder=">=1.0.0" required /><select aria-label={`依赖 ${index + 1} 类型`} value={dependency.dependencyType} onChange={(event) => setForm((current) => ({ ...current, dependencies: current.dependencies.map((item, itemIndex) => itemIndex === index ? { ...item, dependencyType: event.target.value } : item) }))}><option value="REQUIRED_RUNTIME">运行强依赖</option><option value="REQUIRED_ACTIVATION">开通强依赖</option><option value="OPTIONAL">可选依赖</option></select><select aria-label={`依赖 ${index + 1} 开通策略`} value={dependency.activationPolicy} onChange={(event) => setForm((current) => ({ ...current, dependencies: current.dependencies.map((item, itemIndex) => itemIndex === index ? { ...item, activationPolicy: event.target.value } : item) }))}><option value="REQUIRE_EXISTING">要求已开通</option><option value="AUTO_PROVISION_ALLOWED">允许联动计划</option></select><button type="button" aria-label="删除依赖" onClick={() => setForm((current) => ({ ...current, dependencies: current.dependencies.filter((_, itemIndex) => itemIndex !== index) }))}><X size={15} /></button></div>)}
+        {!applications.length ? <p className="internal-application-version-empty">当前没有其他已发布应用可作为依赖。</p> : null}
+      </section>
     </div>
-    <div className="tenant-lifecycle__modal-foot"><button type="button" className="platform-button platform-button--secondary" onClick={onClose} disabled={busy}>取消</button><button type="submit" className="platform-button platform-button--primary" disabled={busy || !validSemanticVersion(form.version) || (form.initializationEngine === "SAGA_V1" && !form.steps.length)}>{busy ? "正在创建…" : "创建版本草稿"}</button></div>
+    <div className="tenant-lifecycle__modal-foot"><button type="button" className="platform-button platform-button--secondary" onClick={onClose} disabled={busy}>取消</button><button type="submit" className="platform-button platform-button--primary" disabled={busy || !validSemanticVersion(form.version) || (form.initializationEngine === "SAGA_V1" && (!form.providerBindingKey || !form.steps.length))}>{busy ? "正在创建…" : "创建版本草稿"}</button></div>
+  </form></div>;
+}
+
+function ConnectionModal({ form, setForm, busy, firstField, onClose, onSubmit }: { form: ConnectionForm; setForm: React.Dispatch<React.SetStateAction<ConnectionForm>>; busy: boolean; firstField: React.RefObject<HTMLInputElement | null>; onClose: () => void; onSubmit: (event: FormEvent) => void }) {
+  return <div className="tenant-lifecycle__modal-backdrop platform-modal-scope" role="presentation" onMouseDown={(event) => event.currentTarget === event.target && onClose()}><form className="tenant-lifecycle__modal internal-application-connection-modal" role="dialog" aria-modal="true" aria-labelledby="internal-application-connection-title" onSubmit={onSubmit}>
+    <div className="tenant-lifecycle__modal-head"><div><p className="platform-section-label">部署拓扑控制面</p><h2 id="internal-application-connection-title" className="platform-console__heading">{form.bindingKey ? "创建连接新修订" : "新建运行连接"}</h2></div><button type="button" className="tenant-lifecycle__modal-close" onClick={onClose} disabled={busy} aria-label="关闭"><X size={17} /></button></div>
+    <div className="tenant-lifecycle__modal-body internal-application-connection-form">
+      <p className="internal-application-form-note"><ShieldCheck size={15} />超级管理员可配置真实地址；平台后端负责连接测试和生命周期调用。凭据只填写环境 Secret 引用，不填写 Token 或 Secret 原文。</p>
+      <section><div className="internal-application-connection-form__heading"><span>01</span><div><strong>连接身份</strong><small>稳定逻辑键由应用版本引用，修改配置会产生不可变新修订。</small></div></div><div className="internal-application-connection-form__grid">
+        <label><span>连接名称</span><input ref={firstField} value={form.displayName} onChange={(event) => setForm((current) => ({ ...current, displayName: event.target.value }))} placeholder="研发交付生命周期服务" required /></label>
+        <label><span>逻辑连接键</span><input value={form.bindingKey} readOnly={Boolean(form.bindingKey)} onChange={(event) => setForm((current) => ({ ...current, bindingKey: event.target.value.toLowerCase() }))} placeholder="sales-workbench.lifecycle" required /><small>{form.bindingKey ? "连接键已存在，只创建新的配置修订。" : "创建后不可转移到其他应用。"}</small></label>
+        <label><span>环境标识</span><input value={form.environmentKey} onChange={(event) => setForm((current) => ({ ...current, environmentKey: event.target.value.toLowerCase() }))} placeholder="default" required /></label>
+        <label><span>网络范围</span><select value={form.networkScope} onChange={(event) => setForm((current) => ({ ...current, networkScope: event.target.value }))}><option value="PUBLIC_HTTPS">公网 HTTPS</option><option value="PLATFORM_INTERNAL">平台内部网络</option></select></label>
+      </div></section>
+      <section><div className="internal-application-connection-form__heading"><span>02</span><div><strong>服务与契约</strong><small>地址在运行时保存，不进入应用版本或前端制品。</small></div></div><div className="internal-application-connection-form__grid">
+        <label className="internal-application-connection-form__full"><span>服务 Base URL</span><input value={form.baseUrl} onChange={(event) => setForm((current) => ({ ...current, baseUrl: event.target.value }))} placeholder="https://service.example.test" spellCheck={false} required /><small>公网连接必须使用 HTTPS；内部 HTTP 仅限 PLATFORM_INTERNAL。</small></label>
+        <label><span>生命周期契约版本</span><input value={form.contractVersion} onChange={(event) => setForm((current) => ({ ...current, contractVersion: event.target.value.toLowerCase() }))} placeholder="v1" required /></label>
+        <label><span>健康检查路径</span><input value={form.healthPath} onChange={(event) => setForm((current) => ({ ...current, healthPath: event.target.value }))} required /></label>
+        <label><span>ACTIVATE 路径</span><input value={form.activatePath} onChange={(event) => setForm((current) => ({ ...current, activatePath: event.target.value }))} required /></label>
+        <label><span>RECONCILE 路径</span><input value={form.reconcilePath} onChange={(event) => setForm((current) => ({ ...current, reconcilePath: event.target.value }))} /></label>
+        <label><span>SUSPEND 路径</span><input value={form.suspendPath} onChange={(event) => setForm((current) => ({ ...current, suspendPath: event.target.value }))} /></label>
+        <label><span>RESUME 路径</span><input value={form.resumePath} onChange={(event) => setForm((current) => ({ ...current, resumePath: event.target.value }))} /></label>
+        <label><span>UPGRADE 路径</span><input value={form.upgradePath} onChange={(event) => setForm((current) => ({ ...current, upgradePath: event.target.value }))} /></label>
+      </div></section>
+      <section><div className="internal-application-connection-form__heading"><span>03</span><div><strong>鉴权与可靠性</strong><small>Secret 引用由后端从当前环境解析，浏览器无法读取真实凭据。</small></div></div><div className="internal-application-connection-form__grid">
+        <label><span>鉴权方式</span><select value={form.authType} onChange={(event) => setForm((current) => ({ ...current, authType: event.target.value, secretRef: event.target.value === "NONE" ? "" : current.secretRef }))}><option value="NONE">无需鉴权</option><option value="BEARER_SECRET_REF">Bearer · Secret 引用</option><option value="HMAC_SHA256_SECRET_REF">HMAC-SHA256 · Secret 引用</option></select></label>
+        <label><span>Secret 引用</span><input value={form.secretRef} disabled={form.authType === "NONE"} required={form.authType !== "NONE"} onChange={(event) => setForm((current) => ({ ...current, secretRef: event.target.value.toLowerCase() }))} placeholder="sales-workbench.lifecycle-key" autoComplete="off" /></label>
+        <label><span>请求超时（毫秒）</span><input type="number" min={1000} max={60000} step={1000} value={form.timeoutMs} onChange={(event) => setForm((current) => ({ ...current, timeoutMs: Number(event.target.value) }))} required /></label>
+        <label><span>最大尝试次数</span><input type="number" min={1} max={5} value={form.maxAttempts} onChange={(event) => setForm((current) => ({ ...current, maxAttempts: Number(event.target.value) }))} required /></label>
+      </div></section>
+    </div>
+    <div className="tenant-lifecycle__modal-foot"><button type="button" className="platform-button platform-button--secondary" onClick={onClose} disabled={busy}>取消</button><button type="submit" className="platform-button platform-button--primary" disabled={busy || !form.bindingKey.trim() || !form.displayName.trim() || !form.baseUrl.trim() || (form.authType !== "NONE" && !form.secretRef.trim())}>{busy ? "正在保存…" : "保存连接修订"}</button></div>
   </form></div>;
 }
 
@@ -445,4 +715,11 @@ async function fetchApplicationDetail(token: string, appCode: string): Promise<I
   const { body } = await safeFetchJson(response);
   if (!response.ok || !body?.success) throw new Error(body?.message ?? `HTTP ${response.status}`);
   return body.data as InternalApplicationDetail;
+}
+
+async function fetchProviderConnections(token: string, appCode: string): Promise<ProviderConnection[]> {
+  const response = await fetch(`${PLATFORM_API_BASE}/internal-applications/${encodeURIComponent(appCode)}/connections`, { headers: { Authorization: `Bearer ${token}` } });
+  const { body } = await safeFetchJson(response);
+  if (!response.ok || !body?.success || !Array.isArray(body.data)) throw new Error(body?.message ?? `HTTP ${response.status}`);
+  return body.data as ProviderConnection[];
 }

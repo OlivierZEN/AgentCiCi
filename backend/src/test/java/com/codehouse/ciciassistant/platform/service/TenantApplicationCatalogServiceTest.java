@@ -23,8 +23,9 @@ class TenantApplicationCatalogServiceTest {
     private final InternalApplicationRegistryService registry = mock(InternalApplicationRegistryService.class);
     private final SematticeProvisioningService semattice = mock(SematticeProvisioningService.class);
     private final DevAutopilotTenantApplicationService devAutopilot = mock(DevAutopilotTenantApplicationService.class);
+    private final GenericTenantApplicationLifecycleService genericLifecycle = mock(GenericTenantApplicationLifecycleService.class);
     private final TenantApplicationCatalogService service = new TenantApplicationCatalogService(
-            companies, registry, semattice, devAutopilot);
+            companies, registry, semattice, devAutopilot, genericLifecycle);
 
     @Test
     void dynamicallyIncludesPublishedApplicationsAndBlocksRequiredRuntimeDependencies() {
@@ -44,6 +45,8 @@ class TenantApplicationCatalogServiceTest {
                 new SematticeProvisioningService.BindingView(null, companyId, "NOT_PROVISIONED", null, null, null));
         when(devAutopilot.get(companyId)).thenReturn(
                 DevAutopilotTenantApplicationService.View.notEnabled(companyId));
+        when(genericLifecycle.runtime(companyId, "sales-workbench")).thenReturn(
+                GenericTenantApplicationLifecycleService.RuntimeView.notEnabled());
 
         var catalog = service.list(companyId);
 

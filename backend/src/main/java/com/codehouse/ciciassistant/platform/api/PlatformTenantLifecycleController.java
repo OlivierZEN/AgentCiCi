@@ -8,6 +8,7 @@ import com.codehouse.ciciassistant.platform.service.PlatformTenantOwnerRecoveryS
 import com.codehouse.ciciassistant.platform.service.PlatformTenantOwnerIdentityService;
 import com.codehouse.ciciassistant.platform.service.PlatformTenantOwnerResolutionService;
 import com.codehouse.ciciassistant.platform.service.DevAutopilotTenantApplicationService;
+import com.codehouse.ciciassistant.platform.service.GenericTenantApplicationLifecycleService;
 import com.codehouse.ciciassistant.platform.service.TenantApplicationCatalogService;
 import com.codehouse.ciciassistant.semattice.SematticeProvisioningClient;
 import com.codehouse.ciciassistant.semattice.SematticeProvisioningService;
@@ -40,6 +41,7 @@ public class PlatformTenantLifecycleController {
     private final SematticeProvisioningService sematticeProvisioningService;
     private final DevAutopilotTenantApplicationService devAutopilotApplications;
     private final TenantApplicationCatalogService tenantApplications;
+    private final GenericTenantApplicationLifecycleService genericApplications;
     private final PlatformTenantOwnerRecoveryService ownerRecoveryService;
     private final PlatformTenantOwnerIdentityService ownerIdentityService;
     private final PlatformTenantOwnerResolutionService ownerResolutionService;
@@ -50,6 +52,7 @@ public class PlatformTenantLifecycleController {
                                              SematticeProvisioningService sematticeProvisioningService,
                                              DevAutopilotTenantApplicationService devAutopilotApplications,
                                              TenantApplicationCatalogService tenantApplications,
+                                             GenericTenantApplicationLifecycleService genericApplications,
                                              PlatformTenantOwnerRecoveryService ownerRecoveryService,
                                              PlatformTenantOwnerIdentityService ownerIdentityService,
                                              PlatformTenantOwnerResolutionService ownerResolutionService,
@@ -59,6 +62,7 @@ public class PlatformTenantLifecycleController {
         this.sematticeProvisioningService = sematticeProvisioningService;
         this.devAutopilotApplications = devAutopilotApplications;
         this.tenantApplications = tenantApplications;
+        this.genericApplications = genericApplications;
         this.ownerRecoveryService = ownerRecoveryService;
         this.ownerIdentityService = ownerIdentityService;
         this.ownerResolutionService = ownerResolutionService;
@@ -164,6 +168,27 @@ public class PlatformTenantLifecycleController {
     public ApiResponse<TenantApplicationCatalogService.CatalogView> listTenantApplications(
             @PathVariable @Pattern(regexp = "^org[a-z0-9]{17}$") String companyId) {
         return ApiResponse.ok(tenantApplications.list(companyId));
+    }
+
+    @PostMapping("/{companyId}/applications/{appCode}/operations")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
+    public ApiResponse<GenericTenantApplicationLifecycleService.OperationView> executeApplicationOperation(
+            @PathVariable @Pattern(regexp = "^org[a-z0-9]{17}$") String companyId,
+            @PathVariable @Pattern(regexp = "^[a-z][a-z0-9-]{1,63}$") String appCode,
+            @Valid @RequestBody TenantApplicationOperationRequest request) {
+        return ApiResponse.ok(genericApplications.execute(
+                companyId, appCode,
+                new GenericTenantApplicationLifecycleService.OperationCommand(
+                        request.operationType(), request.idempotencyKey()),
+                actorId(), actorRole()),
+                "Tenant application operation completed");
+    }
+
+    @GetMapping("/{companyId}/applications/{appCode}/operations")
+    public ApiResponse<List<GenericTenantApplicationLifecycleService.OperationView>> listApplicationOperations(
+            @PathVariable @Pattern(regexp = "^org[a-z0-9]{17}$") String companyId,
+            @PathVariable @Pattern(regexp = "^[a-z][a-z0-9-]{1,63}$") String appCode) {
+        return ApiResponse.ok(genericApplications.list(companyId, appCode));
     }
 
     @PostMapping("/{companyId}/applications/devautopilot/activations")
@@ -424,6 +449,10 @@ public class PlatformTenantLifecycleController {
     public record DevAutopilotIntakeReconciliationRequest(
             @NotBlank @Size(max = 64) String sessionId,
             @NotBlank @Pattern(regexp = "^[0-9a-fA-F-]{36}$") String recordId) { }
+
+    public record TenantApplicationOperationRequest(
+            @NotBlank @Pattern(regexp = "^(ACTIVATE|RECONCILE|SUSPEND|RESUME|UPGRADE)$") String operationType,
+            @NotBlank @Pattern(regexp = "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$") String idempotencyKey) { }
 
     public record LifecycleActionRequest(String reason) {
     }

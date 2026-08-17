@@ -62,13 +62,16 @@ public class InternalApplicationRegistryService {
     private final JdbcTemplate jdbc;
     private final ObjectMapper objectMapper;
     private final PlatformAuditService audit;
+    private final InternalApplicationProviderConnectionService providerConnections;
 
     public InternalApplicationRegistryService(JdbcTemplate jdbc,
                                               ObjectMapper objectMapper,
-                                              PlatformAuditService audit) {
+                                              PlatformAuditService audit,
+                                              InternalApplicationProviderConnectionService providerConnections) {
         this.jdbc = jdbc;
         this.objectMapper = objectMapper;
         this.audit = audit;
+        this.providerConnections = providerConnections;
     }
 
     @Transactional(readOnly = true)
@@ -242,6 +245,8 @@ public class InternalApplicationRegistryService {
         checks.add("dependencies");
         validateAcyclic(normalizedCode, target.id());
         checks.add("dependency-graph");
+        validateProviderConnection(target);
+        checks.add("provider-connection");
         jdbc.update("""
                 UPDATE internal_application_version
                 SET version_status='VALIDATED',validated_by=?,validated_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP
@@ -389,6 +394,27 @@ public class InternalApplicationRegistryService {
                 throw new ConflictException("Dependency " + dependency.appCode() + " is retired");
             }
         }
+    }
+
+    private void validateProviderConnection(VersionView target) {
+        List<String> providerContractVersions = new ArrayList<>();
+        target.manifest().path("steps").forEach(step -> {
+            if (!Set.of("agentcici", "semattice", "devautopilot").contains(target.appCode())
+                    && !"PROVIDER_CALLBACK".equals(step.path("type").asText())) {
+                throw new ConflictException("Generic applications currently support Provider callback steps only");
+            }
+            if ("PROVIDER_CALLBACK".equals(step.path("type").asText())) {
+                providerContractVersions.add(step.path("contractVersion").asText());
+            }
+        });
+        if (providerContractVersions.isEmpty()) {
+            return;
+        }
+        if (target.providerBindingKey() == null || target.providerBindingKey().isBlank()) {
+            throw new ConflictException("Provider callback steps require an active provider connection");
+        }
+        providerConnections.validateProviderContract(
+                target.appCode(), target.providerBindingKey(), providerContractVersions);
     }
 
     private void validateAcyclic(String targetAppCode, String targetVersionId) {

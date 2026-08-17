@@ -18,7 +18,8 @@ class InternalApplicationRegistryServiceTest {
 
     private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
     private final InternalApplicationRegistryService service = new InternalApplicationRegistryService(
-            jdbc, new ObjectMapper(), mock(PlatformAuditService.class));
+            jdbc, new ObjectMapper(), mock(PlatformAuditService.class),
+            mock(InternalApplicationProviderConnectionService.class));
 
     @Test
     void matchesOnlySupportedSemanticVersionConstraints() {

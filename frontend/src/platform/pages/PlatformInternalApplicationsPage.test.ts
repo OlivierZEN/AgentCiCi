@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   applicationCatalogStatusLabel,
+  providerConnectionStatusLabel,
+  suggestedDependencyConstraint,
   validApplicationCode,
   validSemanticVersion,
   versionStatusLabel,
@@ -20,6 +22,17 @@ describe("internal tenant application registration validation", () => {
     expect(validSemanticVersion("12.8.31")).toBe(true);
     expect(validSemanticVersion("1.0")).toBe(false);
     expect(validSemanticVersion("1.0.0-beta.1")).toBe(false);
+  });
+
+  it("labels provider connection lifecycle without exposing topology details", () => {
+    expect(providerConnectionStatusLabel("ACTIVE")).toBe("已启用");
+    expect(providerConnectionStatusLabel("DISABLED")).toBe("已停用");
+    expect(providerConnectionStatusLabel("DRAFT")).toBe("草稿");
+  });
+
+  it("derives dependency constraints from the selected published version", () => {
+    expect(suggestedDependencyConstraint("2.3.1")).toBe(">=2.3.1");
+    expect(suggestedDependencyConstraint(null)).toBe(">=1.0.0");
   });
 });
 
