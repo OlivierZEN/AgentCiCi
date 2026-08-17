@@ -1,7 +1,7 @@
 ---
 kind: task-archive
 version: 4
-updated_at: 2026-08-11T02:34:13Z
+updated_at: 2026-08-17T11:01:08Z
 updated_by: codex
 archive_status: active
 ---
@@ -121,6 +121,8 @@ Historical task cards have been removed from the hot board. Keep details in task
 - TASK-003 — completed — Replace simulated debug with runtime trace acceptance path
 - TASK-002 — completed — Bind published agent version to runtime
 - TASK-001 — completed — MCP cache runtime smoke closure
+
+- TASK-314 — completed — DevAutopilot v4 sync includes all active HUMAN application administrators; UAT beta.27 passed seven-object and workspace acceptance
 
 ## Maintenance Rules
 
