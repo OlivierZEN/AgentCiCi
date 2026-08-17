@@ -2,11 +2,11 @@
 kind: task-status
 task_id: TASK-313
 feature_id: FEAT-191
-status: in_progress
+status: review
 priority: critical
 owner_role: fullstack-agent
 claimed_by: codex
-updated_at: 2026-08-17T11:09:36Z
+updated_at: 2026-08-17T11:49:50Z
 updated_by: codex
 ---
 
@@ -45,6 +45,10 @@ updated_by: codex
 - Chrome 原运营平台页的登录态在重载后过期并跳转登录页；未读取浏览器存储或绕过认证，授权态应用中心、发布和租户应用卡片视觉验收待平台管理员登录后完成。
 - 按用户反馈将原用户界面名称“租户应用目录”统一调整为“应用中心”，保留路由、API 和内部 catalog 模型；相关 3 个测试文件、27 项通过，production build 通过。
 - 命名提交 `2188e5760087` 已进入本地 `main`；前端从该提交构建为 `2.8.61-dev.2188e57`，正式路由 HTTP 200，运行 JS 回读 9 处“应用中心”且无“租户应用目录”，容器 healthy/restart=0。
+- 运行连接、版本绑定、依赖选择和通用 Provider 生命周期提交 `f56055e921d2` 已进入本地 `main`；远端 `main`、UAT 与生产均未修改。
+- 后端 4 个定向测试类通过，包含真实本机 HTTP Provider 回调；production package 通过。前端全量 52 个测试文件、289 项与 production build 通过。
+- Flyway V121 在本地共享 PostgreSQL 从 V120 成功前进，backend/frontend 均为 `2.8.61-dev.f56055e`、healthy/restart=0；完整 `cc-local-stack ./stack verify` 通过。
+- 正式页面路由 200，匿名运行连接 API 为 JSON 401，部署 JS 已回读“运行连接”“服务 Base URL”“添加依赖”“新建连接修订”；浏览器正确进入平台登录边界且 console 无 error/warning。授权态运行连接创建/测试/启用和真实目标应用开通仍待平台管理员业务验收。
 
 ## 本轮重开范围
 

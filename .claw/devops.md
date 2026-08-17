@@ -1,12 +1,19 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-17T11:01:08Z
+updated_at: 2026-08-17T11:49:50Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-17 TASK-313 本地开发环境
+
+- AgentCiCi backend/frontend 从本地 `main@f56055e921d2` 构建为 `2.8.61-dev.f56055e`，镜像 ID 分别为 `sha256:a20fc94534b0d6fbde16a5b886d72e64f3cef024785423802c9a388c55c3e0dc`、`sha256:ec0d0a72abd48a3f97a61f039277dff40f9e29f97ec672d3afd1dd20b60e21af`，label version/revision 与提交一致。
+- Flyway 从 V120 成功执行 V121；backend/frontend 均 healthy、restart=0，backend `/system/version=2.8.61-dev.f56055e / f56055e921d2`、`/actuator/health=UP`。正式应用中心路由返回 200，匿名运行连接 API 返回 JSON 401。
+- 完整 `cc-local-stack ./stack verify` 通过部署域名门禁、共享数据库隔离、TLS、OIDC、应用健康/version 和匿名鉴权边界；部署 JS 已回读运行连接、Base URL、依赖选择和连接修订文案。
+- 浏览器正式入口进入运营平台登录边界且 console 无 error/warning；未绕过登录执行授权态业务写入。远端 main、UAT、生产、ACR 与 Git tag 均未修改。
 
 ## 2026-08-17 TASK-314 UAT `2.8.61-beta.27`
 

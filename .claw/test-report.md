@@ -1,14 +1,27 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-17T10:50:16Z
+updated_at: 2026-08-17T11:49:50Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-17T10:50:16Z
-last_run_status: passed_task_302_trusted_application_naming_local_with_authorized_visual_pending
+last_run_at: 2026-08-17T11:49:50Z
+last_run_status: passed_task_313_provider_lifecycle_local_with_authorized_business_acceptance_pending
 ---
 
 # Test Report
+
+## 2026-08-17 TASK-313 内部租户应用注册中心本地验证
+
+- 状态：`passed_task_313_provider_lifecycle_local_with_authorized_business_acceptance_pending`。
+- 后端：`InternalApplicationRegistryServiceTest`、`InternalApplicationProviderConnectionServiceTest`、`GenericTenantApplicationLifecycleServiceTest`、`TenantApplicationCatalogServiceTest` 定向通过，production package 通过；覆盖公网 HTTPS/内部网络边界、Metadata 拒绝、Secret 引用、活动连接稳定元数据、版本/连接契约门禁、依赖状态、真实本机 HTTP Provider 初始化回调和既有三应用兼容投影。
+- 前端：全量 52 个测试文件、289 项通过；TypeScript 与 Vite production build 通过，仅有既有大 chunk warning。运行连接工作区、真实 Base URL/动作路径、版本连接选择和应用依赖选择器已进入制品。
+- 全量边界：后端全量套件启动后持续等待本机未启动的共享 PostgreSQL，尚未进入业务断言；为避免无效等待手动中止，exit 130。本轮没有 repair 或改写共享测试库，定向测试与 package 无失败。
+- 状态文件：全仓 `.claw` validator 被既有历史规格 front matter、旧任务归档等债务阻断，未报告 FEAT-191/TASK-313；本轮未扩张范围修复历史状态。
+- 本地主线与迁移：实现提交 `f56055e921d2` 已进入本地 `main`；Flyway 实际从 V120 迁移至 V121，创建连接、修订、operation 与 step 表。
+- 本地运行：backend/frontend 均为 `2.8.61-dev.f56055e`，镜像 revision `f56055e921d2`、healthy/restart=0；容器内 `/system/version` 和 `/actuator/health=UP`、正式页面路由 200、匿名连接 API JSON 401，完整 `cc-local-stack ./stack verify` 通过。部署 JS 回读“运行连接”“服务 Base URL”“添加依赖”“新建连接修订”。
+- 浏览器边界：正式路由正确进入平台登录页，console 无 error/warning；未读取存储、猜测密码或绕过鉴权。授权态创建/测试/启用真实连接、发布版本和目标租户 ACTIVATE 仍待平台管理员业务验收。
+- 发布边界：仅更新本地开发测试环境；远端 main、UAT、生产均未修改。
+- 命名调整：用户界面的“租户应用目录”已统一改为“应用中心”，路由/API/内部 catalog 不变；`PlatformShell`、`PlatformInternalApplicationsPage`、`PlatformTenantApplicationsPage` 共 27 项通过，production build 通过。
 
 ## 2026-08-17 TASK-302 受信应用命名统一
 
@@ -18,19 +31,6 @@ last_run_status: passed_task_302_trusted_application_naming_local_with_authorize
 - 本地主线与制品：代码提交 `a81e3b727bfb` 已进入本地 `main`。为避开同工作树中其他未提交改动，前端镜像从包含该提交的最新代码主线 `2188e5760087` 的干净 Git 归档构建；镜像版本 `2.8.61-dev.2188e57`、revision `2188e5760087`。此后的 main 变更仅为状态文档，不影响制品。
 - 本地运行：仅重建 `cici-frontend`；目标路由返回 200，Nginx 校验通过，frontend healthy/restart=0，运行 JS `index-Ppo-xn5B-2.8.61-dev.2188e57.js` 已回读“受信应用”。
 - 浏览器边界：访问目标路由正确进入平台登录页，当前无平台管理员登录态，未伪造授权态视觉结论。远端 main、UAT、生产均未修改。
-
-## 2026-08-17 TASK-313 内部租户应用注册中心本地验证
-
-- 状态：`passed_task_313_local_technical_with_authorized_visual_pending`。
-- 后端：`InternalApplicationRegistryServiceTest` 与 `TenantApplicationCatalogServiceTest` 定向通过，production package 通过；覆盖非法环境地址、语义版本约束、依赖版本满足、依赖阻断和既有三应用兼容投影。
-- 前端：全量 52 个测试文件、287 项通过；TypeScript 与 Vite production build 通过，仅有既有大 chunk warning。新增目录导航、应用代码/版本校验和动态卡片回归。
-- 全量边界：后端全量运行至中止时为 551 tests、19 failures、157 errors、5 skipped；Spring 启动型用例主要受共享 `agentcici_test` V81 checksum 漂移阻断，另有既有 Ontology AI mock 断言失败。本轮未 repair 数据库，定向测试与 package 无失败。
-- 状态文件：全仓 `.claw` validator 被既有历史规格 front matter、旧任务归档等债务阻断，未报告 FEAT-191/TASK-313；本轮未扩张范围修复历史状态。
-- 本地主线与迁移：提交 `1b0776e0a60d` 已进入本地 `main`；Flyway V120 `success=true`，`agentcici/devautopilot/semattice` seed 均为 `PUBLISHED / 1.0.0`。
-- 本地运行：backend/frontend 均为 `2.8.61-dev.1b0776e`，healthy/restart=0；后端版本和前端资源名回读 commit 一致，目录 SPA 200，匿名目录 API 401；完整 `cc-local-stack ./stack verify` 通过。
-- 浏览器边界：Chrome 原运营平台页的会话在重载后已过期，正式路由正确进入平台登录页；未读取存储、猜测密码或伪造会话。授权态目录、发布与租户动态卡片仍待平台管理员登录后复核。
-- 发布边界：仅更新本地开发测试环境；远端 main、UAT、生产均未修改。
-- 命名调整：用户界面的“租户应用目录”已统一改为“应用中心”，路由/API/内部 catalog 不变；`PlatformShell`、`PlatformInternalApplicationsPage`、`PlatformTenantApplicationsPage` 共 27 项通过，production build 通过。
 
 ## 2026-08-17 AgentCiCi UAT `2.8.61-beta.26`
 

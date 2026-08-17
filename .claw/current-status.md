@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-17T10:50:16Z
+updated_at: 2026-08-17T11:49:50Z
 updated_by: codex
 phase: review
 active_task: TASK-313
-next_action: "由已登录平台管理员复核应用中心、版本/依赖发布和租户动态卡片；通用 Provider 生命周期执行器另建后续切片。"
+next_action: "由已登录平台管理员以真实内部应用创建并测试运行连接，发布带依赖版本，再为测试租户执行开通并核对 Provider 与 operation/step 审计。"
 read_next:
   goals: false
   decisions: false
@@ -24,7 +24,7 @@ read_next:
 
 - `TASK-302 / FEAT-183` 已将系统 API 首页的治理入口从“接入应用”统一为“受信应用”，目标页标题、无障碍标签和空态同步采用同一对象名；“登记应用”“编辑受信应用”等动作词保持不变。代码提交 `a81e3b72` 已进入本地 `main`；前端定向 10 项、全量 52 文件/287 项、production build 与 `git diff --check` 通过。本地前端从包含该提交的最新代码主线 `2188e576` 构建为 `2.8.61-dev.2188e57`，目标路由 200、Nginx 有效、healthy/restart=0，部署 JS 已回读“受信应用”；此后的 main 变更仅为状态文档，不影响制品。浏览器正确进入平台登录边界，授权态视觉回读待平台管理员登录后完成；远端、UAT、生产未修改。
 
-- `TASK-313 / FEAT-191` 第一期已进入 review：提交 `1b0776e0` 在 AgentCiCi 建立内部应用、不可变版本、依赖和发布门禁，seed 三个既有应用，并提供目录治理 API、租户动态聚合 API 和运营“应用中心”；DevAutopilot 既有可恢复 Saga 写链路保持兼容。后端定向测试/package、前端 52 文件/287 项/build、V120、三个 seed、匿名 401、运行版本 `2.8.61-dev.1b0776e`、backend/frontend healthy/restart=0 和完整 `./stack verify` 通过。按用户反馈，原用户界面名称“租户应用目录”已统一调整为“应用中心”，相关 3 个测试文件/27 项与 build 通过，待重新部署前端。可控浏览器会话已过期，授权态应用中心/发布/租户卡片视觉验收待平台管理员登录后完成；通用 Provider 生命周期执行器属于后续切片。
+- `TASK-313 / FEAT-191` 已实现并进入 review：在既有应用目录、不可变版本、依赖和发布门禁之上，提交 `f56055e9` 新增独立运行连接/不可变修订、真实 Base URL 与动作路径、环境 Secret 引用、连接测试/启用、版本绑定、依赖应用选择器和通用 Provider 生命周期执行器；既有 AgentCiCi/Semattice/DevAutopilot 专用适配器保持不变。后端 4 个定向测试类含真实本机 HTTP Provider 回调及 package 通过，前端 52 文件/289 项与 build 通过。Flyway V121 从 V120 成功迁移；backend/frontend 从本地 `main@f56055e9` 构建为 `2.8.61-dev.f56055e`，healthy/restart=0，正式路由 200、匿名连接 API JSON 401、部署 JS 含新运营工作区，完整 `./stack verify` 通过。浏览器正确进入平台登录边界且无 error/warning；授权态真实连接及目标应用开通验收待平台管理员完成，远端/UAT/生产未修改。
 
 - `TASK-312 / FEAT-148` 已发布 UAT `2.8.61-beta.26 / a322fd91324b`：远端 main、tag、镜像和运行 commit 一致；完整备份 `/data/apps/agentcici/backups/20260817T093959Z-before-2.8.61-beta.26` 校验通过，回滚目标 beta.25。仅重建 backend/frontend，状态服务 ID 不变；六容器 healthy/restart=0，health、Flyway、Nginx、公开 smoke、JSON 401 与稳定日志通过。真实未登录桌面会话无需点击即进入统一身份中心，旧表单和按钮均为 0，浏览器无 error/warning。生产未修改。
 

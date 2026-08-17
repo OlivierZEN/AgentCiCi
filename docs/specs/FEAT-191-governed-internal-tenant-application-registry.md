@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-191
 title: 受治理的内部租户应用注册中心
-status: in_implementation
+status: implemented
 owner_role: fullstack-agent
 task_ids: TASK-313
 related_decisions: DEC-055, DEC-021, DEC-023, DEC-054
 related_issues: none
-updated_at: 2026-08-17T11:09:36Z
+updated_at: 2026-08-17T11:49:50Z
 updated_by: codex
 ---
 

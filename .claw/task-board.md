@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-17T11:01:08Z
+updated_at: 2026-08-17T11:49:50Z
 updated_by: codex
 board_status: active
 ---
@@ -17,7 +17,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-313 - 受治理的内部租户应用注册中心
 
-- status: `in_progress`
+- status: `review`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - claimed_by: `codex`
@@ -25,8 +25,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-313.md`
 - blocked_by: `none`
 - scope_files: `内部应用目录/版本/依赖模型、运行连接与修订、平台治理 API、通用生命周期执行、租户应用动态聚合、运营页面、测试与本地环境验证`
-- completion_evidence: `1b0776e0、2188e576；后端定向测试/package、前端 52 文件/287 项及命名回归 27 项/build；V120 与三个 seed；前端 2.8.61-dev.2188e57；正式路由 200、制品仅含“应用中心”、healthy/restart=0；完整 stack verify`
-- next_action: `实现并验证受管运行连接、版本/依赖选择和通用 Provider 生命周期执行。`
+- completion_evidence: `1b0776e0、2188e576、f56055e9；V120/V121；后端 4 个定向测试类/package；前端 52 文件/289 项/build；真实本机 Provider HTTP 回调；backend/frontend 2.8.61-dev.f56055e；healthy/restart=0；正式路由 200、匿名连接 API 401、完整 stack verify`
+- next_action: `由已登录平台管理员创建并测试一个真实内部应用运行连接，发布带依赖的应用版本，再为测试租户执行 ACTIVATE 并回读 Provider 与 operation/step 审计。`
 
 ### TASK-312 - 登录中转页移除手动触发区
 
