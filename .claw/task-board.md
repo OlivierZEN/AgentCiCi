@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-17T09:59:48Z
+updated_at: 2026-08-17T10:23:35Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,18 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-314 - DevAutopilot HUMAN 应用管理员授权同步
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `backend-agent`
+- claimed_by: `codex`
+- integration_id: `INT-025`
+- spec_path: `docs/specs/FEAT-177-devautopilot-authorization-initialization.md`
+- task_status_path: `.claw/tasks/TASK-314.md`
+- blocked_by: `cc-semattice TASK-085 v4 provider candidate`
+- next_action: `实现权威 HUMAN 管理员集合、v4 客户端和定向回归。`
 
 ### TASK-313 - 受治理的内部租户应用注册中心
 

@@ -1,3 +1,16 @@
+---
+kind: feature-spec
+version: 1
+feature_id: FEAT-177
+title: DevAutopilot 授权初始化编排
+status: in_implementation
+primary_project: agentcici
+task_ids: TASK-293,TASK-314
+related_integrations: INT-014,INT-025
+updated_at: 2026-08-17T10:35:00Z
+updated_by: codex
+---
+
 # FEAT-177 DevAutopilot 授权初始化编排
 
 ## 目标
@@ -12,7 +25,7 @@ AgentCiCi 在 DevAutopilot 新开通、标准模板同步和新增开发者时�
 2. 幂等应用 `devautopilot.standard.v1` 元数据。
 3. 创建并发布产品经理 Agent 与 PM SERVICE；新增 developer 仍由租户管理员按需执行。
 4. 投影初始 HUMAN owner、PM SERVICE 和所有 developer SERVICE。
-5. 以 activation 资源清单调用 Semattice 固定授权模板：owner=`application_admin`、PM=`product_manager`、developer=`developer`。
+5. 以 activation 资源清单和权威成员关系调用 Semattice 固定授权模板：active OWNER/ORG_ADMIN/显式 APP_ADMIN=`application_admin`、PM=`product_manager`、developer=`developer`。
 6. 校验模板版本、摘要、4 个角色、4 个权限包、7 个对象、全部预期主体绑定和 `verified=true`。
 7. 保存授权回执；只有所有条件满足才置 `ACTIVE` / `initializationReady=true`。
 
@@ -30,6 +43,14 @@ AgentCiCi 在 DevAutopilot 新开通、标准模板同步和新增开发者时�
 - 调用体中的主体只能来自当前 activation 的受管资源和初始有效 HUMAN 管理员。
 - HUMAN 负责人承担治理问责；PM 与 developer SERVICE 是实际业务执行主体。
 - OACT scope 只是 Capability 入口上限，Semattice 角色、字段权限、数据范围、Principal 状态和 RLS 继续作为最终授权。
+
+### authorization.v4 主体集合
+
+- UAT `INT-025` 证实旧实现只提交初始 Owner，导致同租户 active ORG_ADMIN 的 HUMAN OACT 在元数据读取成功后被对象 PDP 拒绝。
+- v4 的 HUMAN `application_admin` 集合来自 AgentCiCi 当前权威数据：active `OWNER`、active `ORG_ADMIN`，以及 `tenant_application_member_role` 中显式 active `APP_ADMIN` 且成员本身 active 的主体。
+- 正式授权同步先通过 `identity.principal.sync` 逐个投影上述 HUMAN，再调用受管模板；任一主体不再属于当前租户或投影失败时整次同步失败关闭，不以缺少该管理员的方式降级成功。
+- 普通 ORG_USER、VIEWER/CONTRIBUTOR/REVIEWER、REVOKED 应用角色和非激活成员不进入该只读管理员集合；本缺陷修复不重新定义其业务权限。
+- 完整集合按 Principal ID 排序去重并进入 reconciliation key。管理员资格变化不会由 GET 隐式写入，必须通过既有受治理成员操作或“同步交付授权”正式动作收敛到 Semattice。
 
 ## 验收
 

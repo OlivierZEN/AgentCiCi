@@ -607,6 +607,9 @@ public class DevAutopilotTenantApplicationService {
     SematticeDevAutopilotAuthorizationClient.AuthorizationView reconcileAuthorizationTemplate(String companyId,
                                                                                                 String activationId) {
         List<SematticeDevAutopilotAuthorizationClient.Assignment> assignments = authorizationAssignments(companyId, activationId);
+        assignments.stream()
+                .filter(item -> "application_admin".equals(item.logicalRole()))
+                .forEach(item -> principals.synchronizeHumanProjection(companyId, item.principalId()));
         var result = authorizationTemplate.apply(companyId, activationId,
                 authorizationReconciliationKey(activationId, assignments), assignments);
         if (!companyId.equals(result.companyId())
@@ -628,18 +631,23 @@ public class DevAutopilotTenantApplicationService {
         return result;
     }
 
-    private List<SematticeDevAutopilotAuthorizationClient.Assignment> authorizationAssignments(String companyId,
-                                                                                                String activationId) {
-        String applicationAdminMemberId = initialOwnerMemberId(companyId);
-        String applicationAdmin = jdbc.queryForObject("""
-                SELECT account_id FROM company_member
-                WHERE id=? AND company_id=? AND member_status='ACTIVE'
-                """, String.class, applicationAdminMemberId, companyId);
-        if (applicationAdmin == null || applicationAdmin.isBlank()) {
+    List<SematticeDevAutopilotAuthorizationClient.Assignment> authorizationAssignments(String companyId,
+                                                                                        String activationId) {
+        List<SematticeDevAutopilotAuthorizationClient.Assignment> result = new java.util.ArrayList<>();
+        result.addAll(jdbc.query("""
+                SELECT DISTINCT member.account_id
+                FROM company_member member
+                LEFT JOIN tenant_application_member_role app_access
+                  ON app_access.activation_id=? AND app_access.company_member_id=member.id
+                 AND app_access.status='ACTIVE'
+                WHERE member.company_id=? AND member.member_status='ACTIVE'
+                  AND (member.role_code IN ('OWNER','ORG_ADMIN') OR app_access.role_code='APP_ADMIN')
+                ORDER BY member.account_id
+                """, (rs, rowNum) -> new SematticeDevAutopilotAuthorizationClient.Assignment(
+                rs.getString(1), "application_admin"), activationId, companyId));
+        if (result.isEmpty()) {
             throw new IllegalStateException("DevAutopilot application administrator is unavailable");
         }
-        List<SematticeDevAutopilotAuthorizationClient.Assignment> result = new java.util.ArrayList<>();
-        result.add(new SematticeDevAutopilotAuthorizationClient.Assignment(applicationAdmin, "application_admin"));
         result.addAll(jdbc.query("""
                 SELECT external_id,logical_role
                 FROM tenant_application_resource
