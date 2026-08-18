@@ -1,14 +1,24 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-17T15:37:19Z
+updated_at: 2026-08-18T02:05:50Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-17T15:37:19Z
-last_run_status: passed_task_315_local_runtime_with_authenticated_dialogue_pending
+last_run_at: 2026-08-18T02:05:50Z
+last_run_status: passed_agentcici_2_8_61_beta_28_uat_technical_gate
 ---
 
 # Test Report
+
+## 2026-08-18 AgentCiCi UAT `2.8.61-beta.28`
+
+- 状态：`passed_agentcici_2_8_61_beta_28_uat_technical_gate_with_business_acceptance_pending`。
+- Source/制品：远程 `main` 包含冻结提交 `242074e72a9e`，annotated tag peeled commit、backend/frontend image label 和运行版本均为该提交；ACR index digest 为 backend `sha256:99851d50ad5f9c6ae72b02edf23a1f2949b60f2842179b91becb1eb0f4801c10`、frontend `sha256:e1231cd5366c6b4528569e665436374d8f28dde185f6ca018d5332d321c04953`，未更新 `latest`。
+- 质量门禁：本次候选相关后端 12 个测试类共 87 项通过，0 failure/error/skipped；前端全量 52 个文件、289 项通过；production package/build 与 `git diff --check` 通过。后端全量套件仍不声明通过，沿用已记录的共享 PostgreSQL 历史债务边界。
+- 备份与回滚：`/data/apps/agentcici/backups/20260818T020041Z-before-2.8.61-beta.28` 的 Compose、受管环境、PostgreSQL、KB、Qdrant、beta.27 两项旧镜像和 SHA-256 清单均非空、`0600` 且通过读取校验；回滚目标 beta.27，仅重建 backend/frontend。
+- 运行门禁：仅 backend/frontend 重建；database、Redis、RabbitMQ、Qdrant ID 保持不变。V121 成功，117 条 migration 成功；六容器 healthy/restart=0，health=`UP`、版本/commit/digest 一致，Nginx 有效，backend severe=0、frontend 5xx=0。
+- 公网与鉴权：两轮 UAT 首页、Keycloak discovery、Semattice health/version、DevAutopilot integrated health 全部通过；HTTP→HTTPS 301，`/app`、应用中心和系统 API 页面为 200，匿名 auth、应用目录和连接 API 均为 `401 application/json`。
+- 契约与业务边界：候选新增通用 Provider 连接能力但没有创建或启用真实连接，TASK-315 复用既有模型与 Semattice Tool 契约；本次无新增/切换/启用的跨项目契约。未代用户发送产品经理对话、确认创建或写入 Semattice，真实 UAT 业务验收待已登录用户完成；生产未修改。
 
 ## 2026-08-17 TASK-315 产品经理结构化语义判定与标准输出
 

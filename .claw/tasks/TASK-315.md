@@ -6,7 +6,7 @@ status: review
 priority: critical
 owner_role: backend-agent
 claimed_by: codex
-updated_at: 2026-08-18T01:57:16Z
+updated_at: 2026-08-18T02:05:50Z
 updated_by: codex
 ---
 
@@ -27,7 +27,7 @@ updated_by: codex
 - 同一结构化结果始终生成同一草案和可执行确认口令。
 - 无真实回执的成功声明稳定阻断，非交付答案不误伤。
 - 缺少结构化标记的旧自由文本草案失败关闭。
-- 本地环境版本可追溯到本地 `main` 提交；UAT、生产不修改。
+- 本地环境和 UAT 候选均可追溯到远程 `main` 冻结提交；生产不修改。
 
 ## 当前证据
 
@@ -39,3 +39,5 @@ updated_by: codex
 - 提交 `f121d20c`、`cc4312ed` 已进入本地 `main`；backend/frontend 运行 `2.8.61-dev.cc4312e`，镜像 revision 一致、healthy/restart=0，内部版本与 health 回读、正式入口 200 和完整 `./stack verify` 均通过。
 - 真实 Provider 非写入探测中，隐含创建返回 `CREATE_DRAFT/PROJECT/CCSales 智能应用`，否定解释返回 `OTHER`；已登录 Chrome 回读新版本，但未代用户发送页面消息。固定草案格式仍待用户验收，UAT/生产未修改。
 - 实现、修复和验证记录已随本地 `main@a25cce7e` 非强制快进推送到 `origin/main`；未创建 tag，未发布 UAT/生产。
+- UAT `2.8.61-beta.28 / 242074e72a9e` 已完成技术发布：backend/frontend digest 分别为 `sha256:99851d50ad5f9c6ae72b02edf23a1f2949b60f2842179b91becb1eb0f4801c10`、`sha256:e1231cd5366c6b4528569e665436374d8f28dde185f6ca018d5332d321c04953`；完整备份校验、V121、六容器健康、版本回读、JSON 401、公开 smoke 与稳定日志通过。
+- 本轮未代用户发送产品经理对话或确认创建，未新增 Semattice 业务记录；隐含创建、否定表达、固定草案与确认后真实回执仍待已登录 UAT 用户验收。生产未修改。

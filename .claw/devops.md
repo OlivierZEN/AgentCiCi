@@ -1,12 +1,20 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-18T01:57:16Z
+updated_at: 2026-08-18T02:05:50Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-18 TASK-313 / TASK-315 UAT `2.8.61-beta.28`
+
+- 冻结时 AgentCiCi 本地/远程 `main` 和 annotated tag peeled commit 均为 `242074e72a9e`；后续发布记录提交只更新文档。backend/frontend linux/amd64 ACR index digest 分别为 `sha256:99851d50ad5f9c6ae72b02edf23a1f2949b60f2842179b91becb1eb0f4801c10`、`sha256:e1231cd5366c6b4528569e665436374d8f28dde185f6ca018d5332d321c04953`，未更新 `latest`。
+- 完整备份 `/data/apps/agentcici/backups/20260818T020041Z-before-2.8.61-beta.28` 包含 Compose、受管环境、PostgreSQL、KB、Qdrant、beta.27 旧镜像、容器状态和 SHA-256 清单；全部工件非空且 `0600`，数据库、tar、gzip 和清单校验通过。即时回滚目标为 `2.8.61-beta.27`。
+- 仅 pull/force-recreate backend/frontend；database、Redis、RabbitMQ、Qdrant 容器 ID 分别保持 `d14ef639f035`、`db0945fd318c`、`4166b9909101`、`26aec0ef3a29`。V121 成功，六容器 healthy/restart=0，backend health=`UP`、版本与 commit 一致，Nginx 有效。
+- 两轮公开 smoke、HTTP 301、目标页面 200、匿名 auth/应用目录/连接 API JSON 401 与稳定窗口通过；backend severe error=0、frontend 5xx=0，前端资源名回读 beta.28。
+- 本次没有创建/启用真实 Provider 连接，且 TASK-315 未改变既有模型或 Semattice Tool 协议，因此无新增启用的跨项目契约。未发送产品经理消息或确认写入，授权态业务验收待用户完成；生产、Semattice、DevAutopilot 和 Keycloak 均未部署。
 
 ## 2026-08-18 AgentCiCi 主线远端同步
 

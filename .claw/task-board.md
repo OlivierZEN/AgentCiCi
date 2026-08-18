@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-18T01:57:16Z
+updated_at: 2026-08-18T02:05:50Z
 updated_by: codex
 board_status: active
 ---
@@ -25,8 +25,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-315.md`
 - blocked_by: `none`
 - scope_files: `研发交付对话结构化语义判定、固定草案/澄清模板、确认协议、可信回执门禁、测试与本地环境验证`
-- completion_evidence: `e083fb87、f121d20c、cc4312ed、a25cce7e；8 个定向测试类/78 项、package、真实 Provider 非写入探测、backend/frontend 2.8.61-dev.cc4312e、healthy/restart=0、完整 stack verify；实现与验证记录已进入 origin/main`
-- next_action: `已登录业务用户在 cici.localhost 验证隐含创建、否定表达和固定草案格式；通过后再决定 UAT 发布。`
+- completion_evidence: `e083fb87、f121d20c、cc4312ed；UAT 2.8.61-beta.28 / 242074e72a9e；12 个相关后端测试类/87 项、前端 52 文件/289 项、package/build；完整备份、V121、六容器 healthy/restart=0、JSON 401、公开 smoke 与稳定日志`
+- next_action: `由已登录业务用户在 UAT 验证隐含创建、否定表达、固定草案格式及确认后真实回执；生产保持不变。`
 
 ### TASK-313 - 受治理的内部租户应用注册中心
 
@@ -38,8 +38,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-313.md`
 - blocked_by: `none`
 - scope_files: `内部应用目录/版本/依赖模型、运行连接与修订、平台治理 API、通用生命周期执行、租户应用动态聚合、运营页面、测试与本地环境验证`
-- completion_evidence: `1b0776e0、2188e576、f56055e9、ded50c26；V120/V121；后端 4 个定向测试类/package；前端 52 文件/289 项/build；真实本机 Provider HTTP 回调；backend/frontend 2.8.61-dev.f56055e；healthy/restart=0；正式路由 200、匿名连接 API 401、完整 stack verify；实现与验证记录已进入 origin/main`
-- next_action: `由已登录平台管理员创建并测试一个真实内部应用运行连接，发布带依赖的应用版本，再为测试租户执行 ACTIVATE 并回读 Provider 与 operation/step 审计。`
+- completion_evidence: `1b0776e0、2188e576、f56055e9、ded50c26；UAT 2.8.61-beta.28 / 242074e72a9e；V120/V121；前端 52 文件/289 项；六容器 healthy/restart=0；页面 200、匿名连接 API JSON 401；未启用新 Provider 契约`
+- next_action: `由已登录平台管理员在 UAT 创建、测试并启用一个真实内部应用运行连接，发布带依赖版本，再为测试租户执行 ACTIVATE 并回读 Provider 与 operation/step 审计。`
 
 ### TASK-312 - 登录中转页移除手动触发区
 

@@ -7,7 +7,7 @@ owner_role: fullstack-agent
 task_ids: TASK-313
 related_decisions: DEC-055, DEC-021, DEC-023, DEC-054
 related_issues: none
-updated_at: 2026-08-17T11:49:50Z
+updated_at: 2026-08-18T02:05:50Z
 updated_by: codex
 ---
 
@@ -58,7 +58,7 @@ updated_by: codex
 - 不允许运营人员录入可执行脚本、SQL、数据库连接串或长期凭据原文。
 - 不提供删除租户业务数据的“卸载”动作。
 - 不新增移动端布局、移动端截图或移动端自动化测试。
-- 不发布 UAT 或生产。
+- 不发布生产；UAT 已由用户在实现完成后单独授权，并以未启用真实 Provider 连接的源码候选发布。
 
 ## 控制面模型
 
@@ -223,3 +223,4 @@ DRAFT → VALIDATED → PUBLISHED → DEPRECATED
 - 动态页面故障时可回滚前端到固定卡片版本，不修改任何 activation 或提供方资源。
 - 目录版本发布不自动改动已开通租户；回滚默认版本只影响后续新开通计划。
 - 不通过删除目录、activation 或提供方业务数据完成回滚。
+- UAT `2.8.61-beta.28 / 242074e72a9e` 已完成技术发布，V121、页面路由、匿名连接 API JSON 401、六容器健康与稳定日志通过；本轮未创建或启用真实 Provider 连接，授权态连接与 ACTIVATE 仍待业务验收。

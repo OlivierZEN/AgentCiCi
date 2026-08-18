@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-18T01:57:16Z
+updated_at: 2026-08-18T02:05:50Z
 updated_by: codex
 phase: review
 active_task: TASK-315
-next_action: "由已登录业务用户在 cici.localhost 使用当前固定模型验证隐含创建、否定表达和固定草案格式；验收通过后再单独决定是否发布 UAT。"
+next_action: "由已登录业务用户在 UAT 使用当前固定模型验证隐含创建、否定表达和固定草案格式；平台管理员另行验收真实运行连接和租户 ACTIVATE。"
 read_next:
   goals: false
   decisions: false
@@ -22,13 +22,11 @@ read_next:
 
 ## Latest Snapshot
 
-- AgentCiCi 本地 `main` 已按用户授权同步远端：首次非强制推送将 `origin/main` 从 `4b76898c` 快进到 `a25cce7e`，包含应用中心 `f56055e9/ded50c26`、命名调整和 TASK-315 的完整主线历史；未创建或改写 tag，未发布 UAT/生产。
-
-- `TASK-315 / FEAT-192` 已修复首轮本地验收回归：真实 Trace 证明 `deepseek-v4-flash-0731` 在 0 Token 时拒绝了思考模式下的命名 `tool_choice`，并非用户语义不清。提交 `f121d20c` 改为唯一工具的思考兼容 `auto` 判定，缺少协议时再关闭思考做一次命名工具重试；`cc4312ed` 放宽无关字段必填、规范化结构化项目字段别名，并明确解释操作失败属于普通对话而非业务数据查询。真实 Provider 非写入探测已得到隐含创建 `CREATE_DRAFT/PROJECT` 与否定解释 `OTHER`；8 个定向测试类共 78 项及 package 通过。backend/frontend 从本地 `main@cc4312edde85` 运行 `2.8.61-dev.cc4312e`，healthy/restart=0，完整 `./stack verify` 通过，已登录 Chrome 回读版本成功但未代用户发送消息。实现与验证记录已进入远端 `main`；页面业务验收仍待用户执行，UAT、生产未修改。
+- `TASK-315 / FEAT-192` 已随 AgentCiCi UAT `2.8.61-beta.28 / 242074e72a9e` 完成技术发布：远程 `main` 包含冻结提交，annotated tag、两项不可变镜像和运行 commit 一致；完整备份 `/data/apps/agentcici/backups/20260818T020041Z-before-2.8.61-beta.28` 校验通过，回滚目标 beta.27。仅重建 backend/frontend，四个状态服务 ID 不变；V121、六容器 healthy/restart=0、health/version、Nginx、页面路由、匿名 JSON 401、两轮公开 smoke 与稳定日志通过。候选没有启用新的跨项目契约；真实产品经理对话和 Semattice 写入未代用户执行，业务验收待已登录用户完成。生产未修改。
 
 - `TASK-302 / FEAT-183` 已将系统 API 首页的治理入口从“接入应用”统一为“受信应用”，目标页标题、无障碍标签和空态同步采用同一对象名；“登记应用”“编辑受信应用”等动作词保持不变。代码提交 `a81e3b72` 已进入本地 `main`；前端定向 10 项、全量 52 文件/287 项、production build 与 `git diff --check` 通过。本地前端从包含该提交的最新代码主线 `2188e576` 构建为 `2.8.61-dev.2188e57`，目标路由 200、Nginx 有效、healthy/restart=0，部署 JS 已回读“受信应用”；此后的 main 变更仅为状态文档，不影响制品。浏览器正确进入平台登录边界，授权态视觉回读待平台管理员登录后完成；远端、UAT、生产未修改。
 
-- `TASK-313 / FEAT-191` 已实现并进入 review：在既有应用目录、不可变版本、依赖和发布门禁之上，提交 `f56055e9` 新增独立运行连接/不可变修订、真实 Base URL 与动作路径、环境 Secret 引用、连接测试/启用、版本绑定、依赖应用选择器和通用 Provider 生命周期执行器；既有 AgentCiCi/Semattice/DevAutopilot 专用适配器保持不变。后端 4 个定向测试类含真实本机 HTTP Provider 回调及 package 通过，前端 52 文件/289 项与 build 通过。Flyway V121 从 V120 成功迁移；backend/frontend 从本地 `main@f56055e9` 构建为 `2.8.61-dev.f56055e`，healthy/restart=0，正式路由 200、匿名连接 API JSON 401、部署 JS 含新运营工作区，完整 `./stack verify` 通过。`f56055e9/ded50c26` 已进入远端 `main`；授权态真实连接及目标应用开通验收待平台管理员完成，UAT/生产未修改。
+- `TASK-313 / FEAT-191` 已包含在 UAT beta.28：V121 成功建立运行连接、修订、operation 与 step 表，应用中心和系统 API 路由 200，匿名连接 API 为 JSON 401；本轮未创建、测试或启用任何真实 Provider 连接，因此没有新增跨项目契约被启用。授权态连接创建/测试/启用、版本发布和目标租户 ACTIVATE 仍待平台管理员业务验收；生产未修改。
 
 - `TASK-312 / FEAT-148` 已发布 UAT `2.8.61-beta.26 / a322fd91324b`：远端 main、tag、镜像和运行 commit 一致；完整备份 `/data/apps/agentcici/backups/20260817T093959Z-before-2.8.61-beta.26` 校验通过，回滚目标 beta.25。仅重建 backend/frontend，状态服务 ID 不变；六容器 healthy/restart=0，health、Flyway、Nginx、公开 smoke、JSON 401 与稳定日志通过。真实未登录桌面会话无需点击即进入统一身份中心，旧表单和按钮均为 0，浏览器无 error/warning。生产未修改。
 

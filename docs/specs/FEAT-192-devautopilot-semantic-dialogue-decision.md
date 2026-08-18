@@ -7,7 +7,7 @@ owner_role: backend-agent
 task_ids: TASK-315
 related_decisions: "自然语言由模型理解；固定协议由服务端解析；明确结果由服务端标准渲染"
 related_issues: ISSUE-2026-08-17-devautopilot-keyword-routing
-updated_at: 2026-08-17T15:37:19Z
+updated_at: 2026-08-18T02:05:50Z
 updated_by: codex
 ---
 
@@ -78,6 +78,6 @@ UAT 的产品经理对“创建一个项目：CCSales智能应用”没有调用
 
 ## 发布与回滚
 
-- 本任务先进入 AgentCiCi 本地 `main` 并更新 `https://cici.localhost/`；UAT、生产需另行授权。
+- 本任务已进入 AgentCiCi 远程 `main` 并随 `2.8.61-beta.28 / 242074e72a9e` 完成 UAT 技术发布；真实已登录产品经理对话仍作为独立业务验收，生产未发布。
 - 回滚应用镜像即可恢复旧编排；已成功写入的 Semattice 记录不随应用回滚删除。
 - 可信回执完整性门禁不得因回滚降低。
