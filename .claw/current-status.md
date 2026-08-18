@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-18T04:09:38Z
+updated_at: 2026-08-18T06:38:21Z
 updated_by: codex
 phase: review
-active_task: TASK-318
-next_action: "平台管理员登录本地运营平台后只读确认 OneKeyToken 真实模型目录；同时完成 UAT 指南阅读与会话历史业务验收，生产保持不变。"
+active_task: TASK-319
+next_action: "用户重新登录本地员工工作台后，打开组织切换弹层，确认全部组织名称无省略号且弹层宽度随最长名称自适应；生产保持不变。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- `TASK-319` 已实现组织切换弹层完整显示组织名称：提交 `1ad25d39` 将固定 `192px` 宽度改为内容自适应并保留最小宽度与桌面视口上限，移除名称 `ellipsis/nowrap`，超长名称只在视口安全边界换行；主题、当前状态和“管理后台”动作保持不变。聚焦 12 项、前端全量 53 文件/294 项、production build 与 diff check 通过；本地 frontend `2.8.61-dev.1ad25d3` healthy/restart=0，正式 `/app` 200、Nginx 与运行 CSS 指纹通过。浏览器员工会话已过期并回到统一登录页，未绕过认证；登录态桌面截图和用户视觉验收待重新登录后完成。远端、UAT、生产未修改。
 
 - `TASK-318 / FEAT-179` 已实现 OneKeyToken 按 Key 枚举模型：公开端点负例返回 `401 application/json / unauthorized`，确认 `/v1/models` 路由与说明一致；提交 `1a1ab512` 使用已保存 Bearer Key 拉取 `data[].id/name`，401/403 给出 Key 轮换及账号/应用/`model:invoke` scope 提示且不回显 Key，未知能力仍需人工确认。聚焦单测、backend package、diff check 通过；本地 backend `2.8.61-dev.1a1ab51` healthy/restart=0，版本、正式路由 200、匿名目录 API JSON 401、启动无 ERROR/Exception。独立空库迁移到 V122 成功，但 Spring 集成用例在执行前被既有 OACT 测试配置漂移阻断。当前没有可复用的平台管理员登录态，已保存 Key 的真实正例目录回读待用户登录后完成；提交进入本地主线并随本次同步推送远端，但未纳入冻结于 `d2abc9c4` 的 UAT beta.29，生产未修改。
 

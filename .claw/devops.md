@@ -1,12 +1,18 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-18T04:09:38Z
+updated_at: 2026-08-18T06:38:21Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-18 TASK-319 本地开发环境
+
+- AgentCiCi frontend 从本地 `main@1ad25d3923de` 构建为 `2.8.61-dev.1ad25d3`；镜像 ID、version/revision label 均回读为 `sha256:d1aa950dc64daced7c21a870242ad5d71ff8ffa833eb15e574babe5c72b5b9ce / 1ad25d3923de`。
+- 仅 force-recreate `cici-frontend`；容器 healthy、restart=0，Nginx 有效，`https://cici.localhost/app` 返回 `200 text/html`，运行 CSS 资产包含组织弹层自适应宽度规则。backend、数据库、Keycloak、Semattice 和 DevAutopilot 未重建。
+- 本次为单前端样式调整，按 local-stack 最短闭环执行目标门禁，未运行完整 `./stack verify`。浏览器员工会话已过期并回到统一登录边界，未绕过认证；登录态截图待用户重新登录后补充。远端、UAT、生产未修改。
 
 ## 2026-08-18 TASK-316 / TASK-317 UAT `2.8.61-beta.29`
 

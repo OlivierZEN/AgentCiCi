@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-18T04:09:38Z
+updated_at: 2026-08-18T06:38:21Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-18T04:09:38Z
-last_run_status: passed_agentcici_2_8_61_beta_29_uat_technical_gate
+last_run_at: 2026-08-18T06:38:21Z
+last_run_status: passed_task_319_local_technical_with_authenticated_visual_pending
 ---
 
 # Test Report
+
+## 2026-08-18 TASK-319 组织切换弹层完整显示组织名称
+
+- 状态：`passed_task_319_local_technical_with_authenticated_visual_pending`。
+- 自动化：`theme.test.ts` 12/12 通过，断言弹层 `fit-content`、`192px` 最小宽度、桌面视口上限及名称不含 `ellipsis/nowrap`；前端全量 53 个测试文件、294 项全部通过。
+- 构建与静态：TypeScript/Vite production build、`DESIGN.json` 解析和 `git diff --check` 通过；仅保留既有大 chunk warning。
+- 本地主线与运行：实现提交 `1ad25d3923de` 已进入本地 `main`；frontend 镜像 `sha256:d1aa950dc64daced7c21a870242ad5d71ff8ffa833eb15e574babe5c72b5b9ce`，label/version/revision 为 `2.8.61-dev.1ad25d3 / 1ad25d3923de`。仅 `cici-frontend` 重建，healthy/restart=0；`/app=200 text/html`、Nginx 有效，运行 CSS 资产包含自适应宽度规则。
+- 视觉边界：浏览器中既有员工会话已过期，刷新后按预期进入统一登录页；未读取或代填凭据，也未绕过认证。真实组织数据下的弹层截图、hover/focus 与用户视觉接受仍待重新登录后完成；远端、UAT、生产未修改。
 
 ## 2026-08-18 AgentCiCi UAT `2.8.61-beta.29`
 

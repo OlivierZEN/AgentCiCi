@@ -1,6 +1,6 @@
 ---
 task_id: TASK-319
-status: in_progress
+status: review
 priority: high
 owner_role: frontend-agent
 claimed_by: codex
@@ -16,4 +16,5 @@ claimed_by: codex
 
 ## 下一步
 
-- 完成测试、构建、本地主线提交、本地前端更新与真实弹层截图检查。
+- 实现 `1ad25d39` 已进入本地 `main`；前端全量 53 文件/294 项、production build 和本地运行门禁通过。
+- 用户重新登录本地员工工作台后打开组织切换弹层，补充真实桌面截图与视觉验收；不绕过统一登录。
