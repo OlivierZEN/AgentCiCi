@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-196
 title: DevAutopilot 产品经理初始化模板分层
-status: in_implementation
+status: implemented
 owner_role: backend-agent
 task_ids: TASK-321
 related_decisions: none
 related_issues: none
-updated_at: 2026-08-18T14:35:00Z
+updated_at: 2026-08-18T14:42:00Z
 updated_by: codex
 ---
 

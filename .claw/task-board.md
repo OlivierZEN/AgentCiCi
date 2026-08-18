@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-18T14:36:46Z
+updated_at: 2026-08-18T14:42:00Z
 updated_by: codex
 board_status: active
 ---
@@ -27,19 +27,6 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - scope_files: `平台基础提示、Agent Definition 名称注入、统一运行时身份、定向测试、本地真实问候`
 - completion_evidence: `e91b28d6；身份聚焦 48 项、合并聚焦 65 项；backend package；2.8.61-dev.e91b28d healthy/restart=0；正式路由 200；其他服务未重建`
 - next_action: `经用户即时确认后，在已登录产品经理对话发送“你好”，核对回答与 Trace 使用 AgentDefinition.name=研发产品经理。`
-
-### TASK-321 - DevAutopilot 产品经理初始化模板分层
-
-- status: `done`
-- priority: `high`
-- owner_role: `backend-agent`
-- claimed_by: `codex`
-- spec_path: `docs/specs/FEAT-196-devautopilot-product-manager-initialization-template.md`
-- task_status_path: `.claw/tasks/TASK-321.md`
-- blocked_by: `none`
-- scope_files: `标准系统提示词、8 步流程 Spec、初始化补偿、Spec IR 有效工具与意图、定向测试、本地环境验证`
-- completion_evidence: `4a697051；18 项模板聚焦回归、backend package、diff check；随 main@e91b28d6 更新本地 backend，health/restart/route 门禁通过`
-- next_action: `none`
 
 ### TASK-319 - 组织切换弹层完整显示组织名称
 
