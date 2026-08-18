@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-18T03:18:23Z
+updated_at: 2026-08-18T03:54:22Z
 updated_by: codex
-phase: review
-active_task: TASK-317
-next_action: "等待用户确认 TASK-317 本地会话历史体验；TASK-316 同时等待本地文档阅读体验确认。"
+phase: implementation
+active_task: TASK-318
+next_action: "提交 OneKeyToken GET /v1/models 枚举实现到本地 main，重建 backend 并用已保存 Key 做真实目录回读。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- `TASK-318 / FEAT-179` 正在验证 OneKeyToken 按 Key 枚举模型：公开端点负例已返回 `401 application/json` 与 `unauthorized`，确认 `/v1/models` 路由存在；最小实现已将该厂商接入 Bearer `GET /models`，并为 401 Key 轮换、403 账号/应用/`model:invoke` scope 提供不回显 Key 的错误。聚焦单测、后端编译和 diff check 已通过；待提交本地 main、重建 backend 并用已保存 Key 完成真实正例回读。UAT、生产未修改。
 
 - `TASK-317 / FEAT-194` 已完成长期会话身份修复：Web 会话由服务端创建全局 UUID，外部渠道业务键进入 `source_key` 映射，所有读写/附件/删除按租户与所有者校验；V122 清空测试会话并增加 UUID、渠道/可见范围、唯一性和 `(session_id, company_id)` 复合外键。实现 `0b34fb65` 与验证文档 `ce7f8800` 已进入本地 main。后端相关测试/package、前端 53 文件/292 项/build、完整 stack verify 通过；运行代码制品 `2.8.61-dev.0cd8887` 包含实现，backend/frontend healthy/restart=0。目标租户 `org0gtwzqvxell4gly8s` 在登录态页面创建 2 个独立 UUID 会话，刷新后历史仍显示 2 条；无 `workbench:*` 或孤儿记录。UAT、生产未修改。
 

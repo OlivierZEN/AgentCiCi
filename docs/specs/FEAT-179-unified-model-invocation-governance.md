@@ -4,10 +4,10 @@ feature_id: FEAT-179
 title: 统一模型调用治理
 status: implemented
 primary_project: agentcici
-task_ids: TASK-297, TASK-298
+task_ids: TASK-297, TASK-298, TASK-318
 related_decisions: ADR-010
 related_issues: ISSUE-2026-08-13-model-provider-bypass
-updated_at: 2026-08-13T09:54:05Z
+updated_at: 2026-08-18T03:54:22Z
 updated_by: codex
 ---
 
@@ -68,6 +68,7 @@ updated_by: codex
 - 平台模型路由 API 增加上述场景；现有场景保持路径与请求格式兼容。
 - 路由读取响应增加每个场景的 `requiredCapabilities`、`recommendation`、已过滤 `candidates` 与 `recommendedCandidates`；路由写入在服务端复核能力与协议兼容性。
 - 厂商模型读取响应增加 `modelCapabilityConfirmations`。平台运营可通过 `PUT /platform/models/providers/{providerCode}/model-capabilities` 写入人工确认，并通过 `DELETE` 撤销；请求只包含模型与能力列表。确认与撤销写入平台审计，撤销后模型从所有场景候选中移除。
+- OneKeyToken 目录通过平台已保存 Key 以 Bearer 鉴权调用配置地址下的 `GET /models`，解析 OpenAI-compatible `data[].id/name`；401 提示检查 Key 正确性或轮换，403 提示检查 Key、账号/应用状态及 `model:invoke` scope。目录结果不自动推断能力。
 - 知识库 embedding 选项和保存接口改为只读显示当前路由或拒绝任意厂商/模型覆盖；历史字段保留以支持向量审计。
 - 集成应用 API 对代码解释器、联网搜索、网页抓取忽略并拒绝新的独立模型凭据字段；历史密文不再参与执行。
 - 不新增跨项目数据库访问或跨仓依赖。
@@ -101,6 +102,7 @@ updated_by: codex
 - 2026-08-13：用户要求将人工确认收敛为“选择能力并保存”，不再采集、校验或展示厂商文档与证据引用；全部模型阶段可直接加入平台目录，能力确认只影响后续场景路由。TASK-298 正在实现并回归本地开发环境，UAT/生产不修改。
 - 2026-08-13：TASK-298 已提交 `1979c62` 并发布本地开发环境 `2.8.61-dev.1979c62`。人工确认 API 只接收模型和能力，审计不再记录外部证据；目录选择不再受能力确认阻塞，而场景候选仍只接受已确认的兼容能力。backend/frontend healthy/restart=0，路由 200、匿名 API 401、完整 `./stack verify` 通过；Spring 集成仍被既有 `agentcici_test` Flyway V81 checksum 漂移阻断，未 repair。UAT/生产未修改。
 - 2026-08-13：截图暴露确认页把网关 HTML 直接解析为 JSON。提交 `4da7a3b` 将确认与撤销调用改为显式 JSON 协商和安全解析，非 JSON 响应返回可操作的 HTTP/版本一致性提示；本地只重建 frontend `2.8.61-dev.4da7a3b`，能力 API 保持 JSON 鉴权边界，完整 `./stack verify` 通过。UAT/生产未修改。
+- 2026-08-18：TASK-318 根据 OneKeyToken 新确认的目录契约，将原 `remote-unavailable` 策略改为使用已保存 Key 调用 `GET /v1/models`；公开无效 Key 负例已确认 `401 unauthorized`。实现保留目录选择与人工能力确认分层，并补充成功、401、403 和 Key 不泄露聚焦测试；待本地 main 部署与真实正例回读。
 
 ## 交接说明
 

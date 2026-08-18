@@ -40,6 +40,7 @@ public class ModelProviderService {
     private static final String FETCH_OPENAI_STYLE = "openai-compatible";
     private static final String FETCH_OLLAMA = "ollama";
     private static final String FETCH_ANTHROPIC = "anthropic";
+    private static final String FETCH_ONEKEYTOKEN = "onekeytoken";
     private static final String FETCH_REMOTE_UNAVAILABLE = "remote-unavailable";
     private static final String CONFIG_SELECTED_MODELS = "selectedModels";
     private static final String CONFIG_MODEL_CAPABILITIES = "modelCapabilities";
@@ -140,7 +141,7 @@ public class ModelProviderService {
                     "OneKeyToken",
                     "https://my.onekeytoken.com/v1",
                     "https://my.onekeytoken.com",
-                    FETCH_REMOTE_UNAVAILABLE,
+                    FETCH_ONEKEYTOKEN,
                     true,
                     List.of()
             ))
@@ -577,6 +578,7 @@ public class ModelProviderService {
             case FETCH_OPENAI_STYLE -> fetchOpenAiCompatibleModels(entity.getApiBaseUrl(), entity.getApiKey(), def.apiKeyRequired());
             case FETCH_OLLAMA -> fetchOllamaModels(entity.getApiBaseUrl());
             case FETCH_ANTHROPIC -> fetchAnthropicModels(entity.getApiBaseUrl(), entity.getApiKey());
+            case FETCH_ONEKEYTOKEN -> fetchOneKeyTokenModels(entity.getApiBaseUrl(), entity.getApiKey());
             case FETCH_REMOTE_UNAVAILABLE -> List.of();
             default -> throw new IllegalArgumentException("Unsupported provider fetch type: " + def.fetchKind());
         };
@@ -636,8 +638,8 @@ public class ModelProviderService {
                     "resolvedModel", routedModel,
                     "modelCount", 0,
                     "sampleModels", List.of(),
-                    "catalogSource", "unavailable",
-                    "remoteFetchSupported", false);
+                    "catalogSource", "remote",
+                    "remoteFetchSupported", true);
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
@@ -666,6 +668,20 @@ public class ModelProviderService {
         }
 
         return parseDataModelDetails(send(builder.build(), "OpenAI-compatible /models 调用失败"));
+    }
+
+    private List<ModelDetail> fetchOneKeyTokenModels(String baseUrl, String apiKey) {
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new IllegalArgumentException("OneKeyToken API Key 不能为空。");
+        }
+        String endpoint = appendPath(baseUrl, "/models");
+        HttpRequest request = HttpRequest.newBuilder(URI.create(endpoint))
+                .timeout(Duration.ofSeconds(60))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
+                .header(HttpHeaders.ACCEPT, "application/json")
+                .GET()
+                .build();
+        return parseDataModelDetails(sendOneKeyTokenModels(request));
     }
 
     private List<ModelDetail> fetchAnthropicModels(String baseUrl, String apiKey) {
@@ -844,6 +860,27 @@ public class ModelProviderService {
             throw e;
         } catch (Exception e) {
             throw new IllegalArgumentException("OneKeyToken 检测失败：无法连接网关，请检查 API 地址后重试。");
+        }
+    }
+
+    private String sendOneKeyTokenModels(HttpRequest request) {
+        try {
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 401) {
+                throw new IllegalArgumentException("OneKeyToken 模型列表查询失败，HTTP 401：请检查 API Key 是否正确或已轮换。");
+            }
+            if (response.statusCode() == 403) {
+                throw new IllegalArgumentException("OneKeyToken 模型列表查询失败，HTTP 403：请检查 Key、所属账号或应用状态，并确认 scope 包含 model:invoke。");
+            }
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                throw new IllegalArgumentException("OneKeyToken 模型列表查询失败，HTTP " + response.statusCode()
+                        + "：" + clip(response.body()));
+            }
+            return response.body();
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("OneKeyToken 模型列表查询失败：无法连接网关，请检查 API 地址后重试。");
         }
     }
 

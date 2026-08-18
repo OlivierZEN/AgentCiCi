@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-18T03:18:23Z
+updated_at: 2026-08-18T03:54:22Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,18 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-318 - OneKeyToken 按 Key 枚举可用模型
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `backend-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-179-unified-model-invocation-governance.md`
+- task_status_path: `.claw/tasks/TASK-318.md`
+- blocked_by: `none`
+- scope_files: `OneKeyToken GET /v1/models、Bearer 鉴权、目录解析、401/403 安全错误、聚焦测试与本地环境验证`
+- next_action: `提交本地 main，从该提交重建 backend，并用已保存 Key 在受权平台页面回读真实模型目录。`
 
 ### TASK-317 - 服务端 UUID 会话身份与历史完整性修复
 

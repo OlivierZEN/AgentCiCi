@@ -82,7 +82,8 @@ class PlatformModelProviderIntegrationTest {
                     .andExpect(jsonPath("$.data.checkMode").value("live_chat_completions"))
                     .andExpect(jsonPath("$.data.validatedModel").value("onekeytoken/auto"))
                     .andExpect(jsonPath("$.data.resolvedModel").value("qwen3.5-flash"))
-                    .andExpect(jsonPath("$.data.catalogSource").value("unavailable"))
+                    .andExpect(jsonPath("$.data.catalogSource").value("remote"))
+                    .andExpect(jsonPath("$.data.remoteFetchSupported").value(true))
                     .andExpect(jsonPath("$.data.modelCount").value(0))
                     .andExpect(jsonPath("$.data.sampleModels").isEmpty());
 
@@ -146,15 +147,6 @@ class PlatformModelProviderIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[?(@.providerCode == 'aliyun-bailian')]").exists())
                 .andExpect(jsonPath("$.data[?(@.providerCode == 'onekeytoken' && @.defaultBaseUrl == 'https://my.onekeytoken.com/v1')]").exists());
-
-        mockMvc.perform(post("/platform/models/providers/{providerCode}/models/fetch", "onekeytoken")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.catalogSource").value("unavailable"))
-                .andExpect(jsonPath("$.data.remoteFetchSupported").value(false))
-                .andExpect(jsonPath("$.data.count").value(0))
-                .andExpect(jsonPath("$.data.models").isEmpty())
-                .andExpect(jsonPath("$.data.modelDetails").isEmpty());
 
         mockMvc.perform(put("/platform/models/providers/{providerCode}", "deepseek")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
