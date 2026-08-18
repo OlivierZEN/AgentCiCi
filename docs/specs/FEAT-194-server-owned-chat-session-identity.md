@@ -1,3 +1,16 @@
+---
+kind: feature-spec
+feature_id: FEAT-194
+title: 服务端持有的会话身份
+status: implemented
+owner_role: fullstack-agent
+task_ids: TASK-317
+related_decisions: none
+related_issues: none
+updated_at: 2026-08-18T03:18:23Z
+updated_by: codex
+---
+
 # FEAT-194 服务端持有的会话身份
 
 ## 背景
