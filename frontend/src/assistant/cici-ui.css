@@ -282,7 +282,9 @@
   left: 68px;
   bottom: 16px;
   z-index: 80;
-  width: 192px;
+  width: fit-content;
+  min-width: 192px;
+  max-width: calc(100vw - 84px);
   padding: 8px 10px;
   border: 1px solid #ded2bb;
   border-radius: 10px;
@@ -353,9 +355,10 @@
 
 .cici-org-menu__item span {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
   font-size: 13px;
   font-weight: 700;
 }

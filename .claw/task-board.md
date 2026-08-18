@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-18T04:04:35Z
+updated_at: 2026-08-18T06:32:44Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-319 - 组织切换弹层完整显示组织名称
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `frontend-agent`
+- claimed_by: `codex`
+- task_status_path: `.claw/tasks/TASK-319.md`
+- blocked_by: `none`
+- scope_files: `组织切换弹层自适应宽度、组织名称完整显示、桌面视口安全换行、聚焦测试与本地环境验证`
+- next_action: `运行前端测试与构建，从本地 main 更新 cici-frontend，并完成登录态桌面截图检查。`
 
 ### TASK-318 - OneKeyToken 按 Key 枚举可用模型
 

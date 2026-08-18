@@ -79,6 +79,19 @@ describe("product theme catalog", () => {
     expect(assistantCss).toContain("border-color: var(--theme-line-strong);");
   });
 
+  it("shows complete organization names in a content-sized switcher", () => {
+    const menuRule = assistantCss.match(/\.cici-org-menu\s*\{([^}]*)\}/)?.[1] ?? "";
+    const nameRule = assistantCss.match(/\.cici-org-menu__item span\s*\{([^}]*)\}/)?.[1] ?? "";
+
+    expect(menuRule).toContain("width: fit-content;");
+    expect(menuRule).toContain("min-width: 192px;");
+    expect(menuRule).toContain("max-width: calc(100vw - 84px);");
+    expect(nameRule).toContain("overflow-wrap: anywhere;");
+    expect(nameRule).toContain("text-overflow: clip;");
+    expect(nameRule).not.toContain("text-overflow: ellipsis;");
+    expect(nameRule).not.toContain("white-space: nowrap;");
+  });
+
   it("keeps admin subpages, dialogs, and foldout panels on the selected theme", () => {
     for (const selector of [
       ":root[data-theme] .admin-main .ontology-modal-backdrop,",
