@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-18T14:36:00Z
+updated_at: 2026-08-18T14:36:46Z
 updated_by: codex
-phase: implementation
+phase: validation
 active_task: TASK-322
-next_action: "提交 FEAT-197 Agent Definition 名称运行时注入，从本地 main 更新 cici.localhost backend，并验证真实产品经理问候。"
+next_action: "经用户即时确认后，在已登录产品经理对话发送“你好”，核对回答与 Trace 使用 AgentDefinition.name=研发产品经理。"
 read_next:
   goals: false
   decisions: false
@@ -22,9 +22,9 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-322 / FEAT-197` 已进入提交前验证：`AgentDefinition.name` 是 Agent 唯一对外称呼，CiCi 仅为承载平台名；平台基础提示已移除全局 `You are CiCi`，Definition 名称进入聊天和候选评测统一身份上下文。身份相关 48 项、与 TASK-321 合并聚焦 65 项、backend package 和 diff check 通过，待提交本地 main 并更新 `cici.localhost` backend 后执行真实产品经理问候。UAT、生产、DevAutopilot 与 Semattice 均不修改。
+- `TASK-322 / FEAT-197` 已进入业务验收：`AgentDefinition.name` 是 Agent 唯一对外称呼，CiCi 仅为承载平台名；平台基础提示已移除全局 `You are CiCi`，Definition 名称进入聊天和候选评测统一身份上下文。提交 `e91b28d6`；身份相关 48 项、与 TASK-321 合并聚焦 65 项、backend package 和 diff check 通过。本地 backend 为 `2.8.61-dev.e91b28d`，healthy/restart=0，正式 DevAutopilot 路由 200，其他服务未重建。真实产品经理“你好”待用户在浏览器发送动作前即时确认；UAT、生产、DevAutopilot 与 Semattice 均未修改。
 
-- `TASK-321 / FEAT-196` 模板分层代码已以 `4a697051` 进入本地 main：标准产品经理初始化将系统提示词、8 步自然语言流程 Spec、Semattice Skill 与后端确定性门禁分层；既有租户只在平台管理员显式执行 `initializations` 时补偿，不通过部署或普通读取隐式改写。18 项模板聚焦回归、backend package 和 diff check 通过，待与 TASK-322 一并更新本地 backend。UAT、生产、DevAutopilot 与 Semattice 均未修改。
+- `TASK-321 / FEAT-196` 已完成：模板分层代码 `4a697051` 已进入本地 main 并随 `main@e91b28d6` 更新本地 backend；标准产品经理初始化将系统提示词、8 步自然语言流程 Spec、Semattice Skill 与后端确定性门禁分层。既有租户只在平台管理员显式执行 `initializations` 时补偿，不通过部署或普通读取隐式改写。18 项模板聚焦回归、backend package、diff check 和本地运行门禁通过；UAT、生产、DevAutopilot 与 Semattice 均未修改。
 
 - `TASK-319` 已随 AgentCiCi UAT `2.8.61-beta.30 / 39424a982068` 完成技术发布：远程 `main` 包含冻结提交，annotated tag peeled commit、两项不可变 linux/amd64 镜像和运行 commit 一致，未更新 `latest`；后续发布记录提交只更新文档。完整备份 `/data/apps/agentcici/backups/20260818T093113Z-before-2.8.61-beta.30` 的 11 项工件均非空、`0600` 且校验通过，应用回滚目标 beta.29。仅重建 backend/frontend，四个状态服务 ID 哈希不变；六容器 healthy/restart=0，health、版本、V122、Nginx、两轮公开 smoke、匿名 JSON 401、运行 CSS 指纹和 90 秒稳定日志门禁通过。本候选未新增、启用或切换跨项目契约；登录态视觉和用户接受待平台用户完成，生产未修改。
 

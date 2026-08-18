@@ -1,22 +1,23 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-18T14:24:34Z
+updated_at: 2026-08-18T14:36:46Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-18T14:24:34Z
-last_run_status: passed_task_320_scoped_code_with_shared_db_integration_blocked
+last_run_at: 2026-08-18T14:36:46Z
+last_run_status: passed_task_322_local_technical_pending_real_greeting
 ---
 
 # Test Report
 
 ## 2026-08-18 TASK-322 Agent Definition 对外身份一致性
 
-- 状态：`passed_task_322_scoped_code_pending_local_runtime`。
+- 状态：`passed_task_322_local_technical_pending_real_greeting`。
 - 身份聚焦回归：`SkillPromptAssemblerTest` 2 项、`SkillResolverPinnedRuntimeBoundaryTest` 1 项、`SkillDefinitionServicePlatformSnapshotTest` 1 项、`MeetingMinutesServiceTest` 1 项、`ChatOrchestratorServiceModelIdentityTest` 43 项，共 48 项通过，0 failure/error/skipped。
 - 身份断言：平台基础提示不再包含 `You are CiCi`；统一运行时提示从 `AgentDefinition.name` 注入唯一对外名称，要求自我介绍精确使用该值，并明确角色、Skill、工具、模型和 `agentId` 均不得覆盖名称。默认内置 Agent 使用自身 Definition 名称 `思思（CiCi）`。
 - 合并回归：连同 TASK-321 模板分层用例共 10 个测试类、65 项通过；后端 `mvn -q -DskipTests package` 与 `git diff --check` 通过。
-- 运行边界：本地 main 提交和 `cici.localhost` backend 更新待完成；未修改 UAT、生产、DevAutopilot 或 Semattice。
+- 本地运行：提交 `e91b28d6` 构建为 `2.8.61-dev.e91b28d`；backend healthy/restart=0，health=UP，正式 DevAutopilot 路由 200，启动后 severe 日志 0，其他服务未重建。
+- 业务边界：已登录产品经理页面只读可用；真实“你好”发送待用户即时确认。未修改 UAT、生产、DevAutopilot 或 Semattice。
 
 ## 2026-08-18 TASK-321 产品经理初始化模板分层
 
@@ -25,7 +26,7 @@ last_run_status: passed_task_320_scoped_code_with_shared_db_integration_blocked
 - 断言覆盖：新建模板分别写入标准系统提示词和 8 步流程 Spec；存量补偿校准两者；Spec IR 识别 query/intake/planning/create/update/delete/transfer/review/acceptance/handoff；Skill 独有工具进入 Spec IR 和 workflow code，但不写回 Agent 静态绑定。
 - 构建与静态：后端 `mvn -q -DskipTests package` 与 `git diff --check` 通过。
 - 扩展集成边界：`OrchestratorIntegrationTest` 在 Spring 上下文启动后持续重试本机共享 PostgreSQL，未进入目标断言；等待 60 秒后主动停止，退出 130。不修复共享测试数据库，也不把本次聚焦通过扩写为完整集成套件通过。
-- 运行边界：本地 main 提交和 `cici.localhost` backend 更新待完成；未执行真实租户 `initializations`，未修改 UAT、生产、DevAutopilot 或 Semattice。
+- 运行边界：随 `main@e91b28d6` 更新本地 backend，版本、health、restart、正式路由和服务隔离门禁通过；未执行真实租户 `initializations`，未修改 UAT、生产、DevAutopilot 或 Semattice。
 
 ## 2026-08-18 TASK-319 UAT `2.8.61-beta.30`
 

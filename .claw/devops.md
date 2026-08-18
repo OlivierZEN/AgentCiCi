@@ -1,12 +1,19 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-18T09:34:34Z
+updated_at: 2026-08-18T14:36:46Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-18 TASK-321 / TASK-322 本地开发环境
+
+- AgentCiCi backend 从干净本地 `main@e91b28d6befe` 构建为 `2.8.61-dev.e91b28d`，镜像 ID `sha256:4882033dd8772a5bc0d2f1f91af13cdbac3c0fde88f42b43b70faae21d638b4e`；image label、容器内 `/system/version` 与 Git commit 一致。
+- 仅使用 `--no-deps --force-recreate backend` 替换 AgentCiCi backend；容器 healthy、restart=0，`/actuator/health=UP`，`https://cici.localhost/devautopilot/` 返回 `200 text/html`，启动后 severe 日志计数为 0。
+- frontend、PostgreSQL、Redis、RabbitMQ、Nginx、Semattice 与 DevAutopilot 的容器 ID 前后不变且 restart=0；Keycloak 与 Qdrant 未重建。未执行真实租户 `initializations`，未修改 Agent Definition、业务数据、UAT 或生产。
+- 本次是单 backend 提示组装和模板编译调整，按 local-stack 最短闭环执行目标门禁，未运行完整 `./stack verify`。已登录产品经理页面可读；真实“你好”消息待用户在发送动作前即时确认。
 
 ## 2026-08-18 TASK-319 UAT `2.8.61-beta.30`
 

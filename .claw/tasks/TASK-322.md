@@ -2,11 +2,11 @@
 kind: task-status
 task_id: TASK-322
 feature_id: FEAT-197
-status: in_progress
+status: review
 priority: high
 owner_role: backend-agent
 claimed_by: codex
-updated_at: 2026-08-18T14:36:00Z
+updated_at: 2026-08-18T14:36:46Z
 updated_by: codex
 ---
 
@@ -31,7 +31,8 @@ updated_by: codex
 
 - 故障 Trace 命中 `devautopilot-pm`，Tool 与 RAG 均为 0；输出“我是 CiCi”来自全局 `You are CiCi` 基础提示，而不是 Agent 定义或业务数据。
 - 当前产品经理 `AgentDefinition.name=研发产品经理`，该值是用户确认的唯一对外称呼。
-- 代码已将 Definition 名称加入统一技能上下文和权威身份提示；聚焦回归与构建已通过，待提交和本地运行验证。
+- 代码提交 `e91b28d6` 已将 Definition 名称加入统一技能上下文和权威身份提示；身份聚焦 48 项、合并聚焦 65 项、package、diff check 和本地 backend 技术门禁通过。
+- 本地运行版本为 `2.8.61-dev.e91b28d`，healthy/restart=0，正式 DevAutopilot 路由 200；真实“你好”消息待用户在发送动作前即时确认。
 
 ## 回滚
 
