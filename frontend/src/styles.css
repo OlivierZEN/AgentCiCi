@@ -22686,6 +22686,12 @@ td.skills-data-table__actions > * {
 }
 
 /* Application Center developer integration manual. */
+html.application-guide-scroll-lock,
+body.application-guide-scroll-lock {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 .application-integration-guide {
   height: auto;
   min-height: 0;

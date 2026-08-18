@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import {
   ArrowLeft,
@@ -147,6 +147,30 @@ export default function PlatformApplicationIntegrationGuidePage() {
   const returnPath = safeSourceApp
     ? `/platform/internal-applications/${encodeURIComponent(safeSourceApp)}`
     : "/platform/internal-applications";
+
+  useEffect(() => {
+    const scrollLockClass = "application-guide-scroll-lock";
+    document.documentElement.classList.add(scrollLockClass);
+    document.body.classList.add(scrollLockClass);
+    window.scrollTo({ top: 0, left: 0 });
+    const anchorFrame = window.requestAnimationFrame(() => {
+      const targetId = decodeURIComponent(window.location.hash.slice(1));
+      if (!APPLICATION_INTEGRATION_GUIDE_SECTIONS.some((section) => section.id === targetId)) return;
+      const target = document.getElementById(targetId);
+      const scrollContainer = target?.closest<HTMLElement>(".platform-main");
+      if (!target || !scrollContainer) return;
+      const targetTop = target.getBoundingClientRect().top
+        - scrollContainer.getBoundingClientRect().top
+        + scrollContainer.scrollTop
+        - 20;
+      scrollContainer.scrollTo({ top: targetTop, left: 0 });
+    });
+    return () => {
+      window.cancelAnimationFrame(anchorFrame);
+      document.documentElement.classList.remove(scrollLockClass);
+      document.body.classList.remove(scrollLockClass);
+    };
+  }, []);
 
   return (
     <div className="admin-page platform-page application-integration-guide">
