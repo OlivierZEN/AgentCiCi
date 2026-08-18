@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-18T03:15:43Z
+updated_at: 2026-08-18T03:18:23Z
 updated_by: codex
 board_status: active
 ---
@@ -17,7 +17,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-317 - 服务端 UUID 会话身份与历史完整性修复
 
-- status: `in_progress`
+- status: `review`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - claimed_by: `codex`
@@ -25,7 +25,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-317.md`
 - blocked_by: `none`
 - scope_files: `会话 UUID 身份、外部 source_key 映射、租户/所有者校验、V122 测试历史重置、工作台创建链路、回归与本地环境验证`
-- next_action: `实现后端与前端并完成本地全栈验收；UAT/生产不修改。`
+- completion_evidence: `0b34fb65、ce7f8800；V122；后端相关测试/package、前端 53 文件/292 项/build；2.8.61-dev.0cd8887；healthy/restart=0；完整 stack verify；目标租户创建 2 个 UUID 会话并在刷新后保持历史可见`
+- next_action: `等待用户确认本地会话历史体验；UAT/生产仅在另行授权后部署并清空测试会话。`
 
 ### TASK-316 - 应用中心在线接入指南
 

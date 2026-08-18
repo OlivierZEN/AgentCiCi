@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-18T03:15:43Z
+updated_at: 2026-08-18T03:18:23Z
 updated_by: codex
 phase: review
 active_task: TASK-317
-next_action: "继续 TASK-317 的服务端 UUID 会话身份与历史完整性实现；TASK-316 等待用户确认本地文档阅读体验。"
+next_action: "等待用户确认 TASK-317 本地会话历史体验；TASK-316 同时等待本地文档阅读体验确认。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- `TASK-317 / FEAT-194` 已完成长期会话身份修复：Web 会话由服务端创建全局 UUID，外部渠道业务键进入 `source_key` 映射，所有读写/附件/删除按租户与所有者校验；V122 清空测试会话并增加 UUID、渠道/可见范围、唯一性和 `(session_id, company_id)` 复合外键。实现 `0b34fb65` 与验证文档 `ce7f8800` 已进入本地 main。后端相关测试/package、前端 53 文件/292 项/build、完整 stack verify 通过；运行代码制品 `2.8.61-dev.0cd8887` 包含实现，backend/frontend healthy/restart=0。目标租户 `org0gtwzqvxell4gly8s` 在登录态页面创建 2 个独立 UUID 会话，刷新后历史仍显示 2 条；无 `workbench:*` 或孤儿记录。UAT、生产未修改。
 
 - `TASK-316 / FEAT-193` 已完成用户反馈修复：代码示例显式重置全局 `pre` 浅色背景，最终计算样式为深棕底/暖白字/0px 内框；指南路由进入时锁定浏览器外层滚动，只保留运营主区域一个滚动容器，并让直接章节锚点定位到主容器。新增公开 `/agent-docs/internal-applications/integration-guide.md`，391 行完整覆盖 12 章接入契约，返回 `200 text/markdown`、`nosniff`，不依赖登录或 JavaScript且无真实环境地址/Secret。提交 `1f1d816c`、`4c368db3`、`0cd88875` 已进入本地 main；前端 53 文件/293 项、production build、Nginx 校验、登录态桌面视觉和完整 stack verify 通过。frontend 为 `2.8.61-dev.0cd8887`、healthy/restart=0；远端、UAT、生产未修改。
 

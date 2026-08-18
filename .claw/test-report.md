@@ -1,14 +1,25 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-18T03:15:43Z
+updated_at: 2026-08-18T03:18:23Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-18T03:15:43Z
-last_run_status: passed_task_316_local_runtime_and_authenticated_visual
+last_run_at: 2026-08-18T03:18:23Z
+last_run_status: passed_task_317_local_session_identity_and_history
 ---
 
 # Test Report
+
+## 2026-08-18 TASK-317 服务端 UUID 会话身份与历史完整性
+
+- 状态：`passed_task_317_local_session_identity_and_history`。
+- 根因：前端稳定键 `workbench:<agent>` 被直接用作全局 `chat_session.id`；同一键跨租户碰撞后，Trace/消息可观测但会话列表按租户/用户过滤为 0。
+- 后端：相关 5 个测试类、test compile 和 `mvn -q -DskipTests package` 通过；独立 Spring 集成测试因本机未提供 `agentcici_test` 数据库未运行，租户/迁移门禁改由真实本地栈验证。
+- 前端：全量 53 个测试文件、292 项、TypeScript 与 production build 通过；`git diff --check` 通过。
+- 实库：V122 成功且 Flyway 回读 `success=true`；会话测试数据清空，UUID 检查、`(id, company_id)` 唯一性、渠道/source key 约束以及消息/状态/附件三项 `(session_id, company_id)` 复合外键生效。`workbench:*`、非 UUID 会话和三类孤儿记录均为 0。
+- 登录态业务链路：目标租户 `org0gtwzqvxell4gly8s / CC DevAutopilot1` 自动创建首个会话，点击“新对话”创建第二个会话；刷新后历史列表仍为 2 条。数据库回读两个不同 UUID，均为 `web / USER / source_key=NULL`。
+- 本地主线与运行：实现 `0b34fb65` 已进入本地 main；运行代码制品 `2.8.61-dev.0cd8887` 包含该提交，backend/frontend healthy、restart=0；完整 `cc-local-stack ./stack verify` 通过。后续 `ce7f8800` 仅更新验证文档，不影响制品。
+- 边界：未代用户发送模型消息；会话创建、租户归属、UUID 持久化及刷新回显已验证。UAT、生产未授权、未修改。
 
 ## 2026-08-18 TASK-316 应用中心在线接入指南与阅读缺陷修复
 
