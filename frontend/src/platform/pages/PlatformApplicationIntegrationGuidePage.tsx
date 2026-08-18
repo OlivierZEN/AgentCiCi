@@ -9,6 +9,7 @@ import {
   ClipboardCheck,
   Code2,
   Copy,
+  ExternalLink,
   KeyRound,
   Link2,
   Network,
@@ -32,6 +33,8 @@ export const APPLICATION_INTEGRATION_GUIDE_SECTIONS = [
   { id: "operations", number: "11", label: "运行期运维" },
   { id: "troubleshooting", number: "12", label: "排错与检查" },
 ] as const;
+
+export const APPLICATION_INTEGRATION_AGENT_GUIDE_PATH = "/agent-docs/internal-applications/integration-guide.md";
 
 export const PROVIDER_LIFECYCLE_REQUEST_EXAMPLE = `{
   "operationId": "8bf2d8aa-9ec4-4f54-9462-4b3d5f55d3fd",
@@ -157,10 +160,21 @@ export default function PlatformApplicationIntegrationGuidePage() {
           <h1 className="skills-catalog__title">内部应用接入指南</h1>
           <p className="subtle skills-catalog__subtitle">从实现 Provider 到租户开通的完整路径。每一步都说明操作、原理与完成标志。</p>
         </div>
-        <div className="application-guide-head__meta" aria-label="指南适用范围">
-          <BookOpen size={18} aria-hidden />
-          <span><strong>适用于</strong>平台受控内部应用</span>
-          <span><strong>预计联调</strong>约 1–2 个工作日</span>
+        <div className="application-guide-head__aside">
+          <a
+            className="platform-button application-guide-agent-link"
+            href={APPLICATION_INTEGRATION_AGENT_GUIDE_PATH}
+            target="_blank"
+            rel="noreferrer"
+          >
+            智能体版 Markdown
+            <ExternalLink size={14} aria-hidden />
+          </a>
+          <div className="application-guide-head__meta" aria-label="指南适用范围">
+            <BookOpen size={18} aria-hidden />
+            <span><strong>适用于</strong>平台受控内部应用</span>
+            <span><strong>预计联调</strong>约 1–2 个工作日</span>
+          </div>
         </div>
       </header>
 

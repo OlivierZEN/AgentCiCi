@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import integrationGuideMarkdown from "../../../public/agent-docs/internal-applications/integration-guide.md?raw";
 import {
+  APPLICATION_INTEGRATION_AGENT_GUIDE_PATH,
   APPLICATION_INTEGRATION_GUIDE_SECTIONS,
   HMAC_CANONICAL_EXAMPLE,
   PROVIDER_LIFECYCLE_REQUEST_EXAMPLE,
@@ -51,5 +53,16 @@ describe("internal application online integration guide", () => {
 
   it("uses only a reserved example domain in developer-facing snippets", () => {
     expect(PROVIDER_LIFECYCLE_REQUEST_EXAMPLE).not.toMatch(/agentcici\.com|cici\.localhost|127\.0\.0\.1/);
+  });
+
+  it("publishes a no-JavaScript Markdown guide for agents with the same governed contract", () => {
+    expect(APPLICATION_INTEGRATION_AGENT_GUIDE_PATH).toBe("/agent-docs/internal-applications/integration-guide.md");
+    expect(integrationGuideMarkdown).toContain("document_id: agentcici.internal-application-integration.v1");
+    expect(integrationGuideMarkdown).toContain("Idempotency-Key: <operationId>:<stepCode>");
+    expect(integrationGuideMarkdown).toContain("app.platform.provider-secrets.<secret_ref>");
+    for (const section of APPLICATION_INTEGRATION_GUIDE_SECTIONS) {
+      expect(integrationGuideMarkdown).toContain(`## ${section.number} ${section.label}`);
+    }
+    expect(integrationGuideMarkdown).not.toMatch(/https?:\/\/(?:[^\s/]+\.)?agentcici\.com|cici\.localhost|127\.0\.0\.1/);
   });
 });

@@ -22687,9 +22687,9 @@ td.skills-data-table__actions > * {
 
 /* Application Center developer integration manual. */
 .application-integration-guide {
-  min-height: calc(100vh - 48px);
+  height: auto;
+  min-height: 0;
   color: var(--platform-heading);
-  scroll-behavior: smooth;
 }
 
 .application-guide-head {
@@ -22700,6 +22700,32 @@ td.skills-data-table__actions > * {
 
 .application-guide-head .platform-section-label {
   margin: 0 0 7px;
+}
+
+.application-guide-head__aside {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.application-guide-agent-link,
+.application-guide-agent-link:hover,
+.application-guide-agent-link:focus-visible {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 7px;
+  min-height: 34px;
+  border-color: var(--platform-line-strong);
+  background: var(--platform-panel);
+  color: var(--platform-accent-strong);
+  text-decoration: none;
+}
+
+.application-guide-agent-link:hover,
+.application-guide-agent-link:focus-visible {
+  border-color: var(--platform-line-bright);
+  color: var(--platform-heading);
 }
 
 .application-guide-head__meta {
@@ -22831,6 +22857,7 @@ td.skills-data-table__actions > * {
 }
 
 .application-guide-content {
+  align-self: start;
   min-width: 0;
   max-width: 900px;
 }
@@ -23147,13 +23174,25 @@ td.skills-data-table__actions > * {
   max-height: 420px;
   margin: 0;
   overflow: auto;
+  border: 0;
+  border-radius: 0;
+  background: #241f1a;
   padding: 16px;
-  color: inherit;
+  color: #f5ecdc;
   font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
   font-size: 11px;
   line-height: 1.65;
+  overflow-wrap: normal;
   tab-size: 2;
   white-space: pre;
+  word-break: normal;
+}
+
+.application-guide-code pre code {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
 }
 
 .application-guide-detail {
