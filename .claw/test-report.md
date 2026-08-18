@@ -1,24 +1,27 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-18T02:37:22Z
+updated_at: 2026-08-18T02:41:39Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-18T02:37:22Z
-last_run_status: passed_task_316_frontend_ready_for_local_deploy
+last_run_at: 2026-08-18T02:41:39Z
+last_run_status: passed_task_316_local_runtime_with_authorized_visual_pending
 ---
 
 # Test Report
 
 ## 2026-08-18 TASK-316 应用中心在线接入指南
 
-- 状态：`passed_task_316_frontend_ready_for_local_deploy`。
+- 状态：`passed_task_316_local_runtime_with_authorized_visual_pending`。
 - 内容契约：12 个章节完整覆盖接入全景、准备、登记、Provider 生命周期请求与响应、HMAC canonical string、Secret 引用、连接、版本、依赖、发布、租户开通、运行期运维和排错检查；示例只使用保留测试域名，不包含真实环境地址或凭据。
 - 定向验证：`PlatformApplicationIntegrationGuidePage.test.ts`、`PlatformInternalApplicationsPage.test.ts`、`PlatformShell.test.ts` 共 26 项通过，覆盖章节顺序、真实生命周期字段、HMAC 顺序、应用中心导航和目录状态回归。
 - 全量前端：53 个测试文件、293 项全部通过；TypeScript 与 Vite production build 通过，仅保留既有 chunk-size warning；`git diff --check` 通过。
 - 桌面视觉与交互：本地独立视觉入口回读完整语义结构，首屏层级、粘性目录和长文密度正常；“运行连接”锚点定位成功，代码复制按钮反馈“已复制”，console 0 error / 0 warning。临时视觉入口已删除，不进入交付代码。
 - 鉴权边界：正式 `/platform/internal-applications/integration-guide` 正确进入运营平台登录边界；未读取浏览器存储、猜测凭据或绕过鉴权。授权态应用中心入口和平台侧栏包裹下的最终视觉仍待可用管理员会话复核。
-- 部署边界：本地 `cici.localhost` 尚未从本任务 main 提交构建；远端、UAT、生产未修改。
+- 本地主线与制品：实现提交 `94f4e6bcbbd0` 已进入本地 main；backend/frontend 镜像版本均为 `2.8.61-dev.94f4e6b`，revision 为 `94f4e6bcbbd0`。
+- 本地运行：`cc-local-stack ./stack up` 和完整 verify 通过；backend/frontend 均 healthy、restart=0，正式指南路由返回 200，部署资源 `index-CtF052P4-2.8.61-dev.94f4e6b.js` 回读“内部应用接入指南”“接入指南”和“发布前 8 项检查”。backend `/system/version` 回读同一版本与 commit。
+- 正式浏览器边界：访问正式指南路由后正确进入运营平台登录页，console 0 error / 0 warning；未绕过登录。授权态应用中心入口和平台侧栏包裹下的最终视觉仍待可用管理员会话复核。
+- 发布边界：远端、UAT、生产未修改。
 
 ## 2026-08-18 AgentCiCi UAT `2.8.61-beta.28`
 

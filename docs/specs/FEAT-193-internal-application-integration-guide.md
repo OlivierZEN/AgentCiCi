@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-193
 title: 应用中心在线接入指南
-status: implementing
+status: implemented
 owner_role: frontend-agent
 task_ids: TASK-316
 related_decisions: DEC-055
 related_issues: none
-updated_at: 2026-08-18T02:27:22Z
+updated_at: 2026-08-18T02:41:39Z
 updated_by: codex
 ---
 

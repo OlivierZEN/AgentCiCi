@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-18T02:27:22Z
+updated_at: 2026-08-18T02:41:39Z
 updated_by: codex
 board_status: active
 ---
@@ -17,7 +17,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-316 - 应用中心在线接入指南
 
-- status: `in_progress`
+- status: `review`
 - priority: `high`
 - owner_role: `frontend-agent`
 - claimed_by: `codex`
@@ -25,7 +25,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-316.md`
 - blocked_by: `none`
 - scope_files: `应用中心接入指南路由、逐步手册、Provider 契约示例、上下文入口、测试与本地环境验证`
-- next_action: `实现接入指南页面、路由和入口，完成全量测试、构建与本地桌面验收。`
+- completion_evidence: `94f4e6bc；定向 3 文件/26 项、全量 53 文件/293 项、production build；2.8.61-dev.94f4e6b；backend/frontend healthy/restart=0；完整 stack verify；正式路由 200`
+- next_action: `由已登录平台管理员复核应用列表、应用详情和连接空态入口，以及平台侧栏包裹下的指南最终视觉；UAT/生产保持不变。`
 
 ### TASK-315 - 产品经理结构化语义判定与标准输出
 

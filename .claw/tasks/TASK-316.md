@@ -2,12 +2,12 @@
 kind: task-status
 task_id: TASK-316
 title: 应用中心在线接入指南
-status: in_progress
+status: review
 priority: high
 owner_role: frontend-agent
 claimed_by: codex
 spec_path: docs/specs/FEAT-193-internal-application-integration-guide.md
-updated_at: 2026-08-18T02:37:22Z
+updated_at: 2026-08-18T02:41:39Z
 updated_by: codex
 ---
 
@@ -30,8 +30,17 @@ updated_by: codex
 - [x] 完成页面信息架构和内容边界设计。
 - [x] 实现指南页面、路由和上下文入口。
 - [x] 完成定向测试、全量测试、生产构建和独立桌面视觉检查。
-- [ ] 从本地 main 更新 `cici.localhost` 并完成正式路由运行验收。
-- [ ] 更新项目状态和测试证据。
+- [x] 从本地 main 更新 `cici.localhost` 并完成正式路由运行验收。
+- [x] 更新项目状态和测试证据。
+
+## 完成证据
+
+- 实现提交：`94f4e6bcbbd0`。
+- 前端定向 3 文件/26 项、全量 53 文件/293 项和 production build 通过。
+- 本地独立桌面视觉检查通过目录、锚点、复制反馈和 console 门禁。
+- `cc-local-stack ./stack up` 和完整 verify 通过；backend/frontend 均为 `2.8.61-dev.94f4e6b`、healthy、restart=0。
+- 正式指南路由 200，部署资源回读指南标题、入口和发布前检查；浏览器保持运营平台登录边界。
+- 远端、UAT、生产未修改；授权态最终视觉待平台管理员会话复核。
 
 ## 交付边界
 
