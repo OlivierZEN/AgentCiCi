@@ -1,14 +1,24 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-18T04:04:35Z
+updated_at: 2026-08-18T04:09:38Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-18T04:04:35Z
-last_run_status: passed_task_318_scoped_with_authenticated_catalog_pending
+last_run_at: 2026-08-18T04:09:38Z
+last_run_status: passed_agentcici_2_8_61_beta_29_uat_technical_gate
 ---
 
 # Test Report
+
+## 2026-08-18 AgentCiCi UAT `2.8.61-beta.29`
+
+- 状态：`passed_agentcici_2_8_61_beta_29_uat_technical_gate`。
+- Source/制品：本地与远程 `main`、annotated tag peeled commit 和运行 commit 均为 `d2abc9c463b3`；backend/frontend ACR index digest 为 `sha256:56983d2a5ba8d9d94a66c910d95446d008cd1392ae3a0497cbe513c4f3fff8df`、`sha256:cae5a754b957c13b7753478fa40a2c950c7fcfcfccf381006d7eae5c2b65f6b9`，未更新 `latest`。
+- 构建门禁：发布 dry-run 正确生成 beta.29；后端 `-DskipTests package` 和前端 TypeScript/Vite production build 通过。首次实际发布在隔离 worktree 缺少 `node_modules` 时于 `tsc` 前安全失败，未创建镜像、tag 或 UAT 写入；按锁文件 `npm ci` 后使用同一冻结版本成功重试。
+- 备份与回滚：`/data/apps/agentcici/backups/20260818T040400Z-before-2.8.61-beta.29` 的 Compose、受管环境、PostgreSQL、KB、Qdrant、beta.28 两项旧镜像和 SHA-256 清单全部非空、`0600` 且校验通过。应用回滚目标 beta.28；V122 清空的测试会话只可经单独批准整库恢复。
+- 运行门禁：仅 backend/frontend 重建；四个状态服务 ID 哈希不变。V122=`true`，六容器 healthy/restart=0，health=`UP`、版本/commit/digest 一致，Nginx 有效；90 秒稳定窗口 backend severe=0、frontend 5xx=0。
+- 公网与鉴权：两轮 UAT 首页、Keycloak discovery、Semattice health/version 和 DevAutopilot integrated health 通过；HTTP→HTTPS 301，应用中心、HTML 指南和 Markdown 地址为 200，Markdown 为 391 行 `text/markdown` 且 `nosniff`，匿名 auth/应用目录为 `401 application/json`。
+- 边界：本次没有新增、启用或切换跨项目契约，未代用户执行登录态应用接入或新会话业务验收；生产未修改。
 
 ## 2026-08-18 TASK-318 OneKeyToken 按 Key 枚举可用模型
 
@@ -17,7 +27,7 @@ last_run_status: passed_task_318_scoped_with_authenticated_catalog_pending
 - 聚焦回归：`ModelProviderServiceTest` 通过，覆盖保存 Key 的 Bearer 头、`GET /v1/models`、JSON Accept、两个模型解析、401 Key 轮换提示、403 账号/应用/`model:invoke` scope 提示及错误不泄露 Key；backend compile/package 与 `git diff --check` 通过。
 - Spring/空库边界：一次性 PostgreSQL 16 从 V1 成功迁移 118 项至 V122；目标控制器测试在执行前被既有 `OfficialAccessTokenService` 测试配置漂移阻断，错误为启用 OACT 时 issuer/key ID/Semattice scopes 不完整。临时数据库容器已自动停止并删除；未修改迁移或共享测试库。
 - 本地运行：提交 `1a1ab512` 已进入本地 main；backend 镜像 `sha256:8eb9abf014a2cfa520381bac6e89cc33f5eb49e924638256a09971296ee59af1`，label/version/revision 为 `2.8.61-dev.1a1ab51 / 1a1ab512782b`。仅 backend 重建，healthy/restart=0，health=`UP`，正式模型页 200，匿名枚举 API 为 `401 application/json`，启动后 ERROR/FATAL/Exception 均为 0。
-- 业务边界：Chrome 与内置浏览器均无可复用平台管理员会话，因此没有绕过鉴权读取保存 Key；真实“全部模型”数量与名称待平台管理员登录后只读确认。未保存目录选择，远端、UAT、生产未修改。
+- 业务边界：Chrome 与内置浏览器均无可复用平台管理员会话，因此没有绕过鉴权读取保存 Key；真实“全部模型”数量与名称待平台管理员登录后只读确认。未保存目录选择；提交进入本地主线并随本次同步推送远端，但未纳入冻结于 `d2abc9c4` 的 UAT beta.29，生产未修改。
 
 ## 2026-08-18 TASK-317 服务端 UUID 会话身份与历史完整性
 

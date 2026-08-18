@@ -7,7 +7,7 @@ priority: high
 owner_role: frontend-agent
 claimed_by: codex
 spec_path: docs/specs/FEAT-193-internal-application-integration-guide.md
-updated_at: 2026-08-18T03:15:43Z
+updated_at: 2026-08-18T04:09:38Z
 updated_by: codex
 ---
 
@@ -43,10 +43,10 @@ updated_by: codex
 - 智能体地址：`/agent-docs/internal-applications/integration-guide.md` 返回 `200 text/markdown`、`nosniff`，共 391 行，不依赖 JavaScript 或登录态。
 - 登录态视觉：浏览器外层滚动锁定为 0，运营主区域是唯一滚动容器；`#connection` 直接定位到目标章节；代码区为深棕底、暖白字、0px 内框。
 - 最终前端 53 文件/293 项、production build、Nginx 配置校验和完整 stack verify 通过；frontend 为 `2.8.61-dev.0cd8887`、healthy/restart=0。
-- 远端、UAT、生产未修改；真实 Provider 接入和租户开通不属于文档修复验收。
+- 已随 UAT `2.8.61-beta.29 / d2abc9c463b3` 发布；HTML 与 Markdown 地址、MIME、安全响应头和公开 smoke 通过。生产未修改；真实 Provider 接入和租户开通不属于文档修复验收。
 
 ## 交付边界
 
 - 只修改 `cc-agentcici`。
-- 不修改 UAT 或生产环境。
+- UAT 技术发布已获用户授权并完成；生产环境不修改。
 - 不在示例中保存真实环境地址或凭据。

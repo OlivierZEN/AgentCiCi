@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-18T04:04:35Z
+updated_at: 2026-08-18T04:09:38Z
 updated_by: codex
 phase: review
 active_task: TASK-318
-next_action: "平台管理员登录本地运营平台后，在 OneKeyToken 点击“全部模型”，只读确认真实模型数量与名称；不保存选择。"
+next_action: "平台管理员登录本地运营平台后只读确认 OneKeyToken 真实模型目录；同时完成 UAT 指南阅读与会话历史业务验收，生产保持不变。"
 read_next:
   goals: false
   decisions: false
@@ -22,11 +22,13 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-318 / FEAT-179` 已实现 OneKeyToken 按 Key 枚举模型：公开端点负例返回 `401 application/json / unauthorized`，确认 `/v1/models` 路由与说明一致；提交 `1a1ab512` 使用已保存 Bearer Key 拉取 `data[].id/name`，401/403 给出 Key 轮换及账号/应用/`model:invoke` scope 提示且不回显 Key，未知能力仍需人工确认。聚焦单测、backend package、diff check 通过；本地 backend `2.8.61-dev.1a1ab51` healthy/restart=0，版本、正式路由 200、匿名目录 API JSON 401、启动无 ERROR/Exception。独立空库迁移到 V122 成功，但 Spring 集成用例在执行前被既有 OACT 测试配置漂移阻断。当前没有可复用的平台管理员登录态，已保存 Key 的真实正例目录回读待用户登录后完成；UAT、生产、远端未修改。
+- `TASK-318 / FEAT-179` 已实现 OneKeyToken 按 Key 枚举模型：公开端点负例返回 `401 application/json / unauthorized`，确认 `/v1/models` 路由与说明一致；提交 `1a1ab512` 使用已保存 Bearer Key 拉取 `data[].id/name`，401/403 给出 Key 轮换及账号/应用/`model:invoke` scope 提示且不回显 Key，未知能力仍需人工确认。聚焦单测、backend package、diff check 通过；本地 backend `2.8.61-dev.1a1ab51` healthy/restart=0，版本、正式路由 200、匿名目录 API JSON 401、启动无 ERROR/Exception。独立空库迁移到 V122 成功，但 Spring 集成用例在执行前被既有 OACT 测试配置漂移阻断。当前没有可复用的平台管理员登录态，已保存 Key 的真实正例目录回读待用户登录后完成；提交进入本地主线并随本次同步推送远端，但未纳入冻结于 `d2abc9c4` 的 UAT beta.29，生产未修改。
 
-- `TASK-317 / FEAT-194` 已完成长期会话身份修复：Web 会话由服务端创建全局 UUID，外部渠道业务键进入 `source_key` 映射，所有读写/附件/删除按租户与所有者校验；V122 清空测试会话并增加 UUID、渠道/可见范围、唯一性和 `(session_id, company_id)` 复合外键。实现 `0b34fb65` 与验证文档 `ce7f8800` 已进入本地 main。后端相关测试/package、前端 53 文件/292 项/build、完整 stack verify 通过；运行代码制品 `2.8.61-dev.0cd8887` 包含实现，backend/frontend healthy/restart=0。目标租户 `org0gtwzqvxell4gly8s` 在登录态页面创建 2 个独立 UUID 会话，刷新后历史仍显示 2 条；无 `workbench:*` 或孤儿记录。UAT、生产未修改。
+- `TASK-316 / TASK-317` 已随 AgentCiCi UAT `2.8.61-beta.29 / d2abc9c463b3` 完成技术发布：远程 main、annotated tag、两项不可变镜像和运行 commit 一致；完整备份 `/data/apps/agentcici/backups/20260818T040400Z-before-2.8.61-beta.29` 校验通过，应用回滚目标 beta.28。仅重建 backend/frontend，四个状态服务 ID 不变；V122、六容器 healthy/restart=0、health/version、Nginx、两轮公开 smoke、指南 HTML/Markdown、JSON 401 与稳定日志通过。登录态业务验收待平台管理员完成，生产及其他产品未修改。
 
-- `TASK-316 / FEAT-193` 已完成用户反馈修复：代码示例显式重置全局 `pre` 浅色背景，最终计算样式为深棕底/暖白字/0px 内框；指南路由进入时锁定浏览器外层滚动，只保留运营主区域一个滚动容器，并让直接章节锚点定位到主容器。新增公开 `/agent-docs/internal-applications/integration-guide.md`，391 行完整覆盖 12 章接入契约，返回 `200 text/markdown`、`nosniff`，不依赖登录或 JavaScript且无真实环境地址/Secret。提交 `1f1d816c`、`4c368db3`、`0cd88875` 已进入本地 main；前端 53 文件/293 项、production build、Nginx 校验、登录态桌面视觉和完整 stack verify 通过。frontend 为 `2.8.61-dev.0cd8887`、healthy/restart=0；远端、UAT、生产未修改。
+- `TASK-317 / FEAT-194` 已完成长期会话身份修复：Web 会话由服务端创建全局 UUID，外部渠道业务键进入 `source_key` 映射，所有读写/附件/删除按租户与所有者校验；V122 清空测试会话并增加 UUID、渠道/可见范围、唯一性和 `(session_id, company_id)` 复合外键。实现 `0b34fb65` 与验证文档 `ce7f8800` 已进入 main；本地登录态创建/刷新回显和 UAT V122 技术门禁均通过，UAT 登录态新会话业务验收待完成。生产未修改。
+
+- `TASK-316 / FEAT-193` 已完成用户反馈修复：代码示例显式重置全局 `pre` 浅色背景，指南只保留运营主区域一个滚动容器并支持直接章节锚点；公开 `/agent-docs/internal-applications/integration-guide.md` 以 391 行 Markdown 覆盖 12 章接入契约，不依赖登录或 JavaScript且无真实环境地址/Secret。提交 `1f1d816c`、`4c368db3`、`0cd88875` 已进入 main；本地全量测试、构建、登录态视觉和完整 stack verify 通过，UAT HTML/Markdown 路由、MIME 与安全响应头技术门禁通过。UAT 登录态视觉验收待完成，生产未修改。
 
 - `TASK-315 / FEAT-192` 已随 AgentCiCi UAT `2.8.61-beta.28 / 242074e72a9e` 完成技术发布：远程 `main` 包含冻结提交，annotated tag、两项不可变镜像和运行 commit 一致；完整备份 `/data/apps/agentcici/backups/20260818T020041Z-before-2.8.61-beta.28` 校验通过，回滚目标 beta.27。仅重建 backend/frontend，四个状态服务 ID 不变；V121、六容器 healthy/restart=0、health/version、Nginx、页面路由、匿名 JSON 401、两轮公开 smoke 与稳定日志通过。候选没有启用新的跨项目契约；真实产品经理对话和 Semattice 写入未代用户执行，业务验收待已登录用户完成。生产未修改。
 

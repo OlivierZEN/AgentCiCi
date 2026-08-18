@@ -25,7 +25,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-318.md`
 - blocked_by: `none`
 - scope_files: `OneKeyToken GET /v1/models、Bearer 鉴权、目录解析、401/403 安全错误、聚焦测试与本地环境验证`
-- completion_evidence: `1a1ab512；真实无效 Key 401 unauthorized；ModelProviderServiceTest 通过；backend package；2.8.61-dev.1a1ab51；healthy/restart=0；版本/路由/匿名 401 门禁通过`
+- completion_evidence: `1a1ab512、2635d08c；真实无效 Key 401 unauthorized；ModelProviderServiceTest 通过；backend package；2.8.61-dev.1a1ab51；healthy/restart=0；版本/路由/匿名 401 门禁通过；未纳入 UAT beta.29`
 - next_action: `平台管理员登录本地运营平台后，在 OneKeyToken 点击“全部模型”，只读确认真实模型数量与名称；不保存选择。`
 
 ### TASK-317 - 服务端 UUID 会话身份与历史完整性修复
@@ -39,7 +39,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - scope_files: `会话 UUID 身份、外部 source_key 映射、租户/所有者校验、V122 测试历史重置、工作台创建链路、回归与本地环境验证`
 - completion_evidence: `0b34fb65、ce7f8800；V122；后端相关测试/package、前端 53 文件/292 项/build；2.8.61-dev.0cd8887；healthy/restart=0；完整 stack verify；目标租户创建 2 个 UUID 会话并在刷新后保持历史可见`
-- next_action: `等待用户确认本地会话历史体验；UAT/生产仅在另行授权后部署并清空测试会话。`
+- next_action: `UAT beta.29 技术发布已完成；等待平台管理员完成登录态新会话与刷新历史业务验收，生产保持不变。`
 
 ### TASK-316 - 应用中心在线接入指南
 
@@ -52,7 +52,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - scope_files: `应用中心接入指南路由、逐步手册、Provider 契约示例、上下文入口、测试与本地环境验证`
 - completion_evidence: `94f4e6bc、1f1d816c、4c368db3、0cd88875；全量 53 文件/293 项、production build、Nginx 校验；2.8.61-dev.0cd8887；frontend healthy/restart=0；完整 stack verify；HTML 与 Markdown 路由 200；登录态单滚动、直接锚点和代码对比度复核通过`
-- next_action: `等待用户确认本地阅读体验；真实 Provider 接入和租户开通仍按 TASK-313 验收，UAT/生产保持不变。`
+- next_action: `UAT beta.29 技术发布已完成；等待平台管理员完成登录态指南阅读验收，真实 Provider 接入和租户开通仍按 TASK-313 验收，生产保持不变。`
 
 ### TASK-315 - 产品经理结构化语义判定与标准输出
 

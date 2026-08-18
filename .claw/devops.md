@@ -1,18 +1,26 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-18T04:04:35Z
+updated_at: 2026-08-18T04:09:38Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
 
+## 2026-08-18 TASK-316 / TASK-317 UAT `2.8.61-beta.29`
+
+- 冻结 AgentCiCi `main`、远程 `origin/main` 和 annotated tag peeled commit 均为 `d2abc9c463b3`。backend/frontend linux/amd64 ACR index digest 分别为 `sha256:56983d2a5ba8d9d94a66c910d95446d008cd1392ae3a0497cbe513c4f3fff8df`、`sha256:cae5a754b957c13b7753478fa40a2c950c7fcfcfccf381006d7eae5c2b65f6b9`，未更新 `latest`。
+- 完整备份 `/data/apps/agentcici/backups/20260818T040400Z-before-2.8.61-beta.29` 包含 Compose、受管环境、PostgreSQL、KB、Qdrant、beta.28 两项旧镜像、容器状态、回滚说明和 SHA-256 清单；全部工件非空且 `root:root 0600`，dump、tar、gzip 和清单校验通过。即时应用回滚目标为 `2.8.61-beta.28`；V122 数据恢复需要单独批准整库恢复。
+- 仅 pull/force-recreate backend/frontend；database、Redis、RabbitMQ、Qdrant 容器 ID 哈希发布前后均为 `b5dca5759af2a9cfb0ed4285fdb3b01c9af02db33eb2bfbabfa347fe728de2bc`。V122 成功，六容器 healthy/restart=0，backend health=`UP`、版本/commit/digest 一致，Nginx 有效。
+- 两轮公开 smoke、HTTP 301、应用中心、HTML 指南和 391 行 Markdown 地址均为 200；Markdown 返回 `text/markdown` 与 `nosniff`，匿名 auth/应用目录 API 为 JSON 401。90 秒稳定窗口 backend severe=0、frontend 5xx=0。
+- 本候选没有创建、启用或切换真实 Provider 连接，也没有改变 Semattice、DevAutopilot 或 Keycloak 契约；未代用户执行登录态应用接入或会话业务验收。生产及其他产品均未部署。
+
 ## 2026-08-18 TASK-318 本地开发环境
 
 - AgentCiCi backend 从本地 `main@1a1ab512782b` 构建为 `2.8.61-dev.1a1ab51`，镜像 ID `sha256:8eb9abf014a2cfa520381bac6e89cc33f5eb49e924638256a09971296ee59af1`，image label、`/system/version` 与提交一致。
 - 仅 force-recreate backend；容器 healthy、restart=0，`/actuator/health=UP`，正式 `/platform/models` 路由 200，匿名 OneKeyToken 模型枚举 API 为 `401 application/json`，启动后 ERROR/FATAL/Exception 均为 0。数据库、frontend、Keycloak、Semattice 和 DevAutopilot 未重建。
-- 本次是单服务日常调整，按 local-stack 最短闭环执行目标门禁，未运行完整 `./stack verify`。当前无平台管理员登录态，真实已保存 Key 的“全部模型”只读回读待用户登录后完成；远端、UAT、生产未修改。
+- 本次是单服务日常调整，按 local-stack 最短闭环执行目标门禁，未运行完整 `./stack verify`。当前无平台管理员登录态，真实已保存 Key 的“全部模型”只读回读待用户登录后完成；提交进入本地主线并随本次同步推送远端，但未纳入冻结于 `d2abc9c4` 的 UAT beta.29，生产未修改。
 
 ## 2026-08-18 TASK-313 / TASK-315 UAT `2.8.61-beta.28`
 
