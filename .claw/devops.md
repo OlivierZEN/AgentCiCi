@@ -1,18 +1,20 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-18T09:07:09Z
+updated_at: 2026-08-18T09:34:34Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
 
-## 2026-08-18 TASK-319 UAT 发布预检阻塞
+## 2026-08-18 TASK-319 UAT `2.8.61-beta.30`
 
-- AgentCiCi 本地与远程 `main` 已同步到 `e1ecaeec42c9`；UAT 六项公开 smoke 通过。dry-run 计划候选为 `2.8.61-beta.30`，基础版本与当前单发布线 `2.8.61` 一致，`--no-latest`，未创建 tag 或 ACR 镜像。
-- 当前会话未注入可读 `CICI_SAAS_SSH_IDENTITY_FILE`。因此未连接 UAT 主机，未读取受管 Secret，未确认当前运行镜像/回滚点，未创建 PostgreSQL/KB/Qdrant/Compose/旧镜像备份，也未重建 backend/frontend。
-- 继续发布前必须由运维负责人注入受管 SSH identity；随后以届时远程 `main` 重新冻结 commit/版本，完成现场只读回读、非空备份、不可变镜像/tag、仅应用容器切换、完整启动窗口及版本/健康/鉴权/稳定日志验收。生产未修改。
+- 冻结 AgentCiCi 本地/远程 `main` 和 annotated tag peeled commit 为 `39424a982068`。backend/frontend linux/amd64 ACR index digest 分别为 `sha256:5b102dd48d1920a569073403db8c3292c8206de5364c5852e3414026b8456767`、`sha256:6f7fe1aac99b740854448e764160b71a120be4be43ffe46f8aadb739a0424a52`，未更新 `latest`。
+- 完整备份 `/data/apps/agentcici/backups/20260818T093113Z-before-2.8.61-beta.30` 包含 Compose、受管环境、PostgreSQL、KB、Qdrant、beta.29 两项旧镜像、容器状态、回滚说明和 SHA-256 清单；11 项工件全部非空、`root:root 0600`，dump、tar、gzip 和清单校验通过。即时应用回滚目标 beta.29；数据库恢复需单独批准。
+- 仅 pull/force-recreate backend/frontend；database、Redis、RabbitMQ、Qdrant 容器 ID 哈希前后均为 `b5dca5759af2a9cfb0ed4285fdb3b01c9af02db33eb2bfbabfa347fe728de2bc`。六容器 healthy/restart=0，backend health=`UP`、版本/commit/RepoDigest 一致，Flyway V122/V121/V120 成功，Nginx 有效。
+- 发布前后两轮公开 smoke、`/app=200 text/html`、匿名 `/auth/me=401 application/json`、运行 beta.30 资产与组织弹层 CSS 指纹通过。90 秒稳定窗口 backend severe=0、frontend 5xx/upstream=0。
+- 本候选没有新增、启用或切换跨项目契约；未代用户执行登录态组织切换视觉验收。生产及其他产品未部署。
 
 ## 2026-08-18 TASK-319 本地开发环境
 

@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-18T09:07:09Z
+updated_at: 2026-08-18T09:34:34Z
 updated_by: codex
-phase: blocked
+phase: review
 active_task: TASK-319
-next_action: "运维负责人在当前会话注入可读的 CICI_SAAS_SSH_IDENTITY_FILE；随后重新冻结远程 main、重跑 UAT dry-run/备份/发布与技术验收。生产保持不变。"
+next_action: "平台用户登录 UAT 后打开组织切换弹层，复核长组织名称完整显示、hover/focus 和桌面视口边界；生产保持不变。"
 read_next:
   goals: false
   decisions: false
@@ -22,9 +22,9 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-319` 本地 `main@e1ecaeec` 已快进推送至远程 `origin/main`，双方无分叉；UAT 六项公开只读 smoke 全部通过。发布 dry-run 生成计划候选 `2.8.61-beta.30 / e1ecaeec42c9`，但当前会话未注入可读的 `CICI_SAAS_SSH_IDENTITY_FILE`，因此无法现场确认运行版本和回滚点、创建受管备份或执行 UAT 单产品切换；未创建 beta.30 tag、未推送 ACR 镜像、未修改 UAT。待受管 SSH 身份可用后必须以届时远程 `main` 重新冻结候选，不能沿用本次 dry-run 作为发布证据。生产未修改。
+- `TASK-319` 已随 AgentCiCi UAT `2.8.61-beta.30 / 39424a982068` 完成技术发布：远程 `main` 包含冻结提交，annotated tag peeled commit、两项不可变 linux/amd64 镜像和运行 commit 一致，未更新 `latest`；后续发布记录提交只更新文档。完整备份 `/data/apps/agentcici/backups/20260818T093113Z-before-2.8.61-beta.30` 的 11 项工件均非空、`0600` 且校验通过，应用回滚目标 beta.29。仅重建 backend/frontend，四个状态服务 ID 哈希不变；六容器 healthy/restart=0，health、版本、V122、Nginx、两轮公开 smoke、匿名 JSON 401、运行 CSS 指纹和 90 秒稳定日志门禁通过。本候选未新增、启用或切换跨项目契约；登录态视觉和用户接受待平台用户完成，生产未修改。
 
-- `TASK-319` 已实现组织切换弹层完整显示组织名称：提交 `1ad25d39` 将固定 `192px` 宽度改为内容自适应并保留最小宽度与桌面视口上限，移除名称 `ellipsis/nowrap`，超长名称只在视口安全边界换行；主题、当前状态和“管理后台”动作保持不变。聚焦 12 项、前端全量 53 文件/294 项、production build 与 diff check 通过；本地 frontend `2.8.61-dev.1ad25d3` healthy/restart=0，正式 `/app` 200、Nginx 与运行 CSS 指纹通过。浏览器员工会话已过期并回到统一登录页，未绕过认证；登录态桌面截图和用户视觉验收待重新登录后完成。远端、UAT、生产未修改。
+- `TASK-319` 已实现组织切换弹层完整显示组织名称：提交 `1ad25d39` 将固定 `192px` 宽度改为内容自适应并保留最小宽度与桌面视口上限，移除名称 `ellipsis/nowrap`，超长名称只在视口安全边界换行；主题、当前状态和“管理后台”动作保持不变。聚焦 12 项、前端全量 53 文件/294 项、production build 与 diff check 通过；本地 frontend `2.8.61-dev.1ad25d3` healthy/restart=0，正式 `/app` 200、Nginx 与运行 CSS 指纹通过。实现已包含在 UAT beta.30；浏览器员工会话已过期并回到统一登录页，未绕过认证，登录态桌面截图和用户视觉验收待重新登录后完成。生产未修改。
 
 - `TASK-318 / FEAT-179` 已实现 OneKeyToken 按 Key 枚举模型：公开端点负例返回 `401 application/json / unauthorized`，确认 `/v1/models` 路由与说明一致；提交 `1a1ab512` 使用已保存 Bearer Key 拉取 `data[].id/name`，401/403 给出 Key 轮换及账号/应用/`model:invoke` scope 提示且不回显 Key，未知能力仍需人工确认。聚焦单测、backend package、diff check 通过；本地 backend `2.8.61-dev.1a1ab51` healthy/restart=0，版本、正式路由 200、匿名目录 API JSON 401、启动无 ERROR/Exception。独立空库迁移到 V122 成功，但 Spring 集成用例在执行前被既有 OACT 测试配置漂移阻断。当前没有可复用的平台管理员登录态，已保存 Key 的真实正例目录回读待用户登录后完成；提交进入本地主线并随本次同步推送远端，但未纳入冻结于 `d2abc9c4` 的 UAT beta.29，生产未修改。
 

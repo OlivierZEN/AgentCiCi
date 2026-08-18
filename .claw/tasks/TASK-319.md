@@ -1,6 +1,6 @@
 ---
 task_id: TASK-319
-status: blocked
+status: review
 priority: high
 owner_role: frontend-agent
 claimed_by: codex
@@ -17,5 +17,5 @@ claimed_by: codex
 ## 下一步
 
 - 实现 `1ad25d39` 已进入本地 `main`；前端全量 53 文件/294 项、production build 和本地运行门禁通过。
-- 远程 `main@e1ecaeec` 已同步，UAT 公开 smoke 通过；`2.8.61-beta.30` 仅完成 dry-run，未创建 tag/镜像或改动环境。
-- 当前缺少可读 `CICI_SAAS_SSH_IDENTITY_FILE`，待运维负责人注入后重新冻结候选并完成备份、发布和技术验收；登录态视觉验收仍待补。
+- 远程 `main@39424a98` 已同步；UAT `2.8.61-beta.30 / 39424a982068` 的不可变镜像、annotated tag、完整备份、仅应用容器切换、健康/版本/鉴权/稳定日志技术门禁均通过，生产未修改。
+- 平台用户登录 UAT 后打开组织切换弹层，复核长组织名称完整显示、hover/focus 和桌面视口边界；登录态视觉验收仍待补。

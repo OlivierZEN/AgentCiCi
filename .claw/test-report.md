@@ -1,14 +1,25 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-18T09:07:09Z
+updated_at: 2026-08-18T09:34:34Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-18T09:07:09Z
-last_run_status: passed_task_319_remote_main_and_uat_preflight_with_deploy_blocked
+last_run_at: 2026-08-18T09:34:34Z
+last_run_status: passed_agentcici_2_8_61_beta_30_uat_technical_gate
 ---
 
 # Test Report
+
+## 2026-08-18 TASK-319 UAT `2.8.61-beta.30`
+
+- 状态：`passed_agentcici_2_8_61_beta_30_uat_technical_gate`。
+- Source/制品：冻结时本地与远程 `main`、annotated tag peeled commit 和运行 commit 均为 `39424a982068`；backend/frontend linux/amd64 ACR index digest 分别为 `sha256:5b102dd48d1920a569073403db8c3292c8206de5364c5852e3414026b8456767`、`sha256:6f7fe1aac99b740854448e764160b71a120be4be43ffe46f8aadb739a0424a52`，未更新 `latest`。
+- 构建门禁：`release-acr.sh --dry-run --channel test --no-latest` 生成同一候选；后端 production package、前端 TypeScript/Vite production build、镜像推送与 manifest inspect 通过，Git tag 已推送。
+- 备份与回滚：`/data/apps/agentcici/backups/20260818T093113Z-before-2.8.61-beta.30` 包含 Compose、受管环境、PostgreSQL、KB、Qdrant、beta.29 两项旧镜像、容器状态、回滚说明和 SHA-256 清单，共 11 项、约 303MB；全部非空、`root:root 0600`，dump、tar、gzip 和清单校验通过。即时应用回滚目标 beta.29；数据库恢复需单独批准。
+- 运行门禁：仅 backend/frontend 重建，四个状态服务 ID 哈希发布前后均为 `b5dca5759af2a9cfb0ed4285fdb3b01c9af02db33eb2bfbabfa347fe728de2bc`。六容器 healthy/restart=0，health=`UP`，版本/commit/RepoDigest 一致，Flyway V122/V121/V120 成功，Nginx 有效；运行 CSS 包含 `width:fit-content`、`text-overflow:clip`、`overflow-wrap:anywhere`。
+- 公网与稳定性：发布前后两轮 UAT 首页、Keycloak discovery、Semattice health/version 和 DevAutopilot integrated health 均通过；`/app=200 text/html`，匿名 `/auth/me=401 application/json`。90 秒稳定窗口 backend severe=0、frontend 5xx/upstream=0。
+- 状态治理：`git diff --check` 通过；全仓 `validate-state.py .claw` 仍因既有历史规格 front matter/status、旧时间格式、终态任务未归档和归档数量债务返回 1，输出无 TASK-319 finding，本轮未越界清理历史事实。
+- 边界：本候选没有新增、启用或切换跨项目契约；未代用户登录或执行组织切换业务操作，真实长组织名称下的视觉、hover/focus 与用户接受待平台用户完成。生产未修改。
 
 ## 2026-08-18 TASK-319 远程主线同步与 UAT 发布预检
 
