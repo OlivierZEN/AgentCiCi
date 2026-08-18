@@ -869,6 +869,7 @@ public class SkillDefinitionService {
 
         SkillResolverService.ResolvedSkillContext context = new SkillResolverService.ResolvedSkillContext(
                 "preview-agent",
+                "Skill Preview",
                 List.of(new SkillResolverService.ResolvedSkill(
                         normalizeSkillCode(command.skillCode()),
                         fallback(command.name(), "Skill Preview"),
@@ -906,7 +907,7 @@ public class SkillDefinitionService {
                 SkillResolverService.ResolvedPolicyBundle.EMPTY
         );
         String promptPreview = skillPromptAssembler.assemble(
-                "You are CiCi assistant. Follow platform policy and answer safely.",
+                "You are an assistant running on the CiCi platform. Follow platform policy and answer safely.",
                 context
         );
         List<String> compileSummary = new ArrayList<>(compiled.compileSummary());

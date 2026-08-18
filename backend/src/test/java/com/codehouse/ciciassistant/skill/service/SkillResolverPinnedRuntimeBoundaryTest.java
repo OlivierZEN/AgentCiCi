@@ -88,6 +88,7 @@ class SkillResolverPinnedRuntimeBoundaryTest {
         when(skillDefinitionService.normalizeAgentId("agent-a")).thenReturn("agent-a");
         when(capabilityResolverService.resolve("org-a", "agent-a", List.of())).thenReturn(mutableCapability);
         when(definition.getPublishedVersionId()).thenReturn(42L);
+        when(definition.getName()).thenReturn("大乔");
         when(agentDefinitionRepository.findByCompanyIdAndAgentId("org-a", "agent-a"))
                 .thenReturn(Optional.of(definition));
         when(workflowVersionRepository.findById(42L)).thenReturn(Optional.of(publishedVersion));
@@ -123,6 +124,7 @@ class SkillResolverPinnedRuntimeBoundaryTest {
                 "org-a", "agent-a", "session-a");
 
         assertThat(context.defaultKnowledgeBaseIds()).containsExactly("8");
+        assertThat(context.agentName()).isEqualTo("大乔");
         assertThat(context.handoffRules()).containsExactly("manifest-handoff");
         assertThat(context.outputContract()).isNull();
         assertThat(context.skills()).singleElement().satisfies(skill -> {

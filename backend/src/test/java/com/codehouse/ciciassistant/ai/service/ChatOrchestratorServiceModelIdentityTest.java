@@ -57,6 +57,17 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 class ChatOrchestratorServiceModelIdentityTest {
 
     @Test
+    void basePromptTreatsCiciAsPlatformInsteadOfEveryAgentsExternalName() {
+        assertThat(AliyunBailianClient.SYSTEM_PROMPT)
+                .contains("running on the CiCi platform")
+                .contains("Your external name comes only from the authoritative Agent identity policy")
+                .doesNotContain("You are CiCi");
+        assertThat(AliyunBailianClient.SYSTEM_PROMPT_WITH_THINKING)
+                .contains("CiCi is the hosting platform name, not your own name")
+                .doesNotContain("You are CiCi");
+    }
+
+    @Test
     void shouldTellModelTheActualRoutedProviderAndModel() {
         String promptBlock = ChatOrchestratorService.buildModelIdentityPromptBlock(
                 "aliyun-bailian",
@@ -847,6 +858,7 @@ class ChatOrchestratorServiceModelIdentityTest {
                     List.of(), "", "", "LOW", "always-on");
             SkillResolverService.ResolvedSkillContext skillContext = new SkillResolverService.ResolvedSkillContext(
                     "agent-cici",
+                    "经营分析助手",
                     List.of(crmSkill),
                     List.of("crm-business-analysis"),
                     List.of(CrmProductSalesAnalysisToolService.TOOL_NAME),

@@ -6,7 +6,7 @@ status: in_progress
 priority: high
 owner_role: backend-agent
 claimed_by: codex
-updated_at: 2026-08-18T14:35:00Z
+updated_at: 2026-08-18T14:36:00Z
 updated_by: codex
 ---
 
@@ -33,7 +33,7 @@ updated_by: codex
 - 用户已确认按正确分层重新构建。
 - 6 个聚焦测试类共 18 项通过，后端 package 与 diff check 通过。
 - 扩展 `OrchestratorIntegrationTest` 受本机共享 PostgreSQL 不可达阻断，未进入目标断言；未修改共享测试数据库。
-- 待提交本地 `main` 并更新 `cici.localhost` backend。
+- 代码已以 `4a697051` 提交本地 `main`；待与 TASK-322 一并更新 `cici.localhost` backend。
 
 ## 接口与数据影响
 

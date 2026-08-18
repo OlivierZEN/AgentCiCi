@@ -148,6 +148,9 @@ public class SkillResolverService {
         }
 
         Optional<AgentDefinitionEntity> agentDef = agentDefinitionRepository.findByCompanyIdAndAgentId(companyId, agentId);
+        String agentName = agentDef.map(AgentDefinitionEntity::getName)
+                .filter(s -> s != null && !s.isBlank())
+                .orElse(agentId);
         String agentSystemPrompt = agentDef.map(AgentDefinitionEntity::getSystemPrompt)
                 .filter(s -> s != null && !s.isBlank())
                 .orElse(null);
@@ -273,6 +276,7 @@ public class SkillResolverService {
 
         return new ResolvedSkillContext(
                 agentId,
+                agentName,
                 skills,
                 skills.stream().map(ResolvedSkill::skillCode).toList(),
                 runtimeAllowedToolNames,
@@ -530,6 +534,8 @@ public class SkillResolverService {
 
     public record ResolvedSkillContext(
             String agentId,
+            /** Authoritative external name from AgentDefinition.name. */
+            String agentName,
             List<ResolvedSkill> skills,
             List<String> skillCodes,
             /** Effective tools exposed to the model for this session turn (policy-filtered). */

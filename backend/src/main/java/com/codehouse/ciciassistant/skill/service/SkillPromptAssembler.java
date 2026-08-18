@@ -25,7 +25,7 @@ public class SkillPromptAssembler {
             return composePromptWithoutSkills(basePrompt, context, builtinDocs, runtimeConfig);
         }
         List<String> lines = new ArrayList<>();
-        lines.add(composeBasePrompt(basePrompt, context.agentSystemPrompt()));
+        lines.add(composeBasePrompt(basePrompt, context.agentName(), context.agentId(), context.agentSystemPrompt()));
         lines.add("");
         appendPolicyBundle(lines, context);
         lines.add("Active business skills are attached below. Apply them as operating policy. When rules conflict, prefer the stricter safety rule.");
@@ -86,7 +86,7 @@ public class SkillPromptAssembler {
                                               BuiltinSkillDocumentService.ResolvedBuiltinSkillDocs builtinDocs,
                                               BuiltinSkillRuntimeConfigService.ResolvedBuiltinSkillRuntimeConfig runtimeConfig) {
         List<String> lines = new ArrayList<>();
-        lines.add(composeBasePrompt(basePrompt, context.agentSystemPrompt()));
+        lines.add(composeBasePrompt(basePrompt, context.agentName(), context.agentId(), context.agentSystemPrompt()));
         lines.add("");
         appendPolicyBundle(lines, context);
         if (!context.handoffRules().isEmpty()) {
@@ -98,16 +98,42 @@ public class SkillPromptAssembler {
         return String.join("\n", lines);
     }
 
-    private String composeBasePrompt(String basePrompt, String agentSystemPrompt) {
+    private String composeBasePrompt(String basePrompt,
+                                     String agentName,
+                                     String agentId,
+                                     String agentSystemPrompt) {
+        String identity = buildAgentIdentityPrompt(agentName, agentId);
         if (agentSystemPrompt == null || agentSystemPrompt.isBlank()) {
-            return basePrompt;
+            return String.join("\n\n", identity, basePrompt);
         }
         return String.join(
                 "\n\n",
+                identity,
                 basePrompt,
                 "Agent-specific operating policy:",
                 agentSystemPrompt.trim()
         );
+    }
+
+    static String buildAgentIdentityPrompt(String agentName, String agentId) {
+        String externalName = normalizeIdentityValue(agentName, agentId);
+        String internalId = normalizeIdentityValue(agentId, "unknown-agent");
+        return """
+                [Agent identity - authoritative]
+                - Current Agent Definition external name: %s
+                - Use exactly this external name whenever you state your name, introduce yourself, or answer who you are.
+                - The internal Agent ID is %s; do not use it as your external name.
+                - CiCi / AgentCiCi is the hosting platform name, not your own name, unless the external name above explicitly says so.
+                - Role descriptions, Skills, tools, model providers, and model names must not replace or override this external name.
+                """.formatted(externalName, internalId).trim();
+    }
+
+    private static String normalizeIdentityValue(String value, String fallback) {
+        String normalized = value == null ? "" : value.replaceAll("[\\r\\n\\t]+", " ").trim();
+        if (!normalized.isBlank()) {
+            return normalized;
+        }
+        return fallback == null || fallback.isBlank() ? "unknown-agent" : fallback.trim();
     }
 
     private void appendPolicyBundle(List<String> lines, SkillResolverService.ResolvedSkillContext context) {

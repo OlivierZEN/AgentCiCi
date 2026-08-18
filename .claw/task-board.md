@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-18T09:07:09Z
+updated_at: 2026-08-18T14:36:00Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,31 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-322 - Agent Definition 对外身份一致性
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `backend-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-197-agent-definition-external-identity.md`
+- task_status_path: `.claw/tasks/TASK-322.md`
+- blocked_by: `none`
+- scope_files: `平台基础提示、Agent Definition 名称注入、统一运行时身份、定向测试、本地真实问候`
+- next_action: `提交身份修复到本地 main，从该提交更新 cici.localhost backend 并验证产品经理问候。`
+
+### TASK-321 - DevAutopilot 产品经理初始化模板分层
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `backend-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-196-devautopilot-product-manager-initialization-template.md`
+- task_status_path: `.claw/tasks/TASK-321.md`
+- blocked_by: `none`
+- scope_files: `标准系统提示词、8 步流程 Spec、初始化补偿、Spec IR 有效工具与意图、定向测试、本地环境验证`
+- completion_evidence: `4a697051；18 项模板聚焦回归、backend package、diff check 通过`
+- next_action: `与 TASK-322 一并从本地 main 更新 cici.localhost backend，完成运行门禁。`
 
 ### TASK-319 - 组织切换弹层完整显示组织名称
 

@@ -399,7 +399,7 @@ public class ChatOrchestratorService {
                                                         String systemPrompt,
                                                         String model) {
         return new ResolvedSkillContext(
-                current.agentId(), current.skills(), current.skillCodes(), current.allowedToolNames(),
+                current.agentId(), current.agentName(), current.skills(), current.skillCodes(), current.allowedToolNames(),
                 current.agentDirectToolNames(), current.skillDeclaredToolNames(), current.skillScopedToolNames(),
                 current.defaultKnowledgeBaseIds(), current.handoffRules(), current.outputContract(),
                 systemPrompt, model, current.activeSkillCode(), current.maxToolCalls(), current.publishedVersionId(),
