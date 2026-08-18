@@ -1,14 +1,24 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-18T03:18:23Z
+updated_at: 2026-08-18T04:09:38Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-18T03:18:23Z
-last_run_status: passed_task_317_local_session_identity_and_history
+last_run_at: 2026-08-18T04:09:38Z
+last_run_status: passed_agentcici_2_8_61_beta_29_uat_technical_gate
 ---
 
 # Test Report
+
+## 2026-08-18 AgentCiCi UAT `2.8.61-beta.29`
+
+- 状态：`passed_agentcici_2_8_61_beta_29_uat_technical_gate`。
+- Source/制品：本地与远程 `main`、annotated tag peeled commit 和运行 commit 均为 `d2abc9c463b3`；backend/frontend ACR index digest 为 `sha256:56983d2a5ba8d9d94a66c910d95446d008cd1392ae3a0497cbe513c4f3fff8df`、`sha256:cae5a754b957c13b7753478fa40a2c950c7fcfcfccf381006d7eae5c2b65f6b9`，未更新 `latest`。
+- 构建门禁：发布 dry-run 正确生成 beta.29；后端 `-DskipTests package` 和前端 TypeScript/Vite production build 通过。首次实际发布在隔离 worktree 缺少 `node_modules` 时于 `tsc` 前安全失败，未创建镜像、tag 或 UAT 写入；按锁文件 `npm ci` 后使用同一冻结版本成功重试。
+- 备份与回滚：`/data/apps/agentcici/backups/20260818T040400Z-before-2.8.61-beta.29` 的 Compose、受管环境、PostgreSQL、KB、Qdrant、beta.28 两项旧镜像和 SHA-256 清单全部非空、`0600` 且校验通过。应用回滚目标 beta.28；V122 清空的测试会话只可经单独批准整库恢复。
+- 运行门禁：仅 backend/frontend 重建；四个状态服务 ID 哈希不变。V122=`true`，六容器 healthy/restart=0，health=`UP`、版本/commit/digest 一致，Nginx 有效；90 秒稳定窗口 backend severe=0、frontend 5xx=0。
+- 公网与鉴权：两轮 UAT 首页、Keycloak discovery、Semattice health/version 和 DevAutopilot integrated health 通过；HTTP→HTTPS 301，应用中心、HTML 指南和 Markdown 地址为 200，Markdown 为 391 行 `text/markdown` 且 `nosniff`，匿名 auth/应用目录为 `401 application/json`。
+- 边界：本次没有新增、启用或切换跨项目契约，未代用户执行登录态应用接入或新会话业务验收；生产未修改。
 
 ## 2026-08-18 TASK-317 服务端 UUID 会话身份与历史完整性
 

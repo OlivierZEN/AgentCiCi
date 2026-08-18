@@ -8,7 +8,7 @@ owner_role: fullstack-agent
 claimed_by: codex
 spec_path: docs/specs/FEAT-194-server-owned-chat-session-identity.md
 created_at: 2026-08-18T10:30:00+08:00
-updated_at: 2026-08-18T11:20:00+08:00
+updated_at: 2026-08-18T12:09:38+08:00
 ---
 
 # TASK-317
@@ -37,8 +37,8 @@ updated_at: 2026-08-18T11:20:00+08:00
 - 前端全量 53 个测试文件、292 项和 production build 通过；`git diff --check` 通过。
 - V122 在本地数据库成功执行，清空测试会话并建立 UUID 检查、渠道/可见范围/source key 约束及三项 `(session_id, company_id)` 复合外键；无旧 `workbench:*` 会话或孤儿消息、状态、附件。
 - `org0gtwzqvxell4gly8s / CC DevAutopilot1` 登录态页面自动创建首个会话，点击“新对话”创建第二个会话，刷新后历史仍显示 2 条；数据库回读为两个不同 UUID，均为 `web / USER / source_key=NULL`。
-- 本地 backend/frontend 运行 `2.8.61-dev.0cd8887`，均 healthy、restart=0；完整 `cc-local-stack ./stack verify` 通过。UAT、生产未修改。
+- 本地 backend/frontend 运行 `2.8.61-dev.0cd8887`，均 healthy、restart=0；完整 `cc-local-stack ./stack verify` 通过。已随 UAT `2.8.61-beta.29 / d2abc9c463b3` 发布，V122、版本、健康、稳定日志与回滚门禁通过；生产未修改。
 
 ## 下一步
 
-等待用户确认本地会话历史体验；UAT、生产仅在另行授权后部署，届时会按同一 V122 策略清空测试会话。
+等待平台管理员完成 UAT 登录态新会话与刷新历史业务验收；生产仅在另行授权后部署。
