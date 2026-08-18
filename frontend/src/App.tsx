@@ -47,6 +47,7 @@ import PlatformToolsPage from "./platform/pages/PlatformToolsPage";
 import PlatformEvaluationPage from "./platform/pages/PlatformEvaluationPage";
 import PlatformSystemApisPage from "./platform/pages/PlatformSystemApisPage";
 import PlatformInternalApplicationsPage from "./platform/pages/PlatformInternalApplicationsPage";
+import PlatformApplicationIntegrationGuidePage from "./platform/pages/PlatformApplicationIntegrationGuidePage";
 
 const router = createBrowserRouter(createRoutesFromElements(
   <>
@@ -124,6 +125,7 @@ const router = createBrowserRouter(createRoutesFromElements(
             <Route path="system-apis/:providerCode/:apiId" element={<PlatformSystemApisPage />} />
             <Route path="system-apis/:providerCode/:apiId/docs" element={<PlatformSystemApisPage />} />
             <Route path="internal-applications" element={<PlatformInternalApplicationsPage />} />
+            <Route path="internal-applications/integration-guide" element={<PlatformApplicationIntegrationGuidePage />} />
             <Route path="internal-applications/:appCode" element={<PlatformInternalApplicationsPage />} />
             <Route path="evaluation" element={<PlatformEvaluationPage />} />
             <Route path="evaluation/suites" element={<PlatformEvaluationPage />} />

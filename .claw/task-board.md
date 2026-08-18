@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-18T02:05:50Z
+updated_at: 2026-08-18T02:27:22Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,18 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-316 - 应用中心在线接入指南
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `frontend-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-193-internal-application-integration-guide.md`
+- task_status_path: `.claw/tasks/TASK-316.md`
+- blocked_by: `none`
+- scope_files: `应用中心接入指南路由、逐步手册、Provider 契约示例、上下文入口、测试与本地环境验证`
+- next_action: `实现接入指南页面、路由和入口，完成全量测试、构建与本地桌面验收。`
 
 ### TASK-315 - 产品经理结构化语义判定与标准输出
 

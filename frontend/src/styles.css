@@ -22684,3 +22684,700 @@ td.skills-data-table__actions > * {
     grid-template-columns: 1fr;
   }
 }
+
+/* Application Center developer integration manual. */
+.application-integration-guide {
+  min-height: calc(100vh - 48px);
+  color: var(--platform-heading);
+  scroll-behavior: smooth;
+}
+
+.application-guide-head {
+  align-items: end;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--platform-line-strong);
+}
+
+.application-guide-head .platform-section-label {
+  margin: 0 0 7px;
+}
+
+.application-guide-head__meta {
+  display: grid;
+  grid-template-columns: 24px auto;
+  gap: 3px 10px;
+  min-width: 280px;
+  padding: 13px 0 2px 18px;
+  border-left: 1px solid var(--platform-line);
+  color: var(--platform-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.application-guide-head__meta svg {
+  grid-row: 1 / 3;
+  margin-top: 2px;
+  color: var(--platform-accent-strong);
+}
+
+.application-guide-head__meta span {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.application-guide-head__meta strong {
+  color: var(--platform-heading);
+  font-weight: 720;
+}
+
+.application-guide-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 52px;
+  border-bottom: 1px solid var(--platform-line);
+  color: var(--platform-muted);
+  font-size: 11px;
+  font-weight: 680;
+}
+
+.application-guide-flow span:last-child {
+  color: var(--platform-success);
+}
+
+.application-guide-flow svg {
+  color: var(--platform-line-strong);
+}
+
+.application-guide-layout {
+  display: grid;
+  grid-template-columns: 198px minmax(0, 1fr);
+  align-items: start;
+  gap: 42px;
+  max-width: 1180px;
+  margin: 28px auto 0;
+}
+
+.application-guide-toc {
+  position: sticky;
+  top: 24px;
+  padding-right: 20px;
+  border-right: 1px solid var(--platform-line);
+}
+
+.application-guide-toc > p {
+  margin: 0 0 9px;
+  color: var(--platform-muted);
+  font-size: 10px;
+  font-weight: 760;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.application-guide-toc nav {
+  display: grid;
+}
+
+.application-guide-toc nav a {
+  display: grid;
+  grid-template-columns: 25px minmax(0, 1fr);
+  align-items: center;
+  min-height: 31px;
+  color: var(--platform-muted);
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.application-guide-toc nav a span {
+  color: var(--platform-accent-strong);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 9px;
+}
+
+.application-guide-toc nav a:hover,
+.application-guide-toc nav a:focus-visible {
+  color: var(--platform-heading);
+  text-decoration: underline;
+  text-decoration-color: var(--platform-accent);
+  text-underline-offset: 4px;
+}
+
+.application-guide-toc__note {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 8px;
+  margin-top: 18px;
+  padding-top: 15px;
+  border-top: 1px solid var(--platform-line);
+  color: var(--platform-muted);
+}
+
+.application-guide-toc__note svg {
+  color: var(--platform-success);
+}
+
+.application-guide-toc__note p {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.application-guide-toc__note strong {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--platform-heading);
+}
+
+.application-guide-content {
+  min-width: 0;
+  max-width: 900px;
+}
+
+.application-guide-section {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 22px;
+  padding: 0 0 42px;
+  scroll-margin-top: 28px;
+}
+
+.application-guide-section + .application-guide-section {
+  padding-top: 40px;
+  border-top: 1px solid var(--platform-line);
+}
+
+.application-guide-section__number {
+  padding-top: 2px;
+  color: var(--platform-accent-strong);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.application-guide-section__body {
+  min-width: 0;
+}
+
+.application-guide-section__body > .platform-section-label {
+  margin: 0 0 5px;
+}
+
+.application-guide-section h2 {
+  margin: 0;
+  color: var(--platform-heading);
+  font-size: 23px;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+}
+
+.application-guide-section__body > p:not(.platform-section-label):not(.application-guide-result):not(.application-guide-detail) {
+  max-width: 76ch;
+  margin: 13px 0 0;
+  color: var(--platform-muted);
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+.application-guide-section code,
+.application-guide-footer code {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+
+.application-guide-section p code,
+.application-guide-section li code,
+.application-guide-section dd code,
+.application-guide-boundary code {
+  padding: 1px 4px;
+  border: 1px solid var(--platform-line);
+  background: color-mix(in srgb, var(--platform-surface) 80%, var(--platform-accent-soft));
+  color: var(--platform-accent-strong);
+  font-size: 0.9em;
+}
+
+.application-guide-principles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 22px;
+  border-top: 1px solid var(--platform-line);
+  border-bottom: 1px solid var(--platform-line);
+}
+
+.application-guide-principle {
+  min-width: 0;
+  padding: 16px 18px 16px 0;
+}
+
+.application-guide-principle + .application-guide-principle {
+  padding-left: 18px;
+  border-left: 1px solid var(--platform-line);
+}
+
+.application-guide-principle strong {
+  color: var(--platform-heading);
+  font-size: 12px;
+}
+
+.application-guide-principle p {
+  margin: 6px 0 0;
+  color: var(--platform-muted);
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.application-guide-boundary,
+.application-guide-callout {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 10px;
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-left: 2px solid var(--platform-accent);
+  background: color-mix(in srgb, var(--platform-accent-soft) 48%, transparent);
+}
+
+.application-guide-boundary svg,
+.application-guide-callout svg {
+  margin-top: 1px;
+  color: var(--platform-accent-strong);
+}
+
+.application-guide-boundary strong,
+.application-guide-callout strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--platform-heading);
+  font-size: 12px;
+}
+
+.application-guide-boundary p,
+.application-guide-callout p {
+  margin: 5px 0 0;
+  color: var(--platform-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.application-guide-boundary code {
+  display: inline-block;
+}
+
+.application-guide-callout--important {
+  border-left-color: var(--platform-success);
+  background: color-mix(in srgb, var(--platform-success) 7%, transparent);
+}
+
+.application-guide-callout--important svg {
+  color: var(--platform-success);
+}
+
+.application-guide-checklist {
+  display: grid;
+  gap: 0;
+  margin: 20px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--platform-line);
+  list-style: none;
+}
+
+.application-guide-checklist li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: start;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--platform-line);
+  color: var(--platform-heading);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.application-guide-checklist svg {
+  margin-top: 2px;
+  color: var(--platform-success);
+}
+
+.application-guide-result {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 18px 0 0;
+  color: var(--platform-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.application-guide-result svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--platform-success);
+}
+
+.application-guide-result strong {
+  color: var(--platform-success);
+}
+
+.application-guide-steps {
+  display: grid;
+  gap: 0;
+  margin: 20px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--platform-line);
+  list-style: none;
+}
+
+.application-guide-steps li {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--platform-line);
+}
+
+.application-guide-steps li > span {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 1px solid var(--platform-line-strong);
+  color: var(--platform-accent-strong);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.application-guide-steps strong {
+  color: var(--platform-heading);
+  font-size: 12px;
+}
+
+.application-guide-steps p {
+  margin: 4px 0 0;
+  color: var(--platform-muted);
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.application-guide-contract-table {
+  display: grid;
+  margin-top: 20px;
+  border-top: 1px solid var(--platform-line-strong);
+  border-bottom: 1px solid var(--platform-line);
+}
+
+.application-guide-contract-table > div {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr) 160px;
+  align-items: center;
+  min-height: 42px;
+  border-bottom: 1px solid var(--platform-line);
+  color: var(--platform-muted);
+  font-size: 11px;
+}
+
+.application-guide-contract-table > div:last-child {
+  border-bottom: 0;
+}
+
+.application-guide-contract-table > div:first-child {
+  min-height: 35px;
+  color: var(--platform-muted);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.application-guide-contract-table code {
+  color: var(--platform-accent-strong);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.application-guide-contract-table--dependencies > div {
+  grid-template-columns: 200px minmax(0, 1fr) 220px;
+}
+
+.application-guide-code {
+  margin-top: 18px;
+  overflow: hidden;
+  border: 1px solid var(--platform-line-strong);
+  background: #241f1a;
+  color: #f5ecdc;
+}
+
+.application-guide-code__head {
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 12px;
+  border-bottom: 1px solid rgba(245, 236, 220, 0.14);
+  color: #e7d9c3;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.application-guide-code__language {
+  margin-left: 8px;
+  color: #a99b86;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.application-guide-code__head button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 5px 0 5px 10px;
+  border: 0 !important;
+  border-left: 1px solid rgba(245, 236, 220, 0.14) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #d8c8af;
+  font-size: 10px;
+  transform: none !important;
+}
+
+.application-guide-code__head button:hover,
+.application-guide-code__head button:focus-visible {
+  color: #fff8ec;
+}
+
+.application-guide-code pre {
+  max-height: 420px;
+  margin: 0;
+  overflow: auto;
+  padding: 16px;
+  color: inherit;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.65;
+  tab-size: 2;
+  white-space: pre;
+}
+
+.application-guide-detail {
+  margin: 14px 0 0;
+  color: var(--platform-muted);
+  font-size: 11px;
+  line-height: 1.75;
+}
+
+.application-guide-definition-list {
+  display: grid;
+  margin: 20px 0 0;
+  border-top: 1px solid var(--platform-line);
+}
+
+.application-guide-definition-list > div {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 18px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--platform-line);
+}
+
+.application-guide-definition-list dt {
+  color: var(--platform-heading);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.application-guide-definition-list dd {
+  margin: 0;
+  color: var(--platform-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.application-guide-definition-list--operations > div {
+  grid-template-columns: 125px minmax(0, 1fr);
+}
+
+.application-guide-runtime-flow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 20px;
+  border-top: 1px solid var(--platform-line-strong);
+  border-bottom: 1px solid var(--platform-line);
+}
+
+.application-guide-runtime-flow > div {
+  position: relative;
+  padding: 15px 14px 15px 0;
+}
+
+.application-guide-runtime-flow > div + div {
+  padding-left: 14px;
+  border-left: 1px solid var(--platform-line);
+}
+
+.application-guide-runtime-flow span {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--platform-accent-strong);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 9px;
+}
+
+.application-guide-runtime-flow strong {
+  display: block;
+  color: var(--platform-heading);
+  font-size: 11px;
+}
+
+.application-guide-runtime-flow p {
+  margin: 4px 0 0;
+  color: var(--platform-muted);
+  font-size: 10px;
+}
+
+.application-guide-troubleshooting {
+  margin-top: 20px;
+  border-top: 1px solid var(--platform-line-strong);
+}
+
+.application-guide-troubleshooting details {
+  border-bottom: 1px solid var(--platform-line);
+}
+
+.application-guide-troubleshooting summary {
+  display: grid;
+  grid-template-columns: minmax(270px, 0.9fr) minmax(0, 1.1fr);
+  align-items: center;
+  min-height: 46px;
+  color: var(--platform-heading);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.application-guide-troubleshooting summary code {
+  color: var(--platform-accent-strong);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.application-guide-troubleshooting details p {
+  margin: 0;
+  padding: 0 0 14px 270px;
+  color: var(--platform-muted);
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.application-guide-release-check {
+  margin-top: 22px;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--platform-line-strong);
+}
+
+.application-guide-release-check > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.application-guide-release-check > div svg {
+  color: var(--platform-accent-strong);
+}
+
+.application-guide-release-check > div span {
+  display: grid;
+  gap: 3px;
+}
+
+.application-guide-release-check strong {
+  color: var(--platform-heading);
+  font-size: 12px;
+}
+
+.application-guide-release-check small {
+  color: var(--platform-muted);
+  font-size: 10px;
+}
+
+.application-guide-release-check ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px 30px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.application-guide-release-check li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--platform-muted);
+  font-size: 11px;
+}
+
+.application-guide-release-check li svg {
+  color: var(--platform-success);
+}
+
+.application-guide-next {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  margin-top: 26px;
+  padding: 18px 0;
+  border-top: 1px solid var(--platform-line-strong);
+  border-bottom: 1px solid var(--platform-line);
+}
+
+.application-guide-next > div {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.application-guide-next > div svg {
+  color: var(--platform-accent-strong);
+}
+
+.application-guide-next strong {
+  color: var(--platform-heading);
+  font-size: 12px;
+}
+
+.application-guide-next p {
+  margin: 4px 0 0;
+  color: var(--platform-muted);
+  font-size: 10px;
+}
+
+.application-guide-next .platform-button {
+  flex: 0 0 auto;
+}
+
+.application-guide-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 0 28px 70px;
+  border-top: 1px solid var(--platform-line-strong);
+  color: var(--platform-muted);
+  font-size: 10px;
+}
+
+.application-guide-footer svg {
+  color: var(--platform-accent-strong);
+}
+
+.application-guide-footer svg:nth-of-type(2) {
+  margin-left: 14px;
+}
+
+.internal-application-connection-empty__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 7px;
+}
+
+.internal-application-connection-empty__actions button {
+  margin-top: 0;
+}

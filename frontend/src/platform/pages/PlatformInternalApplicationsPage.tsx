@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Activity, AppWindow, ArrowLeft, Cable, CheckCircle2, GitBranch, Plus, Search, ShieldCheck, X } from "lucide-react";
+import { Activity, AppWindow, ArrowLeft, BookOpen, Cable, CheckCircle2, GitBranch, Plus, Search, ShieldCheck, X } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { PLATFORM_API_BASE } from "../../constants";
 import { safeFetchJson } from "../../utils/http";
@@ -487,6 +487,7 @@ export default function PlatformInternalApplicationsPage() {
           <div className="platform-page-head__aside">
             <span className={`internal-application-status internal-application-status--${statusTone(detail.application.catalogStatus)}`}>{applicationCatalogStatusLabel(detail.application.catalogStatus)}</span>
             {detail.application.catalogStatus === "PUBLISHED" ? <button type="button" className="platform-button platform-button--secondary" onClick={() => setConfirmation({ type: "status", status: "SUSPENDED" })}>暂停目录</button> : detail.application.catalogStatus === "SUSPENDED" ? <button type="button" className="platform-button platform-button--primary" onClick={() => setConfirmation({ type: "status", status: "PUBLISHED" })}>恢复目录</button> : null}
+            <button type="button" className="platform-button platform-button--secondary" onClick={() => navigate(`/platform/internal-applications/integration-guide?app=${encodeURIComponent(detail.application.appCode)}`)}><BookOpen size={15} />接入指南</button>
             <button type="button" className="platform-button platform-button--secondary" onClick={() => setConnectionModalOpen(true)} disabled={detail.application.catalogStatus === "RETIRED"}><Cable size={15} />新建连接</button>
             <button type="button" className="platform-button platform-button--primary" onClick={() => setVersionModalOpen(true)} disabled={detail.application.catalogStatus === "RETIRED"}><Plus size={15} />新建版本</button>
           </div>
@@ -569,7 +570,7 @@ export default function PlatformInternalApplicationsPage() {
                 </footer>
               </article>;
             })}
-            {!connections.length ? <div className="internal-application-connection-empty"><Cable size={24} /><strong>尚未配置运行连接</strong><span>先登记 Provider 的真实地址和生命周期接口，测试通过并启用后，应用版本才能引用。</span><button type="button" className="platform-button platform-button--primary" onClick={() => setConnectionModalOpen(true)}>新建运行连接</button></div> : null}
+            {!connections.length ? <div className="internal-application-connection-empty"><Cable size={24} /><strong>尚未配置运行连接</strong><span>先登记 Provider 的真实地址和生命周期接口，测试通过并启用后，应用版本才能引用。</span><div className="internal-application-connection-empty__actions"><button type="button" className="platform-button platform-button--secondary" onClick={() => navigate(`/platform/internal-applications/integration-guide?app=${encodeURIComponent(detail.application.appCode)}#connection`)}><BookOpen size={15} />查看配置步骤</button><button type="button" className="platform-button platform-button--primary" onClick={() => setConnectionModalOpen(true)}>新建运行连接</button></div></div> : null}
           </div>
         </section> : null}
 
@@ -584,7 +585,7 @@ export default function PlatformInternalApplicationsPage() {
     <div className="admin-page skills-catalog platform-page internal-applications-page">
       <header className="skills-catalog__header platform-page-head">
         <div className="platform-page-head__main"><h1 className="skills-catalog__title">应用中心</h1><p className="subtle skills-catalog__subtitle">登记内部应用、发布不可变版本，并声明租户开通依赖与受控初始化契约。</p></div>
-        <div className="platform-page-head__aside"><span className="platform-inline-stat">{applications.length} 个应用</span><button type="button" className="platform-button platform-button--primary" onClick={() => setApplicationModalOpen(true)}><Plus size={15} />登记应用</button></div>
+        <div className="platform-page-head__aside"><span className="platform-inline-stat">{applications.length} 个应用</span><button type="button" className="platform-button platform-button--secondary" onClick={() => navigate("/platform/internal-applications/integration-guide")}><BookOpen size={15} />接入指南</button><button type="button" className="platform-button platform-button--primary" onClick={() => setApplicationModalOpen(true)}><Plus size={15} />登记应用</button></div>
       </header>
       {error ? <div className="platform-console__banner platform-console__banner--error">{error}</div> : null}
       {notice ? <div className="platform-console__banner platform-console__banner--success">{notice}</div> : null}

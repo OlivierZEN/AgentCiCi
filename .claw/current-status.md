@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-18T02:05:50Z
+updated_at: 2026-08-18T02:37:22Z
 updated_by: codex
-phase: review
-active_task: TASK-315
-next_action: "由已登录业务用户在 UAT 使用当前固定模型验证隐含创建、否定表达和固定草案格式；平台管理员另行验收真实运行连接和租户 ACTIVATE。"
+phase: implementation
+active_task: TASK-316
+next_action: "从本地 main 构建前端并更新 cici.localhost，回读正式指南路由、容器健康、重启次数和版本指纹。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- `TASK-316 / FEAT-193` 已完成应用中心在线接入指南实现：认证后独立路由按 12 个章节覆盖应用登记、Provider 请求/响应、HMAC、Secret 引用、运行连接、版本初始化、依赖、发布、租户开通和运维排错；应用列表、应用详情和连接空态提供上下文入口。前端定向 3 文件/26 项、全量 53 文件/293 项、production build 和 `git diff --check` 通过；独立视觉检查确认目录锚点、复制反馈和桌面长文布局，console 无 error/warning。正式路由保持平台登录边界，尚待从本地 main 更新 `cici.localhost`；远端、UAT、生产未修改。
 
 - `TASK-315 / FEAT-192` 已随 AgentCiCi UAT `2.8.61-beta.28 / 242074e72a9e` 完成技术发布：远程 `main` 包含冻结提交，annotated tag、两项不可变镜像和运行 commit 一致；完整备份 `/data/apps/agentcici/backups/20260818T020041Z-before-2.8.61-beta.28` 校验通过，回滚目标 beta.27。仅重建 backend/frontend，四个状态服务 ID 不变；V121、六容器 healthy/restart=0、health/version、Nginx、页面路由、匿名 JSON 401、两轮公开 smoke 与稳定日志通过。候选没有启用新的跨项目契约；真实产品经理对话和 Semattice 写入未代用户执行，业务验收待已登录用户完成。生产未修改。
 
