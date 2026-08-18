@@ -96,6 +96,7 @@ class DevAutopilotTenantApplicationReadinessTest {
     void registersApplicationResourcesBeforeDerivingTheExecutionDelegationPolicy() {
         ServicePrincipalService principals = mock(ServicePrincipalService.class);
         AgentServicePrincipalExecutionService execution = mock(AgentServicePrincipalExecutionService.class);
+        AgentDefinitionService agents = mock(AgentDefinitionService.class);
         DevAutopilotTenantApplicationService orderedService = new DevAutopilotTenantApplicationService(
                 jdbc,
                 mock(CompanyRepository.class),
@@ -103,7 +104,7 @@ class DevAutopilotTenantApplicationReadinessTest {
                 mock(SematticeDevAutopilotTemplateClient.class),
                 mock(SematticeDevAutopilotAuthorizationClient.class),
                 principals,
-                mock(AgentDefinitionService.class),
+                agents,
                 mock(DevAutopilotProductManagerAgentPublisher.class),
                 execution,
                 mock(PlatformAuditService.class),
@@ -116,6 +117,13 @@ class DevAutopilotTenantApplicationReadinessTest {
         ReflectionTestUtils.invokeMethod(orderedService, "createProductManagerResources",
                 "company-a", "activation-a", "研发产品经理", "owner-member", "owner-member", "agent-a");
 
+        ArgumentCaptor<AgentDefinitionService.CreateCommand> create =
+                ArgumentCaptor.forClass(AgentDefinitionService.CreateCommand.class);
+        verify(agents).create(eq("company-a"), create.capture());
+        assertThat(create.getValue().systemPrompt())
+                .isEqualTo(DevAutopilotProductManagerAgentPublisher.STANDARD_SYSTEM_PROMPT);
+        assertThat(create.getValue().specText())
+                .isEqualTo(DevAutopilotProductManagerAgentPublisher.STANDARD_SPEC);
         InOrder order = inOrder(jdbc, execution);
         order.verify(jdbc, times(2)).update(contains("INSERT INTO tenant_application_resource"), any(Object[].class));
         order.verify(execution).configure("company-a", "agent-a", "service-principal-a", true, "owner-member");

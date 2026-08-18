@@ -491,7 +491,7 @@ public class DevAutopilotTenantApplicationService {
     private Map<String, Object> createProductManagerResources(String companyId, String activationId, String displayName,
                                                                 String actorMemberId, String ownerMemberId, String agentId) {
         agents.create(companyId, new AgentDefinitionService.CreateCommand(agentId, displayName, "DevAutopilot 租户产品经理", "", "gpt-4.1",
-                "你是本租户的研发产品经理，只能通过已绑定的受控工具处理研发交付。", "高风险操作必须确认", "standard", "copilot", "devautopilot.standard.v1", null,
+                DevAutopilotProductManagerAgentPublisher.STANDARD_SYSTEM_PROMPT, "高风险操作必须确认", "standard", "copilot", "devautopilot.standard.v1", null,
                 null, false, true, DevAutopilotProductManagerAgentPublisher.STANDARD_SPEC, List.of(),
                 List.of("semattice_project_delivery_query", "semattice_project_delivery_create", "semattice_project_delivery_review"),
                 List.of("web"), Map.of()));

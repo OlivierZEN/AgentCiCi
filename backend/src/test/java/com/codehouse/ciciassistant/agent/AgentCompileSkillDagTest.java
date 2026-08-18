@@ -95,7 +95,7 @@ class AgentCompileSkillDagTest {
                 .thenReturn(new AgentCapabilityResolverService.AgentCapabilityResolution(
                         AGENT_ID,
                         List.of("crm-business-analysis"),
-                        List.of(),
+                        List.of("skill-only-tool"),
                         List.of(),
                         List.of(),
                         null,
@@ -105,8 +105,8 @@ class AgentCompileSkillDagTest {
                         List.of(),
                         List.of(),
                         List.of(),
-                        List.of(),
-                        List.of()));
+                        List.of("skill-only-tool"),
+                        List.of("skill-only-tool")));
         when(agentDefinitionRepository.findByCompanyIdAndAgentId(COMPANY_ID, AGENT_ID)).thenReturn(Optional.of(agent));
         AtomicReference<AgentWorkflowVersionEntity> storedVersion = new AtomicReference<>();
         when(workflowVersionRepository.findTopByCompanyIdAndAgentIdOrderByVersionNoDesc(COMPANY_ID, AGENT_ID))
@@ -124,6 +124,13 @@ class AgentCompileSkillDagTest {
         assertThat(result.draftVersionNo()).isEqualTo(1);
         assertThat(unchanged.draftVersionNo()).isEqualTo(1);
         assertThat(unchanged.changed()).isFalse();
+        Object generatedFromRaw = result.workflowManifest().get("generatedFrom");
+        assertThat(generatedFromRaw).isInstanceOf(java.util.Map.class);
+        java.util.Map<?, ?> generatedFrom = (java.util.Map<?, ?>) generatedFromRaw;
+        SpecCompilerService.SpecIr specIr = (SpecCompilerService.SpecIr) generatedFrom.get("specIr");
+        assertThat(specIr).isNotNull();
+        assertThat(specIr.toolRefs()).containsExactly("skill-only-tool");
+        assertThat(result.workflowCode()).contains("skill-only-tool");
         ArgumentCaptor<AgentWorkflowVersionEntity> versionCaptor = ArgumentCaptor.forClass(AgentWorkflowVersionEntity.class);
         verify(workflowSkillRefService, org.mockito.Mockito.times(2)).ensureWorkflowSkillRefs(
                 org.mockito.ArgumentMatchers.eq(COMPANY_ID),

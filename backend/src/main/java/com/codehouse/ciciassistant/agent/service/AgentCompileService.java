@@ -83,8 +83,6 @@ public class AgentCompileService {
     @Transactional
     public CompileResult compile(String companyId, CompileCommand command) {
         agentDefinitionService.warmupBuiltinAgents(companyId);
-        List<Long> knowledgeBaseIds = normalizeList(command.knowledgeBaseIds());
-        List<String> toolIds = normalizeList(command.toolIds());
         List<String> channels = normalizeList(command.channels());
 
         List<ResolvedSkillRef> resolvedSkillRefs = resolveSkillRefs(companyId, command.agentId(), command.skillRefs());
@@ -112,7 +110,7 @@ public class AgentCompileService {
                 "agent-workflow",
                 safeText(command.name()),
                 command.specText(),
-                toolIds,
+                effectiveToolIds,
                 kbNames,
                 command.handoffRule(),
                 normalizeRiskLevel(command.safetyLevel())
@@ -188,6 +186,7 @@ public class AgentCompileService {
         manifest.put("compileFingerprint", compileFingerprint);
         manifest.put("previewFormat", preview.format());
 
+        String workflowCode = buildWorkflowCode(command, effectiveKnowledgeBaseIds, effectiveToolIds);
         PersistResult persisted = persistDraftVersion(
                 companyId,
                 command,
@@ -196,10 +195,11 @@ public class AgentCompileService {
                 summary,
                 warnings,
                 dependencies,
-                compileFingerprint);
+                compileFingerprint,
+                workflowCode);
 
         return new CompileResult(
-                buildWorkflowCode(command),
+                workflowCode,
                 manifest,
                 preview,
                 summary,
@@ -220,7 +220,8 @@ public class AgentCompileService {
                                               List<String> summary,
                                               List<String> warnings,
                                               List<String> dependencies,
-                                              String compileFingerprint) {
+                                              String compileFingerprint,
+                                              String workflowCode) {
         String agentId = safeText(command.agentId()).trim().toLowerCase();
         if (agentId.isBlank()) {
             return new PersistResult(null, true, "编译完成。", List.of());
@@ -240,7 +241,6 @@ public class AgentCompileService {
                     List.of("无变更：当前草稿与最近编译版本一致。"));
         }
         Integer nextVersionNo = previous.map(item -> item.getVersionNo() + 1).orElse(1);
-        String workflowCode = buildWorkflowCode(command);
         List<String> changeLog = previous
                 .map(item -> buildChangeLog(item, command, compileFingerprint))
                 .orElse(List.of("首次编译：创建初始版本。"));
@@ -435,13 +435,15 @@ public class AgentCompileService {
         };
     }
 
-    private String buildWorkflowCode(CompileCommand command) {
+    private String buildWorkflowCode(CompileCommand command,
+                                     List<Long> effectiveKnowledgeBaseIds,
+                                     List<String> effectiveToolIds) {
         List<String> lines = List.of(
                 "export async function runAgent(ctx: WorkflowContext): Promise<WorkflowResult> {",
                 "  const spec = " + quote(command.specText()) + ";",
                 "  const role = " + quote(command.name()) + ";",
-                "  const knowledgeBases = " + listLiteral(normalizeList(command.knowledgeBaseIds())) + ";",
-                "  const allowedTools = " + listLiteral(normalizeList(command.toolIds())) + ";",
+                "  const knowledgeBases = " + listLiteral(normalizeList(effectiveKnowledgeBaseIds)) + ";",
+                "  const allowedTools = " + listLiteral(normalizeList(effectiveToolIds)) + ";",
                 "",
                 "  const intent = await ctx.model.classify({",
                 "    role,",

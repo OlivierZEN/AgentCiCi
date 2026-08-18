@@ -51,6 +51,8 @@ class DevAutopilotProductManagerAgentPublisherTest {
         assertThat(result).isEqualTo(new DevAutopilotProductManagerAgentPublisher.Publication(42L, true));
         verify(skills).ensurePublishedPlatformSkillVersion(
                 COMPANY_ID, DevAutopilotProductManagerAgentPublisher.DELIVERY_SKILL_CODE);
+        verify(definitions).updateSystemPrompt(
+                COMPANY_ID, AGENT_ID, DevAutopilotProductManagerAgentPublisher.STANDARD_SYSTEM_PROMPT);
         verify(definitions).updateSpec(COMPANY_ID, AGENT_ID, DevAutopilotProductManagerAgentPublisher.STANDARD_SPEC);
         ArgumentCaptor<AgentDefinitionService.ReplaceBindingsCommand> bindings =
                 ArgumentCaptor.forClass(AgentDefinitionService.ReplaceBindingsCommand.class);
@@ -59,6 +61,8 @@ class DevAutopilotProductManagerAgentPublisherTest {
         ArgumentCaptor<AgentCompileService.CompileCommand> compile =
                 ArgumentCaptor.forClass(AgentCompileService.CompileCommand.class);
         verify(compiler).compile(eq(COMPANY_ID), compile.capture());
+        assertThat(compile.getValue().systemPrompt())
+                .isEqualTo(DevAutopilotProductManagerAgentPublisher.STANDARD_SYSTEM_PROMPT);
         assertThat(compile.getValue().specText()).isEqualTo(DevAutopilotProductManagerAgentPublisher.STANDARD_SPEC);
         assertThat(compile.getValue().channels()).containsExactly("web");
         assertThat(compile.getValue().skillRefs())

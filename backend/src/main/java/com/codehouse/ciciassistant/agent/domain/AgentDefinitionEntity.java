@@ -206,6 +206,11 @@ public class AgentDefinitionEntity {
         this.updatedAt = Instant.now();
     }
 
+    public void updateSystemPrompt(String systemPrompt) {
+        this.systemPrompt = systemPrompt;
+        this.updatedAt = Instant.now();
+    }
+
     public void markDeleted() {
         this.enabled = false;
         this.updatedAt = Instant.now();

@@ -318,6 +318,13 @@ public class AgentDefinitionService {
     }
 
     @Transactional
+    public AgentDefinitionEntity updateSystemPrompt(String companyId, String requestedAgentId, String systemPrompt) {
+        AgentDefinitionEntity definition = getDefinition(companyId, normalizeAgentId(requestedAgentId));
+        definition.updateSystemPrompt(trimToNull(systemPrompt));
+        return definition;
+    }
+
+    @Transactional
     public AgentDeleteResult deleteCustomAgent(String companyId, String requestedAgentId) {
         ensureBuiltinAgents(companyId);
         String agentId = normalizeAgentId(requestedAgentId);

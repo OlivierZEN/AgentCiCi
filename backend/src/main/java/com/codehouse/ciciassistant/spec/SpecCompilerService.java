@@ -101,6 +101,30 @@ public class SpecCompilerService {
         if (lower.contains("查询") || lower.contains("query") || lower.contains("检索")) {
             intents.add("query");
         }
+        if (lower.contains("受理") || lower.contains("intake")) {
+            intents.add("intake");
+        }
+        if (lower.contains("规划") || lower.contains("拆解") || lower.contains("planning")) {
+            intents.add("planning");
+        }
+        if (lower.contains("创建") || lower.contains("新增") || lower.contains("create")) {
+            intents.add("create");
+        }
+        if (lower.contains("修改") || lower.contains("更新") || lower.contains("update")) {
+            intents.add("update");
+        }
+        if (lower.contains("删除") || lower.contains("delete")) {
+            intents.add("delete");
+        }
+        if (lower.contains("转派") || lower.contains("移交") || lower.contains("transfer")) {
+            intents.add("transfer");
+        }
+        if (lower.contains("评审") || lower.contains("审核") || lower.contains("review")) {
+            intents.add("review");
+        }
+        if (lower.contains("验收") || lower.contains("acceptance")) {
+            intents.add("acceptance");
+        }
         if (lower.contains("转人工") || lower.contains("handoff")) {
             intents.add("handoff");
         }
@@ -122,6 +146,10 @@ public class SpecCompilerService {
             if (cleaned.contains("如果")
                     || cleaned.contains("则")
                     || cleaned.contains("必须")
+                    || cleaned.contains("只有")
+                    || cleaned.contains("不得")
+                    || cleaned.contains("只能")
+                    || cleaned.contains("否则")
                     || lower.contains("if ")
                     || lower.startsWith("if")
                     || lower.contains("must")) {
