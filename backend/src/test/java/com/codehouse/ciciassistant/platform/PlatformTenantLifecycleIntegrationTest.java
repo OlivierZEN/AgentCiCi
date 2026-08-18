@@ -684,7 +684,7 @@ class PlatformTenantLifecycleIntegrationTest {
 
     private void seedSensitiveRows(String companyId, String memberId) {
         Instant now = Instant.now();
-        String sessionId = "retention-" + UUID.randomUUID();
+        String sessionId = UUID.randomUUID().toString();
         jdbcTemplate.update("""
                         INSERT INTO chat_session(id, company_id, user_id, title, updated_at)
                         VALUES (?, ?, ?, ?, ?)

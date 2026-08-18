@@ -88,8 +88,9 @@ class CustomerWorkbenchServiceTest {
         String companyId = "org-demo";
         String userId = "user-demo";
         String accountId = "001-demo";
-        String expectedSessionId = "customer-workbench:" + UUID.nameUUIDFromBytes(
-                (userId + ":" + accountId).getBytes(StandardCharsets.UTF_8));
+        String expectedSessionId = UUID.nameUUIDFromBytes(
+                ("customer-workbench|" + companyId + "|" + userId + "|" + accountId)
+                        .getBytes(StandardCharsets.UTF_8)).toString();
         CustomerWorkbenchSnapshotEntity snapshot = new CustomerWorkbenchSnapshotEntity(
                 "cw-1",
                 companyId,
@@ -149,7 +150,8 @@ class CustomerWorkbenchServiceTest {
                 anyList(),
                 eq(CustomerWorkbenchService.ASSISTANT_AGENT_ID),
                 eq(CustomerWorkbenchService.SKILL_CODE),
-                anyMap()))
+                anyMap(),
+                eq("customer-workbench")))
                 .thenReturn(Map.of(
                         "answer", "真实智能体回复",
                         "agentId", CustomerWorkbenchService.ASSISTANT_AGENT_ID,
@@ -180,7 +182,8 @@ class CustomerWorkbenchServiceTest {
                 eq(List.of()),
                 eq(CustomerWorkbenchService.ASSISTANT_AGENT_ID),
                 eq(CustomerWorkbenchService.SKILL_CODE),
-                eq(Map.of("source", "customer-workbench", "crmAccountId", accountId)));
+                eq(Map.of("source", "customer-workbench", "crmAccountId", accountId)),
+                eq("customer-workbench"));
         assertThat(promptCaptor.getValue())
                 .contains("客户互动工作台上下文")
                 .contains("北京智造科技有限公司")
@@ -203,6 +206,7 @@ class CustomerWorkbenchServiceTest {
                 eq(CustomerWorkbenchService.ASSISTANT_AGENT_ID),
                 eq(CustomerWorkbenchService.SKILL_CODE),
                 eq(Map.of("source", "customer-workbench", "crmAccountId", accountId)),
+                eq("customer-workbench"),
                 eq(emitter));
     }
 

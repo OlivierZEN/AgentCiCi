@@ -121,9 +121,8 @@ export function devAutopilotInitializationReady(application: DevAutopilotApplica
 }
 
 export function isValidIntakeReconciliationInput(sessionId: string, recordId: string): boolean {
-  return sessionId.trim().length > 0
-    && sessionId.trim().length <= 64
-    && /^[0-9a-fA-F-]{36}$/.test(recordId.trim());
+  const uuidPattern = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/;
+  return uuidPattern.test(sessionId.trim()) && uuidPattern.test(recordId.trim());
 }
 
 export default function PlatformTenantApplicationsPage() {
@@ -607,7 +606,7 @@ export default function PlatformTenantApplicationsPage() {
               </div>
               <label>
                 <span>原确认会话 ID</span>
-                <input ref={intakeSessionRef} value={intakeSessionId} onChange={(event) => setIntakeSessionId(event.target.value)} placeholder="例如：workbench:devautopilot-pm" autoComplete="off" disabled={intakeBusy} />
+                <input ref={intakeSessionRef} value={intakeSessionId} onChange={(event) => setIntakeSessionId(event.target.value)} placeholder="例如：8f90d20c-233d-4e90-bf97-a22e9d4f23ad" autoComplete="off" disabled={intakeBusy} />
               </label>
               <label>
                 <span>Semattice 记录 ID</span>

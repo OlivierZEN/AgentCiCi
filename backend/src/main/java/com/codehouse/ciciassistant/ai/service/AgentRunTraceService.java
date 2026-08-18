@@ -377,7 +377,7 @@ public class AgentRunTraceService {
             return legacyDetail(companyId, userId, decodeLegacySessionId(traceId));
         }
         AgentRunTraceEntity entity = traceRepository.findByTraceIdAndCompanyId(traceId, companyId)
-                .filter(item -> userId.equals(item.getUserId()) || isOrgScopedConversation(item.getSessionId()))
+                .filter(item -> userId.equals(item.getUserId()) || isCompanyScopedSession(companyId, item.getSessionId()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Trace not found"));
         return tracePayload(companyId, entity);
     }
@@ -950,7 +950,8 @@ public class AgentRunTraceService {
     private List<ChatSessionEntity> orgLegacySessions(String companyId, Instant from, Instant to) {
         return chatSessionRepository.findByCompanyIdOrderByUpdatedAtDesc(companyId).stream()
                 .filter(item -> !item.getUpdatedAt().isBefore(from) && !item.getUpdatedAt().isAfter(to))
-                .filter(item -> !item.getId().startsWith("assistant-ui-"))
+                .filter(item -> chatMessageRepository
+                        .findFirstByCompanyIdAndSessionIdOrderByCreatedAtDesc(companyId, item.getId()).isPresent())
                 .sorted((a, b) -> b.getUpdatedAt().compareTo(a.getUpdatedAt()))
                 .toList();
     }
@@ -958,25 +959,20 @@ public class AgentRunTraceService {
     private List<ChatSessionEntity> legacyVisibleSessions(String companyId, String userId, Instant from, Instant to) {
         List<ChatSessionEntity> visible = new ArrayList<>();
         visible.addAll(chatSessionRepository.findByCompanyIdAndUserIdOrderByUpdatedAtDesc(companyId, userId));
-        for (ChatSessionEntity item : chatSessionRepository.findByCompanyIdOrderByUpdatedAtDesc(companyId)) {
-            if (isOrgScopedConversation(item.getId())) {
-                visible.add(item);
-            }
-        }
+        visible.addAll(chatSessionRepository.findByCompanyIdAndVisibilityScopeOrderByUpdatedAtDesc(companyId, "COMPANY"));
         LinkedHashSet<String> seen = new LinkedHashSet<>();
         return visible.stream()
                 .filter(item -> seen.add(item.getId()))
                 .filter(item -> !item.getUpdatedAt().isBefore(from) && !item.getUpdatedAt().isAfter(to))
-                .filter(item -> !item.getId().startsWith("assistant-ui-"))
+                .filter(item -> chatMessageRepository
+                        .findFirstByCompanyIdAndSessionIdOrderByCreatedAtDesc(companyId, item.getId()).isPresent())
                 .sorted((a, b) -> b.getUpdatedAt().compareTo(a.getUpdatedAt()))
                 .toList();
     }
 
     private Optional<ChatSessionEntity> visibleSession(String companyId, String userId, String sessionId) {
-        if (isOrgScopedConversation(sessionId)) {
-            return chatSessionRepository.findByIdAndCompanyId(sessionId, companyId);
-        }
-        return chatSessionRepository.findByIdAndCompanyIdAndUserId(sessionId, companyId, userId);
+        return chatSessionRepository.findByIdAndCompanyId(sessionId, companyId)
+                .filter(session -> session.isCompanyVisible() || userId.equals(session.getUserId()));
     }
 
     private boolean matches(Map<String, Object> payload, RunLogQuery query) {
@@ -1058,6 +1054,17 @@ public class AgentRunTraceService {
         if (sessionId == null) {
             return "web";
         }
+        Optional<String> persistedChannel = chatSessionRepository.findById(sessionId)
+                .map(ChatSessionEntity::getChannelCode)
+                .filter(value -> value != null && !value.isBlank());
+        if (persistedChannel.isPresent()) {
+            return switch (persistedChannel.get()) {
+                case "wecom_kf" -> "wechat_kf";
+                case "openapi" -> "api";
+                case "webchat", "customer_workbench" -> "web";
+                default -> persistedChannel.get();
+            };
+        }
         if (sessionId.startsWith("feishu:")) return "feishu";
         if (sessionId.startsWith("wechat:")) return "wecom";
         if (sessionId.startsWith("wecom-kf:")) return "wechat_kf";
@@ -1076,6 +1083,12 @@ public class AgentRunTraceService {
                 || sessionId.startsWith("api:")
                 || sessionId.startsWith("web:")
                 || sessionId.startsWith("webchat:"));
+    }
+
+    private boolean isCompanyScopedSession(String companyId, String sessionId) {
+        return chatSessionRepository.findByIdAndCompanyId(sessionId, companyId)
+                .map(ChatSessionEntity::isCompanyVisible)
+                .orElseGet(() -> isOrgScopedConversation(sessionId));
     }
 
     private String encodeLegacyTraceId(String sessionId) {

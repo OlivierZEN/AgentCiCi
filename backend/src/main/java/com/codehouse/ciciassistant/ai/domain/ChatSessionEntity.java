@@ -29,15 +29,38 @@ public class ChatSessionEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @Column(name = "channel_code", nullable = false, length = 32)
+    private String channelCode;
+
+    @Column(name = "visibility_scope", nullable = false, length = 16)
+    private String visibilityScope;
+
+    @Column(name = "source_key", length = 160)
+    private String sourceKey;
+
     protected ChatSessionEntity() {
     }
 
     public ChatSessionEntity(String id, String companyId, String userId, String agentId, String title) {
+        this(id, companyId, userId, agentId, title, "web", "USER", null);
+    }
+
+    public ChatSessionEntity(String id,
+                             String companyId,
+                             String userId,
+                             String agentId,
+                             String title,
+                             String channelCode,
+                             String visibilityScope,
+                             String sourceKey) {
         this.id = id;
         this.companyId = companyId;
         this.userId = userId;
         this.agentId = agentId;
         this.title = title;
+        this.channelCode = channelCode;
+        this.visibilityScope = visibilityScope;
+        this.sourceKey = sourceKey;
         this.updatedAt = Instant.now();
     }
 
@@ -63,6 +86,26 @@ public class ChatSessionEntity {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public String getChannelCode() {
+        return channelCode;
+    }
+
+    public String getVisibilityScope() {
+        return visibilityScope;
+    }
+
+    public String getSourceKey() {
+        return sourceKey;
+    }
+
+    public boolean isCompanyVisible() {
+        return "COMPANY".equals(visibilityScope);
+    }
+
+    public String routingKey() {
+        return sourceKey == null || sourceKey.isBlank() ? id : sourceKey;
     }
 
     public void touch(String title, String agentId) {

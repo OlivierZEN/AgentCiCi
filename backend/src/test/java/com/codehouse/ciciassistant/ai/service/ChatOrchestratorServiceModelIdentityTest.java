@@ -22,6 +22,7 @@ import com.codehouse.ciciassistant.agent.service.AgentWorkflowExecutionLogServic
 import com.codehouse.ciciassistant.agent.service.AgentWorkflowRuntimeService;
 import com.codehouse.ciciassistant.ai.domain.ChatMessageEntity;
 import com.codehouse.ciciassistant.ai.domain.ChatMessageRepository;
+import com.codehouse.ciciassistant.ai.domain.ChatSessionEntity;
 import com.codehouse.ciciassistant.ai.domain.ChatSessionRepository;
 import com.codehouse.ciciassistant.ai.domain.ChatSessionStateRepository;
 import com.codehouse.ciciassistant.ai.service.AliyunBailianClient.ToolCallInfo;
@@ -907,7 +908,30 @@ class ChatOrchestratorServiceModelIdentityTest {
                     .thenReturn(List.of());
             when(chatAttachmentService.buildModelContent(anyString(), anyList()))
                     .thenAnswer(invocation -> invocation.getArgument(0));
-            when(chatSessionRepository.findById(anyString())).thenReturn(Optional.empty());
+            Map<String, ChatSessionEntity> persistedSessions = new java.util.concurrent.ConcurrentHashMap<>();
+            when(chatSessionRepository.findById(anyString()))
+                    .thenAnswer(invocation -> Optional.ofNullable(persistedSessions.get(invocation.getArgument(0))));
+            when(chatSessionRepository.findByIdAndCompanyId(anyString(), anyString()))
+                    .thenAnswer(invocation -> Optional.ofNullable(persistedSessions.get(invocation.getArgument(0)))
+                            .filter(session -> invocation.getArgument(1).equals(session.getCompanyId())));
+            when(chatSessionRepository.findByCompanyIdAndChannelCodeAndSourceKey(anyString(), anyString(), anyString()))
+                    .thenAnswer(invocation -> persistedSessions.values().stream()
+                            .filter(session -> invocation.getArgument(0).equals(session.getCompanyId()))
+                            .filter(session -> invocation.getArgument(1).equals(session.getChannelCode()))
+                            .filter(session -> invocation.getArgument(2).equals(session.getSourceKey()))
+                            .findFirst());
+            when(chatSessionRepository.saveAndFlush(any(ChatSessionEntity.class)))
+                    .thenAnswer(invocation -> {
+                        ChatSessionEntity session = invocation.getArgument(0);
+                        persistedSessions.put(session.getId(), session);
+                        return session;
+                    });
+            when(chatSessionRepository.save(any(ChatSessionEntity.class)))
+                    .thenAnswer(invocation -> {
+                        ChatSessionEntity session = invocation.getArgument(0);
+                        persistedSessions.put(session.getId(), session);
+                        return session;
+                    });
             when(agentWorkflowRuntimeService.evaluateForChat(anyString(), anyString(), anyString(), anyList()))
                     .thenReturn(executionResult);
             when(agentPlanExecCanaryService.start(anyString(), anyString(), anyString(), anyString(), anyString(), anyString()))

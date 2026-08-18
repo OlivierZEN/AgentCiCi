@@ -44,9 +44,6 @@ import {
 } from "./deliveryWriteReceipt";
 import {
   buildCompanyScopedCacheKey,
-  buildWorkbenchSessionId,
-  createWorkbenchSessionId,
-  isWorkbenchSessionIdForAgent,
 } from "./workbenchSessions";
 import { isMeetingMinutesStartCommand } from "./meetingMinutesCommand";
 import { appendMeetingTranscriptSegment, speakerDisplayName } from "./meetingTranscript";
@@ -182,7 +179,7 @@ type ConversationThread = {
   title: string;
   participantName: string;
   participantType: "employee" | "external" | "group";
-  channel: "wechat" | "dingtalk" | "feishu" | "web";
+  channel: "wechat" | "wechat_kf" | "dingtalk" | "feishu" | "web" | "openapi" | "customer_workbench";
   lastMessage: string;
   time: string;
   updatedAt?: string;
@@ -368,9 +365,12 @@ type UserQuickCommand = {
 
 const CHANNEL_LABELS: Record<ConversationThread["channel"], string> = {
   wechat: "企微",
+  wechat_kf: "微信客服",
   dingtalk: "钉钉",
   feishu: "飞书",
   web: "WebChat",
+  openapi: "Open API",
+  customer_workbench: "客户工作台",
 };
 
 const DOCK_AGENT_COLORS = [
@@ -616,11 +616,7 @@ function traceStepTokenSummary(node: AgentTraceNodePayload) {
 function normalizeConversationThread(payload: ConversationThreadPayload): ConversationThread {
   const channel = payload.channel && payload.channel in CHANNEL_LABELS ? payload.channel : "web";
   const participantName = payload.participantName?.trim() || payload.title?.trim() || "未命名会话";
-  const isWorkbenchSession = payload.id?.startsWith("workbench:");
-  const fallbackTitleFromLastMessage = (payload.lastMessage?.trim() || "新工作台对话").slice(0, 24);
-  const normalizedTitle = isWorkbenchSession && payload.title?.startsWith("会话 ")
-    ? fallbackTitleFromLastMessage
-    : (payload.title?.trim() || participantName);
+  const normalizedTitle = payload.title?.trim() || participantName;
   return {
     id: payload.id,
     agentId: payload.agentId?.trim() || "cici-system",
@@ -758,31 +754,6 @@ function ComposerAttachmentQueue({
       </div>
     </section>
   );
-}
-
-function createDraftConversationThread(
-  sessionId: string,
-  agentId: string,
-  participantName: string,
-  title = "新对话",
-  avatarUrl = "",
-): ConversationThread {
-  const nowIso = new Date().toISOString();
-  return {
-    id: sessionId,
-    agentId,
-    title,
-    participantName: participantName.trim() || "我",
-    participantType: "employee",
-    channel: "web",
-    lastMessage: "等待首条消息",
-    time: formatConversationTime(nowIso),
-    updatedAt: nowIso,
-    unread: 0,
-    owner: "CiCi",
-    summary: "新建会话，等待首条消息。",
-    avatarUrl,
-  };
 }
 
 function formatWorkbenchTime(date = new Date()) {
@@ -1492,6 +1463,7 @@ export default function AssistantApp() {
   const [customerWorkbenchEmbedded, setCustomerWorkbenchEmbedded] = useState(initialCustomerWorkbenchEmbedded);
   const [conversationMessages, setConversationMessages] = useState<Record<string, ChatBubble[]>>({});
   const [conversationListLoading, setConversationListLoading] = useState(false);
+  const [conversationListLoadedCompanyId, setConversationListLoadedCompanyId] = useState("");
   const [conversationListNotice, setConversationListNotice] = useState("");
   const [conversationHistoryLoadingId, setConversationHistoryLoadingId] = useState("");
   const [workbenchDockAgents, setWorkbenchDockAgents] = useState<WorkbenchDockAgent[]>(WORKBENCH_DOCK_AGENTS);
@@ -1528,6 +1500,7 @@ export default function AssistantApp() {
   const companyMenuCloseTimerRef = useRef<number | null>(null);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const attachmentObjectUrlsRef = useRef<Set<string>>(new Set());
+  const workbenchSessionCreationRef = useRef<Set<string>>(new Set());
   const composerInputRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
   const chatLoadingStaleTimerRef = useRef<number | null>(null);
   const cloudccSsoAttemptedRef = useRef(false);
@@ -1560,6 +1533,7 @@ export default function AssistantApp() {
     setConversationThreads([]);
     setConversationMessages({});
     setConversationListLoading(false);
+    setConversationListLoadedCompanyId("");
     setConversationListNotice("");
     setConversationHistoryLoadingId("");
     setActiveConversationId("");
@@ -2095,6 +2069,7 @@ export default function AssistantApp() {
     if (!auth) {
       setConversationThreads([]);
       setActiveConversationId("");
+      setConversationListLoadedCompanyId("");
       return;
     }
     const requestScope = companyScopeRef.current;
@@ -2111,13 +2086,12 @@ export default function AssistantApp() {
         setConversationListNotice(body?.message ?? "加载会话列表失败");
         setConversationThreads([]);
         setActiveConversationId("");
+        setConversationListLoadedCompanyId("");
         return;
       }
       const nextThreads = ((body.data ?? []) as ConversationThreadPayload[]).map(normalizeConversationThread);
-      setConversationThreads((previous) => {
-        const drafts = previous.filter((item) => item.id.startsWith("workbench:") && !nextThreads.some((thread) => thread.id === item.id));
-        return [...drafts, ...nextThreads];
-      });
+      setConversationThreads(nextThreads);
+      setConversationListLoadedCompanyId(requestScope.companyId);
       setConversationListNotice("");
       setActiveConversationId((current) => {
         if (preferredConversationId && nextThreads.some((item) => item.id === preferredConversationId)) {
@@ -2135,10 +2109,55 @@ export default function AssistantApp() {
       setConversationThreads([]);
       setActiveConversationId("");
       setConversationListNotice("加载会话列表失败");
+      setConversationListLoadedCompanyId("");
     } finally {
       if (isCurrentCompanyScope(requestScope)) {
         setConversationListLoading(false);
       }
+    }
+  };
+
+  const createWorkbenchSession = async (agent: WorkbenchDockAgent): Promise<ConversationThread | null> => {
+    if (!auth) {
+      return null;
+    }
+    const requestScope = companyScopeRef.current;
+    const creationKey = buildCompanyScopedCacheKey(requestScope.companyId, agent.key);
+    if (workbenchSessionCreationRef.current.has(creationKey)) {
+      return null;
+    }
+    workbenchSessionCreationRef.current.add(creationKey);
+    try {
+      const response = await authFetch(LS_ASSISTANT_TOKEN, "/ai/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agentId: agent.runtimeAgentId }),
+      }, {
+        onUnauthorized: () => persistAuth(null),
+      });
+      const { body } = await safeFetchJson<ConversationThreadPayload>(response);
+      if (!isCurrentCompanyScope(requestScope)) {
+        return null;
+      }
+      if (!response.ok || !body?.success || !body.data?.id) {
+        throw new Error(body?.message ?? `HTTP ${response.status}`);
+      }
+      const session = normalizeConversationThread(body.data);
+      const sessionCacheKey = buildCompanyScopedCacheKey(requestScope.companyId, session.id);
+      const agentCacheKey = buildCompanyScopedCacheKey(requestScope.companyId, agent.key);
+      setConversationThreads((prev) => [session, ...prev.filter((item) => item.id !== session.id)]);
+      setConversationMessages((prev) => ({ ...prev, [sessionCacheKey]: [] }));
+      setWorkbenchMessagesByAgent((prev) => ({ ...prev, [agentCacheKey]: [] }));
+      setActiveWorkbenchSessionIdByAgent((prev) => ({ ...prev, [agentCacheKey]: session.id }));
+      setConversationListNotice("");
+      return session;
+    } catch (error) {
+      if (isCurrentCompanyScope(requestScope)) {
+        setConversationListNotice(`创建会话失败：${error instanceof Error ? error.message : String(error)}`);
+      }
+      return null;
+    } finally {
+      workbenchSessionCreationRef.current.delete(creationKey);
     }
   };
 
@@ -2373,6 +2392,7 @@ export default function AssistantApp() {
       setConversationMessages({});
       setConversationListNotice("");
       setActiveConversationId("");
+      setConversationListLoadedCompanyId("");
     }
   }, [auth?.companyId, auth?.token, authStatus]);
 
@@ -2594,14 +2614,14 @@ export default function AssistantApp() {
   const activeQuickCommandsLoading = !!quickCommandsLoadingByAgent[activeWorkbenchAgentId];
   const workbenchSessionThreads = useMemo(() => {
     return conversationThreads
-      .filter((thread) => isWorkbenchSessionIdForAgent(thread.id, activeWorkbenchKey))
+      .filter((thread) => thread.agentId === activeWorkbenchAgentId && thread.channel === "web")
       .sort((a, b) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? ""));
-  }, [activeWorkbenchKey, conversationThreads]);
+  }, [activeWorkbenchAgentId, conversationThreads]);
   const activeWorkbenchAgentCacheKey = buildCompanyScopedCacheKey(auth?.companyId, activeWorkbenchKey);
-  const activeWorkbenchSessionId =
-    activeWorkbenchSessionIdByAgent[activeWorkbenchAgentCacheKey] ??
-    workbenchSessionThreads[0]?.id ??
-    buildWorkbenchSessionId(activeWorkbenchKey);
+  const selectedWorkbenchSessionId = activeWorkbenchSessionIdByAgent[activeWorkbenchAgentCacheKey] ?? "";
+  const activeWorkbenchSessionId = workbenchSessionThreads.some((item) => item.id === selectedWorkbenchSessionId)
+    ? selectedWorkbenchSessionId
+    : (workbenchSessionThreads[0]?.id ?? "");
   const workbenchMessages = workbenchMessagesByAgent[activeWorkbenchAgentCacheKey] ?? [];
   const activeWorkbenchState = workbenchRuntimeByAgent[activeWorkbenchAgentCacheKey] ?? getWorkbenchDefaultState(activeWorkbenchKey);
   const activeWorkbenchThoughts = activeWorkbenchState.thoughts.length ? activeWorkbenchState.thoughts : ["等待新的业务上下文"];
@@ -2617,7 +2637,7 @@ export default function AssistantApp() {
   const activeComposerAttachments = composerAttachments.filter(
     (attachment) => attachment.sessionId === activeComposerSessionId,
   );
-  const activeComposerCanSubmit = composerCanSubmit(
+  const activeComposerCanSubmit = !!activeComposerSessionId && composerCanSubmit(
     input,
     activeComposerAttachments.map((attachment) => attachment.status),
   );
@@ -2776,7 +2796,11 @@ export default function AssistantApp() {
     if (auth && authStatus === "authenticated") {
       void loadWorkbenchAgents(auth.token);
       void loadWorkbenchStats(auth.token);
-      void loadWorkbenchMessages(activeWorkbenchKey, activeWorkbenchSessionId, true);
+      if (activeWorkbenchSessionId) {
+        void loadWorkbenchMessages(activeWorkbenchKey, activeWorkbenchSessionId, true);
+      } else if (conversationListLoadedCompanyId === auth.companyId) {
+        void createWorkbenchSession(activeWorkbenchAgent);
+      }
     }
     setActiveWorkbenchSessionIdByAgent((prev) => {
       if (prev[activeWorkbenchAgentCacheKey] === activeWorkbenchSessionId) {
@@ -2789,7 +2813,7 @@ export default function AssistantApp() {
       setWorkbenchThoughtIndex((current) => current + 1);
     }, 1800);
     return () => window.clearInterval(timer);
-  }, [activeWorkbenchAgentCacheKey, activeWorkbenchKey, activeWorkbenchSessionId, auth?.companyId, auth?.token, authStatus, workspaceTab]);
+  }, [activeWorkbenchAgentCacheKey, activeWorkbenchKey, activeWorkbenchSessionId, auth?.companyId, auth?.token, authStatus, conversationListLoadedCompanyId, workspaceTab]);
 
   useEffect(() => {
     if (!openWorkbenchSessionMenuId) {
@@ -3104,24 +3128,12 @@ export default function AssistantApp() {
     setApprovalDrawerOpen(false);
   };
 
-  const startNewWorkbenchConversation = () => {
-    const sessionId = createWorkbenchSessionId(activeWorkbenchKey);
-    const draft = createDraftConversationThread(
-      sessionId,
-      activeWorkbenchAgent.runtimeAgentId,
-      me?.nickname ?? me?.mobile ?? "我",
-      "新工作台对话",
-      me?.avatarBase64 ?? "",
-    );
-    setConversationThreads((prev) => [draft, ...prev.filter((item) => item.id !== sessionId)]);
-    const companyId = companyScopeRef.current.companyId;
-    const sessionCacheKey = buildCompanyScopedCacheKey(companyId, sessionId);
-    const agentCacheKey = buildCompanyScopedCacheKey(companyId, activeWorkbenchKey);
-    setConversationMessages((prev) => ({ ...prev, [sessionCacheKey]: [] }));
-    setWorkbenchMessagesByAgent((prev) => ({ ...prev, [agentCacheKey]: [] }));
-    setActiveWorkbenchSessionIdByAgent((prev) => ({ ...prev, [agentCacheKey]: sessionId }));
-    setInput("");
-    setSpeechNotice("");
+  const startNewWorkbenchConversation = async () => {
+    const session = await createWorkbenchSession(activeWorkbenchAgent);
+    if (session) {
+      setInput("");
+      setSpeechNotice("");
+    }
   };
 
   const selectWorkbenchConversation = async (sessionId: string) => {
@@ -3210,9 +3222,6 @@ export default function AssistantApp() {
     if (!shouldDelete) {
       return;
     }
-    if (!session.id.startsWith("workbench:")) {
-      return;
-    }
     try {
       await authFetch(LS_ASSISTANT_TOKEN, `/ai/sessions/${encodeURIComponent(session.id)}`, {
         method: "DELETE",
@@ -3229,13 +3238,14 @@ export default function AssistantApp() {
       return next;
     });
     if (session.id === activeWorkbenchSessionId) {
-      const nextSessionId =
-        workbenchSessionThreads.find((item) => item.id !== session.id)?.id ?? buildWorkbenchSessionId(activeWorkbenchKey);
-      setActiveWorkbenchSessionIdByAgent((prev) => ({
-        ...prev,
-        [buildCompanyScopedCacheKey(companyScopeRef.current.companyId, activeWorkbenchKey)]: nextSessionId,
-      }));
-      await loadWorkbenchMessages(activeWorkbenchKey, nextSessionId, true);
+      const nextSessionId = workbenchSessionThreads.find((item) => item.id !== session.id)?.id ?? "";
+      const agentCacheKey = buildCompanyScopedCacheKey(companyScopeRef.current.companyId, activeWorkbenchKey);
+      setActiveWorkbenchSessionIdByAgent((prev) => ({ ...prev, [agentCacheKey]: nextSessionId }));
+      if (nextSessionId) {
+        await loadWorkbenchMessages(activeWorkbenchKey, nextSessionId, true);
+      } else {
+        await createWorkbenchSession(activeWorkbenchAgent);
+      }
     }
   };
 

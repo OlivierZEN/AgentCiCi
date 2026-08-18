@@ -31,6 +31,7 @@ class ChatRealtimeIntegrationTest {
     @Test
     void shouldPushSessionUpdatedEventWhenChatSessionChanges() throws Exception {
         String token = loginToken("13800138007");
+        String sessionId = createSession(token, "cici-system");
 
         MvcResult streamResult = mockMvc.perform(get("/ai/sessions/stream")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
@@ -42,11 +43,11 @@ class ChatRealtimeIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "sessionId": "s-realtime-1",
+                                  "sessionId": "%s",
                                   "question": "帮我回顾一下今天的线索同步情况",
                                   "knowledgeBaseIds": []
                                 }
-                                """))
+                                """.formatted(sessionId)))
                 .andExpect(status().isOk());
 
         Thread.sleep(300L);
@@ -54,7 +55,7 @@ class ChatRealtimeIntegrationTest {
         String streamBody = streamResult.getResponse().getContentAsString();
         assertThat(streamBody).contains("event:connected");
         assertThat(streamBody).contains("event:session_updated");
-        assertThat(streamBody).contains("\"sessionId\":\"s-realtime-1\"");
+        assertThat(streamBody).contains("\"sessionId\":\"" + sessionId + "\"");
 
         if (streamResult.getRequest().getAsyncContext() != null) {
             streamResult.getRequest().getAsyncContext().complete();
@@ -74,5 +75,15 @@ class ChatRealtimeIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn();
         return objectMapper.readTree(loginResult.getResponse().getContentAsString()).path("data").path("token").asText();
+    }
+
+    private String createSession(String token, String agentId) throws Exception {
+        MvcResult result = mockMvc.perform(post("/ai/sessions")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"agentId\":\"%s\"}".formatted(agentId)))
+                .andExpect(status().isOk())
+                .andReturn();
+        return objectMapper.readTree(result.getResponse().getContentAsString()).path("data").path("id").asText();
     }
 }

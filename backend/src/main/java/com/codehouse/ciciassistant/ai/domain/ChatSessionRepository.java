@@ -10,7 +10,12 @@ public interface ChatSessionRepository extends JpaRepository<ChatSessionEntity, 
 
     List<ChatSessionEntity> findByCompanyIdAndUserIdOrderByUpdatedAtDesc(String companyId, String userId);
 
+    List<ChatSessionEntity> findByCompanyIdAndVisibilityScopeOrderByUpdatedAtDesc(String companyId, String visibilityScope);
+
     Optional<ChatSessionEntity> findByIdAndCompanyId(String id, String companyId);
 
     Optional<ChatSessionEntity> findByIdAndCompanyIdAndUserId(String id, String companyId, String userId);
+
+    Optional<ChatSessionEntity> findByCompanyIdAndChannelCodeAndSourceKey(
+            String companyId, String channelCode, String sourceKey);
 }

@@ -69,6 +69,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -225,7 +226,7 @@ public class ChatOrchestratorService {
     public Map<String, Object> chat(String companyId, String userId, String sessionId,
                                      String question, List<String> kbIds, String requestedAgentId,
                                      String activeSkillCode, Map<String, String> metadataFilters) {
-        return chat(companyId, userId, sessionId, question, kbIds, requestedAgentId, activeSkillCode, metadataFilters, "web");
+        return chat(companyId, userId, sessionId, question, kbIds, requestedAgentId, activeSkillCode, metadataFilters, "internal");
     }
 
     public Map<String, Object> chat(String companyId, String userId, String sessionId,
@@ -233,7 +234,7 @@ public class ChatOrchestratorService {
                                     String activeSkillCode, Map<String, String> metadataFilters,
                                     List<String> attachmentIds) {
         return chat(companyId, userId, sessionId, question, kbIds, requestedAgentId,
-                activeSkillCode, metadataFilters, attachmentIds, "web");
+                activeSkillCode, metadataFilters, attachmentIds, "internal");
     }
 
     public Map<String, Object> chat(String companyId, String userId, String sessionId,
@@ -247,10 +248,30 @@ public class ChatOrchestratorService {
                                     String question, List<String> kbIds, String requestedAgentId,
                                     String activeSkillCode, Map<String, String> metadataFilters,
                                     List<String> attachmentIds, String channel) {
+        ChatSessionEntity session = resolveOrCreateInternalSession(
+                companyId, userId, sessionId, requestedAgentId, channel);
+        return chatResolved(companyId, userId, session, question, kbIds, requestedAgentId,
+                activeSkillCode, metadataFilters, attachmentIds);
+    }
+
+    public Map<String, Object> chatWeb(String companyId, String userId, String sessionId,
+                                       String question, List<String> kbIds, String requestedAgentId,
+                                       String activeSkillCode, Map<String, String> metadataFilters,
+                                       List<String> attachmentIds) {
+        ChatSessionEntity session = requireWebSession(companyId, userId, sessionId);
+        return chatResolved(companyId, userId, session, question, kbIds, requestedAgentId,
+                activeSkillCode, metadataFilters, attachmentIds);
+    }
+
+    private Map<String, Object> chatResolved(String companyId, String userId, ChatSessionEntity session,
+                                             String question, List<String> kbIds, String requestedAgentId,
+                                             String activeSkillCode, Map<String, String> metadataFilters,
+                                             List<String> attachmentIds) {
+        String sessionId = session.getId();
         String runId = newRunId();
         return agentRuntimeConcurrencyService.run(companyId, userId, requestedAgentId, sessionId,
                 () -> chatLocked(companyId, userId, sessionId, question, kbIds, requestedAgentId,
-                        activeSkillCode, metadataFilters, attachmentIds, runId, channel));
+                        activeSkillCode, metadataFilters, attachmentIds, runId, session.getChannelCode()));
     }
 
     /**
@@ -436,6 +457,7 @@ public class ChatOrchestratorService {
                                            String question, List<String> kbIds, String requestedAgentId,
                                            String activeSkillCode, Map<String, String> metadataFilters,
                                            List<String> attachmentIds, String runId, String channel) {
+        String routingKey = sessionRoutingKey(companyId, sessionId);
         Instant runStartedAt = Instant.now();
         List<AgentRunTraceService.StageTraceInput> stageTraces = new ArrayList<>();
         List<AgentRunTraceService.ModelCallTraceInput> modelCallTraces = new ArrayList<>();
@@ -471,7 +493,7 @@ public class ChatOrchestratorService {
         List<String> effectiveKnowledgeBaseIds = skillResolverService.resolveKnowledgeBaseIds(skillContext, kbIds);
         List<String> requestedKnowledgeBaseIds = normalizeKnowledgeBaseIds(kbIds);
         KnowledgeRetrievalRouter.Decision knowledgeDecision = KnowledgeRetrievalRouter.decide(
-                safeQuestion, effectiveKnowledgeBaseIds, requestedKnowledgeBaseIds, sessionId);
+                safeQuestion, effectiveKnowledgeBaseIds, requestedKnowledgeBaseIds, routingKey);
         AgentRuntimeModeRouter.ModeDecision modeDecision = agentRuntimeModeRouter.decide(
                 new AgentRuntimeModeRouter.RoutingInput(companyId, skillContext.agentId(), channel, safeQuestion,
                         skillContext.allowedToolNames(), knowledgeDecision.shouldRetrieve(),
@@ -509,7 +531,7 @@ public class ChatOrchestratorService {
         }
         List<String> ragContext = sanitizeContextList(companyId, userId, "RAG_CONTEXT", ragResult.context());
         Instant toolSchemaStartedAt = Instant.now();
-        List<Map<String, Object>> tools = modeDecision.suppressesTools() || planExec.active() || isWecomKfSession(sessionId)
+        List<Map<String, Object>> tools = modeDecision.suppressesTools() || planExec.active() || isWecomKfSession(routingKey)
                 ? List.of()
                 : toolOrchestratorService.getToolDefinitions(
                 companyId, skillContext.allowedToolNames(), skillContext.skillApiTools());
@@ -520,7 +542,7 @@ public class ChatOrchestratorService {
 
         chatSessionStateService.mergeUserTurn(companyId, sessionId, skillContext.agentId(), safeQuestion);
         List<Map<String, Object>> messages = buildInitialMessages(
-                sessionId, safeQuestion, ragContext, showThinking, skillContext, companyId, userId,
+                sessionId, routingKey, safeQuestion, ragContext, showThinking, skillContext, companyId, userId,
                 runtimeContext, routedModel.get("provider"), modelName, builtinDocs, turnAttachments);
         stageTraces.add(stageTrace("MEMORY_CONTEXT", "主体记忆上下文", "SUCCESS", Instant.now(), Instant.now(),
                 "已按可信运行时上下文完成记忆装配。",
@@ -701,11 +723,40 @@ public class ChatOrchestratorService {
     public void chatStream(String companyId, String userId, String sessionId,
                            String question, List<String> kbIds, String requestedAgentId,
                            String activeSkillCode, Map<String, String> metadataFilters,
+                           String channel, SseEmitter emitter) {
+        ChatSessionEntity session = resolveOrCreateInternalSession(
+                companyId, userId, sessionId, requestedAgentId, channel);
+        startResolvedStream(companyId, userId, session, question, kbIds, requestedAgentId,
+                activeSkillCode, metadataFilters, List.of(), emitter);
+    }
+
+    public void chatStream(String companyId, String userId, String sessionId,
+                           String question, List<String> kbIds, String requestedAgentId,
+                           String activeSkillCode, Map<String, String> metadataFilters,
                            List<String> attachmentIds, SseEmitter emitter) {
+        ChatSessionEntity session = resolveOrCreateInternalSession(
+                companyId, userId, sessionId, requestedAgentId, "internal");
+        startResolvedStream(companyId, userId, session, question, kbIds, requestedAgentId,
+                activeSkillCode, metadataFilters, attachmentIds, emitter);
+    }
+
+    public void chatStreamWeb(String companyId, String userId, String sessionId,
+                              String question, List<String> kbIds, String requestedAgentId,
+                              String activeSkillCode, Map<String, String> metadataFilters,
+                              List<String> attachmentIds, SseEmitter emitter) {
+        ChatSessionEntity session = requireWebSession(companyId, userId, sessionId);
+        startResolvedStream(companyId, userId, session, question, kbIds, requestedAgentId,
+                activeSkillCode, metadataFilters, attachmentIds, emitter);
+    }
+
+    private void startResolvedStream(String companyId, String userId, ChatSessionEntity session,
+                                     String question, List<String> kbIds, String requestedAgentId,
+                                     String activeSkillCode, Map<String, String> metadataFilters,
+                                     List<String> attachmentIds, SseEmitter emitter) {
         List<String> requestedAttachments = attachmentIds == null ? List.of() : List.copyOf(attachmentIds);
         CompletableFuture.runAsync(() -> {
-            chatStreamBlocking(companyId, userId, sessionId, question, kbIds, requestedAgentId,
-                    activeSkillCode, metadataFilters, requestedAttachments, "web", emitter);
+            chatStreamResolved(companyId, userId, session, question, kbIds, requestedAgentId,
+                    activeSkillCode, metadataFilters, requestedAttachments, emitter);
         }, agentRuntimeExecutor);
     }
 
@@ -719,7 +770,7 @@ public class ChatOrchestratorService {
                                    String question, List<String> kbIds, String requestedAgentId,
                                    String activeSkillCode, Map<String, String> metadataFilters, SseEmitter emitter) {
         chatStreamBlocking(companyId, userId, sessionId, question, kbIds, requestedAgentId, activeSkillCode,
-                metadataFilters, "web", emitter);
+                metadataFilters, "internal", emitter);
     }
 
     public void chatStreamBlocking(String companyId, String userId, String sessionId,
@@ -733,10 +784,21 @@ public class ChatOrchestratorService {
                                    String question, List<String> kbIds, String requestedAgentId,
                                    String activeSkillCode, Map<String, String> metadataFilters,
                                    List<String> attachmentIds, String channel, SseEmitter emitter) {
+        ChatSessionEntity session = resolveOrCreateInternalSession(
+                companyId, userId, sessionId, requestedAgentId, channel);
+        chatStreamResolved(companyId, userId, session, question, kbIds, requestedAgentId,
+                activeSkillCode, metadataFilters, attachmentIds, emitter);
+    }
+
+    private void chatStreamResolved(String companyId, String userId, ChatSessionEntity session,
+                                    String question, List<String> kbIds, String requestedAgentId,
+                                    String activeSkillCode, Map<String, String> metadataFilters,
+                                    List<String> attachmentIds, SseEmitter emitter) {
+        String sessionId = session.getId();
         String runId = newRunId();
         agentRuntimeConcurrencyService.run(companyId, userId, requestedAgentId, sessionId, () -> {
             chatStreamBlockingLocked(companyId, userId, sessionId, question, kbIds, requestedAgentId,
-                    activeSkillCode, metadataFilters, attachmentIds, channel, emitter, runId);
+                    activeSkillCode, metadataFilters, attachmentIds, session.getChannelCode(), emitter, runId);
             return null;
         });
     }
@@ -745,6 +807,7 @@ public class ChatOrchestratorService {
                                           String question, List<String> kbIds, String requestedAgentId,
                                           String activeSkillCode, Map<String, String> metadataFilters,
                                           List<String> attachmentIds, String channel, SseEmitter emitter, String runId) {
+            String routingKey = sessionRoutingKey(companyId, sessionId);
             Instant runStartedAt = Instant.now();
             List<AgentRunTraceService.StageTraceInput> stageTraces = new ArrayList<>();
             List<AgentRunTraceService.ModelCallTraceInput> modelCallTraces = new ArrayList<>();
@@ -788,7 +851,7 @@ public class ChatOrchestratorService {
                 List<String> effectiveKnowledgeBaseIds = skillResolverService.resolveKnowledgeBaseIds(skillContext, kbIds);
                 List<String> requestedKnowledgeBaseIds = normalizeKnowledgeBaseIds(kbIds);
                 KnowledgeRetrievalRouter.Decision knowledgeDecision = KnowledgeRetrievalRouter.decide(
-                        safeQuestion, effectiveKnowledgeBaseIds, requestedKnowledgeBaseIds, sessionId);
+                        safeQuestion, effectiveKnowledgeBaseIds, requestedKnowledgeBaseIds, routingKey);
                 AgentRuntimeModeRouter.ModeDecision modeDecision = agentRuntimeModeRouter.decide(
                         new AgentRuntimeModeRouter.RoutingInput(companyId, skillContext.agentId(), channel, safeQuestion,
                                 skillContext.allowedToolNames(), knowledgeDecision.shouldRetrieve(),
@@ -851,7 +914,7 @@ public class ChatOrchestratorService {
                             ragResult.fallbackUsed());
                 }
                 Instant toolSchemaStartedAt = Instant.now();
-                List<Map<String, Object>> tools = modeDecision.suppressesTools() || planExec.active() || isWecomKfSession(sessionId)
+                List<Map<String, Object>> tools = modeDecision.suppressesTools() || planExec.active() || isWecomKfSession(routingKey)
                         ? List.of()
                         : toolOrchestratorService.getToolDefinitions(
                         companyId, skillContext.allowedToolNames(), skillContext.skillApiTools());
@@ -861,7 +924,7 @@ public class ChatOrchestratorService {
                 RuntimeContext runtimeContext = runtimeContextPromptService.current();
                 chatSessionStateService.mergeUserTurn(companyId, sessionId, skillContext.agentId(), safeQuestion);
                 List<Map<String, Object>> messages = buildInitialMessages(
-                        sessionId, safeQuestion, ragContext, showThinking, skillContext, companyId, userId,
+                        sessionId, routingKey, safeQuestion, ragContext, showThinking, skillContext, companyId, userId,
                         runtimeContext, routedModel.get("provider"), modelName, builtinDocs, turnAttachments);
                 stageTraces.add(stageTrace("MEMORY_CONTEXT", "主体记忆上下文", "SUCCESS", Instant.now(), Instant.now(),
                         "已按可信运行时上下文完成记忆装配。",
@@ -2346,7 +2409,9 @@ public class ChatOrchestratorService {
 
     // ── Helpers ──
 
-    private List<Map<String, Object>> buildInitialMessages(String sessionId, String question, List<String> ragContext,
+    private List<Map<String, Object>> buildInitialMessages(String sessionId,
+                                                           String routingKey,
+                                                           String question, List<String> ragContext,
                                                            boolean showThinking,
                                                            ResolvedSkillContext skillContext,
                                                            String companyId, String userId,
@@ -2362,7 +2427,7 @@ public class ChatOrchestratorService {
         String system = skillPromptAssembler.assemble(baseSystem, skillContext, builtinDocs, runtimeConfig);
         system = buildModelIdentityPromptBlock(routedProvider, modelName)
                 + "\n---\n\n" + system
-                + "\n---\n\n" + buildToolUseBoundaryPromptBlock(sessionId);
+                + "\n---\n\n" + buildToolUseBoundaryPromptBlock(routingKey);
         // Prepend user memories if available
         List<UserMemoryEntity> memories = userMemoryService.listForInjection(companyId, userId, skillContext.agentId());
         if (!memories.isEmpty()) {
@@ -2423,9 +2488,7 @@ public class ChatOrchestratorService {
 
     private void persistUserTurn(String companyId, String userId, String sessionId, String question,
                                  String agentId, List<ChatAttachmentEntity> attachments) {
-        Optional<ChatSessionEntity> existing = chatSessionRepository.findById(sessionId);
-        ChatSessionEntity session = existing.orElseGet(() ->
-                new ChatSessionEntity(sessionId, companyId, userId, agentId, clip(question, 48)));
+        ChatSessionEntity session = requireWritableSession(companyId, userId, sessionId);
         session.touch(clip(question, 48), agentId);
         chatSessionRepository.save(session);
         ChatMessageEntity message = chatMessageRepository.save(new ChatMessageEntity(sessionId, companyId, "user", question));
@@ -2442,12 +2505,12 @@ public class ChatOrchestratorService {
     private void persistAssistantTurnCommitted(String companyId, String userId, String sessionId,
                                                String answer, String auditAction, String modelName) {
         tx.executeWithoutResult(s -> {
-            touchSessionForAssistantReply(sessionId);
+            touchSessionForAssistantReply(companyId, userId, sessionId);
             chatMessageRepository.save(new ChatMessageEntity(sessionId, companyId, "assistant", answer));
             auditService.log(companyId, userId, auditAction,
                     "session=" + sessionId + ", model=" + modelName);
         });
-        publishSessionUpdated(companyId, userId, sessionId, "session_deleted");
+        publishSessionUpdated(companyId, userId, sessionId, "assistant_message");
     }
 
     private List<String> sanitizeContextList(String companyId, String userId, String surface, List<String> context) {
@@ -2530,16 +2593,153 @@ public class ChatOrchestratorService {
         );
     }
 
-    private void touchSessionForAssistantReply(String sessionId) {
-        chatSessionRepository.findById(sessionId).ifPresent(session -> {
-            session.touch(session.getTitle(), session.getAgentId());
-            chatSessionRepository.save(session);
-        });
+    private void touchSessionForAssistantReply(String companyId, String userId, String sessionId) {
+        ChatSessionEntity session = requireWritableSession(companyId, userId, sessionId);
+        session.touch(session.getTitle(), session.getAgentId());
+        chatSessionRepository.save(session);
+    }
+
+    private ChatSessionEntity requireWebSession(String companyId, String userId, String sessionId) {
+        if (!isUuid(sessionId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "sessionId must be created by POST /ai/sessions");
+        }
+        ChatSessionEntity session = chatSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
+        if (!companyId.equals(session.getCompanyId())
+                || !userId.equals(session.getUserId())
+                || !"web".equals(session.getChannelCode())
+                || session.isCompanyVisible()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found");
+        }
+        return session;
+    }
+
+    private ChatSessionEntity requireWritableSession(String companyId, String userId, String sessionId) {
+        return chatSessionRepository.findByIdAndCompanyId(sessionId, companyId)
+                .filter(session -> session.isCompanyVisible() || userId.equals(session.getUserId()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
+    }
+
+    private ChatSessionEntity resolveOrCreateInternalSession(String companyId,
+                                                             String userId,
+                                                             String sessionReference,
+                                                             String agentId,
+                                                             String requestedChannel) {
+        String reference = sessionReference == null ? "" : sessionReference.trim();
+        if (reference.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "sessionId is required");
+        }
+        String channel = normalizeSessionChannel(requestedChannel, reference);
+        Optional<ChatSessionEntity> direct = chatSessionRepository.findById(reference);
+        if (direct.isPresent()) {
+            ChatSessionEntity session = direct.get();
+            if (!companyId.equals(session.getCompanyId())
+                    || (!session.isCompanyVisible() && !userId.equals(session.getUserId()))) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found");
+            }
+            return session;
+        }
+        boolean uuidReference = isUuid(reference);
+        if (reference.length() > 160) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "External session key is too long");
+        }
+        Optional<ChatSessionEntity> mapped = uuidReference
+                ? Optional.empty()
+                : chatSessionRepository.findByCompanyIdAndChannelCodeAndSourceKey(companyId, channel, reference);
+        if (mapped.isPresent()) {
+            return mapped.get();
+        }
+        String visibility = companyScopedChannel(channel) ? "COMPANY" : "USER";
+        String normalizedAgentId = agentId == null || agentId.isBlank() ? "cici-system" : agentId.trim();
+        ChatSessionEntity created = new ChatSessionEntity(
+                uuidReference ? reference : UUID.randomUUID().toString(),
+                companyId, userId, normalizedAgentId, "新会话",
+                channel, visibility, uuidReference ? null : reference);
+        try {
+            chatSessionRepository.saveAndFlush(created);
+            return created;
+        } catch (DataIntegrityViolationException conflict) {
+            if (uuidReference) {
+                return chatSessionRepository.findByIdAndCompanyId(reference, companyId)
+                        .orElseThrow(() -> conflict);
+            }
+            return chatSessionRepository.findByCompanyIdAndChannelCodeAndSourceKey(companyId, channel, reference)
+                    .orElseThrow(() -> conflict);
+        }
+    }
+
+    private String sessionRoutingKey(String companyId, String sessionId) {
+        return chatSessionRepository.findByIdAndCompanyId(sessionId, companyId)
+                .map(session -> {
+                    if (session.getSourceKey() != null && !session.getSourceKey().isBlank()) {
+                        return session.getSourceKey();
+                    }
+                    return switch (session.getChannelCode()) {
+                        case "feishu" -> "feishu:" + session.getId();
+                        case "wechat" -> "wechat:" + session.getId();
+                        case "wecom_kf" -> "wecom-kf:" + session.getId();
+                        case "dingtalk" -> "dingtalk:" + session.getId();
+                        case "openapi" -> "api:" + session.getId();
+                        case "webchat" -> "webchat:" + session.getId();
+                        default -> session.getId();
+                    };
+                })
+                .orElse(sessionId);
+    }
+
+    private static boolean isUuid(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        try {
+            return UUID.fromString(value).toString().equalsIgnoreCase(value);
+        } catch (IllegalArgumentException ignored) {
+            return false;
+        }
+    }
+
+    private static String normalizeSessionChannel(String requestedChannel, String reference) {
+        String channel = requestedChannel == null ? "" : requestedChannel.trim().toLowerCase(Locale.ROOT);
+        if (channel.isBlank() || "web".equals(channel)) {
+            if (reference.startsWith("feishu:")) return "feishu";
+            if (reference.startsWith("wecom-kf:")) return "wecom_kf";
+            if (reference.startsWith("wechat:")) return "wechat";
+            if (reference.startsWith("dingtalk:")) return "dingtalk";
+            if (reference.startsWith("api:")) return "openapi";
+            if (reference.startsWith("webchat:") || reference.startsWith("web:")) return "webchat";
+            if (reference.startsWith("customer-workbench:")) return "customer_workbench";
+            return "web";
+        }
+        return switch (channel) {
+            case "wecom-kf", "wechat_kf" -> "wecom_kf";
+            case "api" -> "openapi";
+            case "customer-workbench" -> "customer_workbench";
+            default -> channel.replace('-', '_');
+        };
+    }
+
+    private static boolean companyScopedChannel(String channel) {
+        return switch (channel) {
+            case "feishu", "wechat", "wecom_kf", "dingtalk", "webchat", "openapi" -> true;
+            default -> false;
+        };
+    }
+
+    public Map<String, Object> createWebSession(String companyId, String userId, String agentId) {
+        String normalizedAgentId = agentId == null || agentId.isBlank() ? "cici-system" : agentId.trim();
+        ChatSessionEntity session = new ChatSessionEntity(
+                UUID.randomUUID().toString(), companyId, userId, normalizedAgentId, "新工作台对话",
+                "web", "USER", null);
+        chatSessionRepository.saveAndFlush(session);
+        return toSessionSummary(companyId, session);
+    }
+
+    public void assertWebSessionAccess(String companyId, String userId, String sessionId) {
+        requireWebSession(companyId, userId, sessionId);
     }
 
     public List<Map<String, Object>> sessions(String companyId, String userId) {
         return queryVisibleSessions(companyId, userId).stream()
-                .filter(item -> !isInternalWorkbenchSession(item.getId()))
                 .map(item -> toSessionSummary(companyId, item))
                 .toList();
     }
@@ -2592,7 +2792,7 @@ public class ChatOrchestratorService {
             chatSessionStateRepository.deleteBySessionIdAndCompanyId(sessionId, companyId);
             chatSessionRepository.delete(session);
         });
-        publishSessionUpdated(companyId, userId, sessionId, "assistant_message");
+        publishSessionUpdated(companyId, userId, sessionId, "session_deleted");
         return Map.of(
                 "sessionId", sessionId,
                 "deleted", true
@@ -2610,7 +2810,7 @@ public class ChatOrchestratorService {
         payload.put("title", descriptor.title());
         payload.put("participantName", descriptor.participantName());
         payload.put("participantType", descriptor.participantType());
-        payload.put("channel", descriptor.channel());
+        payload.put("channel", publicChannelCode(session.getChannelCode()));
         payload.put("lastMessage", clip(lastMessage == null ? session.getTitle() : lastMessage.getContent(), 120));
         payload.put("updatedAt", session.getUpdatedAt().toString());
         payload.put("unread", 0);
@@ -2623,11 +2823,7 @@ public class ChatOrchestratorService {
     private List<ChatSessionEntity> queryVisibleSessions(String companyId, String userId) {
         List<ChatSessionEntity> visible = new ArrayList<>();
         visible.addAll(chatSessionRepository.findByCompanyIdAndUserIdOrderByUpdatedAtDesc(companyId, userId));
-        for (ChatSessionEntity item : chatSessionRepository.findByCompanyIdOrderByUpdatedAtDesc(companyId)) {
-            if (isOrgScopedConversation(item.getId())) {
-                visible.add(item);
-            }
-        }
+        visible.addAll(chatSessionRepository.findByCompanyIdAndVisibilityScopeOrderByUpdatedAtDesc(companyId, "COMPANY"));
         LinkedHashSet<String> seen = new LinkedHashSet<>();
         List<ChatSessionEntity> deduped = new ArrayList<>();
         for (ChatSessionEntity item : visible) {
@@ -2640,18 +2836,17 @@ public class ChatOrchestratorService {
     }
 
     private Optional<ChatSessionEntity> queryVisibleSession(String companyId, String userId, String sessionId) {
-        if (isOrgScopedConversation(sessionId)) {
-            return chatSessionRepository.findByIdAndCompanyId(sessionId, companyId);
-        }
-        return chatSessionRepository.findByIdAndCompanyIdAndUserId(sessionId, companyId, userId);
+        return chatSessionRepository.findByIdAndCompanyId(sessionId, companyId)
+                .filter(session -> session.isCompanyVisible() || userId.equals(session.getUserId()));
     }
 
     private SessionDescriptor describeSession(ChatSessionEntity session) {
-        String sessionId = session.getId();
+        String sessionId = session.routingKey();
+        String channel = session.getChannelCode() == null ? "web" : session.getChannelCode();
         String agentId = session.getAgentId() == null || session.getAgentId().isBlank()
                 ? "cici-system"
                 : session.getAgentId();
-        if (sessionId.startsWith("feishu:")) {
+        if ("feishu".equals(channel)) {
             String[] parts = sessionId.split(":", 3);
             String chatId = parts.length >= 3 ? parts[2] : sessionId;
             FeishuBotBindingEntity binding = feishuBotBindingRepository
@@ -2673,7 +2868,7 @@ public class ChatOrchestratorService {
                     avatarUrl
             );
         }
-        if (sessionId.startsWith("wechat:")) {
+        if ("wechat".equals(channel)) {
             String participantName = "企微会话 " + abbreviateId(sessionId);
             return new SessionDescriptor(
                     agentId,
@@ -2686,7 +2881,7 @@ public class ChatOrchestratorService {
                     ""
             );
         }
-        if (sessionId.startsWith("wecom-kf:")) {
+        if ("wecom_kf".equals(channel)) {
             String participantName = "微信客服 " + abbreviateId(sessionId);
             return new SessionDescriptor(
                     agentId,
@@ -2699,7 +2894,7 @@ public class ChatOrchestratorService {
                     ""
             );
         }
-        if (sessionId.startsWith("dingtalk:")) {
+        if ("dingtalk".equals(channel)) {
             String participantName = "钉钉会话 " + abbreviateId(sessionId);
             return new SessionDescriptor(
                     agentId,
@@ -2712,7 +2907,7 @@ public class ChatOrchestratorService {
                     ""
             );
         }
-        if (sessionId.startsWith("web:") || sessionId.startsWith("webchat:")) {
+        if ("webchat".equals(channel)) {
             String participantName = "WebChat " + abbreviateId(sessionId);
             return new SessionDescriptor(
                     agentId,
@@ -2725,7 +2920,7 @@ public class ChatOrchestratorService {
                     ""
             );
         }
-        if (sessionId.startsWith("api:")) {
+        if ("openapi".equals(channel)) {
             String participantName = "API 会话 " + abbreviateId(sessionId);
             return new SessionDescriptor(
                     agentId,
@@ -2735,6 +2930,19 @@ public class ChatOrchestratorService {
                     "api",
                     "CiCi",
                     "来自 Agent Open API 的外部系统会话。",
+                    ""
+            );
+        }
+        if ("web".equals(channel)) {
+            String participantName = "会话 " + abbreviateId(session.getId());
+            return new SessionDescriptor(
+                    agentId,
+                    session.getTitle(),
+                    participantName,
+                    "employee",
+                    "web",
+                    "我",
+                    "当前用户在智能体工作台创建的会话。",
                     ""
             );
         }
@@ -2751,28 +2959,26 @@ public class ChatOrchestratorService {
         );
     }
 
-    private boolean isInternalWorkbenchSession(String sessionId) {
-        return sessionId.startsWith("assistant-ui-");
-    }
-
-    private boolean isOrgScopedConversation(String sessionId) {
-        return sessionId.startsWith("feishu:")
-                || sessionId.startsWith("wechat:")
-                || sessionId.startsWith("wecom-kf:")
-                || sessionId.startsWith("dingtalk:")
-                || sessionId.startsWith("api:")
-                || sessionId.startsWith("web:")
-                || sessionId.startsWith("webchat:");
-    }
-
     private void publishSessionUpdated(String companyId, String userId, String sessionId, String trigger) {
+        boolean companyScoped = chatSessionRepository.findByIdAndCompanyId(sessionId, companyId)
+                .map(ChatSessionEntity::isCompanyVisible)
+                .orElse(false);
         sessionRealtimeEventService.publishSessionUpdated(
                 companyId,
                 userId,
                 sessionId,
-                isOrgScopedConversation(sessionId),
+                companyScoped,
                 trigger
         );
+    }
+
+    private static String publicChannelCode(String channel) {
+        if (channel == null || channel.isBlank()) return "web";
+        return switch (channel) {
+            case "wecom_kf" -> "wechat_kf";
+            case "webchat" -> "web";
+            default -> channel;
+        };
     }
 
     private String abbreviateId(String raw) {

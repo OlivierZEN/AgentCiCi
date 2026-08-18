@@ -8,9 +8,8 @@ import com.codehouse.ciciassistant.wecom.domain.WecomKfConversationRepository;
 import com.codehouse.ciciassistant.wecom.domain.WecomKfMessageEntity;
 import com.codehouse.ciciassistant.wecom.domain.WecomKfMessageRepository;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.time.Instant;
-import java.util.HexFormat;
+import java.util.UUID;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
@@ -86,7 +85,9 @@ public class WecomKfConversationService {
                     content,
                     List.of(),
                     conversation.getAgentId(),
-                    null);
+                    null,
+                    Map.of(),
+                    "wecom-kf");
             Object rawAnswer = result.get("answer");
             answer = rawAnswer == null ? "" : String.valueOf(rawAnswer);
             traceId = annotateLatestTrace(conversation, message.msgId(), externalUserId);
@@ -142,14 +143,8 @@ public class WecomKfConversationService {
     }
 
     public String sessionId(String corpId, String openKfId, String externalUserId) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] bytes = digest.digest((blank(corpId) + ":" + blank(openKfId) + ":" + blank(externalUserId))
-                    .getBytes(StandardCharsets.UTF_8));
-            return "wecom-kf:" + HexFormat.of().formatHex(bytes).substring(0, 32);
-        } catch (Exception ex) {
-            throw new IllegalStateException("Build WeCom session failed", ex);
-        }
+        String key = "wecom-kf|" + blank(corpId) + "|" + blank(openKfId) + "|" + blank(externalUserId);
+        return UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8)).toString();
     }
 
     private String outboundMessageId(String inboundMsgId) {

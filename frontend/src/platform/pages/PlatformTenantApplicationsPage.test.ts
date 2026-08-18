@@ -50,9 +50,10 @@ describe("DevAutopilot initialization readiness", () => {
 
 describe("DevAutopilot historical intake reconciliation input", () => {
   it("accepts only a bounded session id and UUID record id", () => {
-    expect(isValidIntakeReconciliationInput("workbench:devautopilot-pm", "019ff668-6874-7348-ab3c-6d1c2635ad0a")).toBe(true);
+    expect(isValidIntakeReconciliationInput("8f90d20c-233d-4e90-bf97-a22e9d4f23ad", "019ff668-6874-7348-ab3c-6d1c2635ad0a")).toBe(true);
     expect(isValidIntakeReconciliationInput("", "019ff668-6874-7348-ab3c-6d1c2635ad0a")).toBe(false);
-    expect(isValidIntakeReconciliationInput("workbench:devautopilot-pm", "REQ-6F34ECF3")).toBe(false);
+    expect(isValidIntakeReconciliationInput("workbench:devautopilot-pm", "019ff668-6874-7348-ab3c-6d1c2635ad0a")).toBe(false);
+    expect(isValidIntakeReconciliationInput("8f90d20c-233d-4e90-bf97-a22e9d4f23ad", "REQ-6F34ECF3")).toBe(false);
   });
 });
 

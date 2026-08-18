@@ -1,6 +1,7 @@
 package com.codehouse.ciciassistant.ai.api;
 
 import com.codehouse.ciciassistant.ai.service.ChatAttachmentService;
+import com.codehouse.ciciassistant.ai.service.ChatOrchestratorService;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import java.util.Map;
@@ -22,26 +23,37 @@ import org.springframework.web.multipart.MultipartFile;
 public class ChatAttachmentController {
 
     private final ChatAttachmentService service;
+    private final ChatOrchestratorService chatOrchestratorService;
 
-    public ChatAttachmentController(ChatAttachmentService service) {
+    public ChatAttachmentController(ChatAttachmentService service, ChatOrchestratorService chatOrchestratorService) {
         this.service = service;
+        this.chatOrchestratorService = chatOrchestratorService;
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<Map<String, Object>> upload(@PathVariable String sessionId,
                                                    @RequestParam String clientAttachmentId,
                                                    @RequestParam MultipartFile file) {
-        return ApiResponse.ok(service.upload(companyId(), userId(), sessionId, clientAttachmentId, file));
+        String companyId = companyId();
+        String userId = userId();
+        chatOrchestratorService.assertWebSessionAccess(companyId, userId, sessionId);
+        return ApiResponse.ok(service.upload(companyId, userId, sessionId, clientAttachmentId, file));
     }
 
     @GetMapping
     public ApiResponse<Map<String, Object>> list(@PathVariable String sessionId) {
-        return ApiResponse.ok(service.list(companyId(), userId(), sessionId));
+        String companyId = companyId();
+        String userId = userId();
+        chatOrchestratorService.assertWebSessionAccess(companyId, userId, sessionId);
+        return ApiResponse.ok(service.list(companyId, userId, sessionId));
     }
 
     @GetMapping("/{attachmentId}/content")
     public ResponseEntity<?> content(@PathVariable String sessionId, @PathVariable String attachmentId) {
-        ChatAttachmentService.AttachmentContent content = service.content(companyId(), userId(), sessionId, attachmentId);
+        String companyId = companyId();
+        String userId = userId();
+        chatOrchestratorService.assertWebSessionAccess(companyId, userId, sessionId);
+        ChatAttachmentService.AttachmentContent content = service.content(companyId, userId, sessionId, attachmentId);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(content.contentType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.inline().filename(content.filename()).build().toString())
@@ -50,7 +62,10 @@ public class ChatAttachmentController {
 
     @DeleteMapping("/{attachmentId}")
     public ApiResponse<Map<String, Object>> delete(@PathVariable String sessionId, @PathVariable String attachmentId) {
-        return ApiResponse.ok(service.delete(companyId(), userId(), sessionId, attachmentId));
+        String companyId = companyId();
+        String userId = userId();
+        chatOrchestratorService.assertWebSessionAccess(companyId, userId, sessionId);
+        return ApiResponse.ok(service.delete(companyId, userId, sessionId, attachmentId));
     }
 
     private static String companyId() {

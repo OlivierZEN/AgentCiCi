@@ -24,7 +24,9 @@ public class FeishuBotConversationService {
                 question,
                 List.of(),
                 binding.getAgentCode(),
-                null
+                null,
+                Map.of(),
+                "feishu"
         );
         Object answer = result.get("answer");
         return answer == null ? "" : String.valueOf(answer);

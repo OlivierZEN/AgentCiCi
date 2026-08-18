@@ -15,6 +15,18 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-317 - 服务端 UUID 会话身份与历史完整性修复
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-194-server-owned-chat-session-identity.md`
+- task_status_path: `.claw/tasks/TASK-317.md`
+- blocked_by: `none`
+- scope_files: `会话 UUID 身份、外部 source_key 映射、租户/所有者校验、V122 测试历史重置、工作台创建链路、回归与本地环境验证`
+- next_action: `实现后端与前端并完成本地全栈验收；UAT/生产不修改。`
+
 ### TASK-316 - 应用中心在线接入指南
 
 - status: `review`

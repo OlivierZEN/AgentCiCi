@@ -182,7 +182,8 @@ public class CustomerWorkbenchService {
     public List<Map<String, String>> assistantHistory(String companyId, String userId, String accountId) {
         assertAccountAccess(companyId, userId, accountId);
         try {
-            return chatOrchestratorService.sessionMessages(companyId, userId, assistantSessionId(userId, accountId)).stream()
+            return chatOrchestratorService.sessionMessages(
+                    companyId, userId, assistantSessionId(companyId, userId, accountId)).stream()
                     .map(item -> Map.of(
                             "role", String.valueOf(item.getOrDefault("role", "assistant")),
                             "content", sanitizeAssistantHistoryContent(String.valueOf(item.getOrDefault("content", ""))),
@@ -456,7 +457,8 @@ public class CustomerWorkbenchService {
                 List.of(),
                 ASSISTANT_AGENT_ID,
                 SKILL_CODE,
-                Map.of("source", "customer-workbench", "crmAccountId", invocation.accountId())
+                Map.of("source", "customer-workbench", "crmAccountId", invocation.accountId()),
+                "customer-workbench"
         );
         Object answer = agentResult.get("answer");
         return mapOf(
@@ -505,6 +507,7 @@ public class CustomerWorkbenchService {
                 ASSISTANT_AGENT_ID,
                 SKILL_CODE,
                 Map.of("source", "customer-workbench", "crmAccountId", invocation.accountId()),
+                "customer-workbench",
                 emitter
         );
         return emitter;
@@ -522,7 +525,7 @@ public class CustomerWorkbenchService {
         }
         Map<String, Object> customer = accountDetail(companyId, userId, accountId);
         Map<String, Object> crmConnection = crmConnectionView(companyId, userId);
-        String sessionId = assistantSessionId(userId, accountId);
+        String sessionId = assistantSessionId(companyId, userId, accountId);
         CustomerMemoryService.AssistantContext context = customerMemoryService.buildAssistantContext(
                 companyId, accountId, text, customer);
         String prompt = buildAssistantPrompt(userId, text, context, crmConnection);
@@ -538,9 +541,9 @@ public class CustomerWorkbenchService {
                                        Map<String, Object> uiAction,
                                        CustomerMemoryService.AssistantContext context) {}
 
-    private String assistantSessionId(String userId, String accountId) {
-        String seed = blankToEmpty(userId) + ":" + blankToEmpty(accountId);
-        return "customer-workbench:" + UUID.nameUUIDFromBytes(seed.getBytes(StandardCharsets.UTF_8));
+    private String assistantSessionId(String companyId, String userId, String accountId) {
+        String seed = "customer-workbench|" + blankToEmpty(companyId) + "|" + blankToEmpty(userId) + "|" + blankToEmpty(accountId);
+        return UUID.nameUUIDFromBytes(seed.getBytes(StandardCharsets.UTF_8)).toString();
     }
 
     private String sanitizeAssistantHistoryContent(String content) {

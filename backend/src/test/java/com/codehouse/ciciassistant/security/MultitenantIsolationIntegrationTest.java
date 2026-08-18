@@ -135,6 +135,23 @@ class MultitenantIsolationIntegrationTest {
     }
 
     private void assertChatIsolation(CreatedOrg orgA, CreatedOrg orgB, TenantFixture fixtureB) throws Exception {
+        String sessionA = createSession(orgA, "cici-system");
+        String sessionB = createSession(orgB, "cici-system");
+        assertThat(sessionA).isNotEqualTo(sessionB);
+        assertThat(UUID.fromString(sessionA)).isNotNull();
+        assertThat(UUID.fromString(sessionB)).isNotNull();
+
+        mockMvc.perform(post("/ai/chat")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(orgA.token()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "sessionId": "%s",
+                                  "question": "不得写入另一租户的会话"
+                                }
+                                """.formatted(sessionB)))
+                .andExpect(status().isNotFound());
+
         MvcResult sessionsForA = mockMvc.perform(get("/ai/sessions")
                         .header(HttpHeaders.AUTHORIZATION, bearer(orgA.token())))
                 .andExpect(status().isOk())
@@ -161,12 +178,11 @@ class MultitenantIsolationIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[0].content").value("组织 B 会话机密"));
 
-        String sharedWorkbenchSession = "workbench:cici-system";
-        chatSessionStateService.mergeUserTurn(orgA.companyId(), sharedWorkbenchSession, "cici-system", "继续上一步");
-        chatSessionStateService.mergeUserTurn(orgB.companyId(), sharedWorkbenchSession, "cici-system", "添加名单，范围是组织 B 客户");
+        chatSessionStateService.mergeUserTurn(orgA.companyId(), sessionA, "cici-system", "继续上一步");
+        chatSessionStateService.mergeUserTurn(orgB.companyId(), sessionB, "cici-system", "添加名单，范围是组织 B 客户");
 
-        var stateA = chatSessionStateRepository.findBySessionIdAndCompanyId(sharedWorkbenchSession, orgA.companyId()).orElseThrow();
-        var stateB = chatSessionStateRepository.findBySessionIdAndCompanyId(sharedWorkbenchSession, orgB.companyId()).orElseThrow();
+        var stateA = chatSessionStateRepository.findBySessionIdAndCompanyId(sessionA, orgA.companyId()).orElseThrow();
+        var stateB = chatSessionStateRepository.findBySessionIdAndCompanyId(sessionB, orgB.companyId()).orElseThrow();
         assertThat(stateA.getCompanyId()).isEqualTo(orgA.companyId());
         assertThat(stateB.getCompanyId()).isEqualTo(orgB.companyId());
         assertThat(stateA.getStateJson()).contains("continue_current_plan").doesNotContain("add_members");
@@ -278,7 +294,7 @@ class MultitenantIsolationIntegrationTest {
                 false,
                 true));
 
-        String sessionId = "tenant-b-session-" + suffix;
+        String sessionId = UUID.randomUUID().toString();
         chatSessionRepository.saveAndFlush(new ChatSessionEntity(
                 sessionId,
                 org.companyId(),
@@ -293,7 +309,7 @@ class MultitenantIsolationIntegrationTest {
                 traceId,
                 org.companyId(),
                 org.userId(),
-                "web:tenant-b:" + suffix,
+                sessionId,
                 agent.getAgentId(),
                 "web",
                 "SUCCESS",
@@ -347,6 +363,17 @@ class MultitenantIsolationIntegrationTest {
                 data.path("companyId").asText(),
                 data.path("userId").asText(),
                 data.path("token").asText());
+    }
+
+    private String createSession(CreatedOrg org, String agentId) throws Exception {
+        MvcResult result = mockMvc.perform(post("/ai/sessions")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(org.token()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"agentId\":\"%s\"}".formatted(agentId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.channel").value("web"))
+                .andReturn();
+        return objectMapper.readTree(result.getResponse().getContentAsString()).path("data").path("id").asText();
     }
 
     private String platformToken() throws Exception {

@@ -31,7 +31,7 @@ public class ChatController {
     public ApiResponse<Map<String, Object>> chat(@Valid @RequestBody ChatRequest request) {
         String companyId = TenantContext.requireCompanyId();
         String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
-        return ApiResponse.ok(chatOrchestratorService.chat(
+        return ApiResponse.ok(chatOrchestratorService.chatWeb(
                 companyId,
                 userId,
                 request.sessionId(),
@@ -49,7 +49,7 @@ public class ChatController {
         String companyId = TenantContext.requireCompanyId();
         String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
         SseEmitter emitter = new SseEmitter(600_000L);
-        chatOrchestratorService.chatStream(
+        chatOrchestratorService.chatStreamWeb(
                 companyId,
                 userId,
                 request.sessionId(),
@@ -68,6 +68,13 @@ public class ChatController {
         String companyId = TenantContext.requireCompanyId();
         String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
         return ApiResponse.ok(chatOrchestratorService.sessions(companyId, userId));
+    }
+
+    @PostMapping("/sessions")
+    public ApiResponse<Map<String, Object>> createSession(@Valid @RequestBody CreateSessionRequest request) {
+        String companyId = TenantContext.requireCompanyId();
+        String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
+        return ApiResponse.ok(chatOrchestratorService.createWebSession(companyId, userId, request.agentId()));
     }
 
     @GetMapping(value = "/sessions/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -108,5 +115,8 @@ public class ChatController {
             Map<String, String> metadataFilters,
             List<String> attachmentIds
     ) {
+    }
+
+    public record CreateSessionRequest(@NotBlank String agentId) {
     }
 }

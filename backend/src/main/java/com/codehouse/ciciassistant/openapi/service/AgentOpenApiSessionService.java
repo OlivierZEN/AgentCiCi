@@ -3,8 +3,7 @@ package com.codehouse.ciciassistant.openapi.service;
 import com.codehouse.ciciassistant.openapi.domain.AgentApiSessionMapEntity;
 import com.codehouse.ciciassistant.openapi.domain.AgentApiSessionMapRepository;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.util.Base64;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -74,27 +73,8 @@ public class AgentOpenApiSessionService {
                                      String agentId,
                                      String publicId,
                                      String externalSessionId) {
-        String publicPart = safePrefix(publicId, 12);
         String hashInput = companyId + "|" + credentialId + "|" + agentId + "|" + externalSessionId;
-        return "api:" + publicPart + ":" + sha256Base64(hashInput).substring(0, 20);
-    }
-
-    private static String safePrefix(String value, int max) {
-        String text = value == null ? "" : value.replaceAll("[^a-zA-Z0-9_-]", "");
-        if (text.length() <= max) {
-            return text;
-        }
-        return text.substring(0, max);
-    }
-
-    private static String sha256Base64(String value) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] bytes = digest.digest(value.getBytes(StandardCharsets.UTF_8));
-            return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-        } catch (Exception ex) {
-            throw new IllegalStateException("Failed to map Agent Open API session", ex);
-        }
+        return UUID.nameUUIDFromBytes(hashInput.getBytes(StandardCharsets.UTF_8)).toString();
     }
 
     public record SessionResolution(

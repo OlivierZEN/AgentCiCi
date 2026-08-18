@@ -1,29 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildWorkbenchSessionId,
   buildCompanyScopedCacheKey,
-  buildWorkbenchSessionPrefix,
-  createWorkbenchSessionId,
-  isWorkbenchSessionIdForAgent,
   pickRecentHistoryLines,
 } from "./workbenchSessions";
 
 describe("workbenchSessions", () => {
-  it("builds stable workbench session ids per agent", () => {
-    expect(buildWorkbenchSessionId("cici-system")).toBe("workbench:cici-system");
-    expect(buildWorkbenchSessionId("sales-agent")).toBe("workbench:sales-agent");
-    expect(buildWorkbenchSessionPrefix("sales-agent")).toBe("workbench:sales-agent:");
-    expect(isWorkbenchSessionIdForAgent("workbench:sales-agent", "sales-agent")).toBe(true);
-    expect(isWorkbenchSessionIdForAgent("workbench:sales-agent:abc", "sales-agent")).toBe(true);
-    expect(isWorkbenchSessionIdForAgent("workbench:approval-agent:abc", "sales-agent")).toBe(false);
-    expect(createWorkbenchSessionId("sales-agent").startsWith("workbench:sales-agent:")).toBe(true);
-  });
-
   it("keeps browser cache entries isolated by company without changing API session ids", () => {
-    expect(buildCompanyScopedCacheKey("company-a", buildWorkbenchSessionId("cici-system")))
-      .toBe("company-a::workbench:cici-system");
-    expect(buildCompanyScopedCacheKey("company-b", buildWorkbenchSessionId("cici-system")))
-      .toBe("company-b::workbench:cici-system");
+    const sessionId = "a4e69d1a-d974-45c2-a7e2-2d31c480c0e2";
+    expect(buildCompanyScopedCacheKey("company-a", sessionId)).toBe(`company-a::${sessionId}`);
+    expect(buildCompanyScopedCacheKey("company-b", sessionId)).toBe(`company-b::${sessionId}`);
   });
 
   it("does not let a default workbench state reuse the unscoped cache key", () => {

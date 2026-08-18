@@ -42,7 +42,7 @@ class AgentRunTraceIntegrationTest {
     @Test
     void shouldExposeChatSessionAsAgentRunLogAndTraceDetail() throws Exception {
         String token = loginToken("13800138017");
-        String sessionId = "s-run-trace-1";
+        String sessionId = createSession(token, "cici-system");
 
         mockMvc.perform(post("/ai/chat")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
@@ -200,5 +200,15 @@ class AgentRunTraceIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn();
         return objectMapper.readTree(loginResult.getResponse().getContentAsString()).path("data").path("token").asText();
+    }
+
+    private String createSession(String token, String agentId) throws Exception {
+        MvcResult result = mockMvc.perform(post("/ai/sessions")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"agentId\":\"%s\"}".formatted(agentId)))
+                .andExpect(status().isOk())
+                .andReturn();
+        return objectMapper.readTree(result.getResponse().getContentAsString()).path("data").path("id").asText();
     }
 }

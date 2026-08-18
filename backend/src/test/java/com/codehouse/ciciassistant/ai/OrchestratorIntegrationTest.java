@@ -96,6 +96,7 @@ class OrchestratorIntegrationTest {
     @Test
     void shouldRunChatWithRagAndToolsAndExposeOpsMetrics() throws Exception {
         String token = loginToken("13800138006");
+        String sessionId = createSession(token, "cici-system");
 
         mockMvc.perform(post("/kb/bootstrap-kb/chunks")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
@@ -113,11 +114,11 @@ class OrchestratorIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                                 {
-                                  "sessionId": "s-orch-1",
+                                  "sessionId": "%s",
                                   "question": "what time is it and summarize leave policy",
                                   "knowledgeBaseIds": ["bootstrap-kb"]
                                 }
-                                """))
+                                """.formatted(sessionId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.model.modelName")
                         .value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.blankOrNullString())))
@@ -159,18 +160,19 @@ class OrchestratorIntegrationTest {
     @Test
     void shouldResolvePhaseOneSkillsForSalesAgent() throws Exception {
         String token = loginToken("13800138116");
+        String sessionId = createSession(token, "sales-agent");
 
         MvcResult result = mockMvc.perform(post("/ai/chat")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "sessionId": "assistant-ui-sales-phase1",
+                                  "sessionId": "%s",
                                   "agentId": "sales-agent",
                                   "question": "帮我查一下客户资料",
                                   "knowledgeBaseIds": []
                                 }
-                                """))
+                                """.formatted(sessionId)))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -187,18 +189,19 @@ class OrchestratorIntegrationTest {
     @Test
     void shouldExposeCloudccDiscoveryToolsForDefaultCiciAgent() throws Exception {
         String token = loginToken("13800138119");
+        String sessionId = createSession(token, "cici-system");
 
         MvcResult result = mockMvc.perform(post("/ai/chat")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "sessionId": "assistant-ui-cici-tool-scope",
+                                  "sessionId": "%s",
                                   "agentId": "cici-system",
                                   "question": "帮我查一下客户资料，需要的话先确认可以查哪些对象和字段",
                                   "knowledgeBaseIds": []
                                 }
-                                """))
+                                """.formatted(sessionId)))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -291,6 +294,7 @@ class OrchestratorIntegrationTest {
         String agentId = "skill-pin-agent-" + suffix();
         String skillCode = "skill-pin-runtime-" + suffix();
         String token = loginToken("13800138129");
+        String sessionId = createSession(token, agentId);
 
         AgentDefinitionEntity agent = agentDefinitionRepository.findByCompanyIdAndAgentId(companyId, agentId)
                 .orElseGet(() -> agentDefinitionRepository.save(new AgentDefinitionEntity(
@@ -408,12 +412,12 @@ class OrchestratorIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "sessionId": "s-skill-pin-runtime-%s",
+                                  "sessionId": "%s",
                                   "agentId": "%s",
                                   "question": "帮我继续执行已发布版本",
                                   "knowledgeBaseIds": []
                                 }
-                                """.formatted(suffix(), agentId)))
+                                """.formatted(sessionId, agentId)))
                 .andExpect(status().isOk())
                 .andReturn();
         JsonNode chatRoot = objectMapper.readTree(chatResult.getResponse().getContentAsString()).path("data");
@@ -446,7 +450,7 @@ class OrchestratorIntegrationTest {
     @Test
     void shouldPersistSessionStateAfterUserIntentHint() throws Exception {
         String token = loginToken("13800138113");
-        String sessionId = "s-session-state-1";
+        String sessionId = createSession(token, "cici-system");
 
         mockMvc.perform(post("/ai/chat")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
@@ -473,7 +477,7 @@ class OrchestratorIntegrationTest {
     @Test
     void shouldKeepSessionStateAcrossSecondTurn() throws Exception {
         String token = loginToken("13800138117");
-        String sessionId = "s-session-state-2-" + suffix();
+        String sessionId = createSession(token, "cici-system");
 
         mockMvc.perform(post("/ai/chat")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
@@ -520,7 +524,7 @@ class OrchestratorIntegrationTest {
     @Test
     void shouldCaptureSessionFieldsAndNoRepeatConstraintAcrossTurns() throws Exception {
         String token = loginToken("13800138123");
-        String sessionId = "s-session-state-3";
+        String sessionId = createSession(token, "cici-system");
 
         mockMvc.perform(post("/ai/chat")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
@@ -566,7 +570,7 @@ class OrchestratorIntegrationTest {
     @Test
     void shouldSwitchRuntimeDependenciesAcrossPublishStates() throws Exception {
         String token = loginToken("13800138111");
-        String sessionId = "s-published-runtime-1";
+        String sessionId = createSession(token, "cici-system");
 
         mockMvc.perform(put("/agents/cici-system/bindings")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
@@ -710,6 +714,7 @@ class OrchestratorIntegrationTest {
     void shouldGracefullyHandleInvalidPublishedManifest() throws Exception {
         String token = loginToken("13800138118");
         String companyId = "demo-org";
+        String sessionId = createSession(token, "cici-system");
 
         agentDefinitionService.replaceBindings(companyId, "cici-system",
                 new AgentDefinitionService.ReplaceBindingsCommand(List.of(), List.of("cloudcc_pageQuery"), List.of("web")));
@@ -755,11 +760,11 @@ class OrchestratorIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "sessionId": "s-published-invalid-fallback",
+                                  "sessionId": "%s",
                                   "agentId": "cici-system",
                                   "question": "测试回退路径"
                                 }
-                                """))
+                                """.formatted(sessionId)))
                 .andExpect(status().isOk())
                 .andReturn();
         JsonNode root = objectMapper.readTree(chatResult.getResponse().getContentAsString()).path("data");
@@ -772,6 +777,7 @@ class OrchestratorIntegrationTest {
     void shouldExposePublishedRuntimePolicyInChatResponse() throws Exception {
         String token = loginToken("13800138119");
         String companyId = "demo-org";
+        String sessionId = createSession(token, "cici-system");
 
         AgentCompileService.CompileResult compileResult = agentCompileService.compile(
                 companyId,
@@ -803,11 +809,11 @@ class OrchestratorIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "sessionId": "s-runtime-policy-1",
+                                  "sessionId": "%s",
                                   "agentId": "cici-system",
                                   "question": "测试运行时策略"
                                 }
-                                """))
+                                """.formatted(sessionId)))
                 .andExpect(status().isOk())
                 .andReturn();
         JsonNode root = objectMapper.readTree(chatResult.getResponse().getContentAsString()).path("data");
@@ -1382,6 +1388,16 @@ class OrchestratorIntegrationTest {
             throw new IllegalStateException("login failed: " + loginResult.getResponse().getContentAsString());
         }
         return objectMapper.readTree(loginResult.getResponse().getContentAsString()).path("data").path("token").asText();
+    }
+
+    private String createSession(String token, String agentId) throws Exception {
+        MvcResult result = mockMvc.perform(post("/ai/sessions")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"agentId\":\"%s\"}".formatted(agentId)))
+                .andExpect(status().isOk())
+                .andReturn();
+        return objectMapper.readTree(result.getResponse().getContentAsString()).path("data").path("id").asText();
     }
 
     private String suffix() {
