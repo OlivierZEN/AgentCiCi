@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-18T02:41:39Z
+updated_at: 2026-08-18T03:15:43Z
 updated_by: codex
 phase: review
-active_task: TASK-316
-next_action: "由已登录平台管理员复核应用列表、应用详情和连接空态入口，以及平台侧栏包裹下的指南最终视觉；UAT/生产保持不变。"
+active_task: TASK-317
+next_action: "继续 TASK-317 的服务端 UUID 会话身份与历史完整性实现；TASK-316 等待用户确认本地文档阅读体验。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-316 / FEAT-193` 已完成应用中心在线接入指南：认证后独立路由按 12 个章节覆盖应用登记、Provider 请求/响应、HMAC、Secret 引用、运行连接、版本初始化、依赖、发布、租户开通和运维排错；应用列表、应用详情和连接空态提供上下文入口。实现提交 `94f4e6bc` 已进入本地 main；定向 3 文件/26 项、全量 53 文件/293 项、production build、独立视觉检查和完整 stack verify 通过。backend/frontend 均为 `2.8.61-dev.94f4e6b`、healthy/restart=0，正式路由 200，部署 JS 回读指南内容；浏览器保持平台登录边界，授权态最终视觉待管理员复核。远端、UAT、生产未修改。
+- `TASK-316 / FEAT-193` 已完成用户反馈修复：代码示例显式重置全局 `pre` 浅色背景，最终计算样式为深棕底/暖白字/0px 内框；指南路由进入时锁定浏览器外层滚动，只保留运营主区域一个滚动容器，并让直接章节锚点定位到主容器。新增公开 `/agent-docs/internal-applications/integration-guide.md`，391 行完整覆盖 12 章接入契约，返回 `200 text/markdown`、`nosniff`，不依赖登录或 JavaScript且无真实环境地址/Secret。提交 `1f1d816c`、`4c368db3`、`0cd88875` 已进入本地 main；前端 53 文件/293 项、production build、Nginx 校验、登录态桌面视觉和完整 stack verify 通过。frontend 为 `2.8.61-dev.0cd8887`、healthy/restart=0；远端、UAT、生产未修改。
 
 - `TASK-315 / FEAT-192` 已随 AgentCiCi UAT `2.8.61-beta.28 / 242074e72a9e` 完成技术发布：远程 `main` 包含冻结提交，annotated tag、两项不可变镜像和运行 commit 一致；完整备份 `/data/apps/agentcici/backups/20260818T020041Z-before-2.8.61-beta.28` 校验通过，回滚目标 beta.27。仅重建 backend/frontend，四个状态服务 ID 不变；V121、六容器 healthy/restart=0、health/version、Nginx、页面路由、匿名 JSON 401、两轮公开 smoke 与稳定日志通过。候选没有启用新的跨项目契约；真实产品经理对话和 Semattice 写入未代用户执行，业务验收待已登录用户完成。生产未修改。
 

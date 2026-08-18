@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-18T02:41:39Z
+updated_at: 2026-08-18T03:15:43Z
 updated_by: codex
 board_status: active
 ---
@@ -37,8 +37,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-316.md`
 - blocked_by: `none`
 - scope_files: `应用中心接入指南路由、逐步手册、Provider 契约示例、上下文入口、测试与本地环境验证`
-- completion_evidence: `94f4e6bc；定向 3 文件/26 项、全量 53 文件/293 项、production build；2.8.61-dev.94f4e6b；backend/frontend healthy/restart=0；完整 stack verify；正式路由 200`
-- next_action: `由已登录平台管理员复核应用列表、应用详情和连接空态入口，以及平台侧栏包裹下的指南最终视觉；UAT/生产保持不变。`
+- completion_evidence: `94f4e6bc、1f1d816c、4c368db3、0cd88875；全量 53 文件/293 项、production build、Nginx 校验；2.8.61-dev.0cd8887；frontend healthy/restart=0；完整 stack verify；HTML 与 Markdown 路由 200；登录态单滚动、直接锚点和代码对比度复核通过`
+- next_action: `等待用户确认本地阅读体验；真实 Provider 接入和租户开通仍按 TASK-313 验收，UAT/生产保持不变。`
 
 ### TASK-315 - 产品经理结构化语义判定与标准输出
 

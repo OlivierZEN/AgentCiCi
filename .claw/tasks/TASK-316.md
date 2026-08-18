@@ -7,7 +7,7 @@ priority: high
 owner_role: frontend-agent
 claimed_by: codex
 spec_path: docs/specs/FEAT-193-internal-application-integration-guide.md
-updated_at: 2026-08-18T02:41:39Z
+updated_at: 2026-08-18T03:15:43Z
 updated_by: codex
 ---
 
@@ -31,16 +31,19 @@ updated_by: codex
 - [x] 实现指南页面、路由和上下文入口。
 - [x] 完成定向测试、全量测试、生产构建和独立桌面视觉检查。
 - [x] 从本地 main 更新 `cici.localhost` 并完成正式路由运行验收。
+- [x] 修复代码块全局 `pre` 样式覆盖和指南双滚动问题。
+- [x] 发布智能体友好的公开 Markdown 地址并验证 MIME、安全响应头和内容门禁。
+- [x] 使用已登录本地平台会话复核直接锚点、单滚动容器、代码对比度和 Markdown 入口。
 - [x] 更新项目状态和测试证据。
 
 ## 完成证据
 
-- 实现提交：`94f4e6bcbbd0`。
-- 前端定向 3 文件/26 项、全量 53 文件/293 项和 production build 通过。
-- 本地独立桌面视觉检查通过目录、锚点、复制反馈和 console 门禁。
-- `cc-local-stack ./stack up` 和完整 verify 通过；backend/frontend 均为 `2.8.61-dev.94f4e6b`、healthy、restart=0。
-- 正式指南路由 200，部署资源回读指南标题、入口和发布前检查；浏览器保持运营平台登录边界。
-- 远端、UAT、生产未修改；授权态最终视觉待平台管理员会话复核。
+- 原始实现提交：`94f4e6bcbbd0`；初始入口与内容定向 3 文件/26 项通过。
+- 修复提交：`1f1d816c`（可读性与 Markdown）、`4c368db3`（Markdown MIME）、`0cd88875`（单滚动容器与直接锚点）。
+- 智能体地址：`/agent-docs/internal-applications/integration-guide.md` 返回 `200 text/markdown`、`nosniff`，共 391 行，不依赖 JavaScript 或登录态。
+- 登录态视觉：浏览器外层滚动锁定为 0，运营主区域是唯一滚动容器；`#connection` 直接定位到目标章节；代码区为深棕底、暖白字、0px 内框。
+- 最终前端 53 文件/293 项、production build、Nginx 配置校验和完整 stack verify 通过；frontend 为 `2.8.61-dev.0cd8887`、healthy/restart=0。
+- 远端、UAT、生产未修改；真实 Provider 接入和租户开通不属于文档修复验收。
 
 ## 交付边界
 

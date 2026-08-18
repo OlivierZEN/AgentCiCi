@@ -7,7 +7,7 @@ owner_role: frontend-agent
 task_ids: TASK-316
 related_decisions: DEC-055
 related_issues: none
-updated_at: 2026-08-18T02:41:39Z
+updated_at: 2026-08-18T03:15:43Z
 updated_by: codex
 ---
 
@@ -35,6 +35,7 @@ updated_by: codex
 - 指南覆盖架构边界、前置条件、应用登记、Provider 契约、鉴权与 Secret 引用、运行连接、版本初始化步骤、应用依赖、验证发布、租户开通、生命周期运维、错误排查和发布前检查。
 - 示例使用保留测试域名，不包含任何本地、UAT、生产或客户私有化环境地址。
 - 代码示例支持复制，并提供可访问的复制结果反馈。
+- 提供无需登录和 JavaScript 的稳定 Markdown 地址 `/agent-docs/internal-applications/integration-guide.md`，使用同一 12 章结构、契约版本和脱敏示例，供智能体与自动化工具直接读取。
 
 ### Out of Scope
 
@@ -78,6 +79,8 @@ updated_by: codex
 
 - 页面标题和章节使用语义化 heading；目录使用锚点并允许键盘操作。
 - 代码块提供明确的复制按钮，成功后使用 `aria-live` 反馈。
+- 代码块显式重置全局 `pre` 的背景、边框和文字色，保证深色代码面与暖白文本形成稳定对比度。
+- 指南进入时锁定浏览器外层文档滚动，只让运营主区域承担长文滚动；离开路由自动解除。直接章节锚点由主滚动容器定位，不产生第二条页面滚动条。
 - 返回动作保留来源应用上下文；无来源时返回应用中心。
 - 所有图标按钮均有可见文字或无障碍名称。
 
@@ -91,6 +94,8 @@ updated_by: codex
 6. 页面保持鎏金账房产品视觉、桌面端紧凑密度和清晰阅读层级。
 7. 定向测试、前端全量测试和 production build 通过。
 8. 从本地 `main` 构建前端并更新 `https://cici.localhost/`，回读路由、容器健康、重启次数和版本指纹。
+9. Markdown 地址返回 `200 text/markdown` 与 `X-Content-Type-Options: nosniff`，无需身份会话即可读取，且不包含真实环境域名或 Secret。
+10. 登录后的桌面页只有运营主区域一个可滚动容器；直接访问章节锚点能定位目标，代码块无浅底浅字问题。
 
 ## 回滚
 

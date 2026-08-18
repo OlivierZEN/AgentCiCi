@@ -1,26 +1,25 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-18T02:41:39Z
+updated_at: 2026-08-18T03:15:43Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-18T02:41:39Z
-last_run_status: passed_task_316_local_runtime_with_authorized_visual_pending
+last_run_at: 2026-08-18T03:15:43Z
+last_run_status: passed_task_316_local_runtime_and_authenticated_visual
 ---
 
 # Test Report
 
-## 2026-08-18 TASK-316 应用中心在线接入指南
+## 2026-08-18 TASK-316 应用中心在线接入指南与阅读缺陷修复
 
-- 状态：`passed_task_316_local_runtime_with_authorized_visual_pending`。
+- 状态：`passed_task_316_local_runtime_and_authenticated_visual`。
 - 内容契约：12 个章节完整覆盖接入全景、准备、登记、Provider 生命周期请求与响应、HMAC canonical string、Secret 引用、连接、版本、依赖、发布、租户开通、运行期运维和排错检查；示例只使用保留测试域名，不包含真实环境地址或凭据。
-- 定向验证：`PlatformApplicationIntegrationGuidePage.test.ts`、`PlatformInternalApplicationsPage.test.ts`、`PlatformShell.test.ts` 共 26 项通过，覆盖章节顺序、真实生命周期字段、HMAC 顺序、应用中心导航和目录状态回归。
+- 定向验证：指南测试 5 项通过，覆盖章节顺序、真实生命周期字段、HMAC 顺序、机器 Markdown 的 12 章一致性、关键安全边界和环境域名负向门禁；初始入口回归 3 文件/26 项亦保持通过。
 - 全量前端：53 个测试文件、293 项全部通过；TypeScript 与 Vite production build 通过，仅保留既有 chunk-size warning；`git diff --check` 通过。
-- 桌面视觉与交互：本地独立视觉入口回读完整语义结构，首屏层级、粘性目录和长文密度正常；“运行连接”锚点定位成功，代码复制按钮反馈“已复制”，console 0 error / 0 warning。临时视觉入口已删除，不进入交付代码。
-- 鉴权边界：正式 `/platform/internal-applications/integration-guide` 正确进入运营平台登录边界；未读取浏览器存储、猜测凭据或绕过鉴权。授权态应用中心入口和平台侧栏包裹下的最终视觉仍待可用管理员会话复核。
-- 本地主线与制品：实现提交 `94f4e6bcbbd0` 已进入本地 main；backend/frontend 镜像版本均为 `2.8.61-dev.94f4e6b`，revision 为 `94f4e6bcbbd0`。
-- 本地运行：`cc-local-stack ./stack up` 和完整 verify 通过；backend/frontend 均 healthy、restart=0，正式指南路由返回 200，部署资源 `index-CtF052P4-2.8.61-dev.94f4e6b.js` 回读“内部应用接入指南”“接入指南”和“发布前 8 项检查”。backend `/system/version` 回读同一版本与 commit。
-- 正式浏览器边界：访问正式指南路由后正确进入运营平台登录页，console 0 error / 0 warning；未绕过登录。授权态应用中心入口和平台侧栏包裹下的最终视觉仍待可用管理员会话复核。
+- 桌面视觉与交互：使用用户已有的本地登录会话只读复核真实平台壳层。直接加载 `#connection` 后主区域 `scrollTop=3672.5`、目标顶部约 30px；浏览器文档 `scrollTop=0` 且 html/body 均为 `overflow:hidden`，页面只保留运营主区域一个滚动容器。代码块 `pre` 计算样式为 `rgb(36,31,26)` 背景、`rgb(245,236,220)` 文字、`0px` 边框，浅底浅字缺陷消失。
+- 智能体地址：`/agent-docs/internal-applications/integration-guide.md` 为 391 行/15377 字节纯 Markdown，包含 `document_id`、契约版本、12 章目录、请求/响应/HMAC/连接/版本/依赖/排错示例；本地边缘返回 `200 text/markdown`、`X-Content-Type-Options: nosniff`、no-store，不要求登录或 JavaScript。
+- 本地主线与制品：原始实现 `94f4e6bc` 及修复 `1f1d816c`、`4c368db3`、`0cd88875` 已进入本地 main；最终 frontend 镜像为 `2.8.61-dev.0cd8887`，revision `0cd888752cbb`、healthy/restart=0。backend 未受本次前端/静态文档修复影响。
+- 本地运行：HTML 指南与 Markdown 路由均返回 200，frontend Nginx 配置校验通过；完整 `cc-local-stack ./stack verify` 通过域名门禁、共享数据库隔离、TLS、OIDC、应用健康/版本和匿名授权边界。
 - 发布边界：远端、UAT、生产未修改。
 
 ## 2026-08-18 AgentCiCi UAT `2.8.61-beta.28`
