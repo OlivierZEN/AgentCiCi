@@ -1,12 +1,18 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-18T06:38:21Z
+updated_at: 2026-08-18T09:07:09Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-18 TASK-319 UAT 发布预检阻塞
+
+- AgentCiCi 本地与远程 `main` 已同步到 `e1ecaeec42c9`；UAT 六项公开 smoke 通过。dry-run 计划候选为 `2.8.61-beta.30`，基础版本与当前单发布线 `2.8.61` 一致，`--no-latest`，未创建 tag 或 ACR 镜像。
+- 当前会话未注入可读 `CICI_SAAS_SSH_IDENTITY_FILE`。因此未连接 UAT 主机，未读取受管 Secret，未确认当前运行镜像/回滚点，未创建 PostgreSQL/KB/Qdrant/Compose/旧镜像备份，也未重建 backend/frontend。
+- 继续发布前必须由运维负责人注入受管 SSH identity；随后以届时远程 `main` 重新冻结 commit/版本，完成现场只读回读、非空备份、不可变镜像/tag、仅应用容器切换、完整启动窗口及版本/健康/鉴权/稳定日志验收。生产未修改。
 
 ## 2026-08-18 TASK-319 本地开发环境
 

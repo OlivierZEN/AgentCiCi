@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-18T06:38:21Z
+updated_at: 2026-08-18T09:07:09Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-18T06:38:21Z
-last_run_status: passed_task_319_local_technical_with_authenticated_visual_pending
+last_run_at: 2026-08-18T09:07:09Z
+last_run_status: passed_task_319_remote_main_and_uat_preflight_with_deploy_blocked
 ---
 
 # Test Report
+
+## 2026-08-18 TASK-319 远程主线同步与 UAT 发布预检
+
+- 状态：`passed_task_319_remote_main_and_uat_preflight_with_deploy_blocked`。
+- Source：本地 `main@e1ecaeec42c9` 已快进推送至 `origin/main`，推送后 ahead/behind=`0/0`；远程主线包含实现 `1ad25d39` 与验证记录。工作树干净，`git diff --check origin/main..main` 通过。
+- UAT 只读基线：AgentCiCi 首页 200、匿名 `/auth/me` 401、Keycloak discovery 200、Semattice health/version 200、DevAutopilot integrated health 200。
+- 候选计划：`release-acr.sh --dry-run --channel test --no-latest` 生成 `2.8.61-beta.30 / e1ecaeec42c9 / linux/amd64`，计划只推不可变 backend/frontend tag 并创建 annotated Git tag；dry-run 未执行构建、推镜像或 tag 写入。
+- 阻塞：当前会话没有可读 `CICI_SAAS_SSH_IDENTITY_FILE`，无法回读 UAT 主机当前运行 commit/镜像、确认回滚点、创建完整备份或执行受管 Compose 单产品切换。遵循发布停止条件，未写 UAT；生产未修改。身份可用后必须按届时远程 `main` 重新 dry-run，不能沿用本条作为实际发布证据。
 
 ## 2026-08-18 TASK-319 组织切换弹层完整显示组织名称
 

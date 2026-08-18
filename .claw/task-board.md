@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-18T06:38:21Z
+updated_at: 2026-08-18T09:07:09Z
 updated_by: codex
 board_status: active
 ---
@@ -17,15 +17,15 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-319 - 组织切换弹层完整显示组织名称
 
-- status: `review`
+- status: `blocked`
 - priority: `high`
 - owner_role: `frontend-agent`
 - claimed_by: `codex`
 - task_status_path: `.claw/tasks/TASK-319.md`
-- blocked_by: `none`
+- blocked_by: `当前会话未注入可读的 CICI_SAAS_SSH_IDENTITY_FILE`
 - scope_files: `组织切换弹层自适应宽度、组织名称完整显示、桌面视口安全换行、聚焦测试与本地环境验证`
-- completion_evidence: `1ad25d39；聚焦 12 项、全量 53 文件/294 项、production build；2.8.61-dev.1ad25d3；frontend healthy/restart=0；/app 200、Nginx 与运行 CSS 指纹通过`
-- next_action: `用户重新登录本地员工工作台后打开组织切换弹层，确认全称、弹层自适应宽度和当前/管理后台对齐；登录态截图待补。`
+- completion_evidence: `1ad25d39/e1ecaeec 已进远程 main；聚焦 12 项、全量 53 文件/294 项、build；本地 2.8.61-dev.1ad25d3 healthy；UAT 公开 smoke 通过；beta.30 仅 dry-run`
+- next_action: `注入可读 CICI_SAAS_SSH_IDENTITY_FILE 后重新冻结候选，完成备份、ACR、UAT 单产品发布和技术验收；登录态视觉验收仍待补。`
 
 ### TASK-318 - OneKeyToken 按 Key 枚举可用模型
 

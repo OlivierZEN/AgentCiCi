@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-18T06:38:21Z
+updated_at: 2026-08-18T09:07:09Z
 updated_by: codex
-phase: review
+phase: blocked
 active_task: TASK-319
-next_action: "用户重新登录本地员工工作台后，打开组织切换弹层，确认全部组织名称无省略号且弹层宽度随最长名称自适应；生产保持不变。"
+next_action: "运维负责人在当前会话注入可读的 CICI_SAAS_SSH_IDENTITY_FILE；随后重新冻结远程 main、重跑 UAT dry-run/备份/发布与技术验收。生产保持不变。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- `TASK-319` 本地 `main@e1ecaeec` 已快进推送至远程 `origin/main`，双方无分叉；UAT 六项公开只读 smoke 全部通过。发布 dry-run 生成计划候选 `2.8.61-beta.30 / e1ecaeec42c9`，但当前会话未注入可读的 `CICI_SAAS_SSH_IDENTITY_FILE`，因此无法现场确认运行版本和回滚点、创建受管备份或执行 UAT 单产品切换；未创建 beta.30 tag、未推送 ACR 镜像、未修改 UAT。待受管 SSH 身份可用后必须以届时远程 `main` 重新冻结候选，不能沿用本次 dry-run 作为发布证据。生产未修改。
 
 - `TASK-319` 已实现组织切换弹层完整显示组织名称：提交 `1ad25d39` 将固定 `192px` 宽度改为内容自适应并保留最小宽度与桌面视口上限，移除名称 `ellipsis/nowrap`，超长名称只在视口安全边界换行；主题、当前状态和“管理后台”动作保持不变。聚焦 12 项、前端全量 53 文件/294 项、production build 与 diff check 通过；本地 frontend `2.8.61-dev.1ad25d3` healthy/restart=0，正式 `/app` 200、Nginx 与运行 CSS 指纹通过。浏览器员工会话已过期并回到统一登录页，未绕过认证；登录态桌面截图和用户视觉验收待重新登录后完成。远端、UAT、生产未修改。
 
