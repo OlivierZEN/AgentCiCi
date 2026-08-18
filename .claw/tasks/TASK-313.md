@@ -6,7 +6,7 @@ status: review
 priority: critical
 owner_role: fullstack-agent
 claimed_by: codex
-updated_at: 2026-08-17T11:49:50Z
+updated_at: 2026-08-18T01:57:16Z
 updated_by: codex
 ---
 
@@ -49,6 +49,7 @@ updated_by: codex
 - 后端 4 个定向测试类通过，包含真实本机 HTTP Provider 回调；production package 通过。前端全量 52 个测试文件、289 项与 production build 通过。
 - Flyway V121 在本地共享 PostgreSQL 从 V120 成功前进，backend/frontend 均为 `2.8.61-dev.f56055e`、healthy/restart=0；完整 `cc-local-stack ./stack verify` 通过。
 - 正式页面路由 200，匿名运行连接 API 为 JSON 401，部署 JS 已回读“运行连接”“服务 Base URL”“添加依赖”“新建连接修订”；浏览器正确进入平台登录边界且 console 无 error/warning。授权态运行连接创建/测试/启用和真实目标应用开通仍待平台管理员业务验收。
+- `f56055e921d2` 与验证记录 `ded50c26` 已随本地 `main@a25cce7e` 非强制快进推送到 `origin/main`；未创建 tag，未发布 UAT/生产。
 
 ## 本轮重开范围
 

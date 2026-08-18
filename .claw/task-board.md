@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-17T11:49:50Z
+updated_at: 2026-08-18T01:57:16Z
 updated_by: codex
 board_status: active
 ---
@@ -25,6 +25,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-315.md`
 - blocked_by: `none`
 - scope_files: `研发交付对话结构化语义判定、固定草案/澄清模板、确认协议、可信回执门禁、测试与本地环境验证`
+- completion_evidence: `e083fb87、f121d20c、cc4312ed、a25cce7e；8 个定向测试类/78 项、package、真实 Provider 非写入探测、backend/frontend 2.8.61-dev.cc4312e、healthy/restart=0、完整 stack verify；实现与验证记录已进入 origin/main`
 - next_action: `已登录业务用户在 cici.localhost 验证隐含创建、否定表达和固定草案格式；通过后再决定 UAT 发布。`
 
 ### TASK-313 - 受治理的内部租户应用注册中心
@@ -37,7 +38,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-313.md`
 - blocked_by: `none`
 - scope_files: `内部应用目录/版本/依赖模型、运行连接与修订、平台治理 API、通用生命周期执行、租户应用动态聚合、运营页面、测试与本地环境验证`
-- completion_evidence: `1b0776e0、2188e576、f56055e9；V120/V121；后端 4 个定向测试类/package；前端 52 文件/289 项/build；真实本机 Provider HTTP 回调；backend/frontend 2.8.61-dev.f56055e；healthy/restart=0；正式路由 200、匿名连接 API 401、完整 stack verify`
+- completion_evidence: `1b0776e0、2188e576、f56055e9、ded50c26；V120/V121；后端 4 个定向测试类/package；前端 52 文件/289 项/build；真实本机 Provider HTTP 回调；backend/frontend 2.8.61-dev.f56055e；healthy/restart=0；正式路由 200、匿名连接 API 401、完整 stack verify；实现与验证记录已进入 origin/main`
 - next_action: `由已登录平台管理员创建并测试一个真实内部应用运行连接，发布带依赖的应用版本，再为测试租户执行 ACTIVATE 并回读 Provider 与 operation/step 审计。`
 
 ### TASK-312 - 登录中转页移除手动触发区
