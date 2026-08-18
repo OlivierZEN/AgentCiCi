@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-18T03:54:22Z
+updated_at: 2026-08-18T04:04:35Z
 updated_by: codex
 board_status: active
 ---
@@ -17,7 +17,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-318 - OneKeyToken 按 Key 枚举可用模型
 
-- status: `in_progress`
+- status: `review`
 - priority: `high`
 - owner_role: `backend-agent`
 - claimed_by: `codex`
@@ -25,7 +25,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-318.md`
 - blocked_by: `none`
 - scope_files: `OneKeyToken GET /v1/models、Bearer 鉴权、目录解析、401/403 安全错误、聚焦测试与本地环境验证`
-- next_action: `提交本地 main，从该提交重建 backend，并用已保存 Key 在受权平台页面回读真实模型目录。`
+- completion_evidence: `1a1ab512；真实无效 Key 401 unauthorized；ModelProviderServiceTest 通过；backend package；2.8.61-dev.1a1ab51；healthy/restart=0；版本/路由/匿名 401 门禁通过`
+- next_action: `平台管理员登录本地运营平台后，在 OneKeyToken 点击“全部模型”，只读确认真实模型数量与名称；不保存选择。`
 
 ### TASK-317 - 服务端 UUID 会话身份与历史完整性修复
 

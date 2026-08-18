@@ -1,12 +1,18 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-18T02:05:50Z
+updated_at: 2026-08-18T04:04:35Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-18 TASK-318 本地开发环境
+
+- AgentCiCi backend 从本地 `main@1a1ab512782b` 构建为 `2.8.61-dev.1a1ab51`，镜像 ID `sha256:8eb9abf014a2cfa520381bac6e89cc33f5eb49e924638256a09971296ee59af1`，image label、`/system/version` 与提交一致。
+- 仅 force-recreate backend；容器 healthy、restart=0，`/actuator/health=UP`，正式 `/platform/models` 路由 200，匿名 OneKeyToken 模型枚举 API 为 `401 application/json`，启动后 ERROR/FATAL/Exception 均为 0。数据库、frontend、Keycloak、Semattice 和 DevAutopilot 未重建。
+- 本次是单服务日常调整，按 local-stack 最短闭环执行目标门禁，未运行完整 `./stack verify`。当前无平台管理员登录态，真实已保存 Key 的“全部模型”只读回读待用户登录后完成；远端、UAT、生产未修改。
 
 ## 2026-08-18 TASK-313 / TASK-315 UAT `2.8.61-beta.28`
 

@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-18T03:54:22Z
+updated_at: 2026-08-18T04:04:35Z
 updated_by: codex
-phase: implementation
+phase: review
 active_task: TASK-318
-next_action: "提交 OneKeyToken GET /v1/models 枚举实现到本地 main，重建 backend 并用已保存 Key 做真实目录回读。"
+next_action: "平台管理员登录本地运营平台后，在 OneKeyToken 点击“全部模型”，只读确认真实模型数量与名称；不保存选择。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-318 / FEAT-179` 正在验证 OneKeyToken 按 Key 枚举模型：公开端点负例已返回 `401 application/json` 与 `unauthorized`，确认 `/v1/models` 路由存在；最小实现已将该厂商接入 Bearer `GET /models`，并为 401 Key 轮换、403 账号/应用/`model:invoke` scope 提供不回显 Key 的错误。聚焦单测、后端编译和 diff check 已通过；待提交本地 main、重建 backend 并用已保存 Key 完成真实正例回读。UAT、生产未修改。
+- `TASK-318 / FEAT-179` 已实现 OneKeyToken 按 Key 枚举模型：公开端点负例返回 `401 application/json / unauthorized`，确认 `/v1/models` 路由与说明一致；提交 `1a1ab512` 使用已保存 Bearer Key 拉取 `data[].id/name`，401/403 给出 Key 轮换及账号/应用/`model:invoke` scope 提示且不回显 Key，未知能力仍需人工确认。聚焦单测、backend package、diff check 通过；本地 backend `2.8.61-dev.1a1ab51` healthy/restart=0，版本、正式路由 200、匿名目录 API JSON 401、启动无 ERROR/Exception。独立空库迁移到 V122 成功，但 Spring 集成用例在执行前被既有 OACT 测试配置漂移阻断。当前没有可复用的平台管理员登录态，已保存 Key 的真实正例目录回读待用户登录后完成；UAT、生产、远端未修改。
 
 - `TASK-317 / FEAT-194` 已完成长期会话身份修复：Web 会话由服务端创建全局 UUID，外部渠道业务键进入 `source_key` 映射，所有读写/附件/删除按租户与所有者校验；V122 清空测试会话并增加 UUID、渠道/可见范围、唯一性和 `(session_id, company_id)` 复合外键。实现 `0b34fb65` 与验证文档 `ce7f8800` 已进入本地 main。后端相关测试/package、前端 53 文件/292 项/build、完整 stack verify 通过；运行代码制品 `2.8.61-dev.0cd8887` 包含实现，backend/frontend healthy/restart=0。目标租户 `org0gtwzqvxell4gly8s` 在登录态页面创建 2 个独立 UUID 会话，刷新后历史仍显示 2 条；无 `workbench:*` 或孤儿记录。UAT、生产未修改。
 

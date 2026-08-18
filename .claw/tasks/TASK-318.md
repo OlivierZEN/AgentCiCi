@@ -1,7 +1,7 @@
 ---
 task_id: TASK-318
 feature_id: FEAT-179
-status: in_progress
+status: review
 priority: high
 owner_role: backend-agent
 claimed_by: codex
@@ -20,9 +20,9 @@ claimed_by: codex
 
 - 真实无效 Key 负例返回 `401 unauthorized`，证明目标路由存在且鉴权语义符合说明。
 - 聚焦测试覆盖成功列表、Bearer Key、GET/JSON 请求、401、403 与错误不泄露 Key。
-- 从 AgentCiCi 本地 `main` 构建 backend `:local`，完成健康、版本指纹和已保存 Key 的真实模型目录回读。
+- 从 AgentCiCi 本地 `main` 构建 backend `:local`，完成健康、版本指纹；已保存 Key 的真实模型目录回读待平台管理员登录。
 - UAT、生产、远端仓库及厂商配置不修改。
 
 ## 下一步
 
-- 提交本地 `main`，更新本地 backend 后通过受权平台页面执行真实“全部模型”回读。
+- 平台管理员登录 `https://cici.localhost/platform/models`，在 OneKeyToken 点击“全部模型”，只读确认真实模型数量与名称；不必保存选择。
