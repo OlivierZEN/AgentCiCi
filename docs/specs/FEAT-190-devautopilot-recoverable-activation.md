@@ -6,7 +6,7 @@ status: implemented
 primary_project: agentcici
 task_ids: TASK-311, TASK-323
 related_integrations: INT-024
-updated_at: 2026-08-19T10:18:00Z
+updated_at: 2026-08-19T10:27:00Z
 updated_by: codex
 ---
 
@@ -52,4 +52,5 @@ updated_by: codex
 
 ## 发布进展
 
+- 2026-08-19：最终提交 `784ccd23e933` 已发布 UAT `2.8.65-beta.1` 与生产 `2.8.65`；`org5nszpgj99jaysxv6y` 登录态重试成功，`orgl624a7r54pzp3e5zv` 回归通过。两租户均为 ACTIVE、标准 PM 资源/scope/Agent 完整，知识库数据与向量计数未变化。
 - 2026-08-17：AgentCiCi `2.8.61-beta.25 / cc0e8078f5f5` 已通过 UAT 技术门禁；Semattice 提供方为 `1.0.5-beta.2 / 0be03d018ecd`，schema `22/22 ready`。真实首次开通或同键恢复仍需受权平台管理员选定 UAT 租户后执行。

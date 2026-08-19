@@ -1,14 +1,21 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-19T09:32:00Z
+updated_at: 2026-08-19T10:27:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-19T09:32:00Z
-last_run_status: passed_task_323_targeted_and_postgres
+last_run_at: 2026-08-19T10:25:00Z
+last_run_status: passed_task_323_uat_production_and_business_recovery
 ---
 
 # Test Report
+
+## 2026-08-19 TASK-323 UAT、生产与真实租户恢复
+
+- UAT `2.8.65-beta.1 / 784ccd23e933`：backend/frontend healthy、restart=0，版本回读一致；备份 `/data/apps/agentcici/backups/20260819T101657Z-before-2.8.65-beta.1` 的 SHA-256 与 PostgreSQL dump 列取校验通过，公网首页 200，DevAutopilot integrated health 为 true/true。
+- 生产 `2.8.65 / 784ccd23e933`：backend/frontend digest 为 `sha256:4c4a1c4040872081777d6b3b7c60a5a6ca6892ff650d11545c9ab9e495d97039` / `sha256:37922c74ddc518500abe68b81e40e9b8ad8a96011185aef1e6cb094e6c828ae1`；六容器 healthy/restart=0，health UP，Nginx 有效，Flyway 118 项且最新 V122，匿名 `/auth/me` 为 JSON 401，15 分钟 ERROR/FATAL/Exception 为 0。
+- 登录态业务验收：`org5nszpgj99jaysxv6y` 重试后 DevAutopilot 为运行中/ACTIVE/semattice 已就绪；`orgl624a7r54pzp3e5zv` 保持运行中/已完成。两者均已开通 3、待处理 0；数据库均为 ACTIVE/ACTIVE、资源 2、标准 PM scope 3、标准 Agent 已发布且 Web 渠道启用。
+- 数据保护：生产发布前后知识库均为 9 个知识库、35 个文档、661 个 chunk、29 个文件和 549 个 Qdrant points；四个状态服务容器 ID 未变化。
 
 ## 2026-08-19 TASK-323 DevAutopilot 机器身份默认 scope
 

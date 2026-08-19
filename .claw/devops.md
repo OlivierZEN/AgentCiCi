@@ -1,12 +1,24 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-19T08:20:00Z
+updated_at: 2026-08-19T10:27:00Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-19 生产 `2.8.65`
+
+- 冻结提交与正式 tag 为 `784ccd23e933` / `2.8.65`；backend/frontend ACR index digest 为 `sha256:4c4a1c4040872081777d6b3b7c60a5a6ca6892ff650d11545c9ab9e495d97039` / `sha256:37922c74ddc518500abe68b81e40e9b8ad8a96011185aef1e6cb094e6c828ae1`。
+- 完整回滚点 `/opt/cici/backups/20260819T102115Z-before-2.8.65` 含 PostgreSQL custom dump、KB 文件、Qdrant 原生 snapshot/存储副本、`2.8.64` 两项旧镜像、受管部署配置、容器基线和 SHA-256 清单；dump 与清单均校验通过。
+- 仅重建 backend/frontend；database、RabbitMQ、Redis、Qdrant 容器 ID 保持 `5b470883...`、`8289db58...`、`e70d0052...`、`be0f2844...`。六容器 healthy/restart=0，health UP，Nginx 有效，Flyway 最新 V122，首页 200、匿名 `/auth/me=401 application/json`，DevAutopilot integrated health 为 true/true。
+- 登录态重试 `org5nszpgj99jaysxv6y` 成功，`orgl624a7r54pzp3e5zv` 回归通过；两者最终均 ACTIVE，知识库 9/35/661、29 文件、549 points 未变化。应用回滚恢复备份 `acr.env` 并重建 `2.8.64` backend/frontend；数据恢复需单独批准。
+
+## 2026-08-19 UAT `2.8.65-beta.1`
+
+- 冻结提交与 tag 为 `784ccd23e933` / `2.8.65-beta.1`；backend/frontend ACR index digest 为 `sha256:06159519de61f3a6a665c1440aae70042b527ac77ef7eb4ad499816eb1699812` / `sha256:b4fff4a7ce4f08e1fca12f70f7fd36d369375fb7cef1d8f09e39881398bbc95e`。
+- 备份 `/data/apps/agentcici/backups/20260819T101657Z-before-2.8.65-beta.1` 清单与 PostgreSQL dump 校验通过；仅重建 backend/frontend，六容器 healthy，应用容器 restart=0，版本/commit 一致，公网首页 200，DevAutopilot integrated health 为 true/true。
 
 ## 2026-08-19 生产 `2.8.61`
 

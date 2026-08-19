@@ -1,7 +1,7 @@
 ---
 kind: task-archive
 version: 4
-updated_at: 2026-08-18T14:42:00Z
+updated_at: 2026-08-19T10:27:00Z
 updated_by: codex
 archive_status: active
 ---
@@ -11,6 +11,8 @@ archive_status: active
 Historical task cards have been removed from the hot board. Keep details in task status files and specs when they exist.
 
 ## Archived Tasks
+
+- TASK-323 — done — DevAutopilot 开通的默认 scope、中断重试、opaque 主体 UUID 契约映射及本地/资源键分离已根治；`784ccd23` 已发布 UAT `2.8.65-beta.1` 和生产 `2.8.65`，两个目标租户均为 ACTIVE 且知识库数据保持不变。
 
 - TASK-321 — done — DevAutopilot 产品经理初始化模板已按系统提示词、8 步自然语言 Spec、Semattice Skill 与后端确定性门禁分层；`4a697051` 已随 `main@e91b28d6` 更新本地 backend，18 项聚焦回归和本地技术门禁通过。
 
