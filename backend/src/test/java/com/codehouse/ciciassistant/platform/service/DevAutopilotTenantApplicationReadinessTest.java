@@ -14,6 +14,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.codehouse.ciciassistant.agent.service.AgentDefinitionService;
+import com.codehouse.ciciassistant.agent.domain.AgentDefinitionEntity;
 import com.codehouse.ciciassistant.agent.service.AgentServicePrincipalExecutionService;
 import com.codehouse.ciciassistant.auth.domain.CompanyRepository;
 import com.codehouse.ciciassistant.auth.service.ServicePrincipalService;
@@ -113,6 +114,8 @@ class DevAutopilotTenantApplicationReadinessTest {
         when(principals.create(eq("company-a"), eq("owner-member"), eq("owner-member"),
                 eq("研发产品经理"), eq("OFFICIAL_APP"), anyString(), any(), any()))
                 .thenReturn(Map.of("principalId", "service-principal-a"));
+        when(agents.get("company-a", "agent-a"))
+                .thenThrow(new com.codehouse.ciciassistant.common.error.ResourceNotFoundException("missing"));
 
         ReflectionTestUtils.invokeMethod(orderedService, "createProductManagerResources",
                 "company-a", "activation-a", "研发产品经理", "owner-member", "owner-member", "agent-a");
@@ -131,17 +134,50 @@ class DevAutopilotTenantApplicationReadinessTest {
     }
 
     @Test
+    void reusesManagedAgentLeftByAnInterruptedActivationAttempt() {
+        ServicePrincipalService principals = mock(ServicePrincipalService.class);
+        AgentServicePrincipalExecutionService execution = mock(AgentServicePrincipalExecutionService.class);
+        AgentDefinitionService agents = mock(AgentDefinitionService.class);
+        DevAutopilotProductManagerAgentPublisher publisher = mock(DevAutopilotProductManagerAgentPublisher.class);
+        DevAutopilotTenantApplicationService retryableService = new DevAutopilotTenantApplicationService(
+                jdbc, mock(CompanyRepository.class), mock(SematticeProvisioningService.class),
+                mock(SematticeDevAutopilotTemplateClient.class), mock(SematticeDevAutopilotAuthorizationClient.class),
+                principals, agents, publisher, execution, mock(PlatformAuditService.class),
+                List.of("runtime.record.read"), List.of("runtime.record.read"));
+        AgentDefinitionEntity existing = new AgentDefinitionEntity(
+                "company-a", "agent-a", "研发产品经理", "DevAutopilot 租户产品经理", "", "gpt-4.1",
+                DevAutopilotProductManagerAgentPublisher.STANDARD_SYSTEM_PROMPT, "高风险操作必须确认",
+                "standard", "copilot", "devautopilot.standard.v1", null, false, true);
+        when(agents.get("company-a", "agent-a")).thenReturn(new AgentDefinitionService.AgentDetail(
+                existing, DevAutopilotProductManagerAgentPublisher.STANDARD_SPEC, List.of(), List.of(),
+                List.of("web"), Map.of()));
+        when(principals.create(eq("company-a"), eq("owner-member"), eq("owner-member"),
+                eq("研发产品经理"), eq("OFFICIAL_APP"), anyString(), any(), any()))
+                .thenReturn(Map.of("principalId", "service-principal-a"));
+
+        ReflectionTestUtils.invokeMethod(retryableService, "createProductManagerResources",
+                "company-a", "activation-a", "研发产品经理", "owner-member", "owner-member", "agent-a");
+
+        verify(agents, org.mockito.Mockito.never()).create(anyString(), any());
+        verify(publisher).ensurePublished("company-a", "agent-a");
+        verify(execution).configure("company-a", "agent-a", "service-principal-a", true, "owner-member");
+    }
+
+    @Test
     void usesTheGovernedExecutionScopesWhenDeploymentOverridesAreAbsent() {
         ServicePrincipalService principals = mock(ServicePrincipalService.class);
         AgentServicePrincipalExecutionService execution = mock(AgentServicePrincipalExecutionService.class);
+        AgentDefinitionService agents = mock(AgentDefinitionService.class);
         DevAutopilotTenantApplicationService defaultedService = new DevAutopilotTenantApplicationService(
                 jdbc, mock(CompanyRepository.class), mock(SematticeProvisioningService.class),
                 mock(SematticeDevAutopilotTemplateClient.class), mock(SematticeDevAutopilotAuthorizationClient.class),
-                principals, mock(AgentDefinitionService.class), mock(DevAutopilotProductManagerAgentPublisher.class),
+                principals, agents, mock(DevAutopilotProductManagerAgentPublisher.class),
                 execution, mock(PlatformAuditService.class), List.of(), List.of());
         when(principals.create(eq("company-a"), eq("owner-member"), eq("owner-member"),
                 eq("研发产品经理"), eq("OFFICIAL_APP"), anyString(), any(), any()))
                 .thenReturn(Map.of("principalId", "service-principal-a"));
+        when(agents.get("company-a", "agent-a"))
+                .thenThrow(new com.codehouse.ciciassistant.common.error.ResourceNotFoundException("missing"));
 
         ReflectionTestUtils.invokeMethod(defaultedService, "createProductManagerResources",
                 "company-a", "activation-a", "研发产品经理", "owner-member", "owner-member", "agent-a");

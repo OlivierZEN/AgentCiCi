@@ -37,6 +37,11 @@ public class DevAutopilotTenantApplicationService {
     private static final String APP = "devautopilot";
     private static final String PRODUCT_MANAGER_AGENT_ID = "devautopilot-pm";
     private static final String PRODUCT_MANAGER_DEFAULT_NAME = "研发产品经理";
+    private static final String PRODUCT_MANAGER_TEMPLATE_VERSION = "devautopilot.standard.v1";
+    private static final List<String> PRODUCT_MANAGER_TOOL_IDS = List.of(
+            "semattice_project_delivery_query",
+            "semattice_project_delivery_create",
+            "semattice_project_delivery_review");
     private static final Pattern KEY = Pattern.compile("^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$");
     private final JdbcTemplate jdbc;
     private final CompanyRepository companies;
@@ -498,11 +503,7 @@ public class DevAutopilotTenantApplicationService {
 
     private Map<String, Object> createProductManagerResources(String companyId, String activationId, String displayName,
                                                                 String actorMemberId, String ownerMemberId, String agentId) {
-        agents.create(companyId, new AgentDefinitionService.CreateCommand(agentId, displayName, "DevAutopilot 租户产品经理", "", "gpt-4.1",
-                DevAutopilotProductManagerAgentPublisher.STANDARD_SYSTEM_PROMPT, "高风险操作必须确认", "standard", "copilot", "devautopilot.standard.v1", null,
-                null, false, true, DevAutopilotProductManagerAgentPublisher.STANDARD_SPEC, List.of(),
-                List.of("semattice_project_delivery_query", "semattice_project_delivery_create", "semattice_project_delivery_review"),
-                List.of("web"), Map.of()));
+        ensureProductManagerAgent(companyId, displayName, agentId);
         productManagerAgentPublisher.ensurePublished(companyId, agentId);
         Map<String, Object> principal = principals.create(companyId, actorMemberId, ownerMemberId, displayName, "OFFICIAL_APP",
                 OfficialAccessTokenService.SEMATTICE_AUDIENCE, null, pmScopes);
@@ -514,6 +515,28 @@ public class DevAutopilotTenantApplicationService {
         resource(activationId, "product_manager", "AGENT", generatedAlias("product-manager-agent"), displayName, agentId, true, 1);
         execution.configure(companyId, agentId, principalId, true, ownerMemberId);
         return principal;
+    }
+
+    /**
+     * Agent creation commits independently from the activation checkpoint.  A process interruption
+     * can therefore leave the governed Agent in place before the application resource rows exist.
+     * Reuse only the exact managed template identity; a same-id custom Agent remains a hard conflict.
+     */
+    private void ensureProductManagerAgent(String companyId, String displayName, String agentId) {
+        try {
+            AgentDefinitionService.AgentDetail existing = agents.get(companyId, agentId);
+            if (!PRODUCT_MANAGER_TEMPLATE_VERSION.equals(existing.definition().getVersionLabel())
+                    || !existing.definition().isEnabled()) {
+                throw new ConflictException("Existing Agent is not the managed DevAutopilot product-manager template: " + agentId);
+            }
+            return;
+        } catch (ResourceNotFoundException notFound) {
+            // The normal first-attempt path creates the managed Agent below.
+        }
+        agents.create(companyId, new AgentDefinitionService.CreateCommand(agentId, displayName, "DevAutopilot 租户产品经理", "", "gpt-4.1",
+                DevAutopilotProductManagerAgentPublisher.STANDARD_SYSTEM_PROMPT, "高风险操作必须确认", "standard", "copilot", PRODUCT_MANAGER_TEMPLATE_VERSION, null,
+                null, false, true, DevAutopilotProductManagerAgentPublisher.STANDARD_SPEC, List.of(),
+                PRODUCT_MANAGER_TOOL_IDS, List.of("web"), Map.of()));
     }
 
     /**
