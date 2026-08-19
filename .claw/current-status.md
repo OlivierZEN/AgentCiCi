@@ -1,7 +1,7 @@
 ---
 kind: current-status
-version: 4
-updated_at: 2026-08-19T10:27:00Z
+version: 5
+updated_at: 2026-08-19T10:34:08Z
 updated_by: codex
 phase: validation
 active_task: TASK-322
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- `INT-027` UAT SERVICE 身份链路已修复：运行配置已启用 OIDC SERVICE Token 交换，Wukong Principal 经官方管理界面补充最小 `identity.principal.sync` 后，scope 精确为该项加 `runtime.record.create/read/update`。最终 UAT `2.8.65-beta.1 / 784ccd23e933` 开关回读为 true，CLI identity/capacity/tasks 全部成功，六容器 healthy/restart=0，四个状态服务未重建，生产未修改。
 
 - `TASK-323 / FEAT-190` 已完成：最终源码 `784ccd23e933` 已发布 UAT `2.8.65-beta.1` 和生产 `2.8.65`。生产登录态重试 `org5nszpgj99jaysxv6y` 成功，`orgl624a7r54pzp3e5zv` 回归通过；两者 UI 均为运行中、已开通 3、待处理 0，数据库均为 `ACTIVE/ACTIVE`、无失败阶段/错误码、资源 2、PM scope 3。六容器 healthy/restart=0，四个状态服务 ID 未变；知识库仍为 9/35/661、29 文件、549 points。生产备份为 `/opt/cici/backups/20260819T102115Z-before-2.8.65`。
 

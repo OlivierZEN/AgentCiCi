@@ -1,14 +1,22 @@
 ---
 kind: test-report
-version: 3
-updated_at: 2026-08-19T10:27:00Z
+version: 4
+updated_at: 2026-08-19T10:34:08Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-19T10:25:00Z
-last_run_status: passed_task_323_uat_production_and_business_recovery
+last_run_at: 2026-08-19T10:34:08Z
+last_run_status: passed_int_027_uat_service_identity
 ---
 
 # Test Report
+
+## 2026-08-19 INT-027 UAT DevAutopilot SERVICE 身份修复
+
+- 状态：`passed_int_027_uat_service_identity`。
+- 运行配置：最终 UAT `2.8.65-beta.1 / 784ccd23e933` 回读 `APP_AUTH_OIDC_SERVICE_TOKEN_EXCHANGE_ENABLED=true`；六容器 healthy/restart=0，四个状态服务容器指纹未变化。
+- 权限：Wukong SERVICE 最终 scope 精确为 `identity.principal.sync,runtime.record.create,runtime.record.read,runtime.record.update`；匿名 OACT 交换返回 401，未扩大其他 Principal 权限。
+- CLI：`doctor` ready，兼容性 `1.0.4-beta.8 / cli/v2`，Wukong identity active；容量 `0/2`、可用 `2`；任务查询成功返回空队列，不再出现 Keycloak/OACT 认证错误。
+- 运行门禁：公开六项只读 smoke、Nginx 校验、backend health UP 与 30 秒稳定窗口通过；backend severe=0、frontend 5xx=0。生产未修改。
 
 ## 2026-08-19 TASK-323 UAT、生产与真实租户恢复
 
