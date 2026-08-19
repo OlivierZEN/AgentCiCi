@@ -35,6 +35,7 @@ import com.codehouse.ciciassistant.memory.service.TrustedMemoryRuntimeContextSer
 import com.codehouse.ciciassistant.model.service.ModelProviderService;
 import com.codehouse.ciciassistant.ops.service.AuditService;
 import com.codehouse.ciciassistant.security.service.SafetyGatewayService;
+import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryUpdateToolService;
 import com.codehouse.ciciassistant.skill.service.BuiltinSkillDocumentService;
 import com.codehouse.ciciassistant.skill.service.BuiltinSkillRuntimeConfigService;
 import com.codehouse.ciciassistant.skill.service.SkillPromptAssembler;
@@ -55,6 +56,28 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 class ChatOrchestratorServiceModelIdentityTest {
+
+    @Test
+    void formatsOnlyTrustedUpdateReceiptAsCompletedRename() {
+        var intent = new SematticeProjectDeliveryUpdateToolService.UpdateIntent(
+                "project", "DAS-4F5ED86B", "名称", "name", "AgentCiCi企业级智能体平台");
+
+        assertThat(ChatOrchestratorService.formatProjectDeliveryUpdateResult("""
+                {"status":"SUCCESS","source":"SEMATTICE_LIVE","record_id":"record-1",
+                 "revision":2,"correlation_id":"corr-1","readback_verified":true,"changed":true,
+                 "verified_values":{"name":"AgentCiCi企业级智能体平台"}}
+                """, intent))
+                .contains("已在 Semattice 将项目 DAS-4F5ED86B 的名称修改为“AgentCiCi企业级智能体平台”")
+                .contains("revision：2")
+                .doesNotContain("内部字段已隐藏");
+
+        assertThat(ChatOrchestratorService.formatProjectDeliveryUpdateResult("""
+                {"status":"SUCCESS","source":"SEMATTICE_LIVE","record_id":"record-1",
+                 "revision":2,"correlation_id":"corr-1","readback_verified":true,"changed":true,
+                 "verified_values":{"name":"仍是旧名称"}}
+                """, intent))
+                .startsWith("未修改研发交付记录");
+    }
 
     @Test
     void basePromptTreatsCiciAsPlatformInsteadOfEveryAgentsExternalName() {

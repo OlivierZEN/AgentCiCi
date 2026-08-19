@@ -4,6 +4,8 @@ import com.codehouse.ciciassistant.agent.service.AgentServicePrincipalExecutionS
 import com.codehouse.ciciassistant.auth.service.OfficialAccessTokenService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -36,7 +38,8 @@ public class SematticeProjectDeliveryUpdateToolService {
     private static final String UPDATE_CAPABILITY_ID = "runtime.record.update";
     private static final String QUERY_CAPABILITY_ID = "runtime.record.query";
     private static final Pattern CONFIRM_UPDATE = Pattern.compile(
-            "^\\s*(?:请)?(?:确认|确定)修改(?:项目|需求|任务)[：:]\\s*(.+?)\\s*$", Pattern.CASE_INSENSITIVE);
+            "^(?:请)?(?:确认|确定)将(项目|需求|任务)\\s+(.+?)\\s+的(.+?)修改为\\s*(.+)$",
+            Pattern.CASE_INSENSITIVE);
 
     private static final Map<String, String> ENTITY_OBJECTS = Map.of(
             "project", "dev_project",
@@ -58,6 +61,31 @@ public class SematticeProjectDeliveryUpdateToolService {
             "dev_change", Set.of("title", "status", "impact_analysis", "description"),
             "dev_delivery_event", Set.of("status", "description"));
 
+    private static final Map<String, Map<String, FieldDefinition>> CONFIRMABLE_FIELDS = Map.of(
+            "project", Map.of(
+                    "名称", new FieldDefinition("name", ValueType.TEXT),
+                    "负责人", new FieldDefinition("owner", ValueType.TEXT),
+                    "状态", new FieldDefinition("status", ValueType.TEXT),
+                    "健康度", new FieldDefinition("health", ValueType.TEXT),
+                    "进度", new FieldDefinition("progress", ValueType.DECIMAL),
+                    "发布版本", new FieldDefinition("release", ValueType.TEXT),
+                    "描述", new FieldDefinition("description", ValueType.TEXT)),
+            "requirement", Map.of(
+                    "标题", new FieldDefinition("title", ValueType.TEXT),
+                    "状态", new FieldDefinition("status", ValueType.TEXT),
+                    "优先级", new FieldDefinition("priority", ValueType.TEXT),
+                    "负责人", new FieldDefinition("owner", ValueType.TEXT),
+                    "摘要", new FieldDefinition("summary", ValueType.TEXT),
+                    "验收标准", new FieldDefinition("acceptance", ValueType.TEXT)),
+            "task", Map.of(
+                    "标题", new FieldDefinition("title", ValueType.TEXT),
+                    "状态", new FieldDefinition("status", ValueType.TEXT),
+                    "负责人", new FieldDefinition("owner", ValueType.TEXT),
+                    "预估工时", new FieldDefinition("estimate", ValueType.DECIMAL),
+                    "实际工时", new FieldDefinition("actual_hours", ValueType.DECIMAL),
+                    "顺序", new FieldDefinition("sequence", ValueType.INTEGER),
+                    "描述", new FieldDefinition("description", ValueType.TEXT)));
+
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
     private final AgentServicePrincipalExecutionService executionPrincipalService;
@@ -74,12 +102,42 @@ public class SematticeProjectDeliveryUpdateToolService {
     }
 
     public static Optional<UpdateIntent> confirmedIntent(String question) {
-        String value = question == null ? "" : question.trim();
+        String value = normalizeInstruction(question);
         Matcher matcher = CONFIRM_UPDATE.matcher(value);
-        if (matcher.matches()) {
-            return Optional.of(new UpdateIntent(matcher.group(1)));
+        if (!matcher.matches()) {
+            return Optional.empty();
         }
-        return Optional.empty();
+        String entityType = entityTypeForLabel(matcher.group(1));
+        String reference = matcher.group(2).trim();
+        String fieldLabel = matcher.group(3).trim();
+        String requestedValue = matcher.group(4).trim();
+        FieldDefinition field = CONFIRMABLE_FIELDS.getOrDefault(entityType, Map.of()).get(fieldLabel);
+        if (field == null || reference.isBlank() || requestedValue.isBlank()
+                || reference.length() > 256 || requestedValue.length() > 2000) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(new UpdateIntent(
+                    entityType, reference, fieldLabel, field.apiName(), field.convert(requestedValue)));
+        } catch (NumberFormatException ignored) {
+            return Optional.empty();
+        }
+    }
+
+    private static String normalizeInstruction(String question) {
+        String normalized = question == null ? "" : question.trim();
+        normalized = normalized.replaceAll("^[`\\\"“”‘’']+", "");
+        normalized = normalized.replaceAll("[`\\\"“”‘’。！？!?]+$", "");
+        return normalized.trim();
+    }
+
+    private static String entityTypeForLabel(String label) {
+        return switch (label) {
+            case "项目" -> "project";
+            case "需求" -> "requirement";
+            case "任务" -> "task";
+            default -> "";
+        };
     }
 
     public String dispatch(String companyId, String userId, String agentId, String argumentsJson) {
@@ -129,7 +187,7 @@ public class SematticeProjectDeliveryUpdateToolService {
             return failure("NO_ALLOWED_FIELDS", "提交的字段均不在允许修改范围内，未修改。");
         }
 
-        // Find the target record
+        // Find exactly one target by record ID, business code or display name/title.
         List<Map<String, Object>> matches = queryRecords(objectApiName, token).stream()
                 .filter(record -> matchesReference(record, args.reference()))
                 .toList();
@@ -143,11 +201,16 @@ public class SematticeProjectDeliveryUpdateToolService {
         String recordId = (String) record.get("record_id");
         long revision = extractRevision(record);
 
+        String correlationId = correlationId(args);
+        if (matchesPatch(record, patch)) {
+            return successReceipt(args, objectApiName, recordId, revision, correlationId, patch, false);
+        }
+
         // Invoke runtime.record.update with optimistic revision control
         Map<String, Object> request = new LinkedHashMap<>();
         request.put("capability_id", UPDATE_CAPABILITY_ID);
-        request.put("request_id", "cici-delivery-update-" + UUID.randomUUID());
-        request.put("idempotency_key", "cici-delivery-update-" + UUID.randomUUID());
+        request.put("request_id", correlationId);
+        request.put("idempotency_key", correlationId);
         request.put("input", Map.of(
                 "object_api_name", objectApiName,
                 "record_id", recordId,
@@ -167,13 +230,56 @@ public class SematticeProjectDeliveryUpdateToolService {
             return failure("UPDATE_FAILED", error);
         }
 
+        JsonNode updated = response.path("result");
+        long updatedRevision = updated.path("revision").asLong();
+        if (!recordId.equals(updated.path("record_id").asText())
+                || updatedRevision <= revision
+                || !matchesPatch(objectMapper.convertValue(updated.path("data"), Map.class), patch)) {
+            return failure("UPDATE_READBACK_INVALID", "Semattice 更新回执不完整，未确认修改成功。");
+        }
+
+        Map<String, Object> verified = queryRecords(objectApiName, token).stream()
+                .filter(candidate -> recordId.equals(candidate.get("record_id")))
+                .findFirst()
+                .orElse(Map.of());
+        if (extractRevision(verified) < updatedRevision || !matchesPatch(verified, patch)) {
+            return failure("UPDATE_READBACK_INVALID", "Semattice 写后查询与修改内容不一致，未确认修改成功。");
+        }
+        return successReceipt(args, objectApiName, recordId, extractRevision(verified),
+                response.path("correlationId").asText(correlationId), patch, true);
+    }
+
+    private String correlationId(UpdateArguments args) {
+        try {
+            byte[] stable = objectMapper.writeValueAsBytes(Map.of(
+                    "entity_type", args.entityType(),
+                    "reference", args.reference(),
+                    "updates", args.updates()));
+            return "cici-delivery-update-" + UUID.nameUUIDFromBytes(stable);
+        } catch (Exception exception) {
+            byte[] fallback = (args.entityType() + "\n" + args.reference() + "\n" + args.updates())
+                    .getBytes(StandardCharsets.UTF_8);
+            return "cici-delivery-update-" + UUID.nameUUIDFromBytes(fallback);
+        }
+    }
+
+    private Map<String, Object> successReceipt(UpdateArguments args, String objectApiName,
+                                                String recordId, long revision, String correlationId,
+                                                Map<String, Object> patch, boolean changed) {
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("status", "succeeded");
-        result.put("message", "记录修改成功。");
+        result.put("status", "SUCCESS");
+        result.put("source", "SEMATTICE_LIVE");
+        result.put("message", changed ? "记录修改成功。" : "记录已经是目标值，无需重复修改。");
+        result.put("entity_type", args.entityType());
+        result.put("reference", args.reference());
         result.put("record_id", recordId);
         result.put("object_api_name", objectApiName);
+        result.put("revision", revision);
+        result.put("correlation_id", correlationId);
         result.put("updated_fields", patch.keySet());
-        result.put("new_revision", response.path("result").path("revision").asLong(revision + 1));
+        result.put("verified_values", patch);
+        result.put("changed", changed);
+        result.put("readback_verified", true);
         return result;
     }
 
@@ -205,12 +311,26 @@ public class SematticeProjectDeliveryUpdateToolService {
 
     private boolean matchesReference(Map<String, Object> record, String reference) {
         String ref = reference.trim().toLowerCase(Locale.ROOT);
-        for (Object value : record.values()) {
-            if (value != null && value.toString().toLowerCase(Locale.ROOT).contains(ref)) {
-                return true;
+        return Set.of("record_id", "code", "name", "title").stream()
+                .map(record::get)
+                .filter(java.util.Objects::nonNull)
+                .map(Object::toString)
+                .map(value -> value.trim().toLowerCase(Locale.ROOT))
+                .anyMatch(ref::equals);
+    }
+
+    private boolean matchesPatch(Map<String, Object> record, Map<String, Object> patch) {
+        for (Map.Entry<String, Object> entry : patch.entrySet()) {
+            JsonNode expected = objectMapper.valueToTree(entry.getValue());
+            JsonNode actual = objectMapper.valueToTree(record.get(entry.getKey()));
+            boolean equal = expected.isNumber() && actual.isNumber()
+                    ? expected.decimalValue().compareTo(actual.decimalValue()) == 0
+                    : expected.equals(actual);
+            if (!equal) {
+                return false;
             }
         }
-        return false;
+        return true;
     }
 
     private long extractRevision(Map<String, Object> record) {
@@ -261,6 +381,29 @@ public class SematticeProjectDeliveryUpdateToolService {
     public record UpdateArguments(String entityType, String reference, Map<String, Object> updates) {
     }
 
-    public record UpdateIntent(String combined) {
+    public record UpdateIntent(String entityType, String reference, String fieldLabel,
+                               String field, Object value) {
+        public String toArguments(ObjectMapper objectMapper) {
+            try {
+                return objectMapper.writeValueAsString(Map.of(
+                        "entity_type", entityType,
+                        "reference", reference,
+                        "updates", Map.of(field, value)));
+            } catch (Exception exception) {
+                throw new IllegalArgumentException("无法生成修改工具参数", exception);
+            }
+        }
     }
+
+    private record FieldDefinition(String apiName, ValueType valueType) {
+        Object convert(String value) {
+            return switch (valueType) {
+                case TEXT -> value;
+                case DECIMAL -> new BigDecimal(value);
+                case INTEGER -> Long.valueOf(value);
+            };
+        }
+    }
+
+    private enum ValueType { TEXT, DECIMAL, INTEGER }
 }

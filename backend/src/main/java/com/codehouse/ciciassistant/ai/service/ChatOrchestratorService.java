@@ -35,6 +35,7 @@ import com.codehouse.ciciassistant.ops.service.AuditService;
 import com.codehouse.ciciassistant.kb.service.KbAccessControlService;
 import com.codehouse.ciciassistant.security.service.SafetyGatewayService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryDeleteToolService;
+import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryUpdateToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryTransferToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryWriteToolService;
@@ -557,6 +558,11 @@ public class ChatOrchestratorService {
                 messages, companyId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
         if (forcedProjectDeliveryWriteAnswer.isEmpty()) {
             forcedProjectDeliveryWriteAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty()
+                    : appendForcedSematticeProjectDeliveryUpdateAnswer(
+                    messages, companyId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
+        }
+        if (forcedProjectDeliveryWriteAnswer.isEmpty()) {
+            forcedProjectDeliveryWriteAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty()
                 : appendForcedSematticeProjectDeliveryDeleteAnswer(
                 messages, companyId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
         }
@@ -937,6 +943,11 @@ public class ChatOrchestratorService {
                 // transfer service itself enforces role, scope and Semattice read-back.
                 Optional<String> forcedProjectDeliveryWriteAnswer = appendForcedSematticeProjectDeliveryTransferAnswer(
                         messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
+                if (forcedProjectDeliveryWriteAnswer.isEmpty()) {
+                    forcedProjectDeliveryWriteAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty()
+                            : appendForcedSematticeProjectDeliveryUpdateAnswer(
+                            messages, companyId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
+                }
                 if (forcedProjectDeliveryWriteAnswer.isEmpty()) {
                     forcedProjectDeliveryWriteAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty()
                         : appendForcedSematticeProjectDeliveryDeleteAnswer(
@@ -1729,6 +1740,41 @@ public class ChatOrchestratorService {
         return Optional.of(formatProjectDeliveryWriteResult(toolResult));
     }
 
+    /** A confirmed update is server-routed and never delegated to free-form model planning. */
+    private Optional<String> appendForcedSematticeProjectDeliveryUpdateAnswer(
+            List<Map<String, Object>> messages,
+            String companyId,
+            String userId,
+            String sessionId,
+            ResolvedSkillContext skillContext,
+            SseEmitter emitter,
+            List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces,
+            String runId,
+            String question) {
+        if (skillContext == null
+                || !skillContext.allowedToolNames().contains(SematticeProjectDeliveryUpdateToolService.TOOL_NAME)) {
+            return Optional.empty();
+        }
+        Optional<SematticeProjectDeliveryUpdateToolService.UpdateIntent> confirmed =
+                SematticeProjectDeliveryUpdateToolService.confirmedIntent(question);
+        if (confirmed.isEmpty()) {
+            return Optional.empty();
+        }
+        String toolResult = executeAndAppendSyntheticToolCall(
+                messages,
+                companyId,
+                userId,
+                sessionId,
+                skillContext,
+                emitter,
+                toolCallTraces,
+                runId,
+                SematticeProjectDeliveryUpdateToolService.TOOL_NAME,
+                confirmed.get().toArguments(TOOL_RESULT_OBJECT_MAPPER),
+                "auto_semattice_delivery_update_");
+        return Optional.of(formatProjectDeliveryUpdateResult(toolResult, confirmed.get()));
+    }
+
     /** A confirmed delete is server-routed and never delegated to free-form model planning. */
     private Optional<String> appendForcedSematticeProjectDeliveryDeleteAnswer(
             List<Map<String, Object>> messages,
@@ -1839,6 +1885,7 @@ public class ChatOrchestratorService {
         return skillContext != null
                 && (skillContext.allowedToolNames().contains(SematticeProjectDeliveryWriteToolService.TOOL_NAME)
                 || skillContext.allowedToolNames().contains(SematticeProjectDeliveryToolService.TOOL_NAME)
+                || skillContext.allowedToolNames().contains(SematticeProjectDeliveryUpdateToolService.TOOL_NAME)
                 || skillContext.allowedToolNames().contains(SematticeProjectDeliveryDeleteToolService.TOOL_NAME)
                 || skillContext.allowedToolNames().contains(SematticeProjectDeliveryTransferToolService.TOOL_NAME)
                 || skillContext.skillCodes().contains("semattice-project-delivery-management"));
@@ -1981,6 +2028,48 @@ public class ChatOrchestratorService {
         } catch (Exception exception) {
             return "未删除研发交付记录：Semattice 回执解析失败，不能确认删除成功。请稍后重试。";
         }
+    }
+
+    static String formatProjectDeliveryUpdateResult(
+            String toolResult, SematticeProjectDeliveryUpdateToolService.UpdateIntent intent) {
+        try {
+            JsonNode result = TOOL_RESULT_OBJECT_MAPPER.readTree(toolResult);
+            if (!"SUCCESS".equals(result.path("status").asText())
+                    || !"SEMATTICE_LIVE".equals(result.path("source").asText())
+                    || result.path("record_id").asText().isBlank()
+                    || result.path("revision").asLong() < 1
+                    || result.path("correlation_id").asText().isBlank()
+                    || !result.path("readback_verified").asBoolean(false)
+                    || !sameJsonValue(result.path("verified_values").path(intent.field()),
+                            TOOL_RESULT_OBJECT_MAPPER.valueToTree(intent.value()))) {
+                return "未修改研发交付记录："
+                        + result.path("error").path("message").asText("Semattice 未返回与目标值一致的写后回读。")
+                        + " 请核对记录编号、字段值和修改权限后重试。";
+            }
+            String entityLabel = switch (intent.entityType()) {
+                case "project" -> "项目";
+                case "requirement" -> "需求";
+                case "task" -> "任务";
+                default -> "研发交付记录";
+            };
+            String outcome = result.path("changed").asBoolean(false)
+                    ? "已在 Semattice 将" + entityLabel + " " + intent.reference() + " 的" + intent.fieldLabel()
+                            + "修改为“" + intent.value() + "”"
+                    : "Semattice 回读确认" + entityLabel + " " + intent.reference() + " 的" + intent.fieldLabel()
+                            + "已是“" + intent.value() + "”";
+            return outcome + "。记录 ID：" + result.path("record_id").asText()
+                    + "；revision：" + result.path("revision").asLong()
+                    + "；关联号：" + result.path("correlation_id").asText() + "。";
+        } catch (Exception exception) {
+            return "未修改研发交付记录：Semattice 回执解析失败，不能确认修改成功。请稍后重试。";
+        }
+    }
+
+    private static boolean sameJsonValue(JsonNode actual, JsonNode expected) {
+        if (actual.isNumber() && expected.isNumber()) {
+            return actual.decimalValue().compareTo(expected.decimalValue()) == 0;
+        }
+        return actual.equals(expected);
     }
 
     private static String formatProjectDeliveryWriteResult(String toolResult) {

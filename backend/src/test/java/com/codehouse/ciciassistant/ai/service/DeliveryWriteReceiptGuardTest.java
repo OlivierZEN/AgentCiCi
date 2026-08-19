@@ -77,6 +77,22 @@ class DeliveryWriteReceiptGuardTest {
     }
 
     @Test
+    void preservesConfirmedUpdateOnlyWithVerifiedLiveValueReceipt() {
+        AgentRunTraceService.ToolCallTraceInput receipt = trace(
+                "semattice_project_delivery_update",
+                "{\"status\":\"SUCCESS\",\"source\":\"SEMATTICE_LIVE\","
+                        + "\"object_api_name\":\"dev_project\",\"record_id\":\"project-1\","
+                        + "\"revision\":2,\"correlation_id\":\"corr-1\",\"readback_verified\":true,"
+                        + "\"verified_values\":{\"name\":\"AgentCiCi企业级智能体平台\"}}",
+                true);
+
+        assertThat(DeliveryWriteReceiptGuard.enforce(
+                "确认将项目 DAS-4F5ED86B 的名称修改为 AgentCiCi企业级智能体平台",
+                "已在 Semattice 修改项目 DAS-4F5ED86B。", List.of(receipt)))
+                .contains("DAS-4F5ED86B");
+    }
+
+    @Test
     void preservesTransferClaimOnlyWithEveryTransferredTaskReadBack() {
         AgentRunTraceService.ToolCallTraceInput receipt = trace(
                 "semattice_project_delivery_transfer",

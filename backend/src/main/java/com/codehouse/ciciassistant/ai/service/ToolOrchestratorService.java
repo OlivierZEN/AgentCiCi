@@ -10,6 +10,7 @@ import com.codehouse.ciciassistant.platform.service.PlatformGovernanceService;
 import com.codehouse.ciciassistant.security.service.SafetyGatewayService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryDeleteToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryToolService;
+import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryUpdateToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryReviewToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryWriteToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryTransferToolService;
@@ -59,6 +60,7 @@ public class ToolOrchestratorService {
     private final SematticeProjectDeliveryWriteToolService sematticeProjectDeliveryWriteToolService;
     private final SematticeProjectDeliveryReviewToolService sematticeProjectDeliveryReviewToolService;
     private SematticeProjectDeliveryDeleteToolService sematticeProjectDeliveryDeleteToolService;
+    private SematticeProjectDeliveryUpdateToolService sematticeProjectDeliveryUpdateToolService;
     private SematticeProjectDeliveryTransferToolService sematticeProjectDeliveryTransferToolService;
     private final SafetyGatewayService safetyGatewayService;
     private final ObjectMapper objectMapper;
@@ -111,6 +113,12 @@ public class ToolOrchestratorService {
     void setSematticeProjectDeliveryDeleteToolService(
             SematticeProjectDeliveryDeleteToolService sematticeProjectDeliveryDeleteToolService) {
         this.sematticeProjectDeliveryDeleteToolService = sematticeProjectDeliveryDeleteToolService;
+    }
+
+    @Autowired(required = false)
+    void setSematticeProjectDeliveryUpdateToolService(
+            SematticeProjectDeliveryUpdateToolService sematticeProjectDeliveryUpdateToolService) {
+        this.sematticeProjectDeliveryUpdateToolService = sematticeProjectDeliveryUpdateToolService;
     }
 
     @Autowired(required = false)
@@ -344,6 +352,12 @@ public class ToolOrchestratorService {
             return sematticeProjectDeliveryDeleteToolService == null
                     ? "{\"status\":\"failed\",\"error\":{\"code\":\"DELETE_TOOL_UNAVAILABLE\"}}"
                     : sematticeProjectDeliveryDeleteToolService.dispatch(
+                            companyId, userId, currentAgentId, safeArgumentsJson);
+        }
+        if (SematticeProjectDeliveryUpdateToolService.TOOL_NAME.equals(canonicalToolName)) {
+            return sematticeProjectDeliveryUpdateToolService == null
+                    ? "{\"status\":\"failed\",\"error\":{\"code\":\"UPDATE_TOOL_UNAVAILABLE\"}}"
+                    : sematticeProjectDeliveryUpdateToolService.dispatch(
                             companyId, userId, currentAgentId, safeArgumentsJson);
         }
         if (SematticeProjectDeliveryTransferToolService.TOOL_NAME.equals(canonicalToolName)) {

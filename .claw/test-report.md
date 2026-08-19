@@ -1,14 +1,25 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-19T13:24:15Z
+updated_at: 2026-08-19T13:36:32Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-19T13:24:15Z
-last_run_status: passed_task_324_local_technical_pending_human_dialogue
+last_run_at: 2026-08-19T13:36:32Z
+last_run_status: passed_task_325_scoped_code_pending_local_runtime
 ---
 
 # Test Report
+
+## 2026-08-19 TASK-325 项目改名确定性执行与可信回执
+
+- 状态：`passed_task_325_scoped_code_pending_local_runtime`。
+- 根因回归：覆盖截图精确确认语句与旧协议不一致、update dispatcher 缺失、旧回执不能满足可信门禁、写后数据仍是旧值四个缺口。
+- 安全与执行：覆盖普通自然语言/结构字段/非法数值拒绝，update Tool 不进入自由模型定义，只有服务端确定性确认可调度；写入使用当前 revision 和稳定幂等键，响应与写后查询都核对 record ID、revision 和目标值。
+- 结果语义：成功回执按统一字段渲染，不再显示“内部字段已隐藏”；写后查询漂移失败关闭，重复确认返回带真实回读的幂等 NOOP。
+- 后端定向：`AliyunBailianClientTest`、`DevAutopilotDialogueDecisionServiceTest`、`ToolOrchestratorServiceTest`、`ChatOrchestratorServiceModelIdentityTest`、`DeliveryWriteReceiptGuardTest`、创建/修改/删除/转派 Tool 与受理校准共 10 个测试类、97 项通过，0 failure/error/skipped。
+- 构建与静态：`mvn -q -DskipTests package`、`git diff --check` 通过。
+- 状态校验：`validate-state.py .claw` 仍被已有 goals 时间格式、历史规格 front matter/状态、旧完成任务未归档等存量债务阻断；输出没有 TASK-325、FEAT-192 或本轮时间格式错误，本任务未扩大范围修复历史治理债务。
+- 边界：尚未提交/合并本地 `main` 或更新 `cici.localhost`；没有执行截图中的项目改名，没有写入 Semattice；UAT、生产、DevAutopilot 与 Semattice 未修改。
 
 ## 2026-08-19 TASK-324 产品经理上下文澄清回归
 

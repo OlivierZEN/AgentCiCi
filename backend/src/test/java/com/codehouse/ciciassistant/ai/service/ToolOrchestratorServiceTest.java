@@ -15,6 +15,7 @@ import com.codehouse.ciciassistant.platform.service.PlatformGovernanceService;
 import com.codehouse.ciciassistant.security.service.SafetyGatewayService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryDeleteToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryToolService;
+import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryUpdateToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryReviewToolService;
 import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryWriteToolService;
 import com.codehouse.ciciassistant.skill.service.SkillApiToolService;
@@ -264,6 +265,42 @@ class ToolOrchestratorServiceTest {
         assertThat(result).contains("SEMATTICE_LIVE");
         verify(delete).dispatch("org-1", "user-1", "dev-autopilot-pm",
                 "{\"entity_type\":\"task\",\"reference\":\"task-1\"}");
+    }
+
+    @Test
+    void dispatchesConfirmedDeliveryUpdateButKeepsItOutOfFreeFormModelTools() {
+        McpServerService mcp = mock(McpServerService.class);
+        PlatformGovernanceService governance = mock(PlatformGovernanceService.class);
+        SkillApiToolService skillApi = mock(SkillApiToolService.class);
+        SematticeProjectDeliveryUpdateToolService update = mock(SematticeProjectDeliveryUpdateToolService.class);
+        when(mcp.getAllToolsForOrg("org-1")).thenReturn(List.of());
+        when(skillApi.getRuntimeToolDefinitions(List.of())).thenReturn(List.of());
+        when(governance.isRuntimeToolEnabled("org-1", SematticeProjectDeliveryUpdateToolService.TOOL_NAME))
+                .thenReturn(true);
+        when(update.dispatch("org-1", "user-1", "dev-autopilot-pm",
+                "{\"entity_type\":\"project\",\"reference\":\"DAS-4F5ED86B\",\"updates\":{\"name\":\"AgentCiCi企业级智能体平台\"}}"))
+                .thenReturn("{\"status\":\"SUCCESS\",\"source\":\"SEMATTICE_LIVE\"}");
+
+        ToolOrchestratorService orchestrator = new ToolOrchestratorService(
+                mcp, mock(CloudccOpenApiService.class), mock(CrmProductSalesAnalysisToolService.class),
+                mock(EmailToolService.class), mock(UserMemoryService.class), mock(TavilyToolService.class),
+                governance, skillApi, mock(SematticeProjectDeliveryToolService.class),
+                mock(SematticeProjectDeliveryWriteToolService.class),
+                mock(SematticeProjectDeliveryReviewToolService.class), allowSafetyGateway(),
+                new ObjectMapper().findAndRegisterModules());
+        orchestrator.setSematticeProjectDeliveryUpdateToolService(update);
+
+        assertThat(orchestrator.getToolDefinitions(
+                "org-1", List.of(SematticeProjectDeliveryUpdateToolService.TOOL_NAME), List.of()))
+                .extracting(item -> String.valueOf(((Map<?, ?>) item.get("function")).get("name")))
+                .doesNotContain(SematticeProjectDeliveryUpdateToolService.TOOL_NAME);
+        String arguments = "{\"entity_type\":\"project\",\"reference\":\"DAS-4F5ED86B\",\"updates\":{\"name\":\"AgentCiCi企业级智能体平台\"}}";
+        assertThat(orchestrator.executeTool(
+                "org-1", "user-1", SematticeProjectDeliveryUpdateToolService.TOOL_NAME,
+                arguments, List.of(SematticeProjectDeliveryUpdateToolService.TOOL_NAME),
+                List.of(), "dev-autopilot-pm"))
+                .contains("SEMATTICE_LIVE");
+        verify(update).dispatch("org-1", "user-1", "dev-autopilot-pm", arguments);
     }
 
     private SafetyGatewayService allowSafetyGateway() {
