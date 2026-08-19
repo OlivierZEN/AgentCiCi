@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-19T10:27:00Z
+updated_at: 2026-08-19T13:12:22Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-19T10:25:00Z
-last_run_status: passed_task_323_uat_production_and_business_recovery
+last_run_at: 2026-08-19T13:12:22Z
+last_run_status: passed_task_324_scoped_code_pending_local_runtime
 ---
 
 # Test Report
+
+## 2026-08-19 TASK-324 产品经理上下文澄清回归
+
+- 状态：`passed_task_324_scoped_code_pending_local_runtime`。
+- 根因回归：截图首轮文案精确对应结构化需求草案缺少 `title/pm_assessment` 时的固定回退；新回归覆盖结构化模型已给出聚焦问题、低置信但上下文明确、以及字段仍不完整三个分支，均保留原需求并只询问影响验收的产品选择。
+- 后端定向：`AliyunBailianClientTest`、`DevAutopilotDialogueDecisionServiceTest`、`DeliveryWriteReceiptGuardTest`、`ChatOrchestratorServiceModelIdentityTest`、创建/删除/转派 Tool 和历史受理校准共 8 个测试类、82 项通过，0 failure/error/skipped。
+- 构建与静态：`mvn -q -DskipTests package`、`git diff --check` 通过。
+- 状态校验：`validate-state.py .claw` 仍被已有 goals 时间格式、历史规格 front matter/状态、旧完成任务未归档等存量债务阻断；输出没有 TASK-324、FEAT-192 或本轮时间格式错误，本任务未扩大范围修复历史治理债务。
+- 边界：尚未从本地 `main` 构建/更新 `cici.localhost` backend，也未发送真实产品经理消息或执行任何 Semattice 写入；UAT、生产、DevAutopilot 和 Semattice 未修改。
 
 ## 2026-08-19 TASK-323 UAT、生产与真实租户恢复
 

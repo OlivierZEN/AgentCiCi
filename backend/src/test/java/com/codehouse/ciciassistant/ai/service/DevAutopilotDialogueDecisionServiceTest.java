@@ -122,6 +122,51 @@ class DevAutopilotDialogueDecisionServiceTest {
     }
 
     @Test
+    void focusedModelClarificationKeepsKnownUiContextEvenAtLowConfidence() {
+        String clarification = "我理解你希望把 DevAutopilot 右上角的回收站按钮改为图标。"
+                + "请确认图标来源或样式，以及改为纯图标还是保留文字；"
+                + "如果没有偏好，我会按现有设计系统的通用回收站图标和默认交互整理。";
+        DialogueDecision decision = new DialogueDecision(
+                "CREATE_DRAFT", "REQUIREMENT", 0.62, "需要确认可见验收选择", "", "AgentCiCi", "", "", "", "",
+                "P2", "medium", "", List.of(), "", "", List.of(), List.of(),
+                "提个需求：DevAutopilot 右上角的回收站按钮换成对应的图标显示，AgentCiCi 项目",
+                List.of(), List.of(), clarification, "", "", "");
+
+        assertThat(service.fixedAnswer(decision)).hasValueSatisfying(answer -> {
+            assertThat(answer).contains(clarification, "数据写入：未执行");
+            assertThat(answer).doesNotContain("请再说明你是要查询现有研发数据");
+        });
+    }
+
+    @Test
+    void incompleteUiRequirementFallbackEchoesKnownRequestAndAsksOnlyAcceptanceChoices() {
+        String original = "提个需求：DevAutopilot 右上角的回收站按钮换成对应的图标显示，AgentCiCi 项目";
+        DialogueDecision decision = new DialogueDecision(
+                "CREATE_DRAFT", "REQUIREMENT", 0.96, "新增 UI 需求", "", "AgentCiCi", "", "", "", "",
+                "P2", "medium", "", List.of(), "", "", List.of(), List.of(), original,
+                List.of(), List.of(), "", "", "", "");
+
+        assertThat(service.fixedAnswer(decision)).hasValueSatisfying(answer -> {
+            assertThat(answer).contains(original, "目标样式或来源", "是否保留现有文字/信息", "按现有产品设计规范处理");
+            assertThat(answer).doesNotContain("请再说明你希望达到的业务结果");
+        });
+    }
+
+    @Test
+    void semanticContractDescribesContextualUiClarificationAndProfessionalFields() {
+        assertThat(DevAutopilotDialogueDecisionService.decisionPrompt())
+                .contains("页面位置、界面元素和修改方向", "不得再笼统追问", "是否保留按钮文字", "现有设计系统");
+
+        var schema = objectMapper.valueToTree(DevAutopilotDialogueDecisionService.decisionTool());
+        assertThat(schema.path("function").path("parameters").path("properties")
+                .path("pm_assessment").path("description").asText())
+                .contains("用户表述口语化", "不得");
+        assertThat(schema.path("function").path("parameters").path("properties")
+                .path("clarification_question").path("description").asText())
+                .contains("复述已理解", "具体选择", "安全默认方案");
+    }
+
+    @Test
     void standardIntakeMarkerRoundTripsLiteralBracesAndCommentClosers() {
         String original = "希望展示 JSON 示例 }，但不要让 --> 截断受理数据";
         DialogueDecision decision = new DialogueDecision(

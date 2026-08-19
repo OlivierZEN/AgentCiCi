@@ -175,6 +175,9 @@ public class DevAutopilotDialogueDecisionService {
         if (decision == null) {
             return Optional.empty();
         }
+        if ("CREATE_DRAFT".equals(decision.action()) && !decision.clarificationQuestion().isBlank()) {
+            return Optional.of(clarification(decision.clarificationQuestion()));
+        }
         if (decision.confidence() < 0.70) {
             return Optional.of(clarification("请再说明你是要查询现有研发数据，还是新增、调整或删除一项研发事项。"));
         }
@@ -187,9 +190,6 @@ public class DevAutopilotDialogueDecisionService {
     }
 
     private String renderCreateDraft(DialogueDecision decision) {
-        if (!decision.clarificationQuestion().isBlank()) {
-            return clarification(decision.clarificationQuestion());
-        }
         return switch (decision.objectType()) {
             case "PROJECT" -> projectDraft(decision);
             case "TASK" -> taskDraft(decision);
@@ -240,7 +240,7 @@ public class DevAutopilotDialogueDecisionService {
                     : "请补充这个事项所属的父项目编号或名称。");
         }
         if (decision.title().isBlank() || decision.pmAssessment().isBlank()) {
-            return clarification("请再说明你希望达到的业务结果，或当前实际发生的异常。");
+            return incompleteIntakeClarification(decision);
         }
         List<String> acceptance = "REQUIREMENT".equals(decision.objectType())
                 ? decision.acceptanceCriteria() : List.of();
@@ -322,6 +322,15 @@ public class DevAutopilotDialogueDecisionService {
         return answer.toString();
     }
 
+    private String incompleteIntakeClarification(DialogueDecision decision) {
+        String understood = decision.originalReport().isBlank()
+                ? "我已识别到你要提交一项研发事项。"
+                : "我理解你要提交的是：“" + markdownCell(decision.originalReport()) + "”。";
+        return clarification(understood
+                + "\n\n请补充尚未明确且会影响验收的产品选择，例如目标样式或来源、是否保留现有文字/信息，"
+                + "以及完成后的可见效果。若没有特别偏好，可以回复“按现有产品设计规范处理”。");
+    }
+
     private String renderDeleteDraft(DialogueDecision decision) {
         if (decision.recordReference().isBlank() || "UNKNOWN".equals(decision.objectType())) {
             return clarification("请补充要删除的研发记录类型，以及该记录的编号或名称。");
@@ -361,7 +370,7 @@ public class DevAutopilotDialogueDecisionService {
         return userMessages.contains(reported) ? Optional.of(reported) : Optional.empty();
     }
 
-    private static String decisionPrompt() {
+    static String decisionPrompt() {
         return """
                 你是 DEV Autopilot 产品经理对话的语义决策器。必须结合当前消息和最近会话整体语义判断用户真正要做什么，且必须调用 resolve_devautopilot_dialogue 返回结构化结果。
 
@@ -380,8 +389,9 @@ public class DevAutopilotDialogueDecisionService {
                 对 CREATE_DRAFT：
                 - object_type 必须是 PROJECT、REQUIREMENT、TASK、DEFECT 或 CHANGE。
                 - PROJECT 填 name；TASK 填 requirement 和 title。
-                - REQUIREMENT/DEFECT/CHANGE 填完整专业草案字段；original_report 和 user_supplements 必须逐字引用真实用户消息。
-                - 只有真正影响业务意图、父级归属或目标对象的歧义才填写一个 clarification_question；不要向普通用户索要严重度、优先级、技术环境、根因、测试方案等专业字段。
+                - REQUIREMENT/DEFECT/CHANGE 填完整专业草案字段；original_report 和 user_supplements 必须逐字引用真实用户消息。title、classification_reason 和 pm_assessment 是产品经理根据用户原话生成的专业整理，不是要求用户预先提供的正式字段；只要现有描述足以概括目标，就不得留空。
+                - 已给出产品或项目、页面位置、界面元素和修改方向的 UI 需求，已经包含具体业务结果；不得再笼统追问“希望达到的业务结果”。如果图标来源或样式、是否保留按钮文字等可见产品选择会影响验收，则填写一个 clarification_question：先复述已理解的改动，再询问这些具体选择，并说明没有偏好时可按现有设计系统的通用图标和默认交互整理。
+                - 只有真正影响业务意图、父级归属、目标对象或可见验收结果的歧义才填写一个 clarification_question；问题必须保留已知上下文，不得让用户重复已经说清楚的对象和修改方向。不要向普通用户索要严重度、优先级、技术环境、根因、测试方案等专业字段。
                 - DEFECT 的未知工程细节由产品经理填写“待开发者验证”。
                 - priority 使用 P0/P1/P2/P3，severity 使用 critical/high/medium/low。
 
@@ -389,18 +399,22 @@ public class DevAutopilotDialogueDecisionService {
                 """;
     }
 
-    private static Map<String, Object> decisionTool() {
+    static Map<String, Object> decisionTool() {
         Map<String, Object> property = Map.of("type", "string");
-        Map<String, Object> arrayProperty = Map.of("type", "array", "items", property);
         Map<String, Object> properties = new LinkedHashMap<>();
         properties.put("action", Map.of("type", "string", "enum", ACTIONS));
         properties.put("object_type", Map.of("type", "string", "enum", OBJECT_TYPES));
         properties.put("confidence", Map.of("type", "number", "minimum", 0, "maximum", 1));
         for (String field : TEXT_FIELDS) {
-            properties.put(field, property);
+            properties.put(field, Map.of(
+                    "type", "string",
+                    "description", textFieldDescription(field)));
         }
         for (String field : ARRAY_FIELDS) {
-            properties.put(field, arrayProperty);
+            properties.put(field, Map.of(
+                    "type", "array",
+                    "description", arrayFieldDescription(field),
+                    "items", property));
         }
         return Map.of(
                 "type", "function",
@@ -412,6 +426,40 @@ public class DevAutopilotDialogueDecisionService {
                                 "additionalProperties", false,
                                 "properties", properties,
                                 "required", List.of("action", "object_type", "confidence", "reason"))));
+    }
+
+    private static String textFieldDescription(String field) {
+        return switch (field) {
+            case "reason" -> "简洁说明整体语义为什么属于当前 action，不输出思维过程。";
+            case "name" -> "PROJECT 新建草案的项目名称。";
+            case "project" -> "REQUIREMENT 或 DEFECT 所属的现有项目编号或名称。";
+            case "requirement" -> "TASK 或 CHANGE 所属的父需求编号或标题。";
+            case "title" -> "产品经理根据用户原话整理的可执行事项标题；用户不必先提供正式标题。";
+            case "classification_reason" -> "需求、缺陷或变更的简洁专业分类依据。";
+            case "pm_assessment" -> "产品经理根据现有原话整理的目标、范围和可见结果；不得因用户表述口语化而留空。";
+            case "priority" -> "P0、P1、P2 或 P3；没有证据时使用 P2。";
+            case "severity" -> "critical、high、medium 或 low；DEFECT 未知时使用 medium。";
+            case "environment" -> "DEFECT 发生环境；未知时写待开发者验证。";
+            case "expected_result" -> "DEFECT 的预期结果；未知时写待开发者验证。";
+            case "actual_result" -> "DEFECT 当前实际结果。";
+            case "original_report" -> "逐字复制本次事项的首条真实用户原话，不得改写。";
+            case "clarification_question" -> "仅在验收相关选择确实缺失时填写一个聚焦问题：先复述已理解的对象和修改方向，再询问具体选择并给出安全默认方案；不得笼统要求用户重述业务结果。";
+            case "record_reference" -> "DELETE_DRAFT 的目标记录编号或名称。";
+            case "source_developer" -> "TRANSFER_DRAFT 的当前开发者名称。";
+            case "target_developer" -> "TRANSFER_DRAFT 的目标开发者名称。";
+            default -> "仅填写当前 action 所需的业务字段。";
+        };
+    }
+
+    private static String arrayFieldDescription(String field) {
+        return switch (field) {
+            case "reproduction_steps" -> "DEFECT 的复现步骤；未知工程细节写待开发者验证。";
+            case "acceptance_criteria" -> "REQUIREMENT 可从用户原话可靠整理出的可观察、可验收结果。";
+            case "impact_analysis" -> "CHANGE 明确涉及的范围、对象或规则。";
+            case "user_supplements" -> "逐字复制同一事项的后续真实用户补充，不得改写。";
+            case "assumptions" -> "产品经理明确标注、仍待验证且不改变用户核心意图的假设。";
+            default -> "仅填写当前 action 所需的数组字段。";
+        };
     }
 
     private static String rawText(JsonNode root, String field) {

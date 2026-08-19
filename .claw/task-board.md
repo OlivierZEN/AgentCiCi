@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-19T10:27:00Z
+updated_at: 2026-08-19T13:07:59Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,18 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-324 - 产品经理首轮澄清保留具体需求上下文
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `backend-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-192-devautopilot-semantic-dialogue-decision.md`
+- task_status_path: `.claw/tasks/TASK-324.md`
+- blocked_by: `none`
+- scope_files: `结构化语义判定提示、字段 Schema、上下文澄清回退、聚焦测试与本地环境验证`
+- next_action: `实现截图场景回归并运行定向测试。`
 
 ### TASK-322 - Agent Definition 对外身份一致性
 

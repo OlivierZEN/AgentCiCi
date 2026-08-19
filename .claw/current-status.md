@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-19T10:27:00Z
+updated_at: 2026-08-19T13:07:59Z
 updated_by: codex
-phase: validation
-active_task: TASK-322
-next_action: "继续处理 TASK-322 的产品经理对话身份验收；TASK-323 已完成并归档。"
+phase: implementation
+active_task: TASK-324
+next_action: "修复产品经理首轮泛化澄清，完成截图场景回归、定向测试和本地环境验证。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- `TASK-324 / FEAT-192` 已启动：截图中的首轮“请再说明希望达到的业务结果”精确来自结构化需求判定后的不完整草案回退，已知的 UI 位置、控件和修改方向被固定模板丢弃；本任务只修复 AgentCiCi 的语义判定提示、字段说明和上下文澄清回退，不修改 DevAutopilot 展示层，不放宽确认、Semattice 写入或可信回执门禁。
 
 - `TASK-323 / FEAT-190` 已完成：最终源码 `784ccd23e933` 已发布 UAT `2.8.65-beta.1` 和生产 `2.8.65`。生产登录态重试 `org5nszpgj99jaysxv6y` 成功，`orgl624a7r54pzp3e5zv` 回归通过；两者 UI 均为运行中、已开通 3、待处理 0，数据库均为 `ACTIVE/ACTIVE`、无失败阶段/错误码、资源 2、PM scope 3。六容器 healthy/restart=0，四个状态服务 ID 未变；知识库仍为 9/35/661、29 文件、549 points。生产备份为 `/opt/cici/backups/20260819T102115Z-before-2.8.65`。
 
