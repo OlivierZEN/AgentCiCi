@@ -238,7 +238,8 @@ public class OfficialAccessTokenService {
                                                           Integer maxInstances) {
         requireEnabled();
         requireUuid(principalId, "service principal");
-        requireUuid(ownerPrincipalId, "service owner");
+        String sematticeOwnerPrincipalId = sematticePrincipalId(ownerPrincipalId);
+        requireUuid(sematticeOwnerPrincipalId, "service owner");
         if (!hasText(clientId) || !clientId.matches("^[a-z0-9][a-z0-9-]{2,127}$")) {
             throw new ForbiddenException("机器账户客户端标识无效");
         }
@@ -269,7 +270,7 @@ public class OfficialAccessTokenService {
                 .claim("company_id", companyId)
                 .claim("principal_id", principalId)
                 .claim("principal_type", "SERVICE")
-                .claim("owner_principal_id", ownerPrincipalId)
+                .claim("owner_principal_id", sematticeOwnerPrincipalId)
                 .claim("client_id", clientId)
                 .claim("lifecycle_status", lifecycle)
                 .claim("scope", String.join(" ", issuedScopes))
@@ -279,8 +280,9 @@ public class OfficialAccessTokenService {
             builder.claim("max_instances", maxInstances);
         }
         if (hasText(delegatedByPrincipalId)) {
-            requireUuid(delegatedByPrincipalId, "delegating principal");
-            builder.claim("delegated_by_principal_id", delegatedByPrincipalId);
+            String sematticeDelegatingPrincipalId = sematticePrincipalId(delegatedByPrincipalId);
+            requireUuid(sematticeDelegatingPrincipalId, "delegating principal");
+            builder.claim("delegated_by_principal_id", sematticeDelegatingPrincipalId);
         }
         if (hasText(delegationPolicy)) {
             builder.claim("delegation_policy", delegationPolicy.trim());
@@ -321,16 +323,17 @@ public class OfficialAccessTokenService {
         Instant now = Instant.now();
         Instant expiresAt = now.plusSeconds(ttlSeconds);
         String membershipVersion = membershipVersion(member);
+        String sematticePrincipalId = sematticePrincipalId(member.getAccountId());
         JwtBuilder builder = Jwts.builder()
                 .header().keyId(keyId).and()
                 .issuer(issuer)
                 // The official token subject is the immutable AgentCiCi Principal. The
                 // Keycloak subject remains an identity attribute, never a resource actor ID.
-                .subject(member.getAccountId())
+                .subject(sematticePrincipalId)
                 .audience().add(SEMATTICE_AUDIENCE).and()
                 .claim("tenant_id", binding.getSematticeTenantId())
                 .claim("company_id", member.getCompany().getId())
-                .claim("principal_id", member.getAccountId())
+                .claim("principal_id", sematticePrincipalId)
                 .claim("principal_type", "HUMAN")
                 .claim("member_id", member.getId())
                 .claim("account_id", member.getAccountId())
@@ -351,6 +354,28 @@ public class OfficialAccessTokenService {
         }
         String token = builder.signWith(privateKey, Jwts.SIG.RS256).compact();
         return new IssuedToken(token, expiresAt, binding.getSematticeTenantId(), member.getCompany().getId(), issuedScopes);
+    }
+
+    /**
+     * Semattice's governed identity contract requires UUID principal IDs. Current AgentCiCi
+     * accounts already satisfy that contract; legacy opaque account IDs receive a stable UUID
+     * projection without mutating their local primary keys or tenant business data.
+     */
+    public static String sematticePrincipalId(String agentCiciPrincipalId) {
+        String normalized = trim(agentCiciPrincipalId);
+        if (normalized.isBlank()) {
+            throw new ForbiddenException("账号缺少可投影的 Principal 标识");
+        }
+        try {
+            UUID parsed = UUID.fromString(normalized);
+            if (parsed.getMostSignificantBits() != 0L || parsed.getLeastSignificantBits() != 0L) {
+                return parsed.toString();
+            }
+        } catch (IllegalArgumentException ignored) {
+            // Legacy opaque IDs are deterministically projected below.
+        }
+        return UUID.nameUUIDFromBytes(("agentcici-principal:" + normalized)
+                .getBytes(StandardCharsets.UTF_8)).toString();
     }
 
     public Map<String, Object> jwks() {

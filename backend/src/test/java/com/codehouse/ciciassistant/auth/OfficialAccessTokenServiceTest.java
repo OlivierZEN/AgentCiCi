@@ -1,6 +1,7 @@
 package com.codehouse.ciciassistant.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
@@ -29,6 +30,17 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 class OfficialAccessTokenServiceTest {
+
+    @Test
+    void mapsLegacyOpaqueAccountIdsToStableSematticeUuids() {
+        String first = OfficialAccessTokenService.sematticePrincipalId("account-18612345678");
+        String second = OfficialAccessTokenService.sematticePrincipalId("account-18612345678");
+
+        assertThat(first).isEqualTo(second);
+        assertThatCode(() -> java.util.UUID.fromString(first)).doesNotThrowAnyException();
+        assertThat(OfficialAccessTokenService.sematticePrincipalId("11111111-1111-4111-8111-111111111111"))
+                .isEqualTo("11111111-1111-4111-8111-111111111111");
+    }
 
     @Test
     void signsShortLivedSematticeContextWithMappedIdentityAndLocalBinding() throws Exception {

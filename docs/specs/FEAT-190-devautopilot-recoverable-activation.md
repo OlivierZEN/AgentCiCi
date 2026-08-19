@@ -6,7 +6,7 @@ status: implemented
 primary_project: agentcici
 task_ids: TASK-311, TASK-323
 related_integrations: INT-024
-updated_at: 2026-08-19T09:52:00Z
+updated_at: 2026-08-19T10:08:00Z
 updated_by: codex
 ---
 
@@ -43,6 +43,7 @@ updated_by: codex
 4. UAT migration 完成后，运营平台开通最终进入 ACTIVE。
 5. 部署未显式覆盖模板 scope 时，PM/developer SERVICE 仍使用服务端固定的 `runtime.record.read/create/update` 最小集合；空配置不得创建零权限机器主体或阻断新租户开通。
 6. 若前一次尝试已创建标准 PM Agent 但尚未写入 activation resource/checkpoint，重试校验 `devautopilot.standard.v1` 且启用后复用并继续；同 ID 非受管 Agent 必须冲突失败。
+7. 历史 opaque AgentCiCi account ID 必须在 Semattice UUID Principal 契约边界获得稳定、可重复的 UUID projection；projection token 与授权 assignment 不得使用两个不同的主体 ID。
 
 ## 回滚
 

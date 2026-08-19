@@ -675,7 +675,8 @@ public class DevAutopilotTenantApplicationService {
                   AND (member.role_code IN ('OWNER','ORG_ADMIN') OR app_access.role_code='APP_ADMIN')
                 ORDER BY member.account_id
                 """, (rs, rowNum) -> new SematticeDevAutopilotAuthorizationClient.Assignment(
-                rs.getString(1), "application_admin"), activationId, companyId));
+                OfficialAccessTokenService.sematticePrincipalId(rs.getString(1)), "application_admin"),
+                activationId, companyId));
         if (result.isEmpty()) {
             throw new IllegalStateException("DevAutopilot application administrator is unavailable");
         }
