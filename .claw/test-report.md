@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-19T07:00:00Z
+updated_at: 2026-08-19T08:20:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-19T07:00:00Z
-last_run_status: passed_agentcici_2_8_61_beta_31_uat_technical_gate
+last_run_at: 2026-08-19T08:20:00Z
+last_run_status: passed_agentcici_2_8_61_production_technical_gate
 ---
 
 # Test Report
+
+## 2026-08-19 AgentCiCi 生产 `2.8.61`
+
+- 正式 tag `2.8.61^{}`、UAT `2.8.61-beta.31^{}` 与运行 revision 均为 `5b67f80de884`；backend/frontend 正式 ACR index digest 已回读，未更新 `latest`。
+- 发布前 PostgreSQL custom dump 可由 `pg_restore` 列取，KB 29 文件归档/逐文件 SHA-256、Qdrant 549 points 原生 snapshot 和 `2.8.60` 两项旧镜像均通过校验。
+- Flyway V122 成功；清理后旧非 UUID session 为 0，唯一新 `openapi` session 是 V122 后创建的服务端 UUID。全部知识库相关表行数、KB 文件清单和 Qdrant points 发布前后一致。
+- 仅 backend/frontend 重建；database/Qdrant/Redis/RabbitMQ 容器 ID 不变，六容器 healthy/restart=0，backend health UP，公网首页 200、匿名 `/me` 为 JSON 401，启动后 severe 日志为 0。
+- 状态：`passed_agentcici_2_8_61_production_technical_gate`；生产登录态产品经理对话、页面视觉和真实模型调用仍需 HUMAN 业务验收。
 
 ## 2026-08-19 AgentCiCi UAT `2.8.61-beta.31`
 

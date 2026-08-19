@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-19T07:00:00Z
+updated_at: 2026-08-19T08:20:00Z
 updated_by: codex
 phase: validation
 active_task: TASK-322
-next_action: "由 HUMAN 在 UAT 登录态完成产品经理对话与视觉验收；生产未授权。"
+next_action: "由 HUMAN 在生产登录态完成产品经理对话与关键页面业务验收；技术发布已完成。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- AgentCiCi 生产 `2.8.61 / 5b67f80de884` 已完成技术发布：正式 tag 与 UAT beta.31 peeled commit 一致，backend/frontend ACR index digest 为 `sha256:1c6f3df7fa951e65f9bf1d6387133c5591374ee6db2419747a66ee517ec1270a` / `sha256:257b6eb3f7d4ac8b05a516af65b9bbf82408cc73d8767967a2a69f805e83e00b`。发布前备份 `/opt/cici/backups/20260819T081036Z-before-2.8.61` 含 PostgreSQL、KB 文件、Qdrant snapshot、旧应用镜像和 SHA-256 清单；仅重建 backend/frontend，四个状态服务 ID 不变，六容器 healthy/restart=0。Flyway V122 成功，旧非 UUID 会话为 0；所有 KB 表计数、29 个文件哈希与 Qdrant 549 points 发布前后一致。ASR 7 项旧配置已清空，2 项 local/local-hash embedding 配置进入 `unconfigured`，知识库业务数据未丢失。生产登录态业务验收待 HUMAN。
 
 - AgentCiCi UAT `2.8.61-beta.31 / 5b67f80de884` 已完成技术发布：不可变 backend/frontend digest、备份、health/version、Nginx、匿名 JSON 401、六项公开 smoke 和 30 秒稳定窗口通过；仅重建 backend/frontend，状态服务未重建。登录态业务验收待 HUMAN，生产未修改。
 

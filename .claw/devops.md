@@ -1,12 +1,19 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-18T14:42:00Z
+updated_at: 2026-08-19T08:20:00Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-19 生产 `2.8.61`
+
+- 冻结提交 `5b67f80de884` 已以正式 tag `2.8.61` 和 backend/frontend ACR index digest `sha256:1c6f3df7fa951e65f9bf1d6387133c5591374ee6db2419747a66ee517ec1270a` / `sha256:257b6eb3f7d4ac8b05a516af65b9bbf82408cc73d8767967a2a69f805e83e00b` 发布；运行 image labels 为 `2.8.61 / 5b67f80de884`。
+- 完整回滚点 `/opt/cici/backups/20260819T081036Z-before-2.8.61` 包含受管 env/Compose/Nginx/certs、15,396,484-byte PostgreSQL custom dump、KB 归档和 29 项哈希、7,748,608-byte Qdrant snapshot、`2.8.60` 应用镜像归档及 SHA-256 清单，均为 root-only 并通过格式校验。
+- 仅 pull/force-recreate backend/frontend；database、Qdrant、Redis、RabbitMQ ID 不变。六容器 healthy/restart=0，Flyway V122；知识库 9/35/661 核心计数、全部 KB 表行数、文件哈希与 Qdrant 549 points 不变。
+- 应用回滚恢复备份 `acr.env` 并重建 `2.8.60` backend/frontend；V122 历史会话恢复只能在用户单独批准后使用发布前整库 dump，不能通过反向 migration。生产登录态业务验收待 HUMAN。
 
 ## 2026-08-19 UAT `2.8.61-beta.31`
 
