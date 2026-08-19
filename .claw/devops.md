@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-19T13:44:02Z
+updated_at: 2026-08-19T14:07:36Z
 updated_by: codex
 status: active
 ---
@@ -9,6 +9,9 @@ status: active
 # DevOps
 
 ## 2026-08-19 TASK-325 本地开发环境
+
+- 验收纠错：本节原证据只覆盖 backend，不能证明 AgentCiCi 整体产品环境已更新。2026-08-19 用户截图与只读回查确认 frontend 仍为 `2.8.61-dev.1ad25d3 / 1ad25d3923de`，backend 为 `2.8.66-dev.77ce909 / 77ce9095f2bc`；当前属于混合指纹，整体本地版本门禁失败。
+- 后续强制门禁：宣称产品环境已更新前，必须同时回读 backend/frontend 的 image ID、image label、容器环境版本/commit、backend 版本 API 和页面可见角标；任一不一致都只能报告单服务已更新，不能进入业务验收。
 
 - AgentCiCi backend 从本地 `main@77ce9095f2bc` 构建为 `2.8.66-dev.77ce909`，镜像 ID `sha256:9b39d55c2ba4019c2a71d3709570f9a002d647a4b1bf897b0931d40f79cc383c`；image label、容器环境和内部 `/system/version` 的版本/commit 一致。
 - 仅使用现有受管 Compose 执行 `--no-deps --force-recreate backend`；新容器 `bb9317f32896` healthy/restart=0、`/actuator/health=UP`，`https://cici.localhost/app=200`、匿名 `/auth/me=401 application/json`，DevAutopilot `/api/health` 为 integrated/ok 且 AgentCiCi/Semattice 均 true，启动后 severe 日志 0。

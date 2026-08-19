@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-19T13:44:02Z
+updated_at: 2026-08-19T14:07:36Z
 updated_by: codex
 board_status: active
 ---
@@ -17,7 +17,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-325 - 产品经理项目改名确定性执行与可信回执
 
-- status: `review`
+- status: `in_progress`
 - priority: `critical`
 - owner_role: `backend-agent`
 - claimed_by: `codex`
@@ -25,8 +25,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-325.md`
 - blocked_by: `none`
 - scope_files: `精确更新确认协议、服务端强制路由、Tool dispatcher、乐观锁、写后回读、可信回执和聚焦测试`
-- completion_evidence: `77ce9095；截图精确确认、dispatcher、写后查询、幂等 NOOP 与可信渲染回归；10 类 97 项；package；2.8.66-dev.77ce909 healthy/restart=0；正式入口/匿名 401/DevAutopilot integrated 门禁通过`
-- next_action: `由 HUMAN 在本地新会话重试项目改名确认，核对成功回执、名称与 revision 实时查询。`
+- completion_evidence: `代码与 backend 单服务：77ce9095；截图精确确认、dispatcher、写后查询、幂等 NOOP；10 类 97 项；package；backend 2.8.66-dev.77ce909 healthy/restart=0`
+- next_action: `修复 frontend 仍为 2.8.61-dev.1ad25d3 的混合版本；前后端同基线联合回读后才能进入 HUMAN 对话验收。`
 
 ### TASK-324 - 产品经理首轮澄清保留具体需求上下文
 

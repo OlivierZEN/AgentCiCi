@@ -1,27 +1,27 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-19T13:44:02Z
+updated_at: 2026-08-19T14:07:36Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-19T13:44:02Z
-last_run_status: passed_task_325_local_technical_pending_human_update
+last_run_at: 2026-08-19T14:07:36Z
+last_run_status: failed_task_325_product_version_fingerprint_mismatch
 ---
 
 # Test Report
 
 ## 2026-08-19 TASK-325 项目改名确定性执行与可信回执
 
-- 状态：`passed_task_325_local_technical_pending_human_update`。
+- 状态：`failed_task_325_product_version_fingerprint_mismatch`；代码与 backend 单服务门禁通过，整体产品环境版本门禁失败。
 - 根因回归：覆盖截图精确确认语句与旧协议不一致、update dispatcher 缺失、旧回执不能满足可信门禁、写后数据仍是旧值四个缺口。
 - 安全与执行：覆盖普通自然语言/结构字段/非法数值拒绝，update Tool 不进入自由模型定义，只有服务端确定性确认可调度；写入使用当前 revision 和稳定幂等键，响应与写后查询都核对 record ID、revision 和目标值。
 - 结果语义：成功回执按统一字段渲染，不再显示“内部字段已隐藏”；写后查询漂移失败关闭，重复确认返回带真实回读的幂等 NOOP。
 - 后端定向：`AliyunBailianClientTest`、`DevAutopilotDialogueDecisionServiceTest`、`ToolOrchestratorServiceTest`、`ChatOrchestratorServiceModelIdentityTest`、`DeliveryWriteReceiptGuardTest`、创建/修改/删除/转派 Tool 与受理校准共 10 个测试类、97 项通过，0 failure/error/skipped。
 - 构建与静态：`mvn -q -DskipTests package`、`git diff --check` 通过。
 - 状态校验：`validate-state.py .claw` 仍被已有 goals 时间格式、历史规格 front matter/状态、旧完成任务未归档等存量债务阻断；输出没有 TASK-325、FEAT-192 或本轮时间格式错误，本任务未扩大范围修复历史治理债务。
-- 本地运行：代码提交 `77ce9095f2bc` 已进入本地 `main` 并构建为 `2.8.66-dev.77ce909`；镜像 ID `sha256:9b39d55c2ba4019c2a71d3709570f9a002d647a4b1bf897b0931d40f79cc383c`，image/容器环境/版本接口指纹一致。backend healthy/restart=0、health UP，正式入口 200、匿名 JSON 401、DevAutopilot integrated=true/true，启动 severe 日志 0。
-- 编排边界：只替换 backend，frontend、DevAutopilot、Semattice 和状态服务的容器 ID/创建时间保持原值。标准 `./stack version` 被既有 Semattice 基础版本 `config=1.0.5/repository=1.0.7` 漂移失败关闭，本轮不声明完整 stack verify。
-- 业务边界：没有执行截图中的项目改名或其他 Semattice 写入；真实成功回执、名称和 revision 的业务闭环待 HUMAN 在本地新会话确认后验收。UAT、生产、DevAutopilot 与 Semattice 未部署。
+- 本地运行：backend 单服务为 `2.8.66-dev.77ce909 / 77ce9095f2bc`，镜像 ID `sha256:9b39d55c2ba4019c2a71d3709570f9a002d647a4b1bf897b0931d40f79cc383c`，healthy/restart=0、health UP；这些证据只证明 backend，不证明整个产品版本一致。
+- 失败证据：frontend 容器和镜像仍为 `2.8.61-dev.1ad25d3 / 1ad25d3923de`，用户可见角标与只读 `docker inspect` 一致。前后端基础版本和 commit 混合，因此撤销此前本地产品环境已完成的结论。标准 `./stack version` 另被既有 Semattice `config=1.0.5/repository=1.0.7` 漂移阻断。
+- 业务边界：没有执行截图中的项目改名或其他 Semattice 写入；必须先修复混合版本并完成前后端联合回读，之后才能进行 HUMAN 对话验收。UAT、生产、DevAutopilot 与 Semattice 未部署。
 
 ## 2026-08-19 TASK-324 产品经理上下文澄清回归
 

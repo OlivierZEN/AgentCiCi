@@ -2,11 +2,11 @@
 kind: task-status
 task_id: TASK-325
 feature_id: FEAT-192
-status: review
+status: in_progress
 priority: critical
 owner_role: backend-agent
 claimed_by: codex
-updated_at: 2026-08-19T13:44:02Z
+updated_at: 2026-08-19T14:07:36Z
 updated_by: codex
 ---
 
@@ -40,3 +40,5 @@ updated_by: codex
 - 实现提交 `77ce9095f2bc` 已快进进入本地 `main`；远程未推送。backend 从该代码提交构建为 `2.8.66-dev.77ce909`，镜像 ID `sha256:9b39d55c2ba4019c2a71d3709570f9a002d647a4b1bf897b0931d40f79cc383c`，image label、容器环境和 `/system/version` 指纹一致。
 - 仅 force-recreate backend，容器 `bb9317f32896` healthy/restart=0，health UP，`cici.localhost/app=200`、匿名 `/auth/me=401 application/json`，DevAutopilot 为 integrated/ok 且 AgentCiCi/Semattice 均 true，启动后 severe 日志 0；其他容器 ID/创建时间保持不变。
 - 未执行截图中的真实项目改名或其他 Semattice 写入，项目名称与 revision 的业务闭环待 HUMAN 在本地新会话确认后验收。标准 `./stack version` 仍被既有 Semattice `config=1.0.5/repository=1.0.7` 漂移失败关闭，本轮未修改第二仓或 local-stack 配置。
+- 2026-08-19 版本验收纠错：用户页面截图显示 frontend 角标仍为 `2.8.61-dev.1ad25d3`；只读回查确认 backend 为 `2.8.66-dev.77ce909 / 77ce9095f2bc`，frontend 为 `2.8.61-dev.1ad25d3 / 1ad25d3923de`。此前只完成 backend 单服务门禁却宣称本地产品环境版本一致，结论错误。
+- TASK-325 恢复为 `in_progress`。frontend 从同一受控代码基线重建、页面角标与两项镜像/容器指纹联合一致前，不得宣称本地开发环境更新完成，也不得进入 HUMAN 业务验收。
