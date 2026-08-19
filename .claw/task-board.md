@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-18T14:42:00Z
+updated_at: 2026-08-19T09:27:00Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-323 - 修复生产 DevAutopilot 机器身份空 scope
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `integration-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-190-devautopilot-recoverable-activation.md`
+- task_status_path: `.claw/tasks/TASK-323.md`
+- blocked_by: `none`
+- next_action: `完成空配置最小 scope 回归，归并 main 后发布 2.8.62 UAT/生产并重试两个租户。`
 
 ### TASK-322 - Agent Definition 对外身份一致性
 

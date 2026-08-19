@@ -4,9 +4,9 @@ feature_id: FEAT-190
 title: DevAutopilot 可恢复租户开通 Saga
 status: implemented
 primary_project: agentcici
-task_ids: TASK-311
+task_ids: TASK-311, TASK-323
 related_integrations: INT-024
-updated_at: 2026-08-17T09:11:54Z
+updated_at: 2026-08-19T09:27:00Z
 updated_by: codex
 ---
 
@@ -41,6 +41,7 @@ updated_by: codex
 2. reconcile 从失败阶段恢复，已完成步骤不重复创建资源。
 3. 同一 idempotency key 重放返回同一 activation；不同 key 对既有 activation 返回冲突。
 4. UAT migration 完成后，运营平台开通最终进入 ACTIVE。
+5. 部署未显式覆盖模板 scope 时，PM/developer SERVICE 仍使用服务端固定的 `runtime.record.read/create/update` 最小集合；空配置不得创建零权限机器主体或阻断新租户开通。
 
 ## 回滚
 

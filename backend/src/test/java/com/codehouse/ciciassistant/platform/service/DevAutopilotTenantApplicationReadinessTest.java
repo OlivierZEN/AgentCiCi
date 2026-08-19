@@ -131,6 +131,27 @@ class DevAutopilotTenantApplicationReadinessTest {
     }
 
     @Test
+    void usesTheGovernedExecutionScopesWhenDeploymentOverridesAreAbsent() {
+        ServicePrincipalService principals = mock(ServicePrincipalService.class);
+        AgentServicePrincipalExecutionService execution = mock(AgentServicePrincipalExecutionService.class);
+        DevAutopilotTenantApplicationService defaultedService = new DevAutopilotTenantApplicationService(
+                jdbc, mock(CompanyRepository.class), mock(SematticeProvisioningService.class),
+                mock(SematticeDevAutopilotTemplateClient.class), mock(SematticeDevAutopilotAuthorizationClient.class),
+                principals, mock(AgentDefinitionService.class), mock(DevAutopilotProductManagerAgentPublisher.class),
+                execution, mock(PlatformAuditService.class), List.of(), List.of());
+        when(principals.create(eq("company-a"), eq("owner-member"), eq("owner-member"),
+                eq("研发产品经理"), eq("OFFICIAL_APP"), anyString(), any(), any()))
+                .thenReturn(Map.of("principalId", "service-principal-a"));
+
+        ReflectionTestUtils.invokeMethod(defaultedService, "createProductManagerResources",
+                "company-a", "activation-a", "研发产品经理", "owner-member", "owner-member", "agent-a");
+
+        verify(principals).create(eq("company-a"), eq("owner-member"), eq("owner-member"),
+                eq("研发产品经理"), eq("OFFICIAL_APP"), anyString(), any(),
+                eq(DevAutopilotTenantApplicationService.STANDARD_EXECUTION_SCOPES));
+    }
+
+    @Test
     void reappliesAndPersistsTheCurrentSevenObjectMetadataBaselineDuringReconciliation() {
         SematticeDevAutopilotTemplateClient template = mock(SematticeDevAutopilotTemplateClient.class);
         JdbcTemplate metadataJdbc = mock(JdbcTemplate.class);

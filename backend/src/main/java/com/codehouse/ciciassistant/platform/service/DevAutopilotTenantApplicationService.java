@@ -32,6 +32,8 @@ import org.springframework.transaction.annotation.Transactional;
 /** Control-plane authority for the tenant-local DevAutopilot application template. */
 @Service
 public class DevAutopilotTenantApplicationService {
+    static final List<String> STANDARD_EXECUTION_SCOPES = List.of(
+            "runtime.record.read", "runtime.record.create", "runtime.record.update");
     private static final String APP = "devautopilot";
     private static final String PRODUCT_MANAGER_AGENT_ID = "devautopilot-pm";
     private static final String PRODUCT_MANAGER_DEFAULT_NAME = "研发产品经理";
@@ -64,8 +66,14 @@ public class DevAutopilotTenantApplicationService {
         this.authorizationTemplate = authorizationTemplate;
         this.principals = principals; this.agents = agents; this.productManagerAgentPublisher = productManagerAgentPublisher;
         this.execution = execution; this.audit = audit;
-        this.pmScopes = pmScopes == null ? List.of() : pmScopes.stream().filter(v -> v != null && !v.isBlank()).map(String::trim).distinct().toList();
-        this.developerScopes = developerScopes == null ? List.of() : developerScopes.stream().filter(v -> v != null && !v.isBlank()).map(String::trim).distinct().toList();
+        this.pmScopes = templateScopes(pmScopes);
+        this.developerScopes = templateScopes(developerScopes);
+    }
+
+    private static List<String> templateScopes(List<String> configured) {
+        List<String> normalized = configured == null ? List.of() : configured.stream()
+                .filter(v -> v != null && !v.isBlank()).map(String::trim).distinct().sorted().toList();
+        return normalized.isEmpty() ? STANDARD_EXECUTION_SCOPES : normalized;
     }
 
     public View activate(String companyId, ActivationCommand command, String platformActor) {

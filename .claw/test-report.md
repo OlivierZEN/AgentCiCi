@@ -1,14 +1,21 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-19T08:20:00Z
+updated_at: 2026-08-19T09:32:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-19T08:20:00Z
-last_run_status: passed_agentcici_2_8_61_production_technical_gate
+last_run_at: 2026-08-19T09:32:00Z
+last_run_status: passed_task_323_targeted_and_postgres
 ---
 
 # Test Report
+
+## 2026-08-19 TASK-323 DevAutopilot 机器身份默认 scope
+
+- 根因：生产未注入模板 PM/developer scope，构造器把缺省值归一化为空列表，开通在 `PRODUCT_MANAGER_READY` 创建 SERVICE Principal 时返回“机器账户至少需要一个 scope”。
+- 修复：空或纯空白配置回退到服务端固定的 `runtime.record.read/create/update` 最小集合；显式非空配置仍经规范化后使用。
+- 验证：聚焦 readiness/recovery 测试通过；全新 PostgreSQL 16 完整执行 118 项 Flyway migration 后恢复 Saga 集成测试通过；`mvn -DskipTests package` 通过。
+- 全量 backend 测试在既有 `KnowledgeBaseLifecycleIntegrationTest` 默认数据源不可达处持续重试，未进入断言并人工终止；未据此宣称全量通过。
 
 ## 2026-08-19 AgentCiCi 生产 `2.8.61`
 
