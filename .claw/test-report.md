@@ -1,14 +1,21 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-18T14:36:46Z
+updated_at: 2026-08-19T07:00:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-18T14:36:46Z
-last_run_status: passed_task_322_local_technical_pending_real_greeting
+last_run_at: 2026-08-19T07:00:00Z
+last_run_status: passed_agentcici_2_8_61_beta_31_uat_technical_gate
 ---
 
 # Test Report
+
+## 2026-08-19 AgentCiCi UAT `2.8.61-beta.31`
+
+- 状态：`passed_agentcici_2_8_61_beta_31_uat_technical_gate`。
+- 源码/制品：本地与 `origin/main`、tag peeled commit 均为 `5b67f80de884`；backend/frontend linux/amd64 ACR digest 与运行容器一致，未更新 `latest`。
+- 运行/边界：仅 backend/frontend 重建，四个状态服务 ID/重启计数不变；health/version、Nginx、匿名 JSON 401、UAT 六项公开 smoke 和 30 秒稳定日志门禁通过。
+- 恢复：备份 `/data/apps/agentcici/backups/20260819T065648Z-before-2.8.61-beta.31` 12 项非空工件及 SHA-256 清单通过；HUMAN 登录态业务验收待完成，生产未修改。
 
 ## 2026-08-18 TASK-322 Agent Definition 对外身份一致性
 

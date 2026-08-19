@@ -8,6 +8,13 @@ status: active
 
 # DevOps
 
+## 2026-08-19 UAT `2.8.61-beta.31`
+
+- 冻结源码为本地/远程 `main@5b67f80de884`，不可变 tag `2.8.61-beta.31` 已推送；backend/frontend linux/amd64 ACR index digest 分别为 `sha256:3d3b4b8f580cb38e879089aa377b4c090dfeaa8fa064859cb7cde28cee025441`、`sha256:fe50d4c33f306abdcd29aa08100b6b1ccdbb2f4164676de10a379f3d9ee09c05`，未更新 `latest`。
+- 发布前完整备份 `/data/apps/agentcici/backups/20260819T065648Z-before-2.8.61-beta.31`：Compose、受管环境、PostgreSQL、KB、Qdrant、beta.30 两项旧镜像、容器状态和回滚说明共 12 项，均非空、`0600`，SHA-256 清单复核通过；应用回滚目标 beta.30，数据库/KB/Qdrant 恢复需单独批准。
+- 仅 pull/force-recreate backend/frontend；database、Redis、RabbitMQ、Qdrant 容器 ID 与重启计数保持不变。六应用/状态容器 healthy、restart=0，backend health=`UP`、版本/commit/RepoDigest 一致，frontend Nginx 配置有效。
+- UAT 首页、Keycloak discovery、Semattice health/version、DevAutopilot integrated health 和匿名 `/auth/me=401 application/json` 通过；30 秒稳定窗口 backend severe、frontend 5xx/upstream 均为 0。登录态业务验收仍待 HUMAN，生产未修改。
+
 ## 2026-08-18 TASK-321 / TASK-322 本地开发环境
 
 - AgentCiCi backend 从干净代码提交 `e91b28d6befe` 构建为 `2.8.61-dev.e91b28d`，镜像 ID `sha256:3b664865350d51d50d5ebc076d5b79bc1b631108ab7600f5482c3c93c4af9033`；image label、容器内 `/system/version` 与 Git commit 一致。本地 `main` 的后续提交仅包含 `.claw` 与规格验证记录，不影响源码制品。

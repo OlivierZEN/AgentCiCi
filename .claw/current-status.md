@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-18T14:36:46Z
+updated_at: 2026-08-19T07:00:00Z
 updated_by: codex
 phase: validation
 active_task: TASK-322
-next_action: "经用户即时确认后，在已登录产品经理对话发送“你好”，核对回答与 Trace 使用 AgentDefinition.name=研发产品经理。"
+next_action: "由 HUMAN 在 UAT 登录态完成产品经理对话与视觉验收；生产未授权。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- AgentCiCi UAT `2.8.61-beta.31 / 5b67f80de884` 已完成技术发布：不可变 backend/frontend digest、备份、health/version、Nginx、匿名 JSON 401、六项公开 smoke 和 30 秒稳定窗口通过；仅重建 backend/frontend，状态服务未重建。登录态业务验收待 HUMAN，生产未修改。
 
 - `TASK-322 / FEAT-197` 已进入业务验收：`AgentDefinition.name` 是 Agent 唯一对外称呼，CiCi 仅为承载平台名；平台基础提示已移除全局 `You are CiCi`，Definition 名称进入聊天和候选评测统一身份上下文。提交 `e91b28d6`；身份相关 48 项、与 TASK-321 合并聚焦 65 项、backend package 和 diff check 通过。本地 backend 为 `2.8.61-dev.e91b28d`，healthy/restart=0，正式 DevAutopilot 路由 200，其他服务未重建。真实产品经理“你好”待用户在浏览器发送动作前即时确认；UAT、生产、DevAutopilot 与 Semattice 均未修改。
 
