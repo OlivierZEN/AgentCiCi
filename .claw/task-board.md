@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-19T13:07:59Z
+updated_at: 2026-08-19T13:24:15Z
 updated_by: codex
 board_status: active
 ---
@@ -17,7 +17,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-324 - 产品经理首轮澄清保留具体需求上下文
 
-- status: `in_progress`
+- status: `review`
 - priority: `high`
 - owner_role: `backend-agent`
 - claimed_by: `codex`
@@ -25,7 +25,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-324.md`
 - blocked_by: `none`
 - scope_files: `结构化语义判定提示、字段 Schema、上下文澄清回退、聚焦测试与本地环境验证`
-- next_action: `实现截图场景回归并运行定向测试。`
+- completion_evidence: `a9e3d1b0；8 类 82 项；backend package；2.8.66-dev.a9e3d1b healthy/restart=0；正式入口/匿名 401/DevAutopilot integrated 门禁通过`
+- next_action: `由 HUMAN 在本地新会话重试截图原始需求，确认首轮直接生成专业草案或提出上下文明确的图标/文字展示问题。`
 
 ### TASK-322 - Agent Definition 对外身份一致性
 

@@ -1,23 +1,25 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-08-19T13:12:22Z
+updated_at: 2026-08-19T13:24:15Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-19T13:12:22Z
-last_run_status: passed_task_324_scoped_code_pending_local_runtime
+last_run_at: 2026-08-19T13:24:15Z
+last_run_status: passed_task_324_local_technical_pending_human_dialogue
 ---
 
 # Test Report
 
 ## 2026-08-19 TASK-324 产品经理上下文澄清回归
 
-- 状态：`passed_task_324_scoped_code_pending_local_runtime`。
+- 状态：`passed_task_324_local_technical_pending_human_dialogue`。
 - 根因回归：截图首轮文案精确对应结构化需求草案缺少 `title/pm_assessment` 时的固定回退；新回归覆盖结构化模型已给出聚焦问题、低置信但上下文明确、以及字段仍不完整三个分支，均保留原需求并只询问影响验收的产品选择。
 - 后端定向：`AliyunBailianClientTest`、`DevAutopilotDialogueDecisionServiceTest`、`DeliveryWriteReceiptGuardTest`、`ChatOrchestratorServiceModelIdentityTest`、创建/删除/转派 Tool 和历史受理校准共 8 个测试类、82 项通过，0 failure/error/skipped。
 - 构建与静态：`mvn -q -DskipTests package`、`git diff --check` 通过。
 - 状态校验：`validate-state.py .claw` 仍被已有 goals 时间格式、历史规格 front matter/状态、旧完成任务未归档等存量债务阻断；输出没有 TASK-324、FEAT-192 或本轮时间格式错误，本任务未扩大范围修复历史治理债务。
-- 边界：尚未从本地 `main` 构建/更新 `cici.localhost` backend，也未发送真实产品经理消息或执行任何 Semattice 写入；UAT、生产、DevAutopilot 和 Semattice 未修改。
+- 本地运行：`main@a9e3d1b0fc06` 构建为 `2.8.66-dev.a9e3d1b`，镜像 ID `sha256:437dc98af23f0764e341f5d9668380252aff80e9ffd17899fafb5b601832aa75`；image/容器环境/`system/version` 指纹一致，backend healthy/restart=0、health UP，正式入口 200、匿名 JSON 401、DevAutopilot integrated=true/true，启动 severe 日志 0。
+- 编排边界：仅重建并替换 backend，其他容器创建时间保持原值。标准 `./stack version` 被既有 Semattice 基础版本 `config=1.0.5/repository=1.0.7` 漂移失败关闭，未修改 cc-local-stack 或 Semattice；因此本轮只声明目标服务门禁，不声明完整 `stack verify`。
+- 业务边界：未发送真实产品经理消息或执行任何 Semattice 写入；首轮模型答复仍待 HUMAN 在新会话重试。UAT、生产、DevAutopilot 和 Semattice 未部署。
 
 ## 2026-08-19 TASK-323 UAT、生产与真实租户恢复
 

@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-19T13:07:59Z
+updated_at: 2026-08-19T13:24:15Z
 updated_by: codex
-phase: implementation
+phase: review
 active_task: TASK-324
-next_action: "修复产品经理首轮泛化澄清，完成截图场景回归、定向测试和本地环境验证。"
+next_action: "由 HUMAN 在本地 DevAutopilot 产品经理新会话重试截图原始需求，确认首轮直接生成专业草案或只提出上下文明确的图标/文字展示问题。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-324 / FEAT-192` 已启动：截图中的首轮“请再说明希望达到的业务结果”精确来自结构化需求判定后的不完整草案回退，已知的 UI 位置、控件和修改方向被固定模板丢弃；本任务只修复 AgentCiCi 的语义判定提示、字段说明和上下文澄清回退，不修改 DevAutopilot 展示层，不放宽确认、Semattice 写入或可信回执门禁。
+- `TASK-324 / FEAT-192` 已进入本地业务验收：`a9e3d1b0` 加固结构化需求字段与上下文澄清，字段不完整时回显原需求并只问样式/来源、文字保留和可见效果，不再输出截图中的泛化句子。8 个相关测试类 82 项、package、diff check 通过；backend 从本地 `main@a9e3d1b0fc06` 构建为 `2.8.66-dev.a9e3d1b`，image/环境/版本接口一致，healthy/restart=0，`cici.localhost/app=200`、匿名 JSON 401、DevAutopilot integrated=true/true，启动 severe 日志 0。真实首轮模型回答待 HUMAN 重试；标准 `./stack version` 仍被既有 Semattice 基础版本漂移阻断，未修改第二仓治理配置。
 
 - `TASK-323 / FEAT-190` 已完成：最终源码 `784ccd23e933` 已发布 UAT `2.8.65-beta.1` 和生产 `2.8.65`。生产登录态重试 `org5nszpgj99jaysxv6y` 成功，`orgl624a7r54pzp3e5zv` 回归通过；两者 UI 均为运行中、已开通 3、待处理 0，数据库均为 `ACTIVE/ACTIVE`、无失败阶段/错误码、资源 2、PM scope 3。六容器 healthy/restart=0，四个状态服务 ID 未变；知识库仍为 9/35/661、29 文件、549 points。生产备份为 `/opt/cici/backups/20260819T102115Z-before-2.8.65`。
 
