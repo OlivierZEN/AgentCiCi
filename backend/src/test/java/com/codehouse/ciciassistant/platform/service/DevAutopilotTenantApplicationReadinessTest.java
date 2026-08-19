@@ -17,6 +17,7 @@ import com.codehouse.ciciassistant.agent.service.AgentDefinitionService;
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionEntity;
 import com.codehouse.ciciassistant.agent.service.AgentServicePrincipalExecutionService;
 import com.codehouse.ciciassistant.auth.domain.CompanyRepository;
+import com.codehouse.ciciassistant.auth.service.OfficialAccessTokenService;
 import com.codehouse.ciciassistant.auth.service.ServicePrincipalService;
 import com.codehouse.ciciassistant.semattice.SematticeDevAutopilotAuthorizationClient;
 import com.codehouse.ciciassistant.semattice.SematticeDevAutopilotTemplateClient;
@@ -238,9 +239,9 @@ class DevAutopilotTenantApplicationReadinessTest {
     void authorizationAssignmentsIncludeActiveTenantAndExplicitApplicationAdministrators() {
         when(jdbc.query(contains("SELECT DISTINCT member.account_id"), any(RowMapper.class),
                 eq("activation-a"), eq("company-a"))).thenReturn(List.of(
-                new SematticeDevAutopilotAuthorizationClient.Assignment("human-owner", "application_admin"),
-                new SematticeDevAutopilotAuthorizationClient.Assignment("human-org-admin", "application_admin"),
-                new SematticeDevAutopilotAuthorizationClient.Assignment("human-explicit-admin", "application_admin")));
+                "11111111-1111-4111-8111-111111111111",
+                "22222222-2222-4222-8222-222222222222",
+                "account-legacy-admin"));
         when(jdbc.query(contains("SELECT external_id,logical_role"), any(RowMapper.class),
                 eq("activation-a"))).thenReturn(List.of(
                 new SematticeDevAutopilotAuthorizationClient.Assignment("service-pm", "product_manager"),
@@ -249,7 +250,11 @@ class DevAutopilotTenantApplicationReadinessTest {
         var assignments = service.authorizationAssignments("company-a", "activation-a");
 
         assertThat(assignments).extracting(SematticeDevAutopilotAuthorizationClient.Assignment::principalId)
-                .containsExactly("human-explicit-admin", "human-org-admin", "human-owner", "service-developer", "service-pm");
+                .containsExactly(
+                        "11111111-1111-4111-8111-111111111111",
+                        "22222222-2222-4222-8222-222222222222",
+                        OfficialAccessTokenService.sematticePrincipalId("account-legacy-admin"),
+                        "service-developer", "service-pm");
         verify(jdbc).query(org.mockito.ArgumentMatchers.argThat(sql -> sql.contains("member.member_status='ACTIVE'")
                         && sql.contains("member.role_code IN ('OWNER','ORG_ADMIN')")
                         && sql.contains("app_access.role_code='APP_ADMIN'")
@@ -280,8 +285,7 @@ class DevAutopilotTenantApplicationReadinessTest {
                 List.of("runtime.record.read"), List.of("runtime.record.read"));
         when(authorizationJdbc.query(contains("SELECT DISTINCT member.account_id"), any(RowMapper.class),
                 eq("activation-a"), eq("company-a"))).thenReturn(List.of(
-                new SematticeDevAutopilotAuthorizationClient.Assignment("human-owner", "application_admin"),
-                new SematticeDevAutopilotAuthorizationClient.Assignment("human-org-admin", "application_admin")));
+                "human-org-admin", "human-owner"));
         when(authorizationJdbc.query(contains("SELECT external_id,logical_role"), any(RowMapper.class),
                 eq("activation-a"))).thenReturn(List.of(
                 new SematticeDevAutopilotAuthorizationClient.Assignment("service-pm", "product_manager")));

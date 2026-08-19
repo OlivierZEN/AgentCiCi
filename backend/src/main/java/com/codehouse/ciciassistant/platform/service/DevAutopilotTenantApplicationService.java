@@ -638,9 +638,11 @@ public class DevAutopilotTenantApplicationService {
     SematticeDevAutopilotAuthorizationClient.AuthorizationView reconcileAuthorizationTemplate(String companyId,
                                                                                                 String activationId) {
         List<SematticeDevAutopilotAuthorizationClient.Assignment> assignments = authorizationAssignments(companyId, activationId);
-        assignments.stream()
-                .filter(item -> "application_admin".equals(item.logicalRole()))
-                .forEach(item -> principals.synchronizeHumanProjection(companyId, item.principalId()));
+        // Local membership authority is keyed by the original AgentCiCi account ID. Projection
+        // tokens convert legacy opaque IDs to Semattice UUIDs, so synchronize using the local key
+        // and use the mapped UUID only in the resource-facing authorization manifest.
+        applicationAdministratorAccountIds(companyId, activationId)
+                .forEach(accountId -> principals.synchronizeHumanProjection(companyId, accountId));
         var result = authorizationTemplate.apply(companyId, activationId,
                 authorizationReconciliationKey(activationId, assignments), assignments);
         if (!companyId.equals(result.companyId())
@@ -665,18 +667,10 @@ public class DevAutopilotTenantApplicationService {
     List<SematticeDevAutopilotAuthorizationClient.Assignment> authorizationAssignments(String companyId,
                                                                                         String activationId) {
         List<SematticeDevAutopilotAuthorizationClient.Assignment> result = new java.util.ArrayList<>();
-        result.addAll(jdbc.query("""
-                SELECT DISTINCT member.account_id
-                FROM company_member member
-                LEFT JOIN tenant_application_member_role app_access
-                  ON app_access.activation_id=? AND app_access.company_member_id=member.id
-                 AND app_access.status='ACTIVE'
-                WHERE member.company_id=? AND member.member_status='ACTIVE'
-                  AND (member.role_code IN ('OWNER','ORG_ADMIN') OR app_access.role_code='APP_ADMIN')
-                ORDER BY member.account_id
-                """, (rs, rowNum) -> new SematticeDevAutopilotAuthorizationClient.Assignment(
-                OfficialAccessTokenService.sematticePrincipalId(rs.getString(1)), "application_admin"),
-                activationId, companyId));
+        result.addAll(applicationAdministratorAccountIds(companyId, activationId).stream()
+                .map(accountId -> new SematticeDevAutopilotAuthorizationClient.Assignment(
+                        OfficialAccessTokenService.sematticePrincipalId(accountId), "application_admin"))
+                .toList());
         if (result.isEmpty()) {
             throw new IllegalStateException("DevAutopilot application administrator is unavailable");
         }
@@ -696,6 +690,19 @@ public class DevAutopilotTenantApplicationService {
                 .sorted(Comparator.comparing(SematticeDevAutopilotAuthorizationClient.Assignment::logicalRole)
                         .thenComparing(SematticeDevAutopilotAuthorizationClient.Assignment::principalId))
                 .toList();
+    }
+
+    private List<String> applicationAdministratorAccountIds(String companyId, String activationId) {
+        return jdbc.query("""
+                SELECT DISTINCT member.account_id
+                FROM company_member member
+                LEFT JOIN tenant_application_member_role app_access
+                  ON app_access.activation_id=? AND app_access.company_member_id=member.id
+                 AND app_access.status='ACTIVE'
+                WHERE member.company_id=? AND member.member_status='ACTIVE'
+                  AND (member.role_code IN ('OWNER','ORG_ADMIN') OR app_access.role_code='APP_ADMIN')
+                ORDER BY member.account_id
+                """, (rs, rowNum) -> rs.getString(1), activationId, companyId);
     }
 
     static String authorizationReconciliationKey(String activationId,

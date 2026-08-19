@@ -6,7 +6,7 @@ status: in_progress
 priority: critical
 owner_role: integration-agent
 claimed_by: codex
-updated_at: 2026-08-19T10:08:00Z
+updated_at: 2026-08-19T10:18:00Z
 updated_by: codex
 ---
 
@@ -27,4 +27,5 @@ updated_by: codex
 - 已实现空配置回退到固定最小执行 scope；聚焦单测、全新 PostgreSQL 16 的 118 项 Flyway migration 与恢复 Saga 集成测试、backend production package 均通过。
 - 首次生产重试进一步证实 Agent 创建和 activation checkpoint 之间存在提交窗口：标准 `devautopilot-pm` 已存在但应用资源尚未登记。已把创建改为受管模板的 ensure/reuse 语义，并新增中断恢复回归；同 ID 非受管或禁用 Agent 继续失败关闭。
 - 第二租户恢复到 `AUTHORIZATION_READY` 后，15 个应用管理员中的旧式 `account-*` 主键触发 Semattice UUID claim 401。已在官方访问令牌边界增加确定性 UUID projection，并让授权 assignment 使用同一转换；当前 UUID 主体保持原值。
+- UUID projection 后的首次授权重试证实本地成员权威查询不能使用资源侧 UUID 回查旧账号主键。已明确拆分：本地成员同步始终用原始 account ID，Semattice token/assignment 才使用确定性 UUID；两者不再混用。
 - backend 全量测试启动时被既有默认数据源不可达持续重试阻塞，人工终止；本任务定向与真实数据库证据不受影响。
