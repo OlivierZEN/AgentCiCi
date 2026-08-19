@@ -1,12 +1,19 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-08-19T13:24:15Z
+updated_at: 2026-08-19T13:44:02Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-19 TASK-325 本地开发环境
+
+- AgentCiCi backend 从本地 `main@77ce9095f2bc` 构建为 `2.8.66-dev.77ce909`，镜像 ID `sha256:9b39d55c2ba4019c2a71d3709570f9a002d647a4b1bf897b0931d40f79cc383c`；image label、容器环境和内部 `/system/version` 的版本/commit 一致。
+- 仅使用现有受管 Compose 执行 `--no-deps --force-recreate backend`；新容器 `bb9317f32896` healthy/restart=0、`/actuator/health=UP`，`https://cici.localhost/app=200`、匿名 `/auth/me=401 application/json`，DevAutopilot `/api/health` 为 integrated/ok 且 AgentCiCi/Semattice 均 true，启动后 severe 日志 0。
+- frontend、DevAutopilot、Semattice、PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak 和 Nginx 的容器 ID/创建时间保持原值。未发送真实产品经理确认，未执行项目改名或其他 Semattice 写入，UAT/生产未修改。
+- `cc-local-stack ./stack version` 继续被既有 Semattice 基础版本漂移 `config=1.0.5 / repository=1.0.7` 失败关闭；本轮只声明 AgentCiCi backend 目标门禁，不声明完整 `./stack verify`，也未修改 local-stack 或 Semattice 仓库。
 
 ## 2026-08-19 TASK-324 本地开发环境
 

@@ -2,11 +2,11 @@
 kind: task-status
 task_id: TASK-325
 feature_id: FEAT-192
-status: in_progress
+status: review
 priority: critical
 owner_role: backend-agent
 claimed_by: codex
-updated_at: 2026-08-19T13:36:32Z
+updated_at: 2026-08-19T13:44:02Z
 updated_by: codex
 ---
 
@@ -37,4 +37,6 @@ updated_by: codex
 - 已实现精确确认解析、阻塞/流式服务端强制路由、Tool dispatcher、字段与对象白名单、精确记录匹配、稳定幂等键、乐观锁、写入响应核对和写后实时查询；update Tool 保持不向自由模型暴露。
 - 服务端成功输出必须核对 `SUCCESS / SEMATTICE_LIVE / record_id / revision / correlation_id / readback_verified / verified_values`；目标值已存在时返回带回读的幂等 NOOP，回读漂移时失败关闭。
 - 10 个相关测试类共 97 项通过，0 failure/error/skipped；`mvn -q -DskipTests package` 与 `git diff --check` 通过。状态校验仍只报告既有历史债务，未报告 TASK-325/FEAT-192 新错误。
-- 待提交并合并本地 `main`，再从该提交重建 `cici.localhost` backend；未执行截图中的真实项目改名。
+- 实现提交 `77ce9095f2bc` 已快进进入本地 `main`；远程未推送。backend 从该代码提交构建为 `2.8.66-dev.77ce909`，镜像 ID `sha256:9b39d55c2ba4019c2a71d3709570f9a002d647a4b1bf897b0931d40f79cc383c`，image label、容器环境和 `/system/version` 指纹一致。
+- 仅 force-recreate backend，容器 `bb9317f32896` healthy/restart=0，health UP，`cici.localhost/app=200`、匿名 `/auth/me=401 application/json`，DevAutopilot 为 integrated/ok 且 AgentCiCi/Semattice 均 true，启动后 severe 日志 0；其他容器 ID/创建时间保持不变。
+- 未执行截图中的真实项目改名或其他 Semattice 写入，项目名称与 revision 的业务闭环待 HUMAN 在本地新会话确认后验收。标准 `./stack version` 仍被既有 Semattice `config=1.0.5/repository=1.0.7` 漂移失败关闭，本轮未修改第二仓或 local-stack 配置。

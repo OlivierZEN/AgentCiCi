@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-08-19T13:36:32Z
+updated_at: 2026-08-19T13:44:02Z
 updated_by: codex
-phase: implementation
+phase: review
 active_task: TASK-325
-next_action: "提交 TASK-325，合并本地 main，并从该提交重建 cici.localhost backend 后回读版本、健康和正式入口。"
+next_action: "由 HUMAN 在本地产品经理新会话重试截图原始改名流程；确认后核对明确成功回执以及项目名称和 revision 的实时回读。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-325 / FEAT-192` 已完成代码验证、待本地环境：截图中的确认语句现由服务端严格解析并直接调用 update dispatcher；只有 revision 写入响应与写后实时查询都核对目标字段时才返回可信成功，重复确认回读为目标值时幂等 NOOP。10 个相关测试类 97 项、backend package、diff check 通过；状态校验只报告既有历史债务。本任务未修改或写入 Semattice，也未修改 DevAutopilot 展示层。
+- `TASK-325 / FEAT-192` 已进入本地业务验收：`77ce9095` 将截图确认语句服务端严格解析并直达 update dispatcher；只有 revision 写入响应与写后查询同时核对目标字段才返回可信成功，重复确认是带回读的幂等 NOOP。10 类 97 项、package、diff check 通过；backend 从本地 `main@77ce9095f2bc` 构建为 `2.8.66-dev.77ce909`，image/环境/版本接口一致，healthy/restart=0，正式入口 200、匿名 JSON 401、DevAutopilot integrated=true/true、启动 severe 日志 0。真实改名未代用户执行；标准 `./stack version` 仍被既有 Semattice 版本漂移阻断。
 
 - `TASK-324 / FEAT-192` 已进入本地业务验收：`a9e3d1b0` 加固结构化需求字段与上下文澄清，字段不完整时回显原需求并只问样式/来源、文字保留和可见效果，不再输出截图中的泛化句子。8 个相关测试类 82 项、package、diff check 通过；backend 从本地 `main@a9e3d1b0fc06` 构建为 `2.8.66-dev.a9e3d1b`，image/环境/版本接口一致，healthy/restart=0，`cici.localhost/app=200`、匿名 JSON 401、DevAutopilot integrated=true/true，启动 severe 日志 0。真实首轮模型回答待 HUMAN 重试；标准 `./stack version` 仍被既有 Semattice 基础版本漂移阻断，未修改第二仓治理配置。
 
