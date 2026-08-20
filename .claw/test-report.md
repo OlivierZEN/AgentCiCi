@@ -1,14 +1,21 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-20T02:05:34Z
+updated_at: 2026-08-20T02:23:19Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-20T02:05:34Z
-last_run_status: passed_task_326_7x87_consumer_contract
+last_run_at: 2026-08-20T02:23:19Z
+last_run_status: passed_task_326_uat_technical_and_service_contract
 ---
 
 # Test Report
+
+## 2026-08-20 TASK-326 UAT `2.8.66-beta.1`
+
+- 状态：`passed_task_326_uat_technical_and_service_contract`；登录态缺陷业务验收待完成。
+- 冻结提交、远程 `main` 与标签解引用均为 `2c9d3821b458`；backend/frontend 不可变 ACR index digest 分别为 `sha256:314dbfb573ce703ab927c9cde1a5ecbc7349291116899f2931481e1418945d5f`、`sha256:6279ef657523fb0d001f2ebe43b3c2d43baa135e3636ac99f3e05a462d37e0b7`。
+- 仅重建 backend/frontend；六容器 healthy/restart=0、health UP、版本提交一致、Flyway V122、Nginx、公开 smoke、匿名 JSON 401 和错误日志门禁通过，四个状态服务未重建。
+- 12 项备份工件、SHA-256 清单和 PostgreSQL custom dump 恢复目录通过；目标 SERVICE 身份模板探测返回 7×87、state=applied。生产未修改。
 
 ## 2026-08-20 TASK-326 DevAutopilot 7×87 模板消费契约
 

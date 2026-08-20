@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 5
-updated_at: 2026-08-20T02:03:46Z
+updated_at: 2026-08-20T02:23:19Z
 updated_by: codex
-phase: implementation
+phase: uat_validation
 active_task: TASK-326
-next_action: "验证并发布 AgentCiCi 7×87 模板消费契约，再继续 DevAutopilot UAT 候选。"
+next_action: "由登录用户在 UAT 新建测试缺陷完成分配、验证提交和产品经理确认；回读 validation/revision，生产保持不变。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-326 / FEAT-198 / INT-025` 正在对齐 Semattice 当前 `devautopilot.standard.v1`：消费方从精确 7×86 推进为 7×87，初始化恢复幂等键同步改为 `shape-7x87`，不保留历史双版本兼容。Semattice 提供方 UAT `1.0.7-beta.5 / 54f2ab93558f` 已发布，AgentCiCi 与 DevAutopilot 候选待后续门禁。
+- `TASK-326 / FEAT-198 / INT-025` 已完成 UAT 技术发布并进入 review：AgentCiCi `2.8.66-beta.1 / 2c9d3821b458` 只重建 backend/frontend，精确消费 Semattice 7×87 并明确拒绝历史 7×86；四个状态服务未重建，六容器 healthy/restart=0，Flyway V122、备份、Nginx、公开 smoke 与匿名 401 JSON 通过。目标 AgentCiCi SERVICE 身份对 Semattice 模板应用探测返回 7 对象/87 字段、state=applied。DevAutopilot `1.0.5-beta.1 / 58253da87aa2` 也已发布；登录态缺陷业务验收待完成，生产未修改。
 
 - `TASK-325 / FEAT-192` 代码门禁通过但本地产品环境未完成：实现 `77ce9095` 的 10 类 97 项、package、diff check 和 backend 单服务门禁有效；backend 运行 `2.8.66-dev.77ce909 / 77ce9095f2bc`，但 frontend 仍为 `2.8.61-dev.1ad25d3 / 1ad25d3923de`，页面角标暴露混合版本。此前把单服务健康扩大表述为整体环境已一致更新属于错误，现撤销“进入 HUMAN 业务验收”结论；必须先对齐 frontend 并联合回读前后端指纹。真实改名未执行。
 

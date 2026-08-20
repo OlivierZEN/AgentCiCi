@@ -1,12 +1,19 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-08-19T14:07:36Z
+updated_at: 2026-08-20T02:23:19Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-20 TASK-326 UAT `2.8.66-beta.1`
+
+- 冻结提交与 tag 为 `2c9d3821b4588d067199b4842c4e7e12de07e8bd` / `2.8.66-beta.1`；backend/frontend ACR index digest 为 `sha256:314dbfb573ce703ab927c9cde1a5ecbc7349291116899f2931481e1418945d5f` / `sha256:6279ef657523fb0d001f2ebe43b3c2d43baa135e3636ac99f3e05a462d37e0b7`。
+- 完整回滚点 `/data/apps/agentcici/backups/20260820T021002Z-before-2.8.66-beta.1` 含 12 项、316,840,438 bytes 的受管配置、PostgreSQL custom dump、KB、Qdrant 原生 snapshot/存储、旧应用镜像、容器状态、回滚说明和 SHA-256 清单；dump 恢复目录与清单均校验通过。
+- 仅重建 backend/frontend；四个状态服务指纹保持 `b5dca5759af2a9cfb0ed4285fdb3b01c9af02db33eb2bfbabfa347fe728de2bc`。六容器 healthy/restart=0、health UP、版本提交一致、Flyway V122、Nginx、公开 smoke、匿名 JSON 401 和错误日志门禁通过。
+- 目标 AgentCiCi SERVICE 身份成功应用 Semattice `devautopilot.standard.v1`，回读 7 对象/87 字段、state=applied。应用回滚恢复上一 `2.8.65-beta.1` backend/frontend；数据恢复需单独批准。生产未修改。
 
 ## 2026-08-19 TASK-325 本地开发环境
 
