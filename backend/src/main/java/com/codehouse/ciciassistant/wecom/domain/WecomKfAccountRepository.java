@@ -2,6 +2,7 @@ package com.codehouse.ciciassistant.wecom.domain;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface WecomKfAccountRepository extends JpaRepository<WecomKfAccountEntity, Long> {
@@ -15,4 +16,6 @@ public interface WecomKfAccountRepository extends JpaRepository<WecomKfAccountEn
     Optional<WecomKfAccountEntity> findByCompanyIdAndOpenKfId(String companyId, String openKfId);
 
     Optional<WecomKfAccountEntity> findByCompanyIdAndOpenKfIdAndEnabledTrue(String companyId, String openKfId);
+
+    Optional<WecomKfAccountEntity> findByMobileEntryIdAndEnabledTrueAndMobileHandoffEnabledTrue(UUID mobileEntryId);
 }

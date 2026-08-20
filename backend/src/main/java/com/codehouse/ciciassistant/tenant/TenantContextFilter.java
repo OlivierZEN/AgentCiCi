@@ -176,6 +176,9 @@ public class TenantContextFilter extends OncePerRequestFilter {
         if (path.startsWith("/wecom/kf/callback")) {
             return true;
         }
+        if (path.startsWith("/wecom/kf/mobile")) {
+            return true;
+        }
         if (path.startsWith("/public/")) {
             return true;
         }

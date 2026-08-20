@@ -10,6 +10,9 @@ type WecomKfAccount = {
   name: string;
   agentId: string;
   runAsUserId: string;
+  wecomAppAgentId?: string;
+  mobileHandoffEnabled?: boolean;
+  mobileEntryPath?: string;
   enabled: boolean;
   syncCursorPresent?: boolean;
   accessTokenExpiresAt?: string;
@@ -21,6 +24,8 @@ type WecomKfConnectionTest = {
   checkedAt: string;
   accessTokenExpiresAt?: string;
   apiBaseUrl?: string;
+  mobileHandoffStatus?: string;
+  servicerCount?: number;
 };
 
 type AgentOption = {
@@ -47,6 +52,9 @@ type WecomKfForm = {
   encodingAesKey: string;
   agentId: string;
   runAsUserId: string;
+  wecomAppAgentId: string;
+  wecomAppSecret: string;
+  mobileHandoffEnabled: boolean;
   enabled: boolean;
 };
 
@@ -62,6 +70,9 @@ function emptyForm(): WecomKfForm {
     encodingAesKey: "",
     agentId: DEFAULT_AGENT_ID,
     runAsUserId: "",
+    wecomAppAgentId: "",
+    wecomAppSecret: "",
+    mobileHandoffEnabled: false,
     enabled: true,
   };
 }
@@ -76,6 +87,9 @@ function formFromAccount(account: WecomKfAccount): WecomKfForm {
     encodingAesKey: "",
     agentId: account.agentId || DEFAULT_AGENT_ID,
     runAsUserId: account.runAsUserId ?? "",
+    wecomAppAgentId: account.wecomAppAgentId ?? "",
+    wecomAppSecret: "",
+    mobileHandoffEnabled: Boolean(account.mobileHandoffEnabled),
     enabled: account.enabled,
   };
 }
@@ -128,12 +142,14 @@ export default function AdminWecomKfAccountsPage() {
   );
 
   const activeCallbackUrl = callbackUrl(selectedAccount?.callbackPath);
+  const activeMobileEntryUrl = callbackUrl(selectedAccount?.mobileEntryPath);
   const canSave =
     form.corpId.trim() &&
     form.openKfId.trim() &&
     (selectedAccount || form.token.trim()) &&
     form.agentId.trim() &&
     form.runAsUserId.trim() &&
+    (!form.mobileHandoffEnabled || (form.wecomAppAgentId.trim() && (selectedAccount || form.wecomAppSecret.trim()))) &&
     (selectedAccount || form.secret.trim()) &&
     (selectedAccount || form.encodingAesKey.trim());
 
@@ -230,6 +246,9 @@ export default function AdminWecomKfAccountsPage() {
         encodingAesKey: form.encodingAesKey.trim(),
         agentId: form.agentId.trim() || DEFAULT_AGENT_ID,
         runAsUserId: form.runAsUserId.trim(),
+        wecomAppAgentId: form.wecomAppAgentId.trim(),
+        wecomAppSecret: form.wecomAppSecret.trim(),
+        mobileHandoffEnabled: form.mobileHandoffEnabled,
         enabled: form.enabled,
       };
       const response = await fetch(selectedAccount
@@ -284,6 +303,16 @@ export default function AdminWecomKfAccountsPage() {
     }
   };
 
+  const copyMobileEntry = async () => {
+    if (!activeMobileEntryUrl) return;
+    try {
+      await navigator.clipboard.writeText(activeMobileEntryUrl);
+      setNotice("企业微信手机端工作台入口已复制");
+    } catch {
+      setNotice("当前浏览器无法写入剪贴板，请手动复制手机端入口");
+    }
+  };
+
   const testConnection = async () => {
     if (!selectedAccount) return;
     setTestingConnection(true);
@@ -302,7 +331,9 @@ export default function AdminWecomKfAccountsPage() {
       const result = body.data as WecomKfConnectionTest;
       await loadAccounts();
       setConnectionTest(result);
-      setNotice("企业微信连接测试通过");
+      setNotice(result.mobileHandoffStatus === "connected"
+        ? `企业微信客服与手机端连接测试通过 · ${result.servicerCount ?? 0} 名接待人员`
+        : "企业微信客服连接测试通过");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "连接测试失败");
     } finally {
@@ -408,7 +439,7 @@ export default function AdminWecomKfAccountsPage() {
               />
             </label>
             <label>
-              <span>Secret</span>
+              <span>微信客服 API 管理应用 Secret</span>
               <input
                 type="password"
                 value={form.secret}
@@ -457,6 +488,34 @@ export default function AdminWecomKfAccountsPage() {
               />
               <span>保存后启用该客服账号</span>
             </label>
+            <label>
+              <span>企业微信自建应用 AgentID</span>
+              <input
+                value={form.wecomAppAgentId}
+                onChange={(event) => setForm((current) => ({ ...current, wecomAppAgentId: event.target.value }))}
+                placeholder="启用手机端接管时必填"
+                inputMode="numeric"
+                autoComplete="off"
+              />
+            </label>
+            <label>
+              <span>企业微信自建应用 Secret</span>
+              <input
+                type="password"
+                value={form.wecomAppSecret}
+                onChange={(event) => setForm((current) => ({ ...current, wecomAppSecret: event.target.value }))}
+                placeholder={selectedAccount ? "留空保持原加密值" : "用于手机端 OAuth 与 JS-SDK"}
+                autoComplete="new-password"
+              />
+            </label>
+            <label className="wecom-kf-check-row">
+              <input
+                type="checkbox"
+                checked={form.mobileHandoffEnabled}
+                onChange={(event) => setForm((current) => ({ ...current, mobileHandoffEnabled: event.target.checked }))}
+              />
+              <span>启用企业微信手机端监控与强制接管</span>
+            </label>
           </div>
 
           {selectedAccount ? (
@@ -466,6 +525,18 @@ export default function AdminWecomKfAccountsPage() {
                 <code>{activeCallbackUrl}</code>
               </div>
               <button type="button" className="wecom-kf-text-action" onClick={() => void copyCallback()}>
+                复制
+              </button>
+            </div>
+          ) : null}
+
+          {selectedAccount?.mobileHandoffEnabled ? (
+            <div className="wecom-kf-callback">
+              <div>
+                <span className="wecom-kf-callback__label">企业微信工作台手机端入口</span>
+                <code>{activeMobileEntryUrl}</code>
+              </div>
+              <button type="button" className="wecom-kf-text-action" onClick={() => void copyMobileEntry()}>
                 复制
               </button>
             </div>

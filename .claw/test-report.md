@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-20T02:23:19Z
+updated_at: 2026-08-20T16:42:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-20T02:23:19Z
-last_run_status: passed_task_326_uat_technical_and_service_contract
+last_run_at: 2026-08-20T16:42:00Z
+last_run_status: passed_task_327_code_and_fresh_migration_pending_local_runtime_and_real_wecom
 ---
 
 # Test Report
+
+## 2026-08-21 TASK-327 微信客服手机端人工接管（代码与全新迁移）
+
+- 状态：`passed_task_327_code_and_fresh_migration_pending_local_runtime_and_real_wecom`；代码、确定性回归、全新数据库迁移和 JPA 启动通过，本地 main 制品部署与真实企业微信业务验收待继续。
+- 后端聚焦：`WecomKf*Test` 共 8 个测试类、22 项通过，0 failure/error/skipped。覆盖消息 `origin=3/4/5`、人工消息不触发模型、客户明确转人工、发送前 revision fence、接管写后回读、revision 冲突、幂等重放、跨租户拒绝、独立自建应用 Secret、OAuth state 与 Secure/HttpOnly Cookie。
+- 前端：全量 54 个测试文件、297 项通过；TypeScript/Vite production build 通过，仅保留既有 bundle-size warning。移动页没有聊天输入框，接管仅在 `SUCCEEDED + readback_state=3` 后调用企业微信原生 `navigateToKfChat`。
+- 迁移与运行：专用临时 PostgreSQL 16 数据库从空库完整应用 119 项迁移到 V123，JPA `ddl-auto=validate` 通过，临时 backend 正常启动；回读 `remote_service_state/target_state=integer`、`state_revision=bigint`、`operation_id=uuid`，临时库验证后已删除。
+- 构建与静态：`mvn -q -DskipTests package`、`git diff --check` 通过。完整 Maven 套件仍在既有 `KnowledgeBaseLifecycleIntegrationTest` 连接宿主机 `localhost:5432` 阶段持续重试并人工停止，未进入断言；不据此宣称后端全量通过。
+- 协议核验：按企业微信官方当前文档复核状态 0–4、`origin=3/4/5`、接待人员 `status=0` 和 `openKfId + externalUserId` 原生跳转字段。真实 OAuth、真实接待人员列表、微信客户消息、状态 3 接管和原生会话跳转仍为 HUMAN pending，未用 mock 冒充。
 
 ## 2026-08-20 TASK-326 UAT `2.8.66-beta.1`
 

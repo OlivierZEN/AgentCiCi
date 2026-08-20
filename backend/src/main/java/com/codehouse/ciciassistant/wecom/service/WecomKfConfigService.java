@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,6 +49,13 @@ public class WecomKfConfigService {
         return accountRepository.findByCompanyIdAndOpenKfIdAndEnabledTrue(companyId.trim(), openKfId.trim()).map(this::resolve);
     }
 
+    public Optional<ResolvedAccount> findMobileEntry(UUID entryId) {
+        if (entryId == null) {
+            return Optional.empty();
+        }
+        return accountRepository.findByMobileEntryIdAndEnabledTrueAndMobileHandoffEnabledTrue(entryId).map(this::resolve);
+    }
+
     @Transactional
     public WecomKfAccountEntity upsert(String companyId, String actorUserId, UpsertCommand command) {
         String normalizedCompanyId = requireText(companyId, "companyId");
@@ -57,13 +65,26 @@ public class WecomKfConfigService {
         String token = requireText(command.token(), "token");
         String agentId = normalizeAgentId(fallback(command.agentId(), DEFAULT_AFTER_SALES_AGENT_ID));
         String runAsUserId = fallback(command.runAsUserId(), actorUserId);
+        String wecomAppAgentId = blank(command.wecomAppAgentId());
+        String wecomAppSecret = blank(command.wecomAppSecret());
+        boolean mobileHandoffEnabled = Boolean.TRUE.equals(command.mobileHandoffEnabled());
         boolean enabled = command.enabled() == null || command.enabled();
         requireAgent(normalizedCompanyId, agentId);
 
         Optional<WecomKfAccountEntity> existing = accountRepository.findByCompanyIdAndOpenKfId(normalizedCompanyId, openKfId);
         if (existing.isPresent()) {
             WecomKfAccountEntity account = existing.get();
-            account.updateProfile(corpId, openKfId, name, token, agentId, requireText(runAsUserId, "runAsUserId"), enabled);
+            boolean hasStoredAppSecret = !blank(account.getWecomAppSecretCipher()).isBlank()
+                    && !blank(account.getWecomAppSecretIv()).isBlank();
+            if (mobileHandoffEnabled && (wecomAppAgentId.isBlank() || (wecomAppSecret.isBlank() && !hasStoredAppSecret))) {
+                throw new IllegalArgumentException("wecomAppAgentId and wecomAppSecret are required when mobile handoff is enabled");
+            }
+            account.updateProfile(corpId, openKfId, name, token, agentId, requireText(runAsUserId, "runAsUserId"),
+                    wecomAppAgentId, mobileHandoffEnabled, enabled);
+            if (!wecomAppSecret.isBlank()) {
+                SecretCipherService.EncryptedSecret encrypted = secretCipherService.encryptUtf8(wecomAppSecret);
+                account.updateWecomAppSecret(encrypted.cipherBase64(), encrypted.ivBase64());
+            }
             if (!blank(command.secret()).isBlank()) {
                 SecretCipherService.EncryptedSecret encrypted = secretCipherService.encryptUtf8(requireText(command.secret(), "secret"));
                 account.updateSecret(encrypted.cipherBase64(), encrypted.ivBase64());
@@ -77,11 +98,14 @@ public class WecomKfConfigService {
         }
 
         String secret = requireText(command.secret(), "secret");
+        if (mobileHandoffEnabled && (wecomAppAgentId.isBlank() || wecomAppSecret.isBlank())) {
+            throw new IllegalArgumentException("wecomAppAgentId and wecomAppSecret are required when mobile handoff is enabled");
+        }
         String encodingAesKey = requireText(command.encodingAesKey(), "encodingAesKey");
         validateEncodingAesKey(encodingAesKey);
         SecretCipherService.EncryptedSecret encryptedSecret = secretCipherService.encryptUtf8(secret);
         SecretCipherService.EncryptedSecret encryptedAesKey = secretCipherService.encryptUtf8(encodingAesKey);
-        return accountRepository.save(new WecomKfAccountEntity(
+        WecomKfAccountEntity account = new WecomKfAccountEntity(
                 normalizedCompanyId,
                 corpId,
                 openKfId,
@@ -92,7 +116,14 @@ public class WecomKfConfigService {
                 encryptedAesKey.cipherBase64(),
                 encryptedAesKey.ivBase64(),
                 agentId,
-                requireText(runAsUserId, "runAsUserId")));
+                requireText(runAsUserId, "runAsUserId"));
+        account.updateProfile(corpId, openKfId, name, token, agentId, requireText(runAsUserId, "runAsUserId"),
+                wecomAppAgentId, mobileHandoffEnabled, enabled);
+        if (!wecomAppSecret.isBlank()) {
+            SecretCipherService.EncryptedSecret encrypted = secretCipherService.encryptUtf8(wecomAppSecret);
+            account.updateWecomAppSecret(encrypted.cipherBase64(), encrypted.ivBase64());
+        }
+        return accountRepository.save(account);
     }
 
     @Transactional
@@ -111,6 +142,9 @@ public class WecomKfConfigService {
                 command.encodingAesKey(),
                 fallback(command.agentId(), existing.getAgentId()),
                 fallback(command.runAsUserId(), existing.getRunAsUserId()),
+                fallback(command.wecomAppAgentId(), existing.getWecomAppAgentId()),
+                command.wecomAppSecret(),
+                command.mobileHandoffEnabled() == null ? existing.isMobileHandoffEnabled() : command.mobileHandoffEnabled(),
                 command.enabled() == null ? existing.isEnabled() : command.enabled()));
     }
 
@@ -141,6 +175,10 @@ public class WecomKfConfigService {
         payload.put("name", account.getName());
         payload.put("agentId", account.getAgentId());
         payload.put("runAsUserId", account.getRunAsUserId());
+        payload.put("mobileEntryId", account.getMobileEntryId());
+        payload.put("wecomAppAgentId", account.getWecomAppAgentId() == null ? "" : account.getWecomAppAgentId());
+        payload.put("mobileHandoffEnabled", account.isMobileHandoffEnabled());
+        payload.put("mobileEntryPath", "/wecom/kf/mobile/start?entry=" + account.getMobileEntryId());
         payload.put("enabled", account.isEnabled());
         payload.put("syncCursorPresent", account.getSyncCursor() != null && !account.getSyncCursor().isBlank());
         payload.put("accessTokenExpiresAt", account.getAccessTokenExpiresAt() == null ? "" : account.getAccessTokenExpiresAt().toString());
@@ -156,7 +194,10 @@ public class WecomKfConfigService {
         return new ResolvedAccount(
                 account,
                 secretCipherService.decryptUtf8(account.getSecretCipher(), account.getSecretIv()),
-                secretCipherService.decryptUtf8(account.getEncodingAesKeyCipher(), account.getEncodingAesKeyIv()));
+                secretCipherService.decryptUtf8(account.getEncodingAesKeyCipher(), account.getEncodingAesKeyIv()),
+                blank(account.getWecomAppSecretCipher()).isBlank() || blank(account.getWecomAppSecretIv()).isBlank()
+                        ? ""
+                        : secretCipherService.decryptUtf8(account.getWecomAppSecretCipher(), account.getWecomAppSecretIv()));
     }
 
     private void requireAgent(String companyId, String agentId) {
@@ -206,9 +247,15 @@ public class WecomKfConfigService {
                                 String encodingAesKey,
                                 String agentId,
                                 String runAsUserId,
+                                String wecomAppAgentId,
+                                String wecomAppSecret,
+                                Boolean mobileHandoffEnabled,
                                 Boolean enabled) {
     }
 
-    public record ResolvedAccount(WecomKfAccountEntity account, String secret, String encodingAesKey) {
+    public record ResolvedAccount(WecomKfAccountEntity account, String secret, String encodingAesKey, String wecomAppSecret) {
+        public ResolvedAccount(WecomKfAccountEntity account, String secret, String encodingAesKey) {
+            this(account, secret, encodingAesKey, "");
+        }
     }
 }

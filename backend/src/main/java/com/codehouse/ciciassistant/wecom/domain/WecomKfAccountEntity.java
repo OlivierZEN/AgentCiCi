@@ -7,6 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "wecom_kf_account")
@@ -48,6 +49,30 @@ public class WecomKfAccountEntity {
 
     @Column(name = "run_as_user_id", nullable = false, length = 64)
     private String runAsUserId;
+
+    @Column(name = "mobile_entry_id", nullable = false, unique = true)
+    private UUID mobileEntryId = UUID.randomUUID();
+
+    @Column(name = "wecom_app_agent_id", length = 64)
+    private String wecomAppAgentId;
+
+    @Column(name = "wecom_app_secret_cipher", columnDefinition = "TEXT")
+    private String wecomAppSecretCipher;
+
+    @Column(name = "wecom_app_secret_iv", length = 64)
+    private String wecomAppSecretIv;
+
+    @Column(name = "wecom_app_access_token_cipher", columnDefinition = "TEXT")
+    private String wecomAppAccessTokenCipher;
+
+    @Column(name = "wecom_app_access_token_iv", length = 64)
+    private String wecomAppAccessTokenIv;
+
+    @Column(name = "wecom_app_access_token_expires_at")
+    private Instant wecomAppAccessTokenExpiresAt;
+
+    @Column(name = "mobile_handoff_enabled", nullable = false)
+    private boolean mobileHandoffEnabled = false;
 
     @Column(name = "enabled", nullable = false)
     private boolean enabled = true;
@@ -109,6 +134,14 @@ public class WecomKfAccountEntity {
     public String getEncodingAesKeyIv() { return encodingAesKeyIv; }
     public String getAgentId() { return agentId; }
     public String getRunAsUserId() { return runAsUserId; }
+    public UUID getMobileEntryId() { return mobileEntryId; }
+    public String getWecomAppAgentId() { return wecomAppAgentId; }
+    public String getWecomAppSecretCipher() { return wecomAppSecretCipher; }
+    public String getWecomAppSecretIv() { return wecomAppSecretIv; }
+    public String getWecomAppAccessTokenCipher() { return wecomAppAccessTokenCipher; }
+    public String getWecomAppAccessTokenIv() { return wecomAppAccessTokenIv; }
+    public Instant getWecomAppAccessTokenExpiresAt() { return wecomAppAccessTokenExpiresAt; }
+    public boolean isMobileHandoffEnabled() { return mobileHandoffEnabled; }
     public boolean isEnabled() { return enabled; }
     public String getSyncCursor() { return syncCursor; }
     public String getAccessTokenCipher() { return accessTokenCipher; }
@@ -135,6 +168,8 @@ public class WecomKfAccountEntity {
                               String token,
                               String agentId,
                               String runAsUserId,
+                              String wecomAppAgentId,
+                              boolean mobileHandoffEnabled,
                               boolean enabled) {
         this.corpId = corpId;
         this.openKfId = openKfId;
@@ -142,6 +177,8 @@ public class WecomKfAccountEntity {
         this.token = token;
         this.agentId = agentId;
         this.runAsUserId = runAsUserId;
+        this.wecomAppAgentId = blank(wecomAppAgentId);
+        this.mobileHandoffEnabled = mobileHandoffEnabled;
         this.enabled = enabled;
         this.updatedAt = Instant.now();
     }
@@ -159,6 +196,20 @@ public class WecomKfAccountEntity {
         this.updatedAt = Instant.now();
     }
 
+    public void updateWecomAppSecret(String cipher, String iv) {
+        this.wecomAppSecretCipher = cipher;
+        this.wecomAppSecretIv = iv;
+        clearWecomAppAccessToken();
+        this.updatedAt = Instant.now();
+    }
+
+    public void updateWecomAppAccessToken(String cipher, String iv, Instant expiresAt) {
+        this.wecomAppAccessTokenCipher = cipher;
+        this.wecomAppAccessTokenIv = iv;
+        this.wecomAppAccessTokenExpiresAt = expiresAt;
+        this.updatedAt = Instant.now();
+    }
+
     public void updateEnabled(boolean enabled) {
         this.enabled = enabled;
         this.updatedAt = Instant.now();
@@ -168,5 +219,15 @@ public class WecomKfAccountEntity {
         this.accessTokenCipher = null;
         this.accessTokenIv = null;
         this.accessTokenExpiresAt = null;
+    }
+
+    private void clearWecomAppAccessToken() {
+        this.wecomAppAccessTokenCipher = null;
+        this.wecomAppAccessTokenIv = null;
+        this.wecomAppAccessTokenExpiresAt = null;
+    }
+
+    private String blank(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }

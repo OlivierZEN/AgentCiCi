@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-20T02:23:19Z
+updated_at: 2026-08-20T16:42:00Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,19 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-327 - 微信客服企业微信手机端监控与强制接管
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-199-wechat-customer-service-mobile-handoff.md`
+- task_status_path: `.claw/tasks/TASK-327.md`
+- blocked_by: `none`
+- scope_files: `微信客服权威状态/消息来源、人工接管 fence、移动 OAuth/session、坐席列表、原生聊天跳转、V123、前后端测试与本地环境验证`
+- completion_evidence: `代码与全新迁移：后端 WecomKf 8 类 22 项；前端 54 文件/297 项；production package/build；V1-V123 + JPA validate 启动通过；本地 main 部署待执行`
+- next_action: `提交并合并本地 main，从该提交构建 backend/frontend :local，更新 cc-local-stack 并回读版本/迁移/页面/容器证据。`
 
 ### TASK-326 - 对齐 DevAutopilot 7×87 元数据基线
 

@@ -8,12 +8,19 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Objects;
+import java.util.UUID;
 
 @Entity
 @Table(name = "wecom_kf_conversation")
 public class WecomKfConversationEntity {
 
     public static final String STATUS_ACTIVE = "ACTIVE";
+    public static final String OWNER_AI = "AI";
+    public static final String OWNER_HANDOFF = "HANDOFF";
+    public static final String OWNER_PENDING = "PENDING";
+    public static final String OWNER_HUMAN = "HUMAN";
+    public static final String OWNER_ENDED = "ENDED";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -39,6 +46,27 @@ public class WecomKfConversationEntity {
 
     @Column(name = "run_as_user_id", nullable = false, length = 64)
     private String runAsUserId;
+
+    @Column(name = "public_id", nullable = false, unique = true)
+    private UUID publicId = UUID.randomUUID();
+
+    @Column(name = "remote_service_state", nullable = false)
+    private int remoteServiceState = 0;
+
+    @Column(name = "owner_mode", nullable = false, length = 16)
+    private String ownerMode = OWNER_AI;
+
+    @Column(name = "servicer_userid", length = 128)
+    private String servicerUserId;
+
+    @Column(name = "state_revision", nullable = false)
+    private long stateRevision = 0;
+
+    @Column(name = "state_checked_at")
+    private Instant stateCheckedAt;
+
+    @Column(name = "handoff_reason", length = 64)
+    private String handoffReason;
 
     @Column(name = "last_customer_message_at")
     private Instant lastCustomerMessageAt;
@@ -82,6 +110,13 @@ public class WecomKfConversationEntity {
     public String getSessionId() { return sessionId; }
     public String getAgentId() { return agentId; }
     public String getRunAsUserId() { return runAsUserId; }
+    public UUID getPublicId() { return publicId; }
+    public int getRemoteServiceState() { return remoteServiceState; }
+    public String getOwnerMode() { return ownerMode; }
+    public String getServicerUserId() { return servicerUserId; }
+    public long getStateRevision() { return stateRevision; }
+    public Instant getStateCheckedAt() { return stateCheckedAt; }
+    public String getHandoffReason() { return handoffReason; }
     public Instant getLastCustomerMessageAt() { return lastCustomerMessageAt; }
     public int getReplyCountInWindow() { return replyCountInWindow; }
     public String getStatus() { return status; }
@@ -105,5 +140,54 @@ public class WecomKfConversationEntity {
     public void markReplySent() {
         this.replyCountInWindow += 1;
         this.updatedAt = Instant.now();
+    }
+
+    public boolean aiOwned() {
+        return OWNER_AI.equals(ownerMode) && (remoteServiceState == 0 || remoteServiceState == 1);
+    }
+
+    public void reserveHandoff(String reason) {
+        this.ownerMode = OWNER_HANDOFF;
+        this.handoffReason = blank(reason);
+        this.stateRevision += 1;
+        this.updatedAt = Instant.now();
+    }
+
+    public void synchronizeRemoteState(int remoteState, String servicerUserId, String reason, Instant checkedAt) {
+        if (remoteState < 0 || remoteState > 4) {
+            throw new IllegalArgumentException("Unsupported customer service state: " + remoteState);
+        }
+        String normalizedServicer = blank(servicerUserId);
+        String nextOwner = OWNER_HANDOFF.equals(this.ownerMode)
+                && (remoteState == 0 || remoteState == 1)
+                && !"handoff_failed".equals(reason)
+                ? OWNER_HANDOFF
+                : ownerFor(remoteState);
+        boolean changed = remoteServiceState != remoteState
+                || !Objects.equals(this.servicerUserId, normalizedServicer)
+                || !Objects.equals(this.ownerMode, nextOwner);
+        this.remoteServiceState = remoteState;
+        this.ownerMode = nextOwner;
+        this.servicerUserId = normalizedServicer;
+        this.handoffReason = blank(reason);
+        this.stateCheckedAt = checkedAt == null ? Instant.now() : checkedAt;
+        if (changed) {
+            this.stateRevision += 1;
+        }
+        this.updatedAt = Instant.now();
+    }
+
+    private String ownerFor(int remoteState) {
+        return switch (remoteState) {
+            case 0, 1 -> OWNER_AI;
+            case 2 -> OWNER_PENDING;
+            case 3 -> OWNER_HUMAN;
+            case 4 -> OWNER_ENDED;
+            default -> throw new IllegalArgumentException("Unsupported customer service state: " + remoteState);
+        };
+    }
+
+    private String blank(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }

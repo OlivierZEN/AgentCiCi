@@ -13,7 +13,6 @@ import java.util.UUID;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WecomKfConversationService {
@@ -22,21 +21,20 @@ public class WecomKfConversationService {
     private final WecomKfMessageRepository messageRepository;
     private final AgentRunTraceRepository traceRepository;
     private final ChatOrchestratorService chatOrchestratorService;
-    private final WecomKfClient client;
+    private final WecomKfHandoffService handoffService;
 
     public WecomKfConversationService(WecomKfConversationRepository conversationRepository,
                                       WecomKfMessageRepository messageRepository,
                                       AgentRunTraceRepository traceRepository,
                                       ChatOrchestratorService chatOrchestratorService,
-                                      WecomKfClient client) {
+                                      WecomKfHandoffService handoffService) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.traceRepository = traceRepository;
         this.chatOrchestratorService = chatOrchestratorService;
-        this.client = client;
+        this.handoffService = handoffService;
     }
 
-    @Transactional
     public void acceptCustomerMessage(WecomKfConfigService.ResolvedAccount resolved, WecomKfClient.SyncedMessage message) {
         if (message == null || blank(message.msgId()).isBlank()) {
             return;
@@ -46,6 +44,10 @@ public class WecomKfConversationService {
             return;
         }
         String externalUserId = blank(message.externalUserId());
+        if (externalUserId.isBlank()) {
+            persistWithoutConversation(resolved, message);
+            return;
+        }
         String openKfId = blank(message.openKfId()).isBlank() ? resolved.account().getOpenKfId() : blank(message.openKfId());
         WecomKfConversationEntity conversation = conversationRepository
                 .findByCompanyIdAndCorpIdAndOpenKfIdAndExternalUserId(companyId, resolved.account().getCorpId(), openKfId, externalUserId)
@@ -57,23 +59,58 @@ public class WecomKfConversationService {
                         sessionId(resolved.account().getCorpId(), openKfId, externalUserId),
                         resolved.account().getAgentId(),
                         resolved.account().getRunAsUserId()));
-        Instant messageAt = messageInstant(message.sendTime());
-        conversation.markCustomerMessage(messageAt);
-        conversationRepository.save(conversation);
+        conversation = conversationRepository.save(conversation);
 
         String msgType = blank(message.msgType()).isBlank() ? "unknown" : blank(message.msgType());
         String content = "text".equalsIgnoreCase(msgType) ? blank(message.content()) : "非文本消息";
+        boolean customerOrigin = message.origin() == 3;
+        boolean humanOrigin = message.origin() == 5;
+        String direction = humanOrigin ? WecomKfMessageEntity.DIRECTION_OUTBOUND : WecomKfMessageEntity.DIRECTION_INBOUND;
         messageRepository.save(new WecomKfMessageEntity(
                 companyId,
                 message.msgId(),
                 resolved.account().getCorpId(),
                 openKfId,
                 externalUserId,
-                WecomKfMessageEntity.DIRECTION_INBOUND,
+                direction,
                 msgType,
                 clip(content, 1000),
                 "",
-                "received"));
+                "received",
+                message.origin(),
+                message.servicerUserId(),
+                message.eventType(),
+                message.msgId()));
+
+        if (message.origin() == 4 || "event".equalsIgnoreCase(msgType)) {
+            if (message.eventServiceState() >= 0 && message.eventServiceState() <= 4) {
+                handoffService.applyStateEvent(resolved, conversation.getId(), message.eventServiceState(),
+                        message.newServicerUserId(), "wecom_event:" + blank(message.eventType()));
+            } else {
+                safeRefresh(resolved, conversation.getId(), "wecom_event:" + blank(message.eventType()));
+            }
+            return;
+        }
+        if (humanOrigin || !customerOrigin) {
+            safeRefresh(resolved, conversation.getId(), humanOrigin ? "human_message" : "non_customer_origin");
+            return;
+        }
+
+        Instant messageAt = messageInstant(message.sendTime());
+        conversation.markCustomerMessage(messageAt);
+        conversation = conversationRepository.save(conversation);
+        WecomKfHandoffService.ConversationState current = handoffService.refreshState(
+                resolved, conversation.getId(), "customer_message");
+
+        if (humanRequested(content)) {
+            handoffService.queueForHuman(resolved, conversation.getId(), "customer:" + externalUserId,
+                    "customer:" + message.msgId() + ":queue", message.msgId(), current.revision(), "customer_request");
+            return;
+        }
+        if (!WecomKfConversationEntity.OWNER_AI.equals(current.ownerMode())) {
+            return;
+        }
+        long capturedRevision = current.revision();
 
         String answer = "当前版本先支持文字描述。请用文字补充订单号、手机号、序列号或问题详情。";
         String traceId = "";
@@ -92,28 +129,18 @@ public class WecomKfConversationService {
             answer = rawAnswer == null ? "" : String.valueOf(rawAnswer);
             traceId = annotateLatestTrace(conversation, message.msgId(), externalUserId);
         }
-        reply(resolved, conversation, message.msgId(), answer, traceId);
+        reply(resolved, conversation, message.msgId(), answer, traceId, capturedRevision);
     }
 
     private void reply(WecomKfConfigService.ResolvedAccount resolved,
                        WecomKfConversationEntity conversation,
                        String inboundMsgId,
                        String answer,
-                       String traceId) {
+                       String traceId,
+                       long expectedRevision) {
         String content = blank(answer).isBlank() ? "这次没有生成可发送的回复，请稍后再试或转人工处理。" : blank(answer);
-        String status;
-        if (!conversation.canReply(Instant.now())) {
-            status = "window_closed";
-        } else {
-            try {
-                client.sendText(resolved, conversation.getExternalUserId(), content);
-                conversation.markReplySent();
-                conversationRepository.save(conversation);
-                status = "sent";
-            } catch (RuntimeException ex) {
-                status = "send_failed";
-            }
-        }
+        WecomKfHandoffService.AiSendReceipt receipt = handoffService.sendAiReply(
+                resolved, conversation.getId(), expectedRevision, content);
         messageRepository.save(new WecomKfMessageEntity(
                 conversation.getCompanyId(),
                 outboundMessageId(inboundMsgId),
@@ -124,7 +151,34 @@ public class WecomKfConversationService {
                 "text",
                 clip(content, 1000),
                 traceId,
-                status));
+                receipt.status(),
+                1,
+                "",
+                "",
+                receipt.remoteMessageId()));
+    }
+
+    private void persistWithoutConversation(WecomKfConfigService.ResolvedAccount resolved,
+                                            WecomKfClient.SyncedMessage message) {
+        String msgType = blank(message.msgType()).isBlank() ? "unknown" : blank(message.msgType());
+        messageRepository.save(new WecomKfMessageEntity(
+                resolved.account().getCompanyId(), message.msgId(), resolved.account().getCorpId(),
+                blank(message.openKfId()).isBlank() ? resolved.account().getOpenKfId() : blank(message.openKfId()),
+                null, WecomKfMessageEntity.DIRECTION_INBOUND, msgType, "无客户标识的企业微信事件", "", "received",
+                message.origin(), message.servicerUserId(), message.eventType(), message.msgId()));
+    }
+
+    private void safeRefresh(WecomKfConfigService.ResolvedAccount resolved, Long conversationId, String reason) {
+        try {
+            handoffService.refreshState(resolved, conversationId, reason);
+        } catch (RuntimeException ignored) {
+            // The callback is durable through sync cursor/message id. A later message or mobile read refreshes state again.
+        }
+    }
+
+    private boolean humanRequested(String content) {
+        String normalized = blank(content).replaceAll("\\s+", "");
+        return normalized.matches(".*(转人工|人工客服|人工服务|找人工|真人客服|人工接待|转接人工).*?");
     }
 
     private String annotateLatestTrace(WecomKfConversationEntity conversation, String requestId, String externalUserId) {

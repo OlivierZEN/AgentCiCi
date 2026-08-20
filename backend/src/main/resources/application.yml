@@ -44,6 +44,9 @@ info:
     git-commit: ${GIT_COMMIT:unknown}
 
 app:
+  wecom-kf:
+    # Mobile OAuth/JS-SDK callbacks use the deployment-owned public origin. Keep it out of product code.
+    public-base-url: ${APP_WECOM_KF_PUBLIC_BASE_URL:${APP_AUTH_OFFICIAL_ACCESS_ISSUER:}}
   auth:
     jwt-secret: "change-me-in-prod-change-me-in-prod-2026"
     jwt-expiration-seconds: 7200

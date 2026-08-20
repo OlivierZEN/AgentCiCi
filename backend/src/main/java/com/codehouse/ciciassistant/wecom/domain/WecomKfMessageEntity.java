@@ -49,6 +49,18 @@ public class WecomKfMessageEntity {
     @Column(name = "send_status", length = 32)
     private String sendStatus;
 
+    @Column(name = "origin")
+    private Integer origin;
+
+    @Column(name = "servicer_userid", length = 128)
+    private String servicerUserId;
+
+    @Column(name = "event_type", length = 64)
+    private String eventType;
+
+    @Column(name = "remote_msg_id", length = 128)
+    private String remoteMsgId;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
 
@@ -65,6 +77,24 @@ public class WecomKfMessageEntity {
                                 String contentSummary,
                                 String traceId,
                                 String sendStatus) {
+        this(companyId, msgId, corpId, openKfId, externalUserId, direction, msgType, contentSummary,
+                traceId, sendStatus, null, null, null, null);
+    }
+
+    public WecomKfMessageEntity(String companyId,
+                                String msgId,
+                                String corpId,
+                                String openKfId,
+                                String externalUserId,
+                                String direction,
+                                String msgType,
+                                String contentSummary,
+                                String traceId,
+                                String sendStatus,
+                                Integer origin,
+                                String servicerUserId,
+                                String eventType,
+                                String remoteMsgId) {
         this.companyId = companyId;
         this.msgId = msgId;
         this.corpId = corpId;
@@ -75,6 +105,10 @@ public class WecomKfMessageEntity {
         this.contentSummary = contentSummary;
         this.traceId = traceId;
         this.sendStatus = sendStatus;
+        this.origin = origin;
+        this.servicerUserId = servicerUserId;
+        this.eventType = eventType;
+        this.remoteMsgId = remoteMsgId;
     }
 
     public Long getId() { return id; }
@@ -88,5 +122,9 @@ public class WecomKfMessageEntity {
     public String getContentSummary() { return contentSummary; }
     public String getTraceId() { return traceId; }
     public String getSendStatus() { return sendStatus; }
+    public Integer getOrigin() { return origin; }
+    public String getServicerUserId() { return servicerUserId; }
+    public String getEventType() { return eventType; }
+    public String getRemoteMsgId() { return remoteMsgId; }
     public Instant getCreatedAt() { return createdAt; }
 }

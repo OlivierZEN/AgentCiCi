@@ -56,6 +56,9 @@ class WecomKfConfigServiceTest {
                 "abcdefghijklmnopqrstuvwxyzABCDEFG1234567890",
                 "",
                 "",
+                "",
+                "",
+                false,
                 true));
 
         assertThat(saved.getAgentId()).isEqualTo("after-sales-agent");

@@ -80,6 +80,9 @@ public class AdminWecomKfAccountController {
                 request.encodingAesKey(),
                 request.agentId(),
                 request.runAsUserId(),
+                request.wecomAppAgentId(),
+                request.wecomAppSecret(),
+                request.mobileHandoffEnabled(),
                 request.enabled());
     }
 
@@ -91,6 +94,9 @@ public class AdminWecomKfAccountController {
                                 String encodingAesKey,
                                 String agentId,
                                 String runAsUserId,
+                                String wecomAppAgentId,
+                                String wecomAppSecret,
+                                Boolean mobileHandoffEnabled,
                                 Boolean enabled) {
     }
 }
