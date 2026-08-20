@@ -1,6 +1,6 @@
 ---
 kind: devops
-version: 3
+version: 4
 updated_at: 2026-08-19T14:07:36Z
 updated_by: codex
 status: active
@@ -24,6 +24,13 @@ status: active
 - 仅使用现有受管 Compose 和 runtime 执行 `--no-deps --force-recreate backend`；backend healthy/restart=0、`/actuator/health=UP`，`https://cici.localhost/app=200`、匿名 `/auth/me=401 application/json`，DevAutopilot `/api/health` 为 integrated/ok 且 AgentCiCi/Semattice 均 true，启动后 severe 日志 0。
 - frontend、DevAutopilot、Semattice、PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak 和 Nginx 保持原创建时间，未被本轮替换。未发送真实产品经理消息，未执行 Semattice 写入，UAT/生产未修改。
 - `cc-local-stack ./stack status/version/up` 当前被既有 Semattice 基础版本漂移 `config=1.0.5 / repository=1.0.7` 失败关闭；本轮只声明 AgentCiCi backend 目标门禁，不声明完整 `./stack verify`，也未越权修改 local-stack 或 Semattice 仓库。
+
+## 2026-08-19 INT-027 UAT DevAutopilot SERVICE 身份修复
+
+- 变更前 root-only 配置备份位于 `/data/apps/agentcici/config-backups/20260819T095048Z-before-service-token-exchange-enable`，Compose、受管环境、容器 inspect 和 SHA-256 清单均非空、`0600` 且校验通过。
+- UAT Compose 运行配置启用 `APP_AUTH_OIDC_SERVICE_TOKEN_EXCHANGE_ENABLED=true` 后仅重建 backend；四个状态服务容器指纹保持 `b5dca5759af2a9cfb0ed4285fdb3b01c9af02db33eb2bfbabfa347fe728de2bc`。变更时运行版本为 `2.8.62-beta.1 / 83b268870b8e`；并行候选发布后最终为 `2.8.65-beta.1 / 784ccd23e933`，开关仍为 true。
+- HUMAN Owner/ORG_ADMIN 通过官方管理界面只为 Wukong SERVICE 增加 `identity.principal.sync`；最终 scope 为 `identity.principal.sync,runtime.record.create,runtime.record.read,runtime.record.update`，未轮换 Secret、Client ID 或调整容量。
+- 最终六容器 healthy/restart=0，Nginx 有效，公开 smoke 和 30 秒日志稳定窗口通过。应用回滚为恢复上述备份 Compose 并只重建 backend；数据服务无需回滚。生产未修改。
 
 ## 2026-08-19 生产 `2.8.65`
 

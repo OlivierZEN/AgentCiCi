@@ -1,6 +1,6 @@
 ---
 kind: current-status
-version: 4
+version: 5
 updated_at: 2026-08-19T14:07:36Z
 updated_by: codex
 phase: implementation
@@ -25,6 +25,8 @@ read_next:
 - `TASK-325 / FEAT-192` 代码门禁通过但本地产品环境未完成：实现 `77ce9095` 的 10 类 97 项、package、diff check 和 backend 单服务门禁有效；backend 运行 `2.8.66-dev.77ce909 / 77ce9095f2bc`，但 frontend 仍为 `2.8.61-dev.1ad25d3 / 1ad25d3923de`，页面角标暴露混合版本。此前把单服务健康扩大表述为整体环境已一致更新属于错误，现撤销“进入 HUMAN 业务验收”结论；必须先对齐 frontend 并联合回读前后端指纹。真实改名未执行。
 
 - `TASK-324 / FEAT-192` 已进入本地业务验收：`a9e3d1b0` 加固结构化需求字段与上下文澄清，字段不完整时回显原需求并只问样式/来源、文字保留和可见效果，不再输出截图中的泛化句子。8 个相关测试类 82 项、package、diff check 通过；backend 从本地 `main@a9e3d1b0fc06` 构建为 `2.8.66-dev.a9e3d1b`，image/环境/版本接口一致，healthy/restart=0，`cici.localhost/app=200`、匿名 JSON 401、DevAutopilot integrated=true/true，启动 severe 日志 0。真实首轮模型回答待 HUMAN 重试；标准 `./stack version` 仍被既有 Semattice 基础版本漂移阻断，未修改第二仓治理配置。
+
+- `INT-027` UAT SERVICE 身份链路已修复：运行配置已启用 OIDC SERVICE Token 交换，Wukong Principal 经官方管理界面补充最小 `identity.principal.sync` 后，scope 精确为该项加 `runtime.record.create/read/update`。最终 UAT `2.8.65-beta.1 / 784ccd23e933` 开关回读为 true，CLI identity/capacity/tasks 全部成功，六容器 healthy/restart=0，四个状态服务未重建，生产未修改。
 
 - `TASK-323 / FEAT-190` 已完成：最终源码 `784ccd23e933` 已发布 UAT `2.8.65-beta.1` 和生产 `2.8.65`。生产登录态重试 `org5nszpgj99jaysxv6y` 成功，`orgl624a7r54pzp3e5zv` 回归通过；两者 UI 均为运行中、已开通 3、待处理 0，数据库均为 `ACTIVE/ACTIVE`、无失败阶段/错误码、资源 2、PM scope 3。六容器 healthy/restart=0，四个状态服务 ID 未变；知识库仍为 9/35/661、29 文件、549 points。生产备份为 `/opt/cici/backups/20260819T102115Z-before-2.8.65`。
 

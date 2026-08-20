@@ -1,6 +1,6 @@
 ---
 kind: test-report
-version: 3
+version: 4
 updated_at: 2026-08-19T14:07:36Z
 updated_by: codex
 status: active
@@ -33,6 +33,14 @@ last_run_status: failed_task_325_product_version_fingerprint_mismatch
 - 本地运行：`main@a9e3d1b0fc06` 构建为 `2.8.66-dev.a9e3d1b`，镜像 ID `sha256:437dc98af23f0764e341f5d9668380252aff80e9ffd17899fafb5b601832aa75`；image/容器环境/`system/version` 指纹一致，backend healthy/restart=0、health UP，正式入口 200、匿名 JSON 401、DevAutopilot integrated=true/true，启动 severe 日志 0。
 - 编排边界：仅重建并替换 backend，其他容器创建时间保持原值。标准 `./stack version` 被既有 Semattice 基础版本 `config=1.0.5/repository=1.0.7` 漂移失败关闭，未修改 cc-local-stack 或 Semattice；因此本轮只声明目标服务门禁，不声明完整 `stack verify`。
 - 业务边界：未发送真实产品经理消息或执行任何 Semattice 写入；首轮模型答复仍待 HUMAN 在新会话重试。UAT、生产、DevAutopilot 和 Semattice 未部署。
+
+## 2026-08-19 INT-027 UAT DevAutopilot SERVICE 身份修复
+
+- 状态：`passed_int_027_uat_service_identity`。
+- 运行配置：最终 UAT `2.8.65-beta.1 / 784ccd23e933` 回读 `APP_AUTH_OIDC_SERVICE_TOKEN_EXCHANGE_ENABLED=true`；六容器 healthy/restart=0，四个状态服务容器指纹未变化。
+- 权限：Wukong SERVICE 最终 scope 精确为 `identity.principal.sync,runtime.record.create,runtime.record.read,runtime.record.update`；匿名 OACT 交换返回 401，未扩大其他 Principal 权限。
+- CLI：`doctor` ready，兼容性 `1.0.4-beta.8 / cli/v2`，Wukong identity active；容量 `0/2`、可用 `2`；任务查询成功返回空队列，不再出现 Keycloak/OACT 认证错误。
+- 运行门禁：公开六项只读 smoke、Nginx 校验、backend health UP 与 30 秒稳定窗口通过；backend severe=0、frontend 5xx=0。生产未修改。
 
 ## 2026-08-19 TASK-323 UAT、生产与真实租户恢复
 
