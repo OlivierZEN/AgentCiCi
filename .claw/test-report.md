@@ -1,23 +1,29 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-20T16:42:00Z
+updated_at: 2026-08-20T17:05:06Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-20T16:42:00Z
-last_run_status: passed_task_327_code_and_fresh_migration_pending_local_runtime_and_real_wecom
+last_run_at: 2026-08-20T17:05:06Z
+last_run_status: passed_task_327_local_technical_pending_real_wecom_human_acceptance
 ---
 
 # Test Report
 
-## 2026-08-21 TASK-327 微信客服手机端人工接管（代码与全新迁移）
+## 2026-08-21 TASK-327 微信客服手机端人工接管（本地技术验收）
 
-- 状态：`passed_task_327_code_and_fresh_migration_pending_local_runtime_and_real_wecom`；代码、确定性回归、全新数据库迁移和 JPA 启动通过，本地 main 制品部署与真实企业微信业务验收待继续。
+- 状态：`passed_task_327_local_technical_pending_real_wecom_human_acceptance`；代码、确定性回归、全新数据库迁移、JPA 启动和本地 main 全栈技术门禁通过，真实企业微信业务验收待 HUMAN。
 - 后端聚焦：`WecomKf*Test` 共 8 个测试类、22 项通过，0 failure/error/skipped。覆盖消息 `origin=3/4/5`、人工消息不触发模型、客户明确转人工、发送前 revision fence、接管写后回读、revision 冲突、幂等重放、跨租户拒绝、独立自建应用 Secret、OAuth state 与 Secure/HttpOnly Cookie。
 - 前端：全量 54 个测试文件、297 项通过；TypeScript/Vite production build 通过，仅保留既有 bundle-size warning。移动页没有聊天输入框，接管仅在 `SUCCEEDED + readback_state=3` 后调用企业微信原生 `navigateToKfChat`。
 - 迁移与运行：专用临时 PostgreSQL 16 数据库从空库完整应用 119 项迁移到 V123，JPA `ddl-auto=validate` 通过，临时 backend 正常启动；回读 `remote_service_state/target_state=integer`、`state_revision=bigint`、`operation_id=uuid`，临时库验证后已删除。
 - 构建与静态：`mvn -q -DskipTests package`、`git diff --check` 通过。完整 Maven 套件仍在既有 `KnowledgeBaseLifecycleIntegrationTest` 连接宿主机 `localhost:5432` 阶段持续重试并人工停止，未进入断言；不据此宣称后端全量通过。
 - 协议核验：按企业微信官方当前文档复核状态 0–4、`origin=3/4/5`、接待人员 `status=0` 和 `openKfId + externalUserId` 原生跳转字段。真实 OAuth、真实接待人员列表、微信客户消息、状态 3 接管和原生会话跳转仍为 HUMAN pending，未用 mock 冒充。
+- 本地主线与制品：功能提交 `a6427a94548d84feac601f45ac7efc544cbce651` 已 fast-forward 进入本地 `main`。backend/frontend 运行版本均为 `2.8.66-dev.a6427a9`、revision `a6427a94548d`；镜像 ID 分别为 `sha256:a9b13cf387862d8cb561da2032e741e1828ebe251abd0b5d42165d75c1a496f1` 和 `sha256:cd65a06af20fdd78049219dd81906a164c270a36d2604a5f8fea4ad37478d231`。
+- 本地全栈：受管 `./stack up` 完成并由其内置 `./stack verify` 通过环境域名源码门禁、共享数据库隔离、TLS edge、OIDC discovery、应用健康/版本和匿名授权边界。该受管命令刷新了四个应用容器；最终 backend/frontend/Semattice/DevAutopilot 全部 healthy、restart=0。AgentCiCi backend 启动日志显示 V123 成功且无 ERROR/Exception。
+- 运行回读：`/mobile/wechat-kf=200`、首页 `200`；匿名移动上下文为 JSON `401`，无效入口为 JSON `400`，匿名微信客服管理 API 为 JSON `401`。页面资源为 `index-DTN9-mHu-2.8.66-dev.a6427a9.js` 与 `index-BZQn4cEg-2.8.66-dev.a6427a9.css`；开发库回读 V123 success，微信客服账号/已启用移动账号/接管操作均为 0。
+- 移动视觉：390×844 受控浏览器用 mock API 仅验证 UI，三种权威状态、统计与筛选、44px 主动作、当前坐席和文字化 fence 状态可读；首次点击“强制接管”后按钮变为“确认强制接管”并展示 AI 发送阻断说明。mock 未计入真实业务验收。
+- 治理校验：`validate-state.py .claw` 已聚焦确认 TASK-327/FEAT-199 无新增错误；全局仍因仓库既有历史任务归档、旧规格状态/front matter 与旧时间格式债务返回非零，本任务未批量改写历史事实。
+- 待验收边界：当前没有真实微信客服账号、Secret 或接待人员配置，未执行真实手机 OAuth、客户消息、状态 3 写后回读、人工回复无 AI 双发或原生会话跳转；未发布 UAT/生产，也未推送远端。
 
 ## 2026-08-20 TASK-326 UAT `2.8.66-beta.1`
 

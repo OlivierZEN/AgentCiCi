@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 5
-updated_at: 2026-08-20T16:42:00Z
+updated_at: 2026-08-20T17:05:06Z
 updated_by: codex
-phase: implementation
+phase: verification
 active_task: TASK-327
-next_action: "提交并合并 TASK-327 到本地 main，从该提交构建 backend/frontend :local 并更新 cc-local-stack；真实企业微信验收保持 HUMAN pending。"
+next_action: "由 HUMAN 使用获授权真实微信客服账号完成手机 OAuth、客户消息、状态 3 接管、人工回复无 AI 双发和原生会话跳转验收；UAT/生产发布另行授权。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-327 / FEAT-199` 已完成代码与全新迁移门禁，待合并本地 main 和更新本地全栈：企业微信手机端作为人工坐席主界面，AgentCiCi 实现 0–4 权威状态、origin 3/4/5 分流、接管 revision fence、独立自建应用 OAuth/JS-SDK Secret、HttpOnly 会话、坐席资格、可信回执和原生客服会话跳转。后端聚焦 8 类 22 项、前端全量 54 文件/297 项、package/build、空库 V1–V123 和 JPA validate 启动通过；完整 Maven 套件仍被既有宿主机 PostgreSQL 连接条件阻断。真实企业微信 OAuth/客户消息/状态 3/原生跳转待 HUMAN，UAT/生产未修改。
+- `TASK-327 / FEAT-199` 已实现并进入真实渠道业务验收：功能提交 `a6427a94548d` 已进入本地 `main`，企业微信手机端作为人工坐席主界面，AgentCiCi 实现 0–4 权威状态、origin 3/4/5 分流、接管 revision fence、独立自建应用 OAuth/JS-SDK Secret、HttpOnly 会话、坐席资格、可信回执和原生客服会话跳转。后端聚焦 8 类 22 项、前端全量 54 文件/297 项、package/build、空库 V1–V123 和 JPA validate 启动通过；本地 backend/frontend 同为 `2.8.66-dev.a6427a9`，镜像/环境/页面制品一致，V123、正式入口、匿名 JSON 401/400、完整 `./stack verify` 和四应用容器 healthy/restart=0 通过。390×844 受控浏览器验证三态、44px 动作与接管二次确认；该 mock 仅为视觉证据。完整 Maven 套件仍被既有宿主机 PostgreSQL 连接条件阻断。当前开发库微信客服账号为 0，真实 OAuth/客户消息/状态 3/人工无双发/原生跳转待 HUMAN；远端、UAT、生产未修改。
 
 - `TASK-326 / FEAT-198 / INT-025` 已完成 UAT 技术发布并进入 review：AgentCiCi `2.8.66-beta.1 / 2c9d3821b458` 只重建 backend/frontend，精确消费 Semattice 7×87 并明确拒绝历史 7×86；四个状态服务未重建，六容器 healthy/restart=0，Flyway V122、备份、Nginx、公开 smoke 与匿名 401 JSON 通过。目标 AgentCiCi SERVICE 身份对 Semattice 模板应用探测返回 7 对象/87 字段、state=applied。DevAutopilot `1.0.5-beta.1 / 58253da87aa2` 也已发布；登录态缺陷业务验收待完成，生产未修改。
 

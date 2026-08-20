@@ -2,11 +2,11 @@
 kind: task-status
 task_id: TASK-327
 feature_id: FEAT-199
-status: in_progress
+status: review
 priority: critical
 owner_role: fullstack-agent
 claimed_by: codex
-updated_at: 2026-08-20T16:42:00Z
+updated_at: 2026-08-20T17:05:06Z
 updated_by: codex
 ---
 
@@ -28,4 +28,5 @@ updated_by: codex
 
 ## 下一步
 
-- 将已通过代码、22 项聚焦回归、前端 297 项和全新 V123/JPA 启动门禁的实现提交并合并到本地 `main`；随后只从该 main 构建 backend/frontend `:local` 镜像，更新 `cc-local-stack` 并回读运行指纹。真实企业微信渠道验收继续保留为 HUMAN pending。
+- 功能提交 `a6427a94548d` 已进入本地 `main`，本地运行版本为 `2.8.66-dev.a6427a9`；V123、backend/frontend 镜像 label、页面资源、容器健康/restart=0、匿名负例和完整 `./stack verify` 已回读通过。
+- 在获授权的真实微信客服账号配置自建应用 AgentId/Secret、可信域名和正式接待人员后，由 HUMAN 在企业微信手机端完成 OAuth、客户消息、状态 3 接管、人工回复无 AI 双发和原生会话跳转验收。UAT/生产发布另行授权。

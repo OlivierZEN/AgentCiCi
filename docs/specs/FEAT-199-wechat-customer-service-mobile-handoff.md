@@ -2,11 +2,11 @@
 kind: feature-spec
 feature_id: FEAT-199
 title: 微信客服企业微信手机端人工监控与强制接管
-status: in_implementation
+status: implemented
 primary_project: agentcici
 task_ids: TASK-327
 related_integrations: none
-updated_at: 2026-08-21T00:25:00Z
+updated_at: 2026-08-20T17:05:06Z
 updated_by: codex
 ---
 
@@ -108,7 +108,7 @@ updated_by: codex
 ### `wecom_kf_conversation` 增量
 
 - `public_id UUID UNIQUE NOT NULL`。
-- `remote_service_state SMALLINT NOT NULL DEFAULT 0`。
+- `remote_service_state INTEGER NOT NULL DEFAULT 0`。
 - `owner_mode VARCHAR(16) NOT NULL DEFAULT 'AI'`。
 - `servicer_userid VARCHAR(128)`。
 - `state_revision BIGINT NOT NULL DEFAULT 0`。
@@ -117,7 +117,7 @@ updated_by: codex
 
 ### `wecom_kf_message` 增量
 
-- `origin SMALLINT`。
+- `origin INTEGER`。
 - `servicer_userid VARCHAR(128)`。
 - `event_type VARCHAR(64)`。
 - `remote_msg_id VARCHAR(128)`。
