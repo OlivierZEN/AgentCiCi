@@ -79,7 +79,7 @@ class DevAutopilotActivationRecoveryIntegrationTest {
         SematticeDevAutopilotTemplateClient template = mock(SematticeDevAutopilotTemplateClient.class);
         when(template.apply(COMPANY_ID, ACTIVATION_KEY)).thenReturn(
                 new SematticeDevAutopilotTemplateClient.TemplateView(
-                        COMPANY_ID, "tenant-a", "metadata-a", "digest-a", 7, 86, "applied"));
+                        COMPANY_ID, "tenant-a", "metadata-a", "digest-a", 7, 87, "applied"));
         ServicePrincipalService principals = mock(ServicePrincipalService.class);
         when(principals.create(eq(COMPANY_ID), eq("owner-member"), eq("owner-member"), anyString(),
                 eq("OFFICIAL_APP"), eq(OfficialAccessTokenService.SEMATTICE_AUDIENCE), any(), any()))

@@ -178,7 +178,7 @@ public class DevAutopilotTenantApplicationService {
     private void validateMetadataBaseline(String companyId, SematticeDevAutopilotTemplateClient.TemplateView metadata) {
         if (!companyId.equals(metadata.companyId())
                 || metadata.objectCount() != 7
-                || metadata.fieldCount() != 86
+                || metadata.fieldCount() != 87
                 || !("applied".equals(metadata.state()) || "already_applied".equals(metadata.state()))) {
             throw new IllegalStateException("Semattice DevAutopilot metadata baseline is incomplete");
         }
@@ -398,7 +398,7 @@ public class DevAutopilotTenantApplicationService {
 
     static String metadataReconciliationKey(String activationId) {
         require(activationId, "activationId");
-        return "devautopilot.standard.v1:shape-7x86:" + activationId;
+        return "devautopilot.standard.v1:shape-7x87:" + activationId;
     }
 
     @Transactional

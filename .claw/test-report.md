@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-19T14:07:36Z
+updated_at: 2026-08-20T02:05:34Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-19T14:07:36Z
-last_run_status: failed_task_325_product_version_fingerprint_mismatch
+last_run_at: 2026-08-20T02:05:34Z
+last_run_status: passed_task_326_7x87_consumer_contract
 ---
 
 # Test Report
+
+## 2026-08-20 TASK-326 DevAutopilot 7×87 模板消费契约
+
+- 状态：`passed_task_326_7x87_consumer_contract`。
+- `DevAutopilotTenantApplicationReadinessTest` 14 项通过，0 failure/error/skipped；覆盖精确 `shape-7x87` 幂等键、7×87 正例、历史 7×86 失败关闭和旧 6 对象失败关闭。
+- `DevAutopilotActivationRecoveryIntegrationTest` 在当前本机条件下 1 项 skipped、无 failure/error；backend package 与 `git diff --check` 通过。
+- `validate-state.py .claw` 仍只报告既有历史 front matter、旧任务归档和状态枚举债务，没有 TASK-326/FEAT-198 新错误；本任务不扩大范围修复历史治理债务。
+- Semattice 提供方 UAT `1.0.7-beta.5 / 54f2ab93558f` 已发布，AgentCiCi 与 DevAutopilot UAT 候选仍待发布。
 
 ## 2026-08-19 TASK-325 项目改名确定性执行与可信回执
 

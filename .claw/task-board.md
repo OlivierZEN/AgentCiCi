@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-19T14:07:36Z
+updated_at: 2026-08-20T02:03:46Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,19 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-326 - 对齐 DevAutopilot 7×87 元数据基线
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `integration-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-198-devautopilot-defect-validation-template-consumer.md`
+- task_status_path: `.claw/tasks/TASK-326.md`
+- blocked_by: `none`
+- scope_files: `DevAutopilotTenantApplicationService、初始化恢复测试、INT-025 契约和 UAT 发布证据`
+- completion_evidence: `pending`
+- next_action: `完成聚焦回归，合并推送 main，再按 Semattice → AgentCiCi → DevAutopilot 顺序完成 UAT 技术验收。`
 
 ### TASK-325 - 产品经理项目改名确定性执行与可信回执
 

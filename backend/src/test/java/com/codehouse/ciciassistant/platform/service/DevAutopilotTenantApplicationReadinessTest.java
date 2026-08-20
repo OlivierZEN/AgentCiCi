@@ -189,19 +189,34 @@ class DevAutopilotTenantApplicationReadinessTest {
     }
 
     @Test
-    void reappliesAndPersistsTheCurrentSevenObjectMetadataBaselineDuringReconciliation() {
+    void reappliesAndPersistsTheCurrentSevenObjectEightySevenFieldBaselineDuringReconciliation() {
         SematticeDevAutopilotTemplateClient template = mock(SematticeDevAutopilotTemplateClient.class);
         JdbcTemplate metadataJdbc = mock(JdbcTemplate.class);
         DevAutopilotTenantApplicationService metadataService = service(metadataJdbc, template);
         String key = DevAutopilotTenantApplicationService.metadataReconciliationKey("activation-a");
+        assertThat(key).isEqualTo("devautopilot.standard.v1:shape-7x87:activation-a");
         when(template.apply("company-a", key)).thenReturn(new SematticeDevAutopilotTemplateClient.TemplateView(
-                "company-a", "tenant-a", "metadata-v2", "digest-v2", 7, 86, "applied"));
+                "company-a", "tenant-a", "metadata-v2", "digest-v2", 7, 87, "applied"));
 
         var result = metadataService.reconcileMetadataBaseline("company-a", "activation-a");
 
         assertThat(result.metadataVersionId()).isEqualTo("metadata-v2");
         verify(metadataJdbc).update(contains("metadata_version_id=?"),
                 eq("metadata-v2"), eq("digest-v2"), eq("activation-a"));
+    }
+
+    @Test
+    void rejectsTheHistoricalSevenObjectEightySixFieldBaseline() {
+        SematticeDevAutopilotTemplateClient template = mock(SematticeDevAutopilotTemplateClient.class);
+        JdbcTemplate metadataJdbc = mock(JdbcTemplate.class);
+        DevAutopilotTenantApplicationService metadataService = service(metadataJdbc, template);
+        when(template.apply(eq("company-a"), anyString())).thenReturn(new SematticeDevAutopilotTemplateClient.TemplateView(
+                "company-a", "tenant-a", "metadata-v1", "digest-v1", 7, 86, "already_applied"));
+
+        assertThatThrownBy(() -> metadataService.reconcileMetadataBaseline("company-a", "activation-a"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("metadata baseline is incomplete");
+        verifyNoInteractions(metadataJdbc);
     }
 
     @Test
