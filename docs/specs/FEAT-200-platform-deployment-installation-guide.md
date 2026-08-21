@@ -2,11 +2,11 @@
 kind: feature-spec
 feature_id: FEAT-200
 title: 运维中心部署安装在线指南
-status: implementing
+status: implemented
 primary_project: agentcici
 task_ids: TASK-328
 related_integrations: none
-updated_at: 2026-08-21T00:00:00Z
+updated_at: 2026-08-21T06:23:00Z
 updated_by: codex
 ---
 

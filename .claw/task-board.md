@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-21T00:00:00Z
+updated_at: 2026-08-21T06:23:00Z
 updated_by: codex
 board_status: active
 ---
@@ -17,7 +17,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-328 - 运维中心部署安装在线指南
 
-- status: `in_progress`
+- status: `review`
 - priority: `high`
 - owner_role: `frontend-agent`
 - claimed_by: `codex`
@@ -25,8 +25,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-328.md`
 - blocked_by: `none`
 - scope_files: `平台运维中心导航、部署安装在线文档、Agent Markdown、定向测试、前端构建与本地环境验证`
-- completion_evidence: `pending`
-- next_action: `实现页面与 Markdown，运行导航/文档测试、全量测试和 production build。`
+- completion_evidence: `01c678d0、1aff699e；55 文件/304 项、build、域名门禁；本地 frontend 2.8.66-dev.1aff699 healthy/restart=0；HTML/Markdown 200，Markdown text/markdown + nosniff；1280×720 组件桌面预览无横向溢出、console 0；真实登录态视觉待补`
+- next_action: `平台运营账号重新登录本地环境后，打开“运维中心 → 部署安装”，复核正式认证路由的目录锚点和 Markdown 新窗口入口。`
 
 ### TASK-327 - 微信客服企业微信手机端监控与强制接管
 

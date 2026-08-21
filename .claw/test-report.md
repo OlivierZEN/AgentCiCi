@@ -1,14 +1,27 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-20T17:05:06Z
+updated_at: 2026-08-21T06:23:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-20T17:05:06Z
-last_run_status: passed_task_327_local_technical_pending_real_wecom_human_acceptance
+last_run_at: 2026-08-21T06:23:00Z
+last_run_status: passed_task_328_frontend_technical_pending_authenticated_visual_acceptance
 ---
 
 # Test Report
+
+## 2026-08-21 TASK-328 运维中心部署安装在线指南
+
+- 状态：`passed_task_328_frontend_technical_pending_authenticated_visual_acceptance`；导航、在线文档、Agent Markdown、前端构建、本地 frontend 制品与技术路由通过，正式认证路由桌面复核待平台运营账号重新登录。
+- 源码与内容：提交 `01c678d015b4` 新增“运维中心 → 部署安装”、`/platform/operations/deployment-installation`、8 章在线手册和 `/agent-docs/operations/deployment-installation.md`；`1aff699e97cb` 修复 1280px 桌面制品表横向溢出。两项均进入本地 `main`，未推送远端。
+- 文档边界：AgentCiCi 明确使用 backend/frontend 两个授权 OCI 镜像；Semattice 明确当前受管交付为 Linux amd64 二进制、静态资源与 migration，不虚构 OCI 镜像；Keycloak 使用官方 `quay.io/keycloak/keycloak:<approved-version>`。私有 registry、环境坐标和 Secret 均为受管占位符。
+- 自动化：导航与文档定向 2 个测试文件、24 项通过；前端全量 55 个测试文件、304 项通过；TypeScript/Vite production build 通过，仅保留既有 bundle-size warning；`git diff --check` 与 `check-no-environment-domains.sh` 通过。
+- 本地 frontend：从本地 `main@1aff699e97cb` 构建 `2.8.66-dev.1aff699`，镜像 ID `sha256:ba016899fd9086d3cb11cded37198dceb2afb6753acb5ace3499dd330c7c4f5c`；容器 ID `7ea2c6961115`，healthy/restart=0，Nginx 配置有效，近 5 分钟 HTTP 5xx 与 error/emerg/crit/alert 为 0。
+- 路由与制品：正式 HTTPS 页面路由 200；Markdown 200、`text/markdown`、`X-Content-Type-Options: nosniff`、8 个编号章节和稳定 `document_id`；运行 JS bundle 回读“运维中心”。backend、Semattice、DevAutopilot 均继续 healthy；本次未重建这些服务。
+- 版本边界：backend 未受本次纯前端功能影响，继续为 `2.8.66-dev.a6427a9 / a6427a94548d`、healthy/restart=0。因前后端 commit 不同，本证据只声明 frontend 单服务更新，不声明 AgentCiCi 整产品同提交；本次不涉及共享基础设施或跨项目契约，未执行完整 `./stack verify`。
+- 桌面视觉：通过临时未提交预览入口渲染同一生产 React 组件与 CSS；1280×720 检查顶部、制品来源和验收回滚三段，主区域无横向溢出、唯一长文滚动容器、章节锚点正确、表格和代码块可读、console 0 error/warn。临时预览文件已删除。
+- 治理校验：`validate-state.py .claw` 已执行；TASK-328、FEAT-200、当前状态与本轮时间格式未产生新错误。全局仍因既有 goals 时间格式、历史 feature front matter/status、完成任务未归档和 owner role 债务返回非零，本任务未批量改写历史事实。
+- HUMAN 边界：应用内浏览器和 Chrome 现有运营平台登录态均已过期，正式认证路由被正确重定向到 `/platform/login`；未读取或填写凭据，登录后的真实导航点击、锚点和 Markdown 新窗口仍待 HUMAN 复核。UAT、生产、ACR 和其他子仓均未修改。
 
 ## 2026-08-21 TASK-327 微信客服手机端人工接管（本地技术验收）
 

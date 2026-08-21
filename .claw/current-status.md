@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 5
-updated_at: 2026-08-20T17:05:06Z
+updated_at: 2026-08-21T06:23:00Z
 updated_by: codex
 phase: verification
-active_task: TASK-327
-next_action: "由 HUMAN 使用获授权真实微信客服账号完成手机 OAuth、客户消息、状态 3 接管、人工回复无 AI 双发和原生会话跳转验收；UAT/生产发布另行授权。"
+active_task: TASK-328
+next_action: "由平台运营账号重新登录本地环境，复核正式认证路由的运维中心导航、章节锚点与 Agent Markdown 新窗口入口；UAT/生产未修改。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- `TASK-328 / FEAT-200` 已实现并进入登录态视觉复核：运营控制台新增“运维中心 → 部署安装”，在线手册以 8 章覆盖 AgentCiCi 双 OCI 镜像、Semattice Linux amd64 不可变 release、Keycloak 官方 OCI、安装顺序、验收与回滚，并提供公开 `/agent-docs/operations/deployment-installation.md`。提交 `01c678d015b4`、`1aff699e97cb` 已进入本地 `main`；前端 55 文件/304 项、build、环境域名门禁通过。本地 frontend 为 `2.8.66-dev.1aff699`，路由与 Markdown 200、MIME/nosniff、bundle 文案、Nginx、healthy/restart=0 通过；1280×720 同组件桌面预览三段截图无横向溢出且 console 0。现有平台 Chrome 登录态已过期，正式认证路由桌面复核待 HUMAN；backend 未改仍为 `2.8.66-dev.a6427a9`，本轮只声明 frontend 单服务更新，UAT/生产未修改。
 
 - `TASK-327 / FEAT-199` 已实现并进入真实渠道业务验收：功能提交 `a6427a94548d` 已进入本地 `main`，企业微信手机端作为人工坐席主界面，AgentCiCi 实现 0–4 权威状态、origin 3/4/5 分流、接管 revision fence、独立自建应用 OAuth/JS-SDK Secret、HttpOnly 会话、坐席资格、可信回执和原生客服会话跳转。后端聚焦 8 类 22 项、前端全量 54 文件/297 项、package/build、空库 V1–V123 和 JPA validate 启动通过；本地 backend/frontend 同为 `2.8.66-dev.a6427a9`，镜像/环境/页面制品一致，V123、正式入口、匿名 JSON 401/400、完整 `./stack verify` 和四应用容器 healthy/restart=0 通过。390×844 受控浏览器验证三态、44px 动作与接管二次确认；该 mock 仅为视觉证据。完整 Maven 套件仍被既有宿主机 PostgreSQL 连接条件阻断。当前开发库微信客服账号为 0，真实 OAuth/客户消息/状态 3/人工无双发/原生跳转待 HUMAN；远端、UAT、生产未修改。
 

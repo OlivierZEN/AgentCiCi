@@ -2,11 +2,11 @@
 kind: task-status
 task_id: TASK-328
 feature_id: FEAT-200
-status: in_progress
+status: review
 priority: high
 owner_role: frontend-agent
 claimed_by: codex
-updated_at: 2026-08-21T00:00:00Z
+updated_at: 2026-08-21T06:23:00Z
 updated_by: codex
 ---
 
@@ -28,4 +28,5 @@ updated_by: codex
 
 ## 下一步
 
-- 实现页面和文档，运行前端测试与构建。
+- 功能提交 `01c678d015b4` 与桌面溢出修复 `1aff699e97cb` 已进入本地 `main`；55 个测试文件、304 项、production build 和环境域名门禁通过。
+- 本地 `cici-frontend` 为 `2.8.66-dev.1aff699 / 1aff699e97cb`，正式路由与 Markdown 200，容器 healthy/restart=0；登录态 Chrome 会话已过期，真实认证路由桌面复核待 HUMAN 重新登录后完成。
