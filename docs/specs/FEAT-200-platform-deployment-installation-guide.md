@@ -6,7 +6,7 @@ status: implemented
 primary_project: agentcici
 task_ids: TASK-328
 related_integrations: none
-updated_at: 2026-08-21T06:23:00Z
+updated_at: 2026-08-21T06:44:54Z
 updated_by: codex
 ---
 
@@ -38,7 +38,7 @@ updated_by: codex
 
 ### Out of Scope
 
-- 不执行 UAT、生产或客户环境部署，不创建主机、数据库、Realm、Client 或用户。
+- 功能实现本身不创建主机、数据库、Realm、Client 或用户；UAT 发布须单独授权，生产和客户环境部署不在本功能范围内。
 - 不发布、推送或复制任何镜像、二进制、配置包或凭据。
 - 不修改 Semattice、Keycloak 或父级部署编排事实源。
 - 不在业务前端源码中写入 UAT、生产、本地或客户私有化域名、Host、端口和 Secret。
@@ -78,3 +78,9 @@ updated_by: codex
 
 - 回滚导航项、路由、在线页、CSS 和公开 Markdown 文件即可。
 - 该页面是只读文档，不修改运行配置、数据库或租户状态；回滚不需要数据迁移。
+
+## UAT 发布结果
+
+- 已随 `2.8.66-beta.2 / 525f0f610926` 完成技术发布；页面、Markdown MIME/nosniff、稳定 document_id、8 个编号章节和运行 bundle 文案通过。
+- 只重建 AgentCiCi backend/frontend；完整备份、不可变 digest、V123、六容器 healthy/restart=0、公开 smoke、匿名 401 与稳定日志门禁通过。
+- 登录态导航点击、章节锚点和 Markdown 新窗口仍待平台运营账号验收；生产未修改。

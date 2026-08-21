@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-21T06:23:00Z
+updated_at: 2026-08-21T06:44:54Z
 updated_by: codex
 board_status: active
 ---
@@ -25,8 +25,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-328.md`
 - blocked_by: `none`
 - scope_files: `平台运维中心导航、部署安装在线文档、Agent Markdown、定向测试、前端构建与本地环境验证`
-- completion_evidence: `01c678d0、1aff699e；55 文件/304 项、build、域名门禁；本地 frontend 2.8.66-dev.1aff699 healthy/restart=0；HTML/Markdown 200，Markdown text/markdown + nosniff；1280×720 组件桌面预览无横向溢出、console 0；真实登录态视觉待补`
-- next_action: `平台运营账号重新登录本地环境后，打开“运维中心 → 部署安装”，复核正式认证路由的目录锚点和 Markdown 新窗口入口。`
+- completion_evidence: `UAT 2.8.66-beta.2 / 525f0f610926；backend/frontend digest 095c0d71/82155b27；完整备份；六容器 healthy/restart=0；V123；HTML/Markdown 200，Markdown text/markdown + nosniff；8 个编号章节与 bundle 文案通过`
+- next_action: `平台运营账号登录 UAT 后打开“运维中心 → 部署安装”，复核正式认证路由的目录锚点和 Markdown 新窗口入口；生产保持不变。`
 
 ### TASK-327 - 微信客服企业微信手机端监控与强制接管
 
@@ -38,8 +38,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-327.md`
 - blocked_by: `none`
 - scope_files: `微信客服权威状态/消息来源、人工接管 fence、移动 OAuth/session、坐席列表、原生聊天跳转、V123、前后端测试与本地环境验证`
-- completion_evidence: `a6427a94548d 已进入本地 main；后端 8 类 22 项、前端 54 文件/297 项、package/build、V1-V123 + JPA validate；本地 2.8.66-dev.a6427a9 backend/frontend 指纹一致，完整 stack verify、页面与匿名负例、healthy/restart=0、390x844 移动视觉和二次确认通过`
-- next_action: `由 HUMAN 使用获授权真实微信客服账号完成手机 OAuth、真实客户消息、状态 3 接管、人工回复无 AI 双发和企业微信原生会话跳转验收；UAT/生产另行授权。`
+- completion_evidence: `a6427a94548d 已随 UAT 2.8.66-beta.2 / 525f0f610926 发布；V123、移动页 200、匿名 context 401、不存在入口 400；六容器 healthy/restart=0；真实渠道未配置或调用`
+- next_action: `由 HUMAN 使用获授权真实微信客服账号在 UAT 完成手机 OAuth、真实客户消息、状态 3 接管、人工回复无 AI 双发和企业微信原生会话跳转验收；生产保持不变。`
 
 ### TASK-326 - 对齐 DevAutopilot 7×87 元数据基线
 

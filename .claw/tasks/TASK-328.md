@@ -6,7 +6,7 @@ status: review
 priority: high
 owner_role: frontend-agent
 claimed_by: codex
-updated_at: 2026-08-21T06:23:00Z
+updated_at: 2026-08-21T06:44:54Z
 updated_by: codex
 ---
 
@@ -28,5 +28,5 @@ updated_by: codex
 
 ## 下一步
 
-- 功能提交 `01c678d015b4` 与桌面溢出修复 `1aff699e97cb` 已进入本地 `main`；55 个测试文件、304 项、production build 和环境域名门禁通过。
-- 本地 `cici-frontend` 为 `2.8.66-dev.1aff699 / 1aff699e97cb`，正式路由与 Markdown 200，容器 healthy/restart=0；登录态 Chrome 会话已过期，真实认证路由桌面复核待 HUMAN 重新登录后完成。
+- 功能已随 UAT `2.8.66-beta.2 / 525f0f610926` 发布；两项不可变镜像、完整备份、V123、六容器 healthy/restart=0、页面/Markdown/匿名 401 和稳定日志门禁通过。
+- 平台运营账号仍需登录 UAT 复核“运维中心 → 部署安装”的真实导航、章节锚点和 Markdown 新窗口入口；生产保持不变。

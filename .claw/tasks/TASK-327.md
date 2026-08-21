@@ -6,7 +6,7 @@ status: review
 priority: critical
 owner_role: fullstack-agent
 claimed_by: codex
-updated_at: 2026-08-20T17:05:06Z
+updated_at: 2026-08-21T06:44:54Z
 updated_by: codex
 ---
 
@@ -28,5 +28,5 @@ updated_by: codex
 
 ## 下一步
 
-- 功能提交 `a6427a94548d` 已进入本地 `main`，本地运行版本为 `2.8.66-dev.a6427a9`；V123、backend/frontend 镜像 label、页面资源、容器健康/restart=0、匿名负例和完整 `./stack verify` 已回读通过。
-- 在获授权的真实微信客服账号配置自建应用 AgentId/Secret、可信域名和正式接待人员后，由 HUMAN 在企业微信手机端完成 OAuth、客户消息、状态 3 接管、人工回复无 AI 双发和原生会话跳转验收。UAT/生产发布另行授权。
+- 功能已包含在 UAT `2.8.66-beta.2 / 525f0f610926`：V123、移动页 200、带合法 pageUrl 的匿名 context 401、不存在入口 UUID 400、运行版本/镜像/容器健康与 restart=0 通过。
+- 在获授权的真实微信客服账号配置自建应用 AgentId/Secret、可信域名和正式接待人员后，由 HUMAN 在 UAT 企业微信手机端完成 OAuth、客户消息、状态 3 接管、人工回复无 AI 双发和原生会话跳转验收。生产保持不变。

@@ -6,7 +6,7 @@ status: implemented
 primary_project: agentcici
 task_ids: TASK-327
 related_integrations: none
-updated_at: 2026-08-20T17:05:06Z
+updated_at: 2026-08-21T06:44:54Z
 updated_by: codex
 ---
 
@@ -30,6 +30,12 @@ updated_by: codex
 - 当前发送前只检查本地时间窗口，不读取企业微信权威 `service_state`。
 - 当前没有 `service_state/get`、`service_state/trans`、接待人员列表、企业微信成员 OAuth、移动会话或 JS-SDK 原生聊天跳转。
 - FEAT-023 的真实回调、消息拉取和发送正例仍未用正式微信客服账号完成业务验收。本功能不得把 mock 测试替代为真实渠道验收。
+
+## UAT 发布结果
+
+- 功能提交 `a6427a94548d` 已包含在 `2.8.66-beta.2 / 525f0f610926`；运行 backend/frontend 的版本、commit、镜像 label/digest 一致，V123 与六容器 healthy/restart=0 通过。
+- UAT 移动页返回 200；带合法同源 `pageUrl` 的无会话 context 返回 JSON 401，不存在入口 UUID 返回 JSON 400。
+- UAT 未配置或调用真实微信客服账号、Secret、OAuth、客户消息或状态转换；状态 3 接管、人工回复无 AI 双发与原生会话跳转仍待获授权 HUMAN 验收。生产未修改。
 
 ## 产品设计
 

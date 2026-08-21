@@ -1,14 +1,25 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-21T06:23:00Z
+updated_at: 2026-08-21T06:44:54Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-21T06:23:00Z
-last_run_status: passed_task_328_frontend_technical_pending_authenticated_visual_acceptance
+last_run_at: 2026-08-21T06:44:54Z
+last_run_status: passed_uat_2_8_66_beta_2_technical_pending_human_acceptance
 ---
 
 # Test Report
+
+## 2026-08-21 TASK-327 / TASK-328 UAT `2.8.66-beta.2`
+
+- 状态：`passed_uat_2_8_66_beta_2_technical_pending_human_acceptance`；冻结 tag/commit、不可变镜像、备份、运行健康、迁移、公开路由和安全负向通过，两个功能的真实登录态/渠道业务验收待 HUMAN。
+- Git 与制品：本地、tracking、远程 `main` 推送后均为 `525f0f61092693b5b28c91386520dfa50b10a9d3`，ahead/behind=`0/0`；annotated tag `2.8.66-beta.2` 解引用为同一提交并被远程 main 包含。backend/frontend ACR index digest 为 `sha256:095c0d71d87dbac60521b7c0ee029604606a699287c661f6173becb140b5e35f` / `sha256:82155b279677fb5bb4cea2529f94697cf77a4def9a2ad990071dec37665aa79e`，均含 linux/amd64 manifest，未更新 `latest`。
+- 备份与回滚：`/data/apps/agentcici/backups/20260821T064027Z-before-2.8.66-beta.2` 共 12 项、316,927,951 bytes，全部 `0600`；PostgreSQL custom dump catalog、KB/Qdrant tar、1 个 Qdrant 原生 snapshot、旧应用镜像 gzip 和 SHA-256 清单通过。应用回滚目标 beta.1，数据恢复需单独批准。
+- 运行：仅重建 backend/frontend；四个状态服务 ID 发布前后不变。六容器 healthy/restart=0；版本、commit、image label/digest 一致，backend health=`UP`，Flyway V123，frontend 与系统 Nginx 有效，Semattice/DevAutopilot active，Keycloak 未修改。
+- TASK-328：部署安装页 200；公开 Markdown 200、`text/markdown`、`nosniff`、稳定 `agentcici.deployment-installation.v1`、8 个编号章节；运行 bundle 包含“运维中心”。正式平台登录态导航、章节锚点和新窗口仍待 HUMAN。
+- TASK-327：移动页 200；带合法同源 `pageUrl` 且无 session 的 context 为 `401 application/json / mobile session is required`，不存在入口 UUID 为 `400 application/json`。UAT 未配置或调用真实微信客服账号/Secret/OAuth/客户消息/接管；真实业务链路待 HUMAN。
+- 稳定性：两轮 UAT readonly smoke 覆盖 AgentCiCi 首页、匿名 auth、Keycloak discovery、Semattice health/version 与 DevAutopilot integrated health；30 秒窗口 backend severe=0、frontend HTTP 5xx=0、frontend severe=0。
+- 已知风险：缺少控制器声明为必填的 `pageUrl` 或 `entry` 时，Spring 参数异常被通用 handler 映射为 JSON 500；没有认证绕过，且正式契约负向为 401/400。本候选不因该畸形输入风险回滚，后续应统一映射为 400。生产及其他产品未发布。
 
 ## 2026-08-21 TASK-328 运维中心部署安装在线指南
 

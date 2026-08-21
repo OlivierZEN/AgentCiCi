@@ -8,6 +8,14 @@ status: active
 
 # DevOps
 
+## 2026-08-21 TASK-327 / TASK-328 UAT `2.8.66-beta.2`
+
+- 冻结提交与 annotated tag 为 `525f0f61092693b5b28c91386520dfa50b10a9d3` / `2.8.66-beta.2`；远程 `main` 包含候选提交。backend/frontend ACR index digest 分别为 `sha256:095c0d71d87dbac60521b7c0ee029604606a699287c661f6173becb140b5e35f` / `sha256:82155b279677fb5bb4cea2529f94697cf77a4def9a2ad990071dec37665aa79e`，均含 linux/amd64 manifest，未更新 `latest`。
+- 完整回滚点 `/data/apps/agentcici/backups/20260821T064027Z-before-2.8.66-beta.2` 含 12 项、316,927,951 bytes 的受管配置、PostgreSQL custom dump、KB、Qdrant 存储与 1 个原生 snapshot、旧应用镜像、容器状态、回滚说明和 SHA-256 清单；全部文件 `0600`，dump catalog、归档、gzip 与清单校验通过。即时应用回滚目标为 `2.8.66-beta.1`，数据恢复仍需单独批准。
+- 仅 pull/force-recreate backend/frontend；database、Redis、RabbitMQ、Qdrant ID 分别保持 `d14ef639f035`、`db0945fd318c`、`4166b9909101`、`26aec0ef3a29`，六容器 healthy/restart=0。运行版本、commit、image label 与 digest 一致，backend health=`UP`，Flyway V123 成功，Nginx 有效；Semattice 与 DevAutopilot 保持 active，Keycloak 未修改。
+- UAT 公开 smoke、匿名 `/auth/me=401`、部署安装页面 200、Agent Markdown `text/markdown + nosniff`、稳定 `document_id`、8 个编号章节和运行 bundle“运维中心”通过。企业微信移动页 200；带合法 `pageUrl` 的无会话 context 为 JSON 401，不存在入口 UUID 为 JSON 400。
+- 缺少控制器声明为必填的 `pageUrl` 或 `entry` 时，通用异常映射仍返回 JSON 500；该畸形请求风险未造成认证绕过，不阻断本候选的已声明契约，但应在后续输入校验治理中改为 400。真实平台登录态导航、真实微信客服 OAuth/客户消息/状态 3 接管/人工无双发/原生跳转均待 HUMAN；生产及其他产品未发布。
+
 ## 2026-08-20 TASK-326 UAT `2.8.66-beta.1`
 
 - 冻结提交与 tag 为 `2c9d3821b4588d067199b4842c4e7e12de07e8bd` / `2.8.66-beta.1`；backend/frontend ACR index digest 为 `sha256:314dbfb573ce703ab927c9cde1a5ecbc7349291116899f2931481e1418945d5f` / `sha256:6279ef657523fb0d001f2ebe43b3c2d43baa135e3636ac99f3e05a462d37e0b7`。
