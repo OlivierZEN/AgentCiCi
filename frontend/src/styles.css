@@ -23426,3 +23426,159 @@ body.application-guide-scroll-lock {
 .internal-application-connection-empty__actions button {
   margin-top: 0;
 }
+
+/* Operations center deployment and installation manual. */
+.deployment-installation-guide .application-guide-content {
+  max-width: 940px;
+}
+
+.deployment-guide-flow {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--platform-line);
+  color: var(--platform-muted);
+  font-size: 11px;
+  font-weight: 680;
+}
+
+.deployment-guide-flow span:nth-child(even) {
+  color: var(--platform-line-strong);
+}
+
+.deployment-guide-flow span:last-child {
+  color: var(--platform-success);
+}
+
+.deployment-guide-note {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 11px;
+  margin-top: 18px;
+  padding: 14px 15px;
+  border: 1px solid var(--platform-line);
+  background: color-mix(in srgb, var(--platform-accent-soft) 34%, transparent);
+}
+
+.deployment-guide-note > svg {
+  margin-top: 1px;
+  color: var(--platform-accent-strong);
+}
+
+.deployment-guide-note strong {
+  color: var(--platform-heading);
+  font-size: 12px;
+}
+
+.deployment-guide-note p {
+  margin: 5px 0 0;
+  color: var(--platform-muted);
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.deployment-guide-artifact-table,
+.deployment-guide-acceptance-table {
+  display: grid;
+  margin-top: 20px;
+  border-top: 1px solid var(--platform-line-strong);
+  border-bottom: 1px solid var(--platform-line);
+}
+
+.deployment-guide-artifact-table > div,
+.deployment-guide-acceptance-table > div {
+  display: grid;
+  align-items: center;
+  min-height: 48px;
+  border-bottom: 1px solid var(--platform-line);
+  color: var(--platform-muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.deployment-guide-artifact-table > div {
+  grid-template-columns: 108px minmax(170px, 0.8fr) minmax(250px, 1.3fr) minmax(150px, 0.7fr);
+}
+
+.deployment-guide-acceptance-table > div {
+  grid-template-columns: 105px minmax(0, 1.5fr) minmax(180px, 0.8fr);
+}
+
+.deployment-guide-artifact-table > div:last-child,
+.deployment-guide-acceptance-table > div:last-child {
+  border-bottom: 0;
+}
+
+.deployment-guide-artifact-table > div:first-child,
+.deployment-guide-acceptance-table > div:first-child {
+  min-height: 36px;
+  color: var(--platform-muted);
+  font-size: 10px;
+}
+
+.deployment-guide-artifact-table > div > *,
+.deployment-guide-acceptance-table > div > * {
+  min-width: 0;
+  padding-right: 16px;
+}
+
+.deployment-guide-artifact-table strong,
+.deployment-guide-acceptance-table strong {
+  color: var(--platform-heading);
+  font-size: 11px;
+}
+
+.deployment-guide-artifact-table code,
+.deployment-guide-acceptance-table code {
+  color: var(--platform-accent-strong);
+  font-size: 10px;
+}
+
+.deployment-guide-runtime-flow {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.deployment-guide-runtime-flow > div {
+  min-width: 0;
+  padding-right: 10px;
+}
+
+.deployment-guide-runtime-flow > div + div {
+  padding-left: 10px;
+}
+
+.deployment-guide-runtime-flow strong {
+  min-height: 30px;
+}
+
+.deployment-guide-complete {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 11px;
+  margin-top: 22px;
+  padding: 16px 0;
+  border-top: 1px solid var(--platform-line-strong);
+  border-bottom: 1px solid var(--platform-line);
+}
+
+.deployment-guide-complete svg {
+  color: var(--platform-success);
+}
+
+.deployment-guide-complete strong {
+  color: var(--platform-heading);
+  font-size: 12px;
+}
+
+.deployment-guide-complete p {
+  margin: 4px 0 0;
+  color: var(--platform-muted);
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.deployment-guide-footer {
+  padding-left: 70px;
+}

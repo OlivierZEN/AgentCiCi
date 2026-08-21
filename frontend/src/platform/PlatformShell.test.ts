@@ -95,3 +95,27 @@ describe("platform tenant application catalog navigation", () => {
     expect(isPlatformNavigationItemActive(applicationItems[0], "/platform/internal-applications/devautopilot")).toBe(true);
   });
 });
+
+describe("platform operations center navigation", () => {
+  const operationsCenter = PLATFORM_NAVIGATION_GROUPS.find((group) => group.id === "operations_center");
+
+  it("exposes deployment installation under an independent operations center", () => {
+    expect(operationsCenter).toEqual({
+      id: "operations_center",
+      label: "运维中心",
+      items: [
+        {
+          to: "/platform/operations/deployment-installation",
+          label: "部署安装",
+          activePrefixes: ["/platform/operations/deployment-installation"],
+        },
+      ],
+    });
+  });
+
+  it("keeps the deployment entry active for direct sections", () => {
+    const deploymentItem = operationsCenter?.items[0];
+    expect(deploymentItem).toBeDefined();
+    expect(isPlatformNavigationItemActive(deploymentItem!, "/platform/operations/deployment-installation")).toBe(true);
+  });
+});

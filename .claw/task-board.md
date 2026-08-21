@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-20T17:05:06Z
+updated_at: 2026-08-21T00:00:00Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,19 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-328 - 运维中心部署安装在线指南
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `frontend-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-200-platform-deployment-installation-guide.md`
+- task_status_path: `.claw/tasks/TASK-328.md`
+- blocked_by: `none`
+- scope_files: `平台运维中心导航、部署安装在线文档、Agent Markdown、定向测试、前端构建与本地环境验证`
+- completion_evidence: `pending`
+- next_action: `实现页面与 Markdown，运行导航/文档测试、全量测试和 production build。`
 
 ### TASK-327 - 微信客服企业微信手机端监控与强制接管
 

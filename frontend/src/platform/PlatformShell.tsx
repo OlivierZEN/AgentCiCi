@@ -63,6 +63,17 @@ export const PLATFORM_NAVIGATION_GROUPS: PlatformNavigationGroup[] = [
     ],
   },
   {
+    id: "operations_center",
+    label: "运维中心",
+    items: [
+      {
+        to: "/platform/operations/deployment-installation",
+        label: "部署安装",
+        activePrefixes: ["/platform/operations/deployment-installation"],
+      },
+    ],
+  },
+  {
     id: "quality",
     label: "风险与质量",
     items: [
@@ -102,6 +113,7 @@ export default function PlatformShell() {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
     capability: true,
     operations: true,
+    operations_center: true,
     quality: true,
   });
   const nav = useNavigate();
