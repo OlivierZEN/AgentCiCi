@@ -23499,11 +23499,11 @@ body.application-guide-scroll-lock {
 }
 
 .deployment-guide-artifact-table > div {
-  grid-template-columns: 108px minmax(170px, 0.8fr) minmax(250px, 1.3fr) minmax(150px, 0.7fr);
+  grid-template-columns: 96px minmax(0, 0.8fr) minmax(0, 1.3fr) minmax(0, 0.7fr);
 }
 
 .deployment-guide-acceptance-table > div {
-  grid-template-columns: 105px minmax(0, 1.5fr) minmax(180px, 0.8fr);
+  grid-template-columns: 96px minmax(0, 1.5fr) minmax(0, 0.8fr);
 }
 
 .deployment-guide-artifact-table > div:last-child,
