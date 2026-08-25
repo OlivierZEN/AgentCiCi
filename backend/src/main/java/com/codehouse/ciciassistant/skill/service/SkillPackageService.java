@@ -16,6 +16,7 @@ import com.codehouse.ciciassistant.tool.service.BuiltinToolCatalog.ToolCatalogIt
 import com.codehouse.ciciassistant.tool.service.ToolNameNormalizer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
@@ -232,7 +233,7 @@ public class SkillPackageService {
                 return null;
             }
             Map<String, String> files = new LinkedHashMap<>();
-            files.put("manifest.json", manifestJson);
+            files.put("manifest.json", normalizeModelManifest(manifestJson, skill, version, exportedBy));
             files.put("cici-skill.md", skillMarkdown);
             files.put("prompt.md", promptMarkdown);
             files.put("contract.json", contractJson);
@@ -247,6 +248,35 @@ public class SkillPackageService {
             log.warn("Skill export model standardization failed, fallback to deterministic packaging: {}", ex.getMessage());
             return null;
         }
+    }
+
+    String normalizeModelManifest(String rawManifest,
+                                  SkillDefinitionEntity skill,
+                                  SkillVersionEntity version,
+                                  String exportedBy) throws Exception {
+        JsonNode parsed = parseJson(rawManifest);
+        if (!parsed.isObject()) {
+            throw new IllegalArgumentException("manifest.json must be a JSON object");
+        }
+        ObjectNode manifest = ((ObjectNode) parsed).deepCopy();
+        manifest.put("format", "universal-skill-package");
+        manifest.put("formatVersion", "1.0");
+        manifest.put("packageId", skill.getSkillCode());
+        manifest.put("name", nullToEmpty(skill.getName()));
+        manifest.put("description", nullToEmpty(skill.getDescription()));
+        manifest.put("language", "zh-CN");
+        manifest.put("sourceSystem", "cc-cici-assistant");
+        manifest.put("exportedAt", Instant.now().toString());
+        manifest.put("exportedBy", exportedBy == null || exportedBy.isBlank() ? "system" : exportedBy);
+
+        ObjectNode skillMetadata = objectMapper.createObjectNode();
+        skillMetadata.put("code", skill.getSkillCode());
+        skillMetadata.put("riskLevel", nullToEmpty(version.getRiskLevel()));
+        skillMetadata.put("versionNo", version.getVersionNo());
+        skillMetadata.put("publishStatus", nullToEmpty(version.getPublishStatus()));
+        skillMetadata.put("changeLog", nullToEmpty(version.getChangeLog()));
+        manifest.set("skill", skillMetadata);
+        return objectMapper.writeValueAsString(manifest);
     }
 
     private StandardizedPackage buildDeterministicPackage(SkillDefinitionEntity skill, SkillVersionEntity version, String exportedBy) {
@@ -719,6 +749,7 @@ public class SkillPackageService {
                 严格输出一个 JSON 对象，不要 markdown 代码块。顶层字段必须是：
                 manifestJson, skillMarkdown, promptMarkdown, contractJson, resourcesJson, readmeMarkdown。
                 其中 manifestJson、contractJson、resourcesJson 必须是可解析 JSON 字符串。
+                manifestJson 必须使用 format=universal-skill-package、formatVersion=1.0、packageId=输入 skillCode；这些固定身份字段最终由服务端覆盖。
                 skillMarkdown 会被保存为 cici-skill.md；系统会额外生成通用外部智能体入口 SKILL.md。
                 禁止输出任何密钥、token、密码、连接串或凭据。
                 资源只保留工具名和知识库标识，不输出内部配置或机密信息。

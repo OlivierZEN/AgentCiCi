@@ -91,6 +91,23 @@ export type SkillExportJob = {
   warnings: string[];
 };
 
+export async function readSkillExportJobResponse(res: Response): Promise<SkillExportJob> {
+  let json: { success?: boolean; data?: Partial<SkillExportJob>; message?: string };
+  try {
+    json = await res.json();
+  } catch {
+    throw new Error(`导出服务返回非 JSON 响应（HTTP ${res.status}）`);
+  }
+  if (!res.ok || !json.success) {
+    throw new Error(json.message ?? `HTTP ${res.status}`);
+  }
+  const job = json.data;
+  if (!job?.exportId || !job.filename || job.status !== "READY") {
+    throw new Error("导出任务未就绪，请稍后重试");
+  }
+  return job as SkillExportJob;
+}
+
 export async function downloadSkillExportPackage(token: string, job: SkillExportJob): Promise<void> {
   const res = await fetch(`/skills/exports/${encodeURIComponent(job.exportId)}/download`, {
     headers: { Authorization: `Bearer ${token}` },

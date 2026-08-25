@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-21T06:44:54Z
+updated_at: 2026-08-25T09:08:47Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-21T06:44:54Z
-last_run_status: passed_uat_2_8_66_beta_2_technical_pending_human_acceptance
+last_run_at: 2026-08-25T09:08:47Z
+last_run_status: passed_task_329_code_pending_local_runtime
 ---
 
 # Test Report
+
+## 2026-08-25 TASK-329 管理后台技能导出代码回归
+
+- 状态：`passed_task_329_code_pending_local_runtime`；UAT 只读复现、代码修复、后端聚焦测试、前端全量测试与构建通过，本地 main 制品和真实下载仍待完成。
+- UAT 只读复现：公开 smoke 六项通过；登录态自定义已发布技能 `POST /skills/137/exports=400`，页面错误为 `Export package validation failed: manifest format mismatch`，15 秒内没有 download 事件。UAT 运行版本为 `2.8.66-beta.2 / 525f0f610926`；未修改 UAT 配置、镜像、容器或数据，生产未访问或修改。
+- 后端聚焦：`SkillPackageServiceTest` 2 项通过，覆盖模型试图改写 `format/formatVersion/packageId/skill version/publish status` 时由服务端覆盖，以及非对象 manifest 失败关闭。
+- 前端：全量 56 个测试文件、308 项通过；新增 4 项覆盖 READY job、后端校验原因、非 JSON 网关响应和未就绪 job。TypeScript/Vite production build 通过，仅保留既有 chunk-size warning。
+- 构建与静态：`mvn -q -DskipTests package`、`git diff --check` 通过。
+- 未执行项：`SkillGovernanceIntegrationTest` 在 Spring Context/Flyway 初始化阶段因 `localhost:5432` 连接拒绝失败，6 个方法均未进入断言；不声明集成测试通过。该限制不影响无数据库聚焦测试，最终使用本地受管容器运行态补充接口与下载验证。
 
 ## 2026-08-21 TASK-327 / TASK-328 UAT `2.8.66-beta.2`
 

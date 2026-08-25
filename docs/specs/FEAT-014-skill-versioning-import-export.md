@@ -2,13 +2,13 @@
 kind: feature-spec
 feature_id: FEAT-014
 title: Admin Skill Versioning Import Export
-status: in_progress
+status: implemented
 owner_role: product-admin-skill-governance
-task_ids: TASK-035
+task_ids: TASK-035,TASK-329
 related_decisions: FEAT-009
 related_issues: none
-updated_at: 2026-05-02T23:33:46Z
-updated_by: ai
+updated_at: 2026-08-25T09:08:47Z
+updated_by: codex
 ---
 
 # FEAT-014 - 管理端技能版本控制与导入导出
@@ -924,6 +924,7 @@ skill-package.zip
 - 2026-05-01: 完成第二轮硬化实现：导出链路增加“模型标准化优先 + 确定性回退”，并在下载前执行 manifest/schema 与敏感信息扫描；导入预览新增 `resourceMapping`（工具/知识库匹配和未匹配项）与可编辑 `draftOverride` 创建接口；管理端新建页导入改为先载入可编辑草稿；新增 runtime pin retention 回归，验证被 pin 旧版本 prune 后保留为 `PROTECTED_RUNTIME`。
 - 2026-05-01: 完成导入预览工作区收口：新建页导入预览支持“升级处理规则/输出约定”字段编辑，并在“直接创建草稿”前增加技能代码/显示名称必填校验；复跑 FEAT-014 后端集成测试与前端构建通过。
 - 2026-05-03: 修复软删除 Skill code 占用导入创建：删除时归档旧 `skill_code`，创建时遇到历史 `DELETED` 同 code 会先归档旧记录并 flush；新增 `V36__archive_deleted_skill_codes.sql` 处理既有软删除数据；`SkillGovernanceIntegrationTest` 覆盖删除同 code 后导入创建成功，复跑 `SkillGovernanceIntegrationTest` 与 `SkillAuthoringIntegrationTest` 通过。
+- 2026-08-25: TASK-329 修复模型输出 manifest 固定格式字段漂移导致的导出 400。模型继续整理技能正文与可移植契约，但 `format`、`formatVersion`、`packageId`、版本、发布状态和导出身份由服务端按当前发布版本覆盖；最终八文件包仍统一执行 JSON、格式与敏感信息校验。技能列表同步补齐导出进行中状态、非 JSON 与下载失败反馈。
 
 ## 交接说明
 

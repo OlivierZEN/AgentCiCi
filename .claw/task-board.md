@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-21T06:44:54Z
+updated_at: 2026-08-25T09:08:47Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,19 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-329 - 修复管理后台技能导出
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-014-skill-versioning-import-export.md`
+- task_status_path: `.claw/tasks/TASK-329.md`
+- blocked_by: `none`
+- scope_files: `SkillPackageService 模型 manifest 规范化、技能列表导出状态/错误反馈、后端与前端聚焦测试、本地环境验证`
+- completion_evidence: `UAT 只读复现 manifest mismatch；后端聚焦 2 项、前端全量 56 文件/308 项、build、backend package、diff check 通过；Spring 集成测试被本机 PostgreSQL 不可达阻断在初始化`
+- next_action: `状态校验并提交本地 main，从该提交构建 backend/frontend，完成指纹与真实下载验证。`
 
 ### TASK-328 - 运维中心部署安装在线指南
 

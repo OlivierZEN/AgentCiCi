@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 5
-updated_at: 2026-08-21T06:44:54Z
+updated_at: 2026-08-25T09:08:47Z
 updated_by: codex
-phase: verification
-active_task: TASK-328
-next_action: "由平台运营账号登录 UAT，复核运维中心导航、章节锚点与 Agent Markdown 新窗口入口；另由获授权真实微信客服账号完成手机 OAuth、客户消息、状态 3 接管、人工无双发和原生会话跳转，生产保持不变。"
+phase: implementation
+active_task: TASK-329
+next_action: "状态校验并提交 TASK-329 到本地 main，从该提交构建 backend/frontend，完成 cici.localhost 运行指纹与真实导出下载验证；UAT/生产保持不变。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- `TASK-329 / FEAT-014` 已完成 UAT 只读复现和代码修复：`2.8.66-beta.2 / 525f0f610926` 的自定义已发布技能导出因模型 manifest 固定格式字段漂移返回 400 且无下载。服务端现覆盖格式、包 ID、技能版本、发布状态和导出身份，最终八文件校验保持不变；列表页补齐进行中、后端/非 JSON/未就绪/下载错误反馈。后端聚焦 2 项、前端全量 56 文件/308 项、build、backend package、diff check 通过；Spring 集成回归被本机 PostgreSQL 连接拒绝阻断在初始化。待提交本地 main 并从该提交构建 backend/frontend 完成真实下载；UAT 未部署或改配置，生产未修改。
 
 - `TASK-328 / FEAT-200` 已随 UAT `2.8.66-beta.2 / 525f0f610926` 完成技术发布：远程 `main` 包含冻结 tag，两项 linux/amd64 不可变镜像、运行 version/commit/label/digest 一致；完整备份 `/data/apps/agentcici/backups/20260821T064027Z-before-2.8.66-beta.2` 校验通过，应用回滚目标 beta.1。仅重建 backend/frontend，四个状态服务 ID 不变，六容器 healthy/restart=0、V123、Nginx、公开 smoke 与匿名 401 通过；部署页、Markdown MIME/nosniff、稳定 document_id、8 个编号章节和 bundle 文案通过。正式登录态导航、锚点与 Markdown 新窗口待 HUMAN；生产未修改。
 

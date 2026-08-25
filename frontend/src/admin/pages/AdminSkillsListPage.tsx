@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAdminToken } from "../useAdminToken";
-import type { Skill, SkillExportJob, SkillImportPreview } from "../skills/skillStudioShared";
-import { downloadSkillExportPackage, riskBadgeClass, riskLabel, skillSourceLabel } from "../skills/skillStudioShared";
+import type { Skill, SkillImportPreview } from "../skills/skillStudioShared";
+import { downloadSkillExportPackage, readSkillExportJobResponse, riskBadgeClass, riskLabel, skillSourceLabel } from "../skills/skillStudioShared";
 
 function formatTs(iso: string | undefined): string {
   if (!iso) return "—";
@@ -19,6 +19,7 @@ export default function AdminSkillsListPage() {
   const [search, setSearch] = useState("");
   const [scope, setScope] = useState<"all" | "platform" | "custom">("all");
   const [importing, setImporting] = useState(false);
+  const [exportingSkillId, setExportingSkillId] = useState<number | null>(null);
   const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
 
   const flash = (msg: string) => {
@@ -37,22 +38,22 @@ export default function AdminSkillsListPage() {
   };
 
   const exportSkill = async (skill: Skill) => {
-    const res = await fetch(`/skills/${skill.id}/exports`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ allowDraft: false }),
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      flash(`导出失败：${json.message ?? `HTTP ${res.status}`}`);
-      return;
-    }
-    const job = json.data as SkillExportJob;
+    setExportingSkillId(skill.id);
+    setNotice("正在整理并生成通用技能包…");
     try {
+      const res = await fetch(`/skills/${skill.id}/exports`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ allowDraft: false }),
+      });
+      const job = await readSkillExportJobResponse(res);
       await downloadSkillExportPackage(token, job);
       flash("已生成通用技能包");
     } catch (err) {
-      flash(`下载失败：${err instanceof Error ? err.message : "未知错误"}`);
+      flash(`导出失败：${err instanceof Error ? err.message : "未知错误"}`);
+    } finally {
+      setExportingSkillId(null);
+      setOpenActionMenuId(null);
     }
   };
 
@@ -287,12 +288,11 @@ export default function AdminSkillsListPage() {
                             type="button"
                             className="skills-row-menu__item"
                             role="menuitem"
-                            onClick={() => {
-                              setOpenActionMenuId(null);
-                              void exportSkill(skill);
-                            }}
+                            disabled={exportingSkillId === skill.id}
+                            aria-busy={exportingSkillId === skill.id}
+                            onClick={() => void exportSkill(skill)}
                           >
-                            导出
+                            {exportingSkillId === skill.id ? "导出中…" : "导出"}
                           </button>
                           <button
                             type="button"
