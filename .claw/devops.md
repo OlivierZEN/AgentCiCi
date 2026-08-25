@@ -1,12 +1,19 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-08-20T02:23:19Z
+updated_at: 2026-08-25T09:31:01Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-25 TASK-329 本地开发环境
+
+- AgentCiCi backend/frontend 从本地 `main@fada2e5f0b07` 构建为 `2.8.66-dev.fada2e5`；镜像 ID 分别为 `sha256:eb27e47a6a16dbed8c23ae13a727b875184285764cdbf62a800dafaae3df76e1`、`sha256:f2be0fc6cc883257aa0f82741b5a170611bb0a5d17cd940c78b62671eb060a5d`，两项 image label、backend 版本 API 和运行 revision 一致。
+- 仅以现有受管 Compose 执行 `--no-deps --force-recreate backend cici-frontend`；两容器 healthy/restart=0，`/actuator/health=UP`，frontend Nginx 有效，`https://cici.localhost/` 与 `/admin/skills` 为 200，匿名 `/auth/me`、`/skills` 为 JSON 401，运行 bundle 回读导出进行中文案，backend 近 5 分钟 severe 日志为 0。
+- DevAutopilot、Semattice、PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak 和 Nginx 容器 ID 均与更新前一致且 restart=0；本次不改变共享基础设施或跨项目契约，按最小影响门禁未执行完整 `./stack verify`。
+- 本地浏览器进入统一 SSO 登录页，当前无可复用组织管理员会话；未绕过认证执行真实导出。HUMAN 登录后需复核 zip 下载、文件名和八文件内容。远程 `main` 未推送，UAT 仍运行未包含本修复的 `2.8.66-beta.2 / 525f0f610926`，生产未修改。
 
 ## 2026-08-21 TASK-327 / TASK-328 UAT `2.8.66-beta.2`
 

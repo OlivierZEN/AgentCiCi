@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 5
-updated_at: 2026-08-25T09:08:47Z
+updated_at: 2026-08-25T09:31:01Z
 updated_by: codex
-phase: implementation
+phase: verification
 active_task: TASK-329
-next_action: "状态校验并提交 TASK-329 到本地 main，从该提交构建 backend/frontend，完成 cici.localhost 运行指纹与真实导出下载验证；UAT/生产保持不变。"
+next_action: "HUMAN 登录 cici.localhost 管理后台，对自定义已发布技能执行真实导出并检查八文件 zip；UAT 仍为旧候选，生产保持不变。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-329 / FEAT-014` 已完成 UAT 只读复现和代码修复：`2.8.66-beta.2 / 525f0f610926` 的自定义已发布技能导出因模型 manifest 固定格式字段漂移返回 400 且无下载。服务端现覆盖格式、包 ID、技能版本、发布状态和导出身份，最终八文件校验保持不变；列表页补齐进行中、后端/非 JSON/未就绪/下载错误反馈。后端聚焦 2 项、前端全量 56 文件/308 项、build、backend package、diff check 通过；Spring 集成回归被本机 PostgreSQL 连接拒绝阻断在初始化。待提交本地 main 并从该提交构建 backend/frontend 完成真实下载；UAT 未部署或改配置，生产未修改。
+- `TASK-329 / FEAT-014` 已进入本地 HUMAN 验收：UAT `2.8.66-beta.2 / 525f0f610926` 只读复现确认模型 manifest 固定格式字段漂移导致导出 400 且无下载。修复提交 `fada2e5f0b07` 已进入本地 `main`，服务端确定性覆盖格式、包 ID、技能版本、发布状态和导出身份，最终八文件校验保持不变；列表页补齐进行中及后端/非 JSON/未就绪/下载错误反馈。后端聚焦 2 项、前端 56 文件/308 项、build、backend package、diff check 通过。本地 backend/frontend 均运行 `2.8.66-dev.fada2e5 / fada2e5f0b07`、healthy/restart=0，版本 API、image label、前端 bundle 与正式 HTTPS/匿名 401 门禁通过，其他容器未重建。一次性 PostgreSQL 可完成 V123/JPA 初始化，但既有 OACT 测试前置仍阻断导出集成断言；本地浏览器停在统一登录页，真实八文件 zip 下载待 HUMAN 登录复核。远程 main 未推送，UAT/生产未改动。
 
 - `TASK-328 / FEAT-200` 已随 UAT `2.8.66-beta.2 / 525f0f610926` 完成技术发布：远程 `main` 包含冻结 tag，两项 linux/amd64 不可变镜像、运行 version/commit/label/digest 一致；完整备份 `/data/apps/agentcici/backups/20260821T064027Z-before-2.8.66-beta.2` 校验通过，应用回滚目标 beta.1。仅重建 backend/frontend，四个状态服务 ID 不变，六容器 healthy/restart=0、V123、Nginx、公开 smoke 与匿名 401 通过；部署页、Markdown MIME/nosniff、稳定 document_id、8 个编号章节和 bundle 文案通过。正式登录态导航、锚点与 Markdown 新窗口待 HUMAN；生产未修改。
 

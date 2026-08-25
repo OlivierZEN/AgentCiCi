@@ -2,11 +2,11 @@
 kind: task-status
 task_id: TASK-329
 feature_id: FEAT-014
-status: in_progress
+status: review
 priority: high
 owner_role: fullstack-agent
 claimed_by: codex
-updated_at: 2026-08-25T09:08:47Z
+updated_at: 2026-08-25T09:31:01Z
 updated_by: codex
 ---
 
@@ -34,8 +34,11 @@ updated_by: codex
 - 当前 `tryStandardizeByModel` 只检查模型字段非空，直到最终 `validateExportPackage` 才验证固定格式；因此可解析但格式漂移的模型 manifest 不会被规范化。
 - 服务端已覆盖模型 manifest 的固定格式、包身份、技能版本、发布状态和导出身份字段；非对象 manifest 仍失败关闭，最终包校验保持不变。
 - `SkillPackageServiceTest` 2 项、前端全量 56 文件/308 项、前端 production build、backend package 和 `git diff --check` 通过。
-- `SkillGovernanceIntegrationTest` 被本机 `localhost:5432` 连接拒绝阻断在 Spring Context/Flyway 初始化，6 个方法均未进入断言，未报告为通过。
+- `SkillGovernanceIntegrationTest` 首次被本机 `localhost:5432` 连接拒绝阻断；改用一次性 PostgreSQL 后已能完成 119 项迁移到 V123 和 JPA 初始化，但既有测试 OACT 配置/登录前置仍分别在 Context 或登录断言前失败，导出断言未执行，未报告为通过。
+- 实现提交 `fada2e5f0b07` 已进入 AgentCiCi 本地 `main`；backend/frontend 镜像分别为 `sha256:eb27e47a6a16...`、`sha256:f2be0fc6cc88...`，版本与 revision 均回读为 `2.8.66-dev.fada2e5 / fada2e5f0b07`。
+- 本地仅重建 backend/frontend；两容器 healthy/restart=0，`/actuator/health=UP`、`/system/version` 与镜像 label 一致，frontend Nginx 有效，运行 bundle 包含导出进行中文案，正式 `/admin/skills=200`、匿名 `/auth/me` 与 `/skills` 均为 JSON 401。
+- DevAutopilot、Semattice、PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak 和 Nginx 的容器 ID 保持不变；UAT/生产未部署或改配置，远程 `main` 未推送。
 
 ## 下一步
 
-- 运行状态校验并提交到本地 `main`，从该提交构建 backend/frontend 本地镜像，完成运行指纹与真实导出下载验证。
+- HUMAN 使用本地组织管理员账号登录 `https://cici.localhost/admin/skills`，对自定义已发布技能执行一次真实导出，确认 zip 下载、文件名与八文件内容；完成后再将任务由 `review` 置为 `done`。UAT 仍运行旧候选，不将其失败误报为修复后验收。

@@ -1,23 +1,27 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-25T09:08:47Z
+updated_at: 2026-08-25T09:31:01Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-25T09:08:47Z
-last_run_status: passed_task_329_code_pending_local_runtime
+last_run_at: 2026-08-25T09:31:01Z
+last_run_status: passed_task_329_local_technical_pending_authenticated_download
 ---
 
 # Test Report
 
 ## 2026-08-25 TASK-329 管理后台技能导出代码回归
 
-- 状态：`passed_task_329_code_pending_local_runtime`；UAT 只读复现、代码修复、后端聚焦测试、前端全量测试与构建通过，本地 main 制品和真实下载仍待完成。
+- 状态：`passed_task_329_local_technical_pending_authenticated_download`；UAT 只读复现、代码修复、自动化、本地 main 双制品与技术运行门禁通过，登录态真实 zip 下载待 HUMAN。
 - UAT 只读复现：公开 smoke 六项通过；登录态自定义已发布技能 `POST /skills/137/exports=400`，页面错误为 `Export package validation failed: manifest format mismatch`，15 秒内没有 download 事件。UAT 运行版本为 `2.8.66-beta.2 / 525f0f610926`；未修改 UAT 配置、镜像、容器或数据，生产未访问或修改。
 - 后端聚焦：`SkillPackageServiceTest` 2 项通过，覆盖模型试图改写 `format/formatVersion/packageId/skill version/publish status` 时由服务端覆盖，以及非对象 manifest 失败关闭。
 - 前端：全量 56 个测试文件、308 项通过；新增 4 项覆盖 READY job、后端校验原因、非 JSON 网关响应和未就绪 job。TypeScript/Vite production build 通过，仅保留既有 chunk-size warning。
 - 构建与静态：`mvn -q -DskipTests package`、`git diff --check` 通过。
-- 未执行项：`SkillGovernanceIntegrationTest` 在 Spring Context/Flyway 初始化阶段因 `localhost:5432` 连接拒绝失败，6 个方法均未进入断言；不声明集成测试通过。该限制不影响无数据库聚焦测试，最终使用本地受管容器运行态补充接口与下载验证。
+- 集成测试边界：宿主机执行被 `localhost:5432` 连接拒绝；一次性 PostgreSQL 执行已完成 119 项迁移到 V123 和 JPA 初始化，但现有测试 OACT 配置在 Context 或密码登录前置阶段失败，导出断言仍未执行，因此不声明 `SkillGovernanceIntegrationTest` 通过。
+- 本地主线与制品：实现提交 `fada2e5f0b07fa2bcd0ac08da735acb8eb82a064` 已进入本地 `main`。backend/frontend 镜像 ID 分别为 `sha256:eb27e47a6a16dbed8c23ae13a727b875184285764cdbf62a800dafaae3df76e1`、`sha256:f2be0fc6cc883257aa0f82741b5a170611bb0a5d17cd940c78b62671eb060a5d`；两者 label 均为 `2.8.66-dev.fada2e5 / fada2e5f0b07`。
+- 本地运行：仅 `--no-deps --force-recreate backend cici-frontend`；两容器 healthy/restart=0，backend `/actuator/health=UP`、`/system/version=2.8.66-dev.fada2e5 / fada2e5f0b07`，frontend Nginx 有效，运行 JS 包含“正在整理并生成通用技能包”。`https://cici.localhost/` 与 `/admin/skills` 为 200，匿名 `/auth/me`、`/skills` 为 JSON 401，近 5 分钟 backend severe 日志为 0。
+- 最小影响：DevAutopilot、Semattice、PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak 和 Nginx 容器 ID 与更新前一致且 restart=0；本次不涉及共享基础设施或跨项目契约，未执行完整 `./stack verify`。
+- HUMAN 边界：本地浏览器正确进入统一 SSO 登录页，当前没有可复用本地组织管理员会话；未伪造登录或绕过 `@RequireOrgAdmin`。自定义已发布技能的真实 zip 下载、文件名和八文件内容仍待登录后复核。UAT 仍运行未包含修复的 beta.2，生产未修改。
 
 ## 2026-08-21 TASK-327 / TASK-328 UAT `2.8.66-beta.2`
 
