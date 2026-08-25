@@ -1,12 +1,20 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-08-25T09:31:01Z
+updated_at: 2026-08-25T11:12:42Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-25 TASK-329 UAT `2.8.66-beta.3`
+
+- 冻结提交与 annotated tag 为 `e805c0ef7142b7446aef019c786107528cde34a1` / `2.8.66-beta.3`，远程 `main` 与 tag 解引用一致并包含修复 `fada2e5f0b07`。backend/frontend ACR index digest 为 `sha256:a2d0b8a5b6ad618e5451348b84efd813fde62911c8e7ff6949291a3acd6c19b2` / `sha256:44796d4848f8b1071206a5ea0452d1b60368b3c465ebb8039a22f504e470785d`，均含 linux/amd64 manifest，未更新 `latest`。
+- 完整回滚点 `/data/apps/agentcici/backups/20260825T110733Z-before-2.8.66-beta.3` 含 12 项、317,014,387 bytes 的 Compose/env、PostgreSQL dump、KB、Qdrant 存储与原生 snapshot、beta.2 旧应用镜像、容器状态、回滚说明和 SHA-256 清单；全部文件非空且 `0600`，dump catalog、归档、gzip 与清单验证通过。应用回滚目标 beta.2，数据恢复需单独批准。
+- UAT 只以非机密临时变量渲染版本；`uat.secrets.env` 不含版本字段，HUMAN Semattice scopes 仍包含 `metadata.read,runtime.record.read`。仅 `--no-deps --force-recreate backend frontend`；database、Redis、RabbitMQ、Qdrant ID 不变，六容器 healthy/restart=0。
+- backend health=`UP`，运行 version/commit/image label/digest 一致，Flyway V123，系统与 frontend Nginx 有效，Semattice/DevAutopilot active。两轮公开 smoke、管理页 200、匿名 `/auth/me`、`/skills`、导出 POST JSON 401 和运行 bundle 文案通过；切换期 1 次短暂 502 未在 3 分钟稳定窗口复现，稳定窗口 backend severe=0、frontend 5xx/severity=0。
+- 本次没有新增、变更或启用跨项目契约。浏览器刷新后回到统一身份中心，未绕过认证；真实八文件 zip 下载待 HUMAN。生产、Semattice、DevAutopilot 和 Keycloak 均未发布或修改。
 
 ## 2026-08-25 TASK-329 本地开发环境
 

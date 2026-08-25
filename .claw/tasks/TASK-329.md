@@ -6,7 +6,7 @@ status: review
 priority: high
 owner_role: fullstack-agent
 claimed_by: codex
-updated_at: 2026-08-25T09:31:01Z
+updated_at: 2026-08-25T11:12:42Z
 updated_by: codex
 ---
 
@@ -37,8 +37,12 @@ updated_by: codex
 - `SkillGovernanceIntegrationTest` 首次被本机 `localhost:5432` 连接拒绝阻断；改用一次性 PostgreSQL 后已能完成 119 项迁移到 V123 和 JPA 初始化，但既有测试 OACT 配置/登录前置仍分别在 Context 或登录断言前失败，导出断言未执行，未报告为通过。
 - 实现提交 `fada2e5f0b07` 已进入 AgentCiCi 本地 `main`；backend/frontend 镜像分别为 `sha256:eb27e47a6a16...`、`sha256:f2be0fc6cc88...`，版本与 revision 均回读为 `2.8.66-dev.fada2e5 / fada2e5f0b07`。
 - 本地仅重建 backend/frontend；两容器 healthy/restart=0，`/actuator/health=UP`、`/system/version` 与镜像 label 一致，frontend Nginx 有效，运行 bundle 包含导出进行中文案，正式 `/admin/skills=200`、匿名 `/auth/me` 与 `/skills` 均为 JSON 401。
-- DevAutopilot、Semattice、PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak 和 Nginx 的容器 ID 保持不变；UAT/生产未部署或改配置，远程 `main` 未推送。
+- 本地最小影响部署时 DevAutopilot、Semattice、PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak 和 Nginx 的容器 ID 保持不变；该阶段没有修改 UAT/生产或远程 `main`。
+- 远程 `main` 已快进到 `e805c0ef7142`，annotated tag `2.8.66-beta.3` 解引用到同一提交且包含修复 `fada2e5f0b07`；backend/frontend ACR index digest 为 `sha256:a2d0b8a5b6ad618e5451348b84efd813fde62911c8e7ff6949291a3acd6c19b2` / `sha256:44796d4848f8b1071206a5ea0452d1b60368b3c465ebb8039a22f504e470785d`，未更新 `latest`。
+- UAT 发布前备份 `/data/apps/agentcici/backups/20260825T110733Z-before-2.8.66-beta.3` 共 12 项、317,014,387 bytes、全部非空且 `0600`；PostgreSQL catalog、KB/Qdrant 归档、Qdrant 原生 snapshot、旧应用镜像和 SHA-256 清单通过，应用回滚目标 beta.2。
+- UAT 仅重建 backend/frontend；四个状态服务 ID 不变，六容器 healthy/restart=0，运行 `2.8.66-beta.3 / e805c0ef7142`、health UP、V123、Nginx、两轮公开 smoke、管理页 200、匿名导出 POST JSON 401 和稳定窗口通过。启动切换期 1 次短暂 502 未在稳定窗口复现。
+- 本候选没有新增、变更或启用跨项目契约。浏览器刷新后回到统一登录页，未绕过认证；生产未修改。
 
 ## 下一步
 
-- HUMAN 使用本地组织管理员账号登录 `https://cici.localhost/admin/skills`，对自定义已发布技能执行一次真实导出，确认 zip 下载、文件名与八文件内容；完成后再将任务由 `review` 置为 `done`。UAT 仍运行旧候选，不将其失败误报为修复后验收。
+- HUMAN 使用 UAT 组织管理员账号登录技能列表，对自定义已发布技能执行一次真实导出，确认 zip 下载、文件名与八文件内容；完成后再将任务由 `review` 置为 `done`。生产保持不变。

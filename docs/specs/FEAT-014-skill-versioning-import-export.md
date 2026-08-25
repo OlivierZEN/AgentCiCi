@@ -7,7 +7,7 @@ owner_role: product-admin-skill-governance
 task_ids: TASK-035,TASK-329
 related_decisions: FEAT-009
 related_issues: none
-updated_at: 2026-08-25T09:08:47Z
+updated_at: 2026-08-25T11:12:42Z
 updated_by: codex
 ---
 
@@ -925,6 +925,7 @@ skill-package.zip
 - 2026-05-01: 完成导入预览工作区收口：新建页导入预览支持“升级处理规则/输出约定”字段编辑，并在“直接创建草稿”前增加技能代码/显示名称必填校验；复跑 FEAT-014 后端集成测试与前端构建通过。
 - 2026-05-03: 修复软删除 Skill code 占用导入创建：删除时归档旧 `skill_code`，创建时遇到历史 `DELETED` 同 code 会先归档旧记录并 flush；新增 `V36__archive_deleted_skill_codes.sql` 处理既有软删除数据；`SkillGovernanceIntegrationTest` 覆盖删除同 code 后导入创建成功，复跑 `SkillGovernanceIntegrationTest` 与 `SkillAuthoringIntegrationTest` 通过。
 - 2026-08-25: TASK-329 修复模型输出 manifest 固定格式字段漂移导致的导出 400。模型继续整理技能正文与可移植契约，但 `format`、`formatVersion`、`packageId`、版本、发布状态和导出身份由服务端按当前发布版本覆盖；最终八文件包仍统一执行 JSON、格式与敏感信息校验。技能列表同步补齐导出进行中状态、非 JSON 与下载失败反馈。
+- 2026-08-25: TASK-329 随 UAT `2.8.66-beta.3 / e805c0ef7142` 完成技术发布，冻结 tag、远程主线、双镜像 digest、完整备份、应用容器替换、运行指纹、匿名鉴权与稳定窗口门禁通过；登录态真实八文件 zip 下载待 HUMAN。
 
 ## 交接说明
 
