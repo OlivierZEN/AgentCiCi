@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-08-26T04:18:24Z
+updated_at: 2026-08-26T04:23:30Z
 updated_by: codex
 status: active
 ---
@@ -16,6 +16,7 @@ status: active
 - 只 pull/force-recreate backend/frontend；database、Redis、RabbitMQ、Qdrant ID 保持 `5b4708835b05`、`e70d00527987`、`8289db5848cc`、`be0f28441f6e`。六容器 healthy/restart=0，backend health UP，version/commit/label/digest 一致，Flyway V123，Nginx 有效。
 - 公网首页、`/app`、`/admin/skills`、DevAutopilot integrated health、Semattice `1.0.7`、Keycloak discovery 和 HTTP 301 通过；匿名 `/auth/me`、`/skills`、技能导出 POST 为 JSON 401。运行 JS 回读导出进行中、非 JSON 响应和任务未就绪处理；100 秒稳定窗口 backend severe=0、frontend 5xx/upstream=0。
 - 知识库计数发布前后保持 9/35/661，Qdrant 保持 549 points；四个状态服务未重建。
+- 正式 `2.8.66` tag 完成后，发布脚本 dry-run 已把下一生产和首个 UAT 候选推导为 `2.8.67` / `2.8.67-beta.1`；不得再创建新的 `2.8.66-beta.N`。
 
 ## 2026-08-25 TASK-329 UAT `2.8.66-beta.3`
 
