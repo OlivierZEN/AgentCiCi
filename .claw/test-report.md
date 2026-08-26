@@ -1,14 +1,21 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-25T11:12:42Z
+updated_at: 2026-08-26T01:24:34Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-25T11:12:42Z
-last_run_status: passed_task_329_uat_technical_pending_authenticated_download
+last_run_at: 2026-08-26T01:24:34Z
+last_run_status: passed_task_329_uat_human_reported_production_blocked
 ---
 
 # Test Report
+
+## 2026-08-26 TASK-329 HUMAN 验收与 TASK-330 生产预检
+
+- 状态：`passed_task_329_uat_human_reported_production_blocked`。用户确认 UAT 技能导出人工测试通过；该结论完成 TASK-329，但不自动覆盖同一候选内其他任务的验收。
+- 生产只读 smoke 六项通过。生产 AgentCiCi 现场为 `2.8.65 / 784ccd23e933`；六容器 healthy/restart=0，backend health UP、Flyway V122、frontend Nginx 有效，近 15 分钟 backend severe 与 frontend 5xx 均为 0；四个状态服务运行指纹已记录且未改变。
+- 跨项目停止条件：候选代码在 `DevAutopilotTenantApplicationService` 中要求 7 对象/87 字段并拒绝 7×86；生产 Semattice 公网版本为 `1.0.6 / 6579ded320ad`，项目发布事实为 7×86，UAT 7×87 提供方为 `1.0.7-beta.5 / 54f2ab93558f`。未获 Semattice 生产发布授权，未执行提供方写入或 SERVICE 模板应用。
+- HUMAN 边界：TASK-326 缺陷业务闭环、TASK-327 真实微信客服链路、TASK-328 登录态运维文档交互仍为 pending。当前没有创建 `2.8.66` tag/正式镜像/生产备份，也没有修改生产 env、容器、数据库或其他产品。
 
 ## 2026-08-25 TASK-329 管理后台技能导出代码回归
 

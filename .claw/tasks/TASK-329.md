@@ -2,11 +2,11 @@
 kind: task-status
 task_id: TASK-329
 feature_id: FEAT-014
-status: review
+status: done
 priority: high
 owner_role: fullstack-agent
 claimed_by: codex
-updated_at: 2026-08-25T11:12:42Z
+updated_at: 2026-08-26T01:24:34Z
 updated_by: codex
 ---
 
@@ -42,7 +42,8 @@ updated_by: codex
 - UAT 发布前备份 `/data/apps/agentcici/backups/20260825T110733Z-before-2.8.66-beta.3` 共 12 项、317,014,387 bytes、全部非空且 `0600`；PostgreSQL catalog、KB/Qdrant 归档、Qdrant 原生 snapshot、旧应用镜像和 SHA-256 清单通过，应用回滚目标 beta.2。
 - UAT 仅重建 backend/frontend；四个状态服务 ID 不变，六容器 healthy/restart=0，运行 `2.8.66-beta.3 / e805c0ef7142`、health UP、V123、Nginx、两轮公开 smoke、管理页 200、匿名导出 POST JSON 401 和稳定窗口通过。启动切换期 1 次短暂 502 未在稳定窗口复现。
 - 本候选没有新增、变更或启用跨项目契约。浏览器刷新后回到统一登录页，未绕过认证；生产未修改。
+- 2026-08-26 用户确认 UAT 人工测试通过，技能导出真实业务验收完成；本轮将该 HUMAN 结论记为用户验收事实，未伪造额外会话、下载文件或请求回执。
 
 ## 下一步
 
-- HUMAN 使用 UAT 组织管理员账号登录技能列表，对自定义已发布技能执行一次真实导出，确认 zip 下载、文件名与八文件内容；完成后再将任务由 `review` 置为 `done`。生产保持不变。
+- TASK-329 已完成。AgentCiCi `2.8.66` 的生产晋级由 TASK-330 单独跟踪；不得把本任务通过扩大解释为同一候选内 TASK-326/327/328 的 HUMAN 验收。

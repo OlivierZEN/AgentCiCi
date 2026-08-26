@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 5
-updated_at: 2026-08-25T11:12:42Z
+updated_at: 2026-08-26T01:24:34Z
 updated_by: codex
-phase: verification
-active_task: TASK-329
-next_action: "HUMAN 登录 UAT 管理后台，对自定义已发布技能执行真实导出并检查八文件 zip；生产保持不变。"
+phase: release_blocked
+active_task: TASK-330
+next_action: "用户确认 TASK-326/327/328 HUMAN 验收并明确授权 Semattice 1.0.7 独立生产晋级；提供方就绪与 SERVICE 探测通过后再发布 AgentCiCi 2.8.66。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,9 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-329 / FEAT-014` 已发布 UAT `2.8.66-beta.3 / e805c0ef7142` 并进入 HUMAN 验收：修复提交 `fada2e5f0b07` 被冻结 tag 和远程 `main` 包含，backend/frontend ACR index digest 为 `sha256:a2d0b8a5b6ad618e5451348b84efd813fde62911c8e7ff6949291a3acd6c19b2` / `sha256:44796d4848f8b1071206a5ea0452d1b60368b3c465ebb8039a22f504e470785d`，未更新 `latest`。完整备份 `/data/apps/agentcici/backups/20260825T110733Z-before-2.8.66-beta.3` 共 12 项、317,014,387 bytes、全部非空且 `0600`，回滚目标 beta.2。仅重建 backend/frontend，四个状态服务 ID 不变；六容器 healthy/restart=0，health UP、运行 version/commit/image 一致、V123、Nginx、两轮公开 smoke、管理页 200、匿名 `/auth/me`、`/skills` 和导出 POST JSON 401、稳定窗口无 5xx/严重错误。启动切换期曾有 1 次短暂 502，稳定窗口已清零。本次没有新增、变更或启用跨项目契约。浏览器刷新后被统一身份中心要求重新登录，未绕过认证；真实八文件 zip 下载仍待 HUMAN。生产未修改。
+- `TASK-329 / FEAT-014` 已由用户确认 UAT HUMAN 技能导出测试通过，任务完成。生产晋级转入 `TASK-330`，但在任何生产写入前被门禁阻止：AgentCiCi `2.8.66` 明确把 INT-025 从 7×86 提升为严格 7×87，生产 Semattice 现场仍为 `1.0.6 / 6579ded320ad` 和已验证 7×86，而 7×87 只在 UAT `1.0.7-beta.5 / 54f2ab93558f` 完成 SERVICE 探测；此外 TASK-326/327/328 的 HUMAN 验收仍未确认。生产 AgentCiCi 只读回读继续为 `2.8.65 / 784ccd23e933`，六容器 healthy/restart=0、health UP、V122、Nginx与公开 smoke 通过；未创建 2.8.66 tag/镜像/备份，未修改生产配置、数据或容器。
+
+- `TASK-329 / FEAT-014` 已发布 UAT `2.8.66-beta.3 / e805c0ef7142` 并由用户确认 HUMAN 验收通过：修复提交 `fada2e5f0b07` 被冻结 tag 和远程 `main` 包含，backend/frontend ACR index digest 为 `sha256:a2d0b8a5b6ad618e5451348b84efd813fde62911c8e7ff6949291a3acd6c19b2` / `sha256:44796d4848f8b1071206a5ea0452d1b60368b3c465ebb8039a22f504e470785d`，未更新 `latest`。完整备份 `/data/apps/agentcici/backups/20260825T110733Z-before-2.8.66-beta.3` 共 12 项、317,014,387 bytes、全部非空且 `0600`，回滚目标 beta.2。仅重建 backend/frontend，四个状态服务 ID 不变；六容器 healthy/restart=0，health UP、运行 version/commit/image 一致、V123、Nginx、两轮公开 smoke、管理页 200、匿名 `/auth/me`、`/skills` 和导出 POST JSON 401、稳定窗口无 5xx/严重错误。启动切换期曾有 1 次短暂 502，稳定窗口已清零。本任务本身没有新增、变更或启用跨项目契约；生产未修改。
 
 - `TASK-328 / FEAT-200` 已随 UAT `2.8.66-beta.2 / 525f0f610926` 完成技术发布：远程 `main` 包含冻结 tag，两项 linux/amd64 不可变镜像、运行 version/commit/label/digest 一致；完整备份 `/data/apps/agentcici/backups/20260821T064027Z-before-2.8.66-beta.2` 校验通过，应用回滚目标 beta.1。仅重建 backend/frontend，四个状态服务 ID 不变，六容器 healthy/restart=0、V123、Nginx、公开 smoke 与匿名 401 通过；部署页、Markdown MIME/nosniff、稳定 document_id、8 个编号章节和 bundle 文案通过。正式登录态导航、锚点与 Markdown 新窗口待 HUMAN；生产未修改。
 

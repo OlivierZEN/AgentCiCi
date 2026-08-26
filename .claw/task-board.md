@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-25T11:12:42Z
+updated_at: 2026-08-26T01:24:34Z
 updated_by: codex
 board_status: active
 ---
@@ -15,18 +15,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
-### TASK-329 - 修复管理后台技能导出
+### TASK-330 - AgentCiCi 2.8.66 生产晋级
 
-- status: `review`
-- priority: `high`
-- owner_role: `fullstack-agent`
+- status: `blocked`
+- priority: `critical`
+- owner_role: `release-agent`
 - claimed_by: `codex`
-- spec_path: `docs/specs/FEAT-014-skill-versioning-import-export.md`
-- task_status_path: `.claw/tasks/TASK-329.md`
-- blocked_by: `none`
-- scope_files: `SkillPackageService 模型 manifest 规范化、技能列表导出状态/错误反馈、后端与前端聚焦测试、本地环境验证`
-- completion_evidence: `UAT 2.8.66-beta.3 / e805c0ef7142；tag 与远程 main 包含 fada2e5f；backend/frontend digest a2d0b8a5/44796d48；完整备份；仅重建应用；六容器 healthy/restart=0；V123、Nginx、两轮 smoke、匿名导出 JSON 401 和稳定窗口通过`
-- next_action: `HUMAN 登录 UAT 管理后台，对自定义已发布技能执行真实导出并检查八文件 zip；生产保持不变。`
+- task_status_path: `.claw/tasks/TASK-330.md`
+- blocked_by: `生产 Semattice 仍为 1.0.6/7x86；TASK-326、TASK-327、TASK-328 HUMAN 验收未确认`
+- scope_files: `冻结 2.8.66 正式制品、生产完整备份、仅替换 backend/frontend、运行与回滚证据`
+- completion_evidence: `生产只读预检通过；尚未执行生产写入`
+- next_action: `用户明确确认三个待验收功能并授权独立发布 Semattice 1.0.7 后，按提供方到消费方顺序执行生产晋级。`
 
 ### TASK-328 - 运维中心部署安装在线指南
 
@@ -1817,6 +1816,19 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-329 - 修复管理后台技能导出
+
+- status: `done`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-014-skill-versioning-import-export.md`
+- task_status_path: `.claw/tasks/TASK-329.md`
+- blocked_by: `none`
+- scope_files: `SkillPackageService 模型 manifest 规范化、技能列表导出状态/错误反馈、后端与前端聚焦测试、本地环境验证`
+- completion_evidence: `UAT 2.8.66-beta.3 / e805c0ef7142；tag 与远程 main 包含 fada2e5f；backend/frontend digest a2d0b8a5/44796d48；完整备份；仅重建应用；六容器 healthy/restart=0；V123、Nginx、两轮 smoke、匿名导出 JSON 401 和稳定窗口通过；用户确认真实 UAT HUMAN 导出测试通过`
+- next_action: `已完成；生产晋级由 TASK-330 单独跟踪。`
 
 ### TASK-305 - 平台长任务集成超时上限调整
 
