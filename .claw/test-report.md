@@ -1,14 +1,21 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-26T01:24:34Z
+updated_at: 2026-08-26T04:18:24Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-26T01:24:34Z
-last_run_status: passed_task_329_uat_human_reported_production_blocked
+last_run_at: 2026-08-26T04:18:24Z
+last_run_status: passed_task_330_production_release
 ---
 
 # Test Report
+
+## 2026-08-26 TASK-330 生产发布
+
+- 状态：`passed_task_330_production_release`。用户确认 TASK-326/327/328/329 UAT HUMAN 验收；生产按 Semattice 提供方、SERVICE 契约探测、AgentCiCi 消费方的顺序完成。
+- Semattice 生产回读 `1.0.7 / 54f2ab93558f`；AgentCiCi 生产 SERVICE 真实签名探测返回 7 对象/87 字段、state=applied。AgentCiCi 正式制品从 UAT 冻结提交 `e805c0ef7142` 构建，两项 ACR digest、linux/amd64 manifest 与正式 Git tag 回读一致。
+- 生产完整备份 13 项、格式与 SHA-256 清单通过；只重建 backend/frontend，四个状态服务 ID 未变。六容器 healthy/restart=0，health UP、V123、Nginx、运行版本/commit/digest、公开 smoke、匿名 JSON 401 和 100 秒稳定日志窗口通过。
+- 生产运行 bundle 包含技能导出进行中、非 JSON 响应和任务未就绪处理；知识库 9/35/661 与 Qdrant 549 points 保持不变。UAT HUMAN 验收与生产技术回读分别记录，不以匿名探针替代人工结论。
 
 ## 2026-08-26 TASK-329 HUMAN 验收与 TASK-330 生产预检
 

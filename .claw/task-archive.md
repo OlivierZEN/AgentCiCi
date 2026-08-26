@@ -1,7 +1,7 @@
 ---
 kind: task-archive
 version: 4
-updated_at: 2026-08-19T10:27:00Z
+updated_at: 2026-08-26T04:18:24Z
 updated_by: codex
 archive_status: active
 ---
@@ -11,6 +11,11 @@ archive_status: active
 Historical task cards have been removed from the hot board. Keep details in task status files and specs when they exist.
 
 ## Archived Tasks
+
+- TASK-330 — done — 用户确认 UAT HUMAN 验收后，Semattice `1.0.7` 先发布并通过 AgentCiCi 生产 SERVICE 7×87 探测；AgentCiCi `2.8.66 / e805c0ef7142` 随后完成不可变双镜像、完整备份、仅应用容器切换、V123、健康与稳定窗口门禁。
+- TASK-328 — done — 运维中心部署安装在线指南已通过 UAT HUMAN 验收，并随 AgentCiCi `2.8.66` 发布生产。
+- TASK-327 — done — 微信客服企业微信手机端监控与强制接管已由用户确认 UAT HUMAN 验收，并随 AgentCiCi `2.8.66` 发布生产。
+- TASK-326 — done — INT-025 的 7×87 严格消费契约已完成 UAT HUMAN 验收、Semattice 生产提供方发布、AgentCiCi SERVICE 探测和消费方生产晋级。
 
 - TASK-323 — done — DevAutopilot 开通的默认 scope、中断重试、opaque 主体 UUID 契约映射及本地/资源键分离已根治；`784ccd23` 已发布 UAT `2.8.65-beta.1` 和生产 `2.8.65`，两个目标租户均为 ACTIVE 且知识库数据保持不变。
 

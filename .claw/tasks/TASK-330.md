@@ -1,11 +1,11 @@
 ---
 kind: task-status
 task_id: TASK-330
-status: blocked
+status: done
 priority: critical
 owner_role: release-agent
 claimed_by: codex
-updated_at: 2026-08-26T01:24:34Z
+updated_at: 2026-08-26T04:18:24Z
 updated_by: codex
 ---
 
@@ -19,15 +19,10 @@ updated_by: codex
 
 ## 当前证据
 
-- 用户已确认 TASK-329 技能导出 UAT HUMAN 测试通过。
-- 生产只读预检通过：AgentCiCi 当前为 `2.8.65 / 784ccd23e933`，六容器 healthy/restart=0，backend health UP、Flyway V122、frontend Nginx 有效，公开六项 smoke 通过；当前应用回滚点为 `2.8.65` 发布前备份与运行中的 `2.8.65` 制品。
-- 候选 `2.8.66-beta.3` 冻结提交为 `e805c0ef7142`；远程 `main@90d317cb` 只比冻结提交多发布记录，正式制品不得改用该文档提交。
-- `2.8.66` 同时包含 INT-025：AgentCiCi 严格要求 `devautopilot.standard.v1` 为 7 对象/87 字段，并显式拒绝 7×86。生产 Semattice 当前为 `1.0.6 / 6579ded320ad`，其已验证模板仍为 7×86；7×87 只在 UAT `1.0.7-beta.5 / 54f2ab93558f` 完成 SERVICE 技术探测。
-- 同一候选内 TASK-326 缺陷业务链路、TASK-327 真实微信客服链路和 TASK-328 登录态运维文档交互仍在项目事实源中标记为 HUMAN pending；本轮用户确认只承接此前明确待验收的 TASK-329 技能导出。
-- 本轮未创建 `2.8.66` tag、未构建或推送正式镜像、未创建生产备份、未修改生产配置或容器。
-
-## 阻塞与下一步
-
-- 阻塞 1：生产 Semattice 尚未提供 7×87；这是候选明确启用且不兼容 7×86 的跨项目契约，不能把 AgentCiCi 消费方先行切换并宣称完整交付。
-- 阻塞 2：候选内 TASK-326/327/328 的 HUMAN 验收仍未确认通过。
-- 需要用户明确确认上述三项 HUMAN 验收，并授权把 Semattice `1.0.7` 作为独立产品先行完成生产晋级；随后重新执行提供方 SERVICE 探测，再发布 AgentCiCi `2.8.66`。
+- 用户确认 TASK-326/327/328 与 TASK-329 UAT HUMAN 验收通过，并明确授权先独立发布 Semattice `1.0.7`，再发布 AgentCiCi `2.8.66`。
+- Semattice 先从冻结 `1.0.7-beta.5 / 54f2ab93558f` 晋级正式 `1.0.7`；AgentCiCi 生产 SERVICE 身份签名探测返回 7 对象、87 字段、state=applied，提供方门禁闭合后才开始消费方发布。
+- AgentCiCi 正式 tag `2.8.66^{}`、UAT tag `2.8.66-beta.3^{}` 和运行 commit 均为 `e805c0ef7142b7446aef019c786107528cde34a1`。backend/frontend ACR index digest 为 `sha256:d892ff3b60c39bc690a48c71176005f6c2a12299288e16fd8606260375652557` / `sha256:289434e93eab541bdb96cb0a383443cb6280a67e72af1a9a17d206a0b6fcdab4`，均含 linux/amd64 manifest，未更新 `latest`。
+- 完整回滚点 `/opt/cici/backups/20260826T041149Z-before-2.8.66` 含受管配置、PostgreSQL custom dump、KB/Qdrant 归档、Qdrant 原生 snapshot、旧应用镜像、容器基线、回滚说明和 SHA-256 清单；13 项文件全部非空且 `0600`，格式与清单校验通过。应用回滚目标为 `2.8.65`；数据恢复仍需单独批准。
+- 只 pull/force-recreate backend/frontend；database、Redis、RabbitMQ、Qdrant ID 保持不变。六容器 healthy/restart=0，backend health UP，运行 version/commit/image label/digest 一致，Flyway V123，frontend Nginx 有效。
+- 公开首页、`/app`、`/admin/skills`、DevAutopilot integrated health、Semattice `1.0.7` 与 Keycloak discovery 通过；匿名 `/auth/me`、`/skills`、导出 POST 均为 JSON 401。生产 bundle 包含导出进行中、非 JSON 响应和任务未就绪处理；100 秒稳定窗口 backend severe、frontend 5xx/upstream 均为 0。
+- 知识库计数保持 9/35/661，Qdrant 保持 549 points；四个状态服务未重建。生产发布技术门禁完成。

@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-26T01:24:34Z
+updated_at: 2026-08-26T04:18:24Z
 updated_by: codex
 board_status: active
 ---
@@ -14,57 +14,6 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
-
-### TASK-330 - AgentCiCi 2.8.66 生产晋级
-
-- status: `blocked`
-- priority: `critical`
-- owner_role: `release-agent`
-- claimed_by: `codex`
-- task_status_path: `.claw/tasks/TASK-330.md`
-- blocked_by: `生产 Semattice 仍为 1.0.6/7x86；TASK-326、TASK-327、TASK-328 HUMAN 验收未确认`
-- scope_files: `冻结 2.8.66 正式制品、生产完整备份、仅替换 backend/frontend、运行与回滚证据`
-- completion_evidence: `生产只读预检通过；尚未执行生产写入`
-- next_action: `用户明确确认三个待验收功能并授权独立发布 Semattice 1.0.7 后，按提供方到消费方顺序执行生产晋级。`
-
-### TASK-328 - 运维中心部署安装在线指南
-
-- status: `review`
-- priority: `high`
-- owner_role: `frontend-agent`
-- claimed_by: `codex`
-- spec_path: `docs/specs/FEAT-200-platform-deployment-installation-guide.md`
-- task_status_path: `.claw/tasks/TASK-328.md`
-- blocked_by: `none`
-- scope_files: `平台运维中心导航、部署安装在线文档、Agent Markdown、定向测试、前端构建与本地环境验证`
-- completion_evidence: `UAT 2.8.66-beta.2 / 525f0f610926；backend/frontend digest 095c0d71/82155b27；完整备份；六容器 healthy/restart=0；V123；HTML/Markdown 200，Markdown text/markdown + nosniff；8 个编号章节与 bundle 文案通过`
-- next_action: `平台运营账号登录 UAT 后打开“运维中心 → 部署安装”，复核正式认证路由的目录锚点和 Markdown 新窗口入口；生产保持不变。`
-
-### TASK-327 - 微信客服企业微信手机端监控与强制接管
-
-- status: `review`
-- priority: `critical`
-- owner_role: `fullstack-agent`
-- claimed_by: `codex`
-- spec_path: `docs/specs/FEAT-199-wechat-customer-service-mobile-handoff.md`
-- task_status_path: `.claw/tasks/TASK-327.md`
-- blocked_by: `none`
-- scope_files: `微信客服权威状态/消息来源、人工接管 fence、移动 OAuth/session、坐席列表、原生聊天跳转、V123、前后端测试与本地环境验证`
-- completion_evidence: `a6427a94548d 已随 UAT 2.8.66-beta.2 / 525f0f610926 发布；V123、移动页 200、匿名 context 401、不存在入口 400；六容器 healthy/restart=0；真实渠道未配置或调用`
-- next_action: `由 HUMAN 使用获授权真实微信客服账号在 UAT 完成手机 OAuth、真实客户消息、状态 3 接管、人工回复无 AI 双发和企业微信原生会话跳转验收；生产保持不变。`
-
-### TASK-326 - 对齐 DevAutopilot 7×87 元数据基线
-
-- status: `review`
-- priority: `critical`
-- owner_role: `integration-agent`
-- claimed_by: `codex`
-- spec_path: `docs/specs/FEAT-198-devautopilot-defect-validation-template-consumer.md`
-- task_status_path: `.claw/tasks/TASK-326.md`
-- blocked_by: `none`
-- scope_files: `DevAutopilotTenantApplicationService、初始化恢复测试、INT-025 契约和 UAT 发布证据`
-- completion_evidence: `2.8.66-beta.1 / 2c9d3821b458；仅重建 backend/frontend；六容器 healthy/restart=0；Flyway V122；完整备份；目标 SERVICE 探测 7×87 applied`
-- next_action: `由登录用户在 UAT 用新建测试缺陷完成分配、验证提交和产品经理确认，并回读 validation/revision；生产保持不变。`
 
 ### TASK-325 - 产品经理项目改名确定性执行与可信回执
 

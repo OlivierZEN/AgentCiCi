@@ -1,12 +1,21 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-08-25T11:12:42Z
+updated_at: 2026-08-26T04:18:24Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-26 TASK-330 生产 `2.8.66`
+
+- 用户确认 TASK-326/327/328/329 UAT HUMAN 验收，并授权按提供方到消费方顺序发布。Semattice 先以冻结 `1.0.7-beta.5 / 54f2ab93558f` 晋级正式 `1.0.7`；AgentCiCi 生产 SERVICE 对受保护模板端点的签名探测返回 7 对象/87 字段、state=applied 后，才继续 AgentCiCi 发布。
+- AgentCiCi 冻结 UAT `2.8.66-beta.3^{}`、正式 tag `2.8.66^{}` 与运行提交均为 `e805c0ef7142b7446aef019c786107528cde34a1`。backend/frontend ACR index digest 为 `sha256:d892ff3b60c39bc690a48c71176005f6c2a12299288e16fd8606260375652557` / `sha256:289434e93eab541bdb96cb0a383443cb6280a67e72af1a9a17d206a0b6fcdab4`，linux/amd64，未更新 `latest`。
+- 完整回滚点 `/opt/cici/backups/20260826T041149Z-before-2.8.66` 共 13 项，全部非空且 `0600`；PostgreSQL catalog、KB/Qdrant tar、Qdrant 原生 snapshot、旧应用镜像 gzip 和 SHA-256 清单通过。应用回滚恢复备份 `acr.env` 并只重建 `2.8.65` backend/frontend；数据恢复需要单独批准。
+- 只 pull/force-recreate backend/frontend；database、Redis、RabbitMQ、Qdrant ID 保持 `5b4708835b05`、`e70d00527987`、`8289db5848cc`、`be0f28441f6e`。六容器 healthy/restart=0，backend health UP，version/commit/label/digest 一致，Flyway V123，Nginx 有效。
+- 公网首页、`/app`、`/admin/skills`、DevAutopilot integrated health、Semattice `1.0.7`、Keycloak discovery 和 HTTP 301 通过；匿名 `/auth/me`、`/skills`、技能导出 POST 为 JSON 401。运行 JS 回读导出进行中、非 JSON 响应和任务未就绪处理；100 秒稳定窗口 backend severe=0、frontend 5xx/upstream=0。
+- 知识库计数发布前后保持 9/35/661，Qdrant 保持 549 points；四个状态服务未重建。
 
 ## 2026-08-25 TASK-329 UAT `2.8.66-beta.3`
 

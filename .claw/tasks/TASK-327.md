@@ -2,11 +2,11 @@
 kind: task-status
 task_id: TASK-327
 feature_id: FEAT-199
-status: review
+status: done
 priority: critical
 owner_role: fullstack-agent
 claimed_by: codex
-updated_at: 2026-08-21T06:44:54Z
+updated_at: 2026-08-26T04:18:24Z
 updated_by: codex
 ---
 
@@ -26,7 +26,7 @@ updated_by: codex
 - 本地 backend/frontend 同一 main commit 构建，版本、镜像、页面制品、容器健康和 restart count 回读一致。
 - 没有真实企业微信账号时明确保留真实手机 OAuth、接管、原生跳转和客户消息业务验收为 HUMAN pending，不以 mock 替代。
 
-## 下一步
+## 完成证据
 
 - 功能已包含在 UAT `2.8.66-beta.2 / 525f0f610926`：V123、移动页 200、带合法 pageUrl 的匿名 context 401、不存在入口 UUID 400、运行版本/镜像/容器健康与 restart=0 通过。
-- 在获授权的真实微信客服账号配置自建应用 AgentId/Secret、可信域名和正式接待人员后，由 HUMAN 在 UAT 企业微信手机端完成 OAuth、客户消息、状态 3 接管、人工回复无 AI 双发和原生会话跳转验收。生产保持不变。
+- 用户已确认 UAT HUMAN 企业微信手机端业务验收通过；冻结候选随后以 `2.8.66 / e805c0ef7142` 晋级生产。V123、应用容器健康、匿名边界和稳定窗口通过，未在发布记录中保存任何微信客服 Secret。

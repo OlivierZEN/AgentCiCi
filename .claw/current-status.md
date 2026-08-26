@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 5
-updated_at: 2026-08-26T01:24:34Z
+updated_at: 2026-08-26T04:18:24Z
 updated_by: codex
-phase: release_blocked
-active_task: TASK-330
-next_action: "用户确认 TASK-326/327/328 HUMAN 验收并明确授权 Semattice 1.0.7 独立生产晋级；提供方就绪与 SERVICE 探测通过后再发布 AgentCiCi 2.8.66。"
+phase: review
+active_task: TASK-325
+next_action: "AgentCiCi 2.8.66 与 Semattice 1.0.7 已按顺序完成生产晋级；后续继续 TASK-325 的独立本地产品验收。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-329 / FEAT-014` 已由用户确认 UAT HUMAN 技能导出测试通过，任务完成。生产晋级转入 `TASK-330`，但在任何生产写入前被门禁阻止：AgentCiCi `2.8.66` 明确把 INT-025 从 7×86 提升为严格 7×87，生产 Semattice 现场仍为 `1.0.6 / 6579ded320ad` 和已验证 7×86，而 7×87 只在 UAT `1.0.7-beta.5 / 54f2ab93558f` 完成 SERVICE 探测；此外 TASK-326/327/328 的 HUMAN 验收仍未确认。生产 AgentCiCi 只读回读继续为 `2.8.65 / 784ccd23e933`，六容器 healthy/restart=0、health UP、V122、Nginx与公开 smoke 通过；未创建 2.8.66 tag/镜像/备份，未修改生产配置、数据或容器。
+- `TASK-330` 已完成生产晋级：用户确认 TASK-326/327/328 UAT HUMAN 验收并授权先独立发布 Semattice `1.0.7`；提供方以冻结 `54f2ab93558f` 上线并通过 AgentCiCi 生产 SERVICE 7×87 探测后，AgentCiCi 再从冻结 UAT `2.8.66-beta.3 / e805c0ef7142` 晋级正式 `2.8.66`。backend/frontend digest 为 `sha256:d892ff3b60c39bc690a48c71176005f6c2a12299288e16fd8606260375652557` / `sha256:289434e93eab541bdb96cb0a383443cb6280a67e72af1a9a17d206a0b6fcdab4`；完整回滚点为 `/opt/cici/backups/20260826T041149Z-before-2.8.66`。只重建 backend/frontend，四个状态服务 ID 不变；六容器 healthy/restart=0、health UP、V123、Nginx、公开/匿名门禁与 100 秒稳定窗口通过，知识库 9/35/661、Qdrant 549 points 保持不变。
 
 - `TASK-329 / FEAT-014` 已发布 UAT `2.8.66-beta.3 / e805c0ef7142` 并由用户确认 HUMAN 验收通过：修复提交 `fada2e5f0b07` 被冻结 tag 和远程 `main` 包含，backend/frontend ACR index digest 为 `sha256:a2d0b8a5b6ad618e5451348b84efd813fde62911c8e7ff6949291a3acd6c19b2` / `sha256:44796d4848f8b1071206a5ea0452d1b60368b3c465ebb8039a22f504e470785d`，未更新 `latest`。完整备份 `/data/apps/agentcici/backups/20260825T110733Z-before-2.8.66-beta.3` 共 12 项、317,014,387 bytes、全部非空且 `0600`，回滚目标 beta.2。仅重建 backend/frontend，四个状态服务 ID 不变；六容器 healthy/restart=0，health UP、运行 version/commit/image 一致、V123、Nginx、两轮公开 smoke、管理页 200、匿名 `/auth/me`、`/skills` 和导出 POST JSON 401、稳定窗口无 5xx/严重错误。启动切换期曾有 1 次短暂 502，稳定窗口已清零。本任务本身没有新增、变更或启用跨项目契约；生产未修改。
 
