@@ -21,6 +21,16 @@ describe("CloudCC embedded workbench SSO recovery contract", () => {
     expect(publishedBundle).toContain("var fallbackSsoRetryDelays = [0, 800, 2000, 4000]");
   });
 
+  it("sends the canonical company id while retaining legacy component-property compatibility", () => {
+    expect(componentSource).toContain("agentCompanyId: this.agentCompanyId");
+    expect(componentSource).toContain("this.elePropObj.agentCompanyId || this.elePropObj.agentOrgId");
+    expect(componentSource).not.toContain("agentOrgId: this.agentOrgId");
+    expect(publishedBundle).toContain("agentCompanyId: self.agentCompanyId");
+    expect(publishedBundle).toContain('target.getAttribute("agent-company-id")');
+    expect(publishedBundle).toContain('target.getAttribute("agent-org-id")');
+    expect(publishedBundle).not.toContain("agentOrgId: agentOrgId");
+  });
+
   it("reacquires CloudCC token and user for every retry attempt", () => {
     const sourceAttempt = componentSource.slice(
       componentSource.indexOf("async runSsoAttempt"),
@@ -73,6 +83,7 @@ describe("CloudCC embedded workbench SSO recovery contract", () => {
 
   it("recovers from a transient ticket failure without reopening the CRM page", async () => {
     let fetchCalls = 0;
+    const requestBodies: Array<Record<string, unknown>> = [];
     const documentStub = {
       readyState: "complete",
       documentElement: {},
@@ -104,8 +115,9 @@ describe("CloudCC embedded workbench SSO recovery contract", () => {
         queueMicrotask(callback);
         return 1;
       },
-      fetch: async () => {
+      fetch: async (_input: unknown, init?: { body?: string }) => {
         fetchCalls += 1;
+        requestBodies.push(JSON.parse(init?.body || "{}") as Record<string, unknown>);
         if (fetchCalls === 1) {
           return { ok: false, status: 503, json: async () => ({ success: false }) };
         }
@@ -147,6 +159,9 @@ describe("CloudCC embedded workbench SSO recovery contract", () => {
     }
 
     expect(fetchCalls).toBe(2);
+    expect(requestBodies).toHaveLength(2);
+    expect(requestBodies[0]).toMatchObject({ agentCompanyId: "agent-org" });
+    expect(requestBodies[0]).not.toHaveProperty("agentOrgId");
     expect(instance.ssoStarted).toBe(false);
     expect(instance.ssoMessage).toBe("");
     expect(instance.resolvedWorkspaceUrl).toContain("ssoTicket=recovered-ticket");

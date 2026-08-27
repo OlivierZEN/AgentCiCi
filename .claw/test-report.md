@@ -1,14 +1,25 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-26T04:18:24Z
+updated_at: 2026-08-27T03:18:15Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-26T04:18:24Z
-last_run_status: passed_task_330_production_release
+last_run_at: 2026-08-27T03:18:15Z
+last_run_status: passed_task_331_code_and_package_gates
 ---
 
 # Test Report
+
+## 2026-08-27 TASK-331 CloudCC 工作台 SSO company ID 契约修复
+
+- 状态：`passed_task_331_code_and_package_gates`；生产故障已只读定位，代码、自动化、构建与 CloudCC 打包预检通过，CloudCC pagecomponent/customPage 和 AgentCiCi 运行环境尚未修改。
+- 生产故障同构：2026-08-27 10:52:52 CST 的真实 `/auth/cloudcc-sso/ticket` 返回 400；无凭据同结构探针返回 `agentCompanyId must not be blank`。生产组件 V15 的 `vueData.propObj` 仍为 `agentOrgId`；后端 DTO 要求 `agentCompanyId`。
+- 数据边界：目标租户与匹配成员各 1 条，成员 ACTIVE，CloudCC 用户名和安全标记字段非空；未读取、输出或复制安全标记值。请求在 DTO 校验阶段失败，账号绑定不是当前失败点。
+- 前端：定向 `CloudccEmbedSso.test.ts` 8 项通过；全量 56 个测试文件、309 项通过；TypeScript/Vite production build 与 UMD `node --check` 通过，仅有既有 bundle-size warning。
+- 后端：`AuthControllerTest` 3 项通过，覆盖规范 `agentCompanyId` 和旧 `agentOrgId` 反序列化；`mvn -q -DskipTests package` 通过。
+- CloudCC：`cc-customization-expert-msapi 2.2.28-msapi` provider doctor 选择严格 MSAPI；pagecomponent dry-run 通过，只打包受管组件源码、配置和预构建 bundle，并排除 env、token cache 与 `.claw-local`。当前 customPage V9 引用 pagecomponent V15 id `6a5628cee4b0a577cbba2088`，作为组件级回滚点。
+- 静态门禁：`git diff --check` 和 `cc-local-stack/scripts/check-no-environment-domains.sh` 通过。首次从子仓错误路径调用域名脚本返回不存在，改用受管 `cc-local-stack` 入口后通过。
+- 治理校验：`validate-state.py .claw` 首次发现 FEAT-201 状态值不在枚举，已改为合法 `draft`；复核仍受既有 goals 时间格式、历史规格 front matter/status、完成任务未归档和 references 索引债务阻断，不归因于 TASK-331。
 
 ## 2026-08-26 TASK-330 生产发布
 

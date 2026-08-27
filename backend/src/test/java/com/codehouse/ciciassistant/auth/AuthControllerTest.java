@@ -1,5 +1,6 @@
 package com.codehouse.ciciassistant.auth;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -13,9 +14,38 @@ import com.codehouse.ciciassistant.auth.service.OfficialAccessTokenService;
 import com.codehouse.ciciassistant.platform.service.DevAutopilotHandoffService;
 import com.codehouse.ciciassistant.semattice.SematticeConsoleHandoffService;
 import com.codehouse.ciciassistant.semattice.SematticeConsoleLocation;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 class AuthControllerTest {
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Test
+    void deserializesCanonicalCloudccCompanyId() throws Exception {
+        AuthController.CloudccSsoTicketRequest request = objectMapper.readValue("""
+                {
+                  "agentCompanyId": "company-canonical",
+                  "cloudccAccessToken": "runtime-token",
+                  "cloudccUser": {"username": "member@example.invalid"}
+                }
+                """, AuthController.CloudccSsoTicketRequest.class);
+
+        assertThat(request.agentCompanyId()).isEqualTo("company-canonical");
+    }
+
+    @Test
+    void deserializesLegacyCloudccOrgIdAsCompanyId() throws Exception {
+        AuthController.CloudccSsoTicketRequest request = objectMapper.readValue("""
+                {
+                  "agentOrgId": "company-legacy",
+                  "cloudccAccessToken": "runtime-token",
+                  "cloudccUser": {"username": "member@example.invalid"}
+                }
+                """, AuthController.CloudccSsoTicketRequest.class);
+
+        assertThat(request.agentCompanyId()).isEqualTo("company-legacy");
+    }
 
     @Test
     void rejectsLegacyLocalPasswordWritesWhenOidcIsEnabled() {

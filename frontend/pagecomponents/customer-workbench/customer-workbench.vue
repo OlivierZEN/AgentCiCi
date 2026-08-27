@@ -45,7 +45,7 @@ export default {
       },
       propObj: {
         workspaceUrl: "https://x.agentcici.com/app?aiApp=customer-workbench&embed=crm",
-        agentOrgId: "org2sva14i4udjmi2t4s",
+        agentCompanyId: "org2sva14i4udjmi2t4s",
         enableSso: true
       },
       propOption: {
@@ -53,7 +53,7 @@ export default {
           lable: "工作台地址",
           type: "input"
         },
-        agentOrgId: {
+        agentCompanyId: {
           lable: "AgentCiCi 组织 ID",
           type: "input"
         }
@@ -76,8 +76,8 @@ export default {
     iframeUrl() {
       return this.resolvedWorkspaceUrl || this.workspaceUrl;
     },
-    agentOrgId() {
-      return this.elePropObj.agentOrgId || this.propObj.agentOrgId;
+    agentCompanyId() {
+      return this.elePropObj.agentCompanyId || this.elePropObj.agentOrgId || this.propObj.agentCompanyId;
     },
     enableSso() {
       return this.elePropObj.enableSso !== false;
@@ -156,7 +156,7 @@ export default {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            agentOrgId: this.agentOrgId,
+            agentCompanyId: this.agentCompanyId,
             cloudccAccessToken: token,
             cloudccUser: user,
             parentOrigin: window.location.origin,

@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-26T04:18:24Z
+updated_at: 2026-08-27T03:18:15Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,19 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-331 - CloudCC 客户互动工作台 SSO 字段契约修复
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-201-cloudcc-workbench-sso-company-id-compatibility.md`
+- task_status_path: `.claw/tasks/TASK-331.md`
+- blocked_by: `none`
+- scope_files: `CloudCC pagecomponent/UMD 请求字段、后端旧字段兼容、契约测试、UAT/生产发布与真实租户回读`
+- completion_evidence: `前端 56 文件/309 项与 build、UMD check；后端 AuthControllerTest 3 项与 package；pagecomponent dry-run、域名门禁、diff check 通过；V15 id 6a5628cee4b0a577cbba2088 为回滚点`
+- next_action: `提交并推送 main，发布新 pagecomponent、绑定 customPage 并执行目标租户真实登录态回读。`
 
 ### TASK-325 - 产品经理项目改名确定性执行与可信回执
 

@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-08-13T02:00:00Z
+updated_at: 2026-08-27T03:12:39Z
 updated_by: codex
 status: active
 ---
@@ -17,6 +17,13 @@ status: active
 - Status: resolved locally; UAT/production unchanged.
 
 ## Open Issues
+
+- ISSUE-2026-08-27-cloudcc-sso-company-id-contract-drift:
+  - Symptom: 生产租户 `org2sva14i4udjmi2t4s` 从 CloudCC 打开客户互动工作台时显示“CloudCC 身份信息不完整”，iframe 随后跳到不允许跨源嵌入的统一登录页。
+  - Verified root cause: CloudCC pagecomponent 和 UMD fallback 发送 `agentOrgId`，AgentCiCi 后端在 `30ffb3e3` 的顶层身份改名中把必填 DTO 字段改成 `agentCompanyId`，但未同步 pagecomponent。生产真实请求返回 HTTP 400；无凭据同结构探针明确返回 `agentCompanyId must not be blank`。
+  - Safety evidence: 请求在 DTO 校验阶段失败，尚未进入 runtime token、页面用户、成员绑定或 CloudCC accessToken 校验；生产只读数据库回读确认目标匹配成员 ACTIVE，用户名和安全标记字段非空，未读取秘密值。
+  - Resolution progress: TASK-331 采用 pagecomponent 发送规范 `agentCompanyId`、后端以 `JsonAlias` 过渡接受 `agentOrgId`，并补充双实现请求体与后端反序列化契约测试。
+  - Status: in progress; UAT/production unchanged.
 
 - ISSUE-2026-08-17-devautopilot-keyword-routing:
   - Symptom: UAT 产品经理收到明确项目创建请求后没有写入；固定模型本地测试中，“创建项目”被回执门禁拦截，而“帮我建一个项目”反而触发只读项目查询并生成无冒号确认草案。

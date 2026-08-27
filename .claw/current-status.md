@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 5
-updated_at: 2026-08-26T04:23:30Z
+updated_at: 2026-08-27T03:18:15Z
 updated_by: codex
-phase: review
-active_task: TASK-325
-next_action: "AgentCiCi 2.8.66 与 Semattice 1.0.7 已按顺序完成生产晋级；后续继续 TASK-325 的独立本地产品验收。"
+phase: implementation
+active_task: TASK-331
+next_action: "TASK-331 代码与打包门禁已通过；提交并推送 main，发布新 CloudCC pagecomponent/customPage 后完成真实租户回读。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- `TASK-331 / FEAT-201` 已完成代码与打包门禁：目标租户客户互动工作台在 2026-08-27 10:52:52 CST 请求 `/auth/cloudcc-sso/ticket` 返回 HTTP 400；生产无凭据同结构探针明确返回 `agentCompanyId must not be blank`。CloudCC pagecomponent/UMD 仍发送 `agentOrgId`，而后端自 `30ffb3e3` 起要求 `agentCompanyId`，请求在账号绑定校验前失败。修复采用新组件发送规范 `agentCompanyId`、旧配置属性回退和后端 `JsonAlias` 过渡兼容；前端 56 文件/309 项、build、UMD check、后端 3 项与 package、pagecomponent dry-run、域名门禁和 diff check 通过。当前 CloudCC customPage V9 引用 V15 id `6a5628cee4b0a577cbba2088`，作为回滚点；尚未发布新组件或修改 AgentCiCi 运行环境。
 
 - `TASK-330` 已完成生产晋级：用户确认 TASK-326/327/328 UAT HUMAN 验收并授权先独立发布 Semattice `1.0.7`；提供方以冻结 `54f2ab93558f` 上线并通过 AgentCiCi 生产 SERVICE 7×87 探测后，AgentCiCi 再从冻结 UAT `2.8.66-beta.3 / e805c0ef7142` 晋级正式 `2.8.66`。backend/frontend digest 为 `sha256:d892ff3b60c39bc690a48c71176005f6c2a12299288e16fd8606260375652557` / `sha256:289434e93eab541bdb96cb0a383443cb6280a67e72af1a9a17d206a0b6fcdab4`；完整回滚点为 `/opt/cici/backups/20260826T041149Z-before-2.8.66`。只重建 backend/frontend，四个状态服务 ID 不变；六容器 healthy/restart=0、health UP、V123、Nginx、公开/匿名门禁与 100 秒稳定窗口通过，知识库 9/35/661、Qdrant 549 points 保持不变。正式 tag 完成后版本引擎已将下一 DEV/UAT 目标推进为 `2.8.67` / `2.8.67-beta.1`。
 

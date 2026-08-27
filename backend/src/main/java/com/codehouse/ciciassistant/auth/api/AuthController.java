@@ -4,12 +4,13 @@ import com.codehouse.ciciassistant.auth.service.AuthService;
 import com.codehouse.ciciassistant.auth.service.KeycloakOidcLoginService;
 import com.codehouse.ciciassistant.auth.RoleCodes;
 import com.codehouse.ciciassistant.auth.service.CloudccSsoService;
+import com.codehouse.ciciassistant.common.api.ApiResponse;
+import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.platform.service.DevAutopilotHandoffService;
 import com.codehouse.ciciassistant.semattice.SematticeConsoleHandoffService;
 import com.codehouse.ciciassistant.semattice.SematticeConsoleLocation;
-import com.codehouse.ciciassistant.common.api.ApiResponse;
-import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.tenant.TenantContext;
+import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -283,7 +284,7 @@ public class AuthController {
     }
 
     public record CloudccSsoTicketRequest(
-            @NotBlank String agentCompanyId,
+            @JsonAlias("agentOrgId") @NotBlank String agentCompanyId,
             @NotBlank String cloudccAccessToken,
             Map<String, Object> cloudccUser,
             String parentOrigin,
