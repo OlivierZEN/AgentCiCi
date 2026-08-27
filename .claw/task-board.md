@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-27T03:25:54Z
+updated_at: 2026-08-27T09:21:25Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,18 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-333 - 创建 DEMO 单页单对象完整配置示例
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-203-demo-example-application.md`
+- task_status_path: `.claw/tasks/TASK-333.md`
+- blocked_by: `none`
+- scope_files: `demo-example 目录 seed、平台基础投影、安全相对路由、单页单对象配置回读、全参数参考和本地全栈验证`
+- next_action: `实现目录 seed、通用平台基础投影、安全相对路由、示例页及聚焦测试。`
 
 ### TASK-325 - 产品经理项目改名确定性执行与可信回执
 

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  applicationActionLabel,
   devAutopilotInitializationReady,
   devAutopilotActivationKey,
   fetchOwnerIdentity,
@@ -45,6 +46,15 @@ describe("DevAutopilot initialization readiness", () => {
     ];
 
     expect(devAutopilotInitializationReady(application({ resources }))).toBe(true);
+  });
+});
+
+describe("tenant application open actions", () => {
+  it("keeps AgentCiCi lifecycle copy and gives other safe routes an application label", () => {
+    expect(applicationActionLabel("OPEN", application({ appCode: "agentcici" })))
+      .toBe("进入生命周期管理");
+    expect(applicationActionLabel("OPEN", application({ appCode: "demo-example", displayName: "DEMO示例应用" })))
+      .toBe("打开应用");
   });
 });
 

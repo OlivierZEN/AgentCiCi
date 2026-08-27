@@ -486,6 +486,7 @@ export default function PlatformInternalApplicationsPage() {
           </div>
           <div className="platform-page-head__aside">
             <span className={`internal-application-status internal-application-status--${statusTone(detail.application.catalogStatus)}`}>{applicationCatalogStatusLabel(detail.application.catalogStatus)}</span>
+            {detail.application.launchRouteKey === "demo-example.page" ? <button type="button" className="platform-button platform-button--primary" onClick={() => navigate("/platform/internal-applications/demo-example/example")}><AppWindow size={15} />打开示例页</button> : null}
             {detail.application.catalogStatus === "PUBLISHED" ? <button type="button" className="platform-button platform-button--secondary" onClick={() => setConfirmation({ type: "status", status: "SUSPENDED" })}>暂停目录</button> : detail.application.catalogStatus === "SUSPENDED" ? <button type="button" className="platform-button platform-button--primary" onClick={() => setConfirmation({ type: "status", status: "PUBLISHED" })}>恢复目录</button> : null}
             <button type="button" className="platform-button platform-button--secondary" onClick={() => navigate(`/platform/internal-applications/integration-guide?app=${encodeURIComponent(detail.application.appCode)}`)}><BookOpen size={15} />接入指南</button>
             <button type="button" className="platform-button platform-button--secondary" onClick={() => setConnectionModalOpen(true)} disabled={detail.application.catalogStatus === "RETIRED"}><Cable size={15} />新建连接</button>

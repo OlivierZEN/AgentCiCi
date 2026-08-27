@@ -69,10 +69,64 @@ class TenantApplicationCatalogServiceTest {
                 });
     }
 
+    @Test
+    void projectsEveryPlatformBaseApplicationAndOnlyReturnsAllowlistedRelativeRoutes() {
+        String companyId = "org1234567890abcdefg";
+        when(companies.findById(companyId)).thenReturn(Optional.of(new CompanyEntity(companyId, "Demo", "ACTIVE")));
+        ApplicationSummaryView agentcici = application(
+                "agentcici", "AgentCiCi", "PLATFORM_BASE", "1.0.0",
+                "PLATFORM_ROUTE", "agentcici.lifecycle");
+        ApplicationSummaryView demo = application(
+                "demo-example", "DEMO示例应用", "PLATFORM_BASE", "1.0.0",
+                "PLATFORM_ROUTE", "demo-example.page");
+        ApplicationSummaryView unknown = application(
+                "unknown-platform", "未知平台应用", "PLATFORM_BASE", "1.0.0",
+                "PLATFORM_ROUTE", "unknown.page");
+        when(registry.list()).thenReturn(List.of(agentcici, demo, unknown));
+        when(registry.get("agentcici")).thenReturn(detail(agentcici, List.of()));
+        when(registry.get("demo-example")).thenReturn(detail(demo, List.of(
+                new DependencyView("semattice", ">=1.0.0", "OPTIONAL", "AUTO_PROVISION_ALLOWED"))));
+        when(registry.get("unknown-platform")).thenReturn(detail(unknown, List.of()));
+        when(semattice.getProvisioningStatus(companyId)).thenReturn(
+                new SematticeProvisioningService.BindingView(null, companyId, "NOT_PROVISIONED", null, null, null));
+        when(devAutopilot.get(companyId)).thenReturn(DevAutopilotTenantApplicationService.View.notEnabled(companyId));
+
+        var catalog = service.list(companyId);
+
+        assertThat(catalog.enabledCount()).isEqualTo(3);
+        assertThat(catalog.applications()).filteredOn(item -> item.appCode().equals("demo-example"))
+                .singleElement().satisfies(application -> {
+                    assertThat(application.actualState()).isEqualTo("ACTIVE");
+                    assertThat(application.initializationReady()).isTrue();
+                    assertThat(application.activationSupported()).isTrue();
+                    assertThat(application.actions()).containsExactly("OPEN");
+                    assertThat(application.managementRoute())
+                            .isEqualTo("/platform/internal-applications/demo-example/example");
+                    assertThat(application.dependencies()).singleElement()
+                            .satisfies(dependency -> assertThat(dependency.required()).isFalse());
+                });
+        assertThat(catalog.applications()).filteredOn(item -> item.appCode().equals("unknown-platform"))
+                .singleElement().satisfies(application -> {
+                    assertThat(application.actualState()).isEqualTo("ACTIVE");
+                    assertThat(application.actions()).isEmpty();
+                    assertThat(application.managementRoute()).isNull();
+                });
+    }
+
     private ApplicationSummaryView application(String code, String name, String tenantMode, String version) {
+        return application(code, name, tenantMode, version, "NONE", null);
+    }
+
+    private ApplicationSummaryView application(
+            String code,
+            String name,
+            String tenantMode,
+            String version,
+            String launchMode,
+            String launchRouteKey) {
         return new ApplicationSummaryView(
                 code, name, name + " summary", "workflow", name + " team", tenantMode,
-                "PUBLISHED", null, "NONE", null, version, 1, Instant.now(), Instant.now());
+                "PUBLISHED", null, launchMode, launchRouteKey, version, 1, Instant.now(), Instant.now());
     }
 
     private ApplicationDetailView detail(ApplicationSummaryView application, List<DependencyView> dependencies) {

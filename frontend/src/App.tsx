@@ -48,6 +48,7 @@ import PlatformEvaluationPage from "./platform/pages/PlatformEvaluationPage";
 import PlatformSystemApisPage from "./platform/pages/PlatformSystemApisPage";
 import PlatformInternalApplicationsPage from "./platform/pages/PlatformInternalApplicationsPage";
 import PlatformApplicationIntegrationGuidePage from "./platform/pages/PlatformApplicationIntegrationGuidePage";
+import PlatformDemoExampleApplicationPage from "./platform/pages/PlatformDemoExampleApplicationPage";
 import PlatformDeploymentInstallationPage from "./platform/pages/PlatformDeploymentInstallationPage";
 import WecomKfMobilePage from "./mobile/WecomKfMobilePage";
 
@@ -129,6 +130,7 @@ const router = createBrowserRouter(createRoutesFromElements(
             <Route path="system-apis/:providerCode/:apiId/docs" element={<PlatformSystemApisPage />} />
             <Route path="internal-applications" element={<PlatformInternalApplicationsPage />} />
             <Route path="internal-applications/integration-guide" element={<PlatformApplicationIntegrationGuidePage />} />
+            <Route path="internal-applications/demo-example/example" element={<PlatformDemoExampleApplicationPage />} />
             <Route path="internal-applications/:appCode" element={<PlatformInternalApplicationsPage />} />
             <Route path="operations/deployment-installation" element={<PlatformDeploymentInstallationPage />} />
             <Route path="evaluation" element={<PlatformEvaluationPage />} />

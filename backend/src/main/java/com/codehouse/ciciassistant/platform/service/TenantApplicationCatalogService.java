@@ -50,6 +50,9 @@ public class TenantApplicationCatalogService {
         List<ApplicationView> applications = new ArrayList<>();
         for (InternalApplicationRegistryService.ApplicationSummaryView application : catalog) {
             RuntimeSnapshot snapshot = runtime.get(application.appCode());
+            if (snapshot == null && "PLATFORM_BASE".equals(application.tenantMode())) {
+                snapshot = RuntimeSnapshot.platformBase(company.getStatus(), application.defaultVersion());
+            }
             if (snapshot == null) {
                 GenericTenantApplicationLifecycleService.RuntimeView generic =
                         genericLifecycle.runtime(companyId, application.appCode());
@@ -63,7 +66,9 @@ public class TenantApplicationCatalogService {
             boolean dependencyBlocked = dependencies.stream()
                     .anyMatch(item -> item.required() && !item.satisfied());
             boolean supported = activationSupported(application, version);
-            List<String> actions = actions(application, snapshot, dependencyBlocked, supported);
+            String managementRoute = managementRoute(companyId, application);
+            List<String> actions = actions(application, snapshot, dependencyBlocked, supported,
+                    managementRoute != null);
             String healthState = dependencyBlocked ? "BLOCKED" : snapshot.healthState();
             applications.add(new ApplicationView(
                     application.appCode(),
@@ -87,7 +92,7 @@ public class TenantApplicationCatalogService {
                     snapshot.lastErrorCode(),
                     snapshot.attemptCount(),
                     actions,
-                    managementRoute(companyId, application.appCode())));
+                    managementRoute));
         }
 
         long enabled = applications.stream().filter(ApplicationView::enabled).count();
@@ -174,10 +179,11 @@ public class TenantApplicationCatalogService {
     private List<String> actions(InternalApplicationRegistryService.ApplicationSummaryView application,
                                  RuntimeSnapshot runtime,
                                  boolean dependencyBlocked,
-                                 boolean activationSupported) {
+                                 boolean activationSupported,
+                                 boolean openSupported) {
         LinkedHashSet<String> actions = new LinkedHashSet<>();
-        if ("agentcici".equals(application.appCode())) {
-            actions.add("OPEN");
+        if ("PLATFORM_BASE".equals(application.tenantMode())) {
+            if (openSupported) actions.add("OPEN");
             return List.copyOf(actions);
         }
         if (InternalApplicationRegistryService.STATUS_SUSPENDED.equals(application.catalogStatus())) {
@@ -205,7 +211,7 @@ public class TenantApplicationCatalogService {
                 actions.add("RECONCILE");
                 actions.add("SUSPEND");
             }
-            actions.add("OPEN");
+            if (openSupported) actions.add("OPEN");
             return List.copyOf(actions);
         }
         if (!activationSupported) {
@@ -225,6 +231,9 @@ public class TenantApplicationCatalogService {
     private boolean activationSupported(
             InternalApplicationRegistryService.ApplicationSummaryView application,
             InternalApplicationRegistryService.VersionView version) {
+        if ("PLATFORM_BASE".equals(application.tenantMode())) {
+            return true;
+        }
         if (Set.of("agentcici", "semattice", "devautopilot").contains(application.appCode())) {
             return true;
         }
@@ -240,10 +249,16 @@ public class TenantApplicationCatalogService {
         }
     }
 
-    private static String managementRoute(String companyId, String appCode) {
-        return switch (appCode) {
-            case "agentcici" -> "/platform/tenants/" + companyId + "/applications/agentcici";
-            default -> "/platform/tenants/" + companyId + "/applications/" + appCode;
+    private static String managementRoute(
+            String companyId,
+            InternalApplicationRegistryService.ApplicationSummaryView application) {
+        if (!"PLATFORM_ROUTE".equals(application.launchMode())) {
+            return null;
+        }
+        return switch (application.launchRouteKey()) {
+            case "agentcici.lifecycle" -> "/platform/tenants/" + companyId + "/applications/agentcici";
+            case "demo-example.page" -> "/platform/internal-applications/demo-example/example";
+            default -> null;
         };
     }
 
@@ -305,6 +320,21 @@ public class TenantApplicationCatalogService {
         private static RuntimeSnapshot notEnabled() {
             return new RuntimeSnapshot(false, null, "NOT_ENABLED", "NOT_ENABLED", "UNKNOWN",
                     false, "NOT_ENABLED", null, null, 0);
+        }
+
+        private static RuntimeSnapshot platformBase(String companyStatus, String version) {
+            boolean active = "ACTIVE".equals(companyStatus);
+            return new RuntimeSnapshot(
+                    true,
+                    version,
+                    active ? "ACTIVE" : "SUSPENDED",
+                    active ? "ACTIVE" : "SUSPENDED",
+                    active ? "READY" : "BLOCKED",
+                    active,
+                    active ? "ACTIVE" : "SUSPENDED",
+                    null,
+                    null,
+                    0);
         }
     }
 }

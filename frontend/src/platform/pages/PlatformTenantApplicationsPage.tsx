@@ -82,7 +82,7 @@ export function applicationActionLabel(action: string, application: DevAutopilot
     case "RECONCILE": return application.initializationReady ? "同步标准模板" : "补齐初始化";
     case "SUSPEND": return "暂停应用";
     case "RESUME": return "恢复运行";
-    case "OPEN": return "进入生命周期管理";
+    case "OPEN": return application.appCode === "agentcici" ? "进入生命周期管理" : "打开应用";
     default: return action;
   }
 }
@@ -484,7 +484,7 @@ export default function PlatformTenantApplicationsPage() {
                 <div className="tenant-applications__grid">
                   {(applicationCatalog?.applications ?? []).map((application) => {
                     const actions = application.actions ?? [];
-                    const displayActions = actions.filter((action) => action !== "OPEN" || application.appCode === "agentcici");
+                    const displayActions = actions;
                     const requiredDependency = application.dependencies?.find((dependency) => dependency.required);
                     const stateTone = application.actualState === "ACTIVE" ? "healthy" : application.actualState?.toLowerCase() ?? "not_enabled";
                     const iconKind = applicationIconKind(application.iconKey);
