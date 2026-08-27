@@ -1,5 +1,6 @@
 package com.codehouse.ciciassistant.embed.service;
 
+import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.auth.domain.UserRepository;
 import com.codehouse.ciciassistant.auth.service.JwtService;
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
@@ -10,6 +11,7 @@ import com.codehouse.ciciassistant.openapi.domain.AgentApiCredentialEntity;
 import com.codehouse.ciciassistant.openapi.domain.AgentApiCredentialRepository;
 import com.codehouse.ciciassistant.openapi.service.AgentApiKeyGenerator;
 import com.codehouse.ciciassistant.openapi.service.AgentOpenApiCredentialService;
+import com.fasterxml.jackson.annotation.JsonAlias;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
@@ -75,6 +77,9 @@ public class EmbedTokenService {
         int ttl = ttl(command.ttlSeconds(), config.getTokenTtlSeconds());
         Instant expiresAt = Instant.now().plusSeconds(ttl);
         String externalUserId = externalUserId(command.user());
+        SourceBinding binding = sourceBinding(definition, config, source, command.externalTenantId());
+        requireCredentialScope(credential, definition);
+        String executionUserId = resolveExecutionUserId(definition, credential.getCompanyId(), credential.getRunAsUserId(), externalUserId);
         String displayName = stringValue(command.user() == null ? null : command.user().get("displayName"));
         String subject = "embed:" + definition.getAppCode() + ":" + nonce;
         Map<String, Object> claims = new LinkedHashMap<>();
@@ -83,8 +88,12 @@ public class EmbedTokenService {
         claims.put("appCode", definition.getAppCode());
         claims.put("company_id", credential.getCompanyId());
         claims.put("companyId", credential.getCompanyId());
-        claims.put("member_id", credential.getRunAsUserId());
-        claims.put("userId", credential.getRunAsUserId());
+        claims.put("member_id", executionUserId);
+        claims.put("userId", executionUserId);
+        claims.put("issuerRunAsUserId", credential.getRunAsUserId());
+        claims.put("roles", rolesForUser(credential.getCompanyId(), executionUserId));
+        claims.put("agentId", binding.agentId());
+        claims.put("externalTenantId", binding.externalTenantId());
         claims.put("source", source);
         claims.put("objectType", objectType);
         claims.put("objectId", objectId);
@@ -132,6 +141,7 @@ public class EmbedTokenService {
         int ttl = ttl(command.ttlSeconds(), config.getTokenTtlSeconds());
         Instant expiresAt = Instant.now().plusSeconds(ttl);
         String externalUserId = externalUserId(command.user());
+        SourceBinding binding = sourceBinding(definition, config, source, command.externalTenantId());
         String displayName = stringValue(command.user() == null ? null : command.user().get("displayName"));
         String subject = "embed:" + definition.getAppCode() + ":" + nonce;
         Map<String, Object> claims = new LinkedHashMap<>();
@@ -143,6 +153,10 @@ public class EmbedTokenService {
         claims.put("companyId", companyId);
         claims.put("member_id", runAsUserId);
         claims.put("userId", runAsUserId);
+        claims.put("issuerRunAsUserId", runAsUserId);
+        claims.put("roles", rolesForUser(companyId, runAsUserId));
+        claims.put("agentId", binding.agentId());
+        claims.put("externalTenantId", binding.externalTenantId());
         claims.put("source", source);
         claims.put("objectType", objectType);
         claims.put("objectId", objectId);
@@ -179,6 +193,8 @@ public class EmbedTokenService {
                     tokenAppCode,
                     claims.get("companyId", String.class),
                     claims.get("userId", String.class),
+                    claims.get("agentId", String.class),
+                    claims.get("externalTenantId", String.class),
                     claims.get("externalUserId", String.class),
                     claims.get("source", String.class),
                     claims.get("objectType", String.class),
@@ -309,6 +325,82 @@ public class EmbedTokenService {
                 : stringValue(user.get("externalUserId")), 128);
     }
 
+    private String resolveExecutionUserId(EmbedAppDefinitionEntity definition,
+                                          String companyId,
+                                          String fallbackUserId,
+                                          String externalUserId) {
+        if (!"sisi".equals(definition.getAppCode())) {
+            return fallbackUserId;
+        }
+        String cloudccUsername = requireText(externalUserId, "user.externalUserId");
+        return userRepository.findByCompany_IdAndCcUsernameIgnoreCaseAndMemberStatus(
+                        companyId,
+                        cloudccUsername,
+                        UserEntity.STATUS_ACTIVE)
+                .map(UserEntity::getId)
+                .orElseThrow(() -> new ForbiddenException("CloudCC username is not bound to an active member"));
+    }
+
+    private List<String> rolesForUser(String companyId, String userId) {
+        return userRepository.findByIdAndCompany_Id(userId, companyId)
+                .map(UserEntity::getRoleCode)
+                .filter(role -> !role.isBlank())
+                .map(List::of)
+                .orElse(List.of());
+    }
+
+    private SourceBinding sourceBinding(EmbedAppDefinitionEntity definition,
+                                        CompanyEmbedAppConfigEntity config,
+                                        String source,
+                                        String requestedExternalTenantId) {
+        Map<String, Object> bindings = embedAppService.sourceBindings(config);
+        Map<String, Object> sourceConfig = mapValue(bindings.get(source));
+        String agentId = stringValue(sourceConfig.get("agentId"));
+        if (agentId.isBlank()) {
+            agentId = stringValue(bindings.get("agentId"));
+        }
+        if (agentId.isBlank()) {
+            agentId = stringValue(embedAppService.readDoc(definition).get("defaultAgentId"));
+        }
+        if (agentId.isBlank()) {
+            agentId = "cici-system";
+        }
+        String externalTenantId = stringValue(requestedExternalTenantId);
+        if (!"sisi".equals(definition.getAppCode())) {
+            return new SourceBinding(agentId, externalTenantId);
+        }
+        externalTenantId = requireText(externalTenantId, "externalTenantId");
+        String configuredTenantId = stringValue(sourceConfig.get("externalTenantId"));
+        if (configuredTenantId.isBlank()) {
+            throw new ForbiddenException("CloudCC organization binding is not configured");
+        }
+        if (!configuredTenantId.equals(externalTenantId)) {
+            throw new ForbiddenException("CloudCC organization does not match the embedded app binding");
+        }
+        return new SourceBinding(agentId, externalTenantId);
+    }
+
+    private void requireCredentialScope(AgentApiCredentialEntity credential, EmbedAppDefinitionEntity definition) {
+        String required = "sisi".equals(definition.getAppCode()) ? "embed:sisi" : "embed:meeting";
+        List<String> scopes = credentialService.toView(credential).scopes();
+        if (!scopes.contains("*") && !scopes.contains(required)) {
+            throw new ForbiddenException("API key is missing required scope: " + required);
+        }
+    }
+
+    private Map<String, Object> mapValue(Object raw) {
+        if (!(raw instanceof Map<?, ?> map)) {
+            return Map.of();
+        }
+        Map<String, Object> out = new LinkedHashMap<>();
+        map.forEach((key, value) -> {
+            if (key != null) {
+                out.put(String.valueOf(key), value);
+            }
+        });
+        return out;
+    }
+
     private List<String> listClaim(Object raw) {
         if (raw instanceof List<?> list) {
             List<String> out = new ArrayList<>();
@@ -342,6 +434,7 @@ public class EmbedTokenService {
     public record TokenCommand(
             String source,
             String parentOrigin,
+            @JsonAlias({"cloudccOrgId", "tenantId"}) String externalTenantId,
             Map<String, Object> user,
             Map<String, Object> context,
             List<String> permissions,
@@ -362,6 +455,8 @@ public class EmbedTokenService {
             String appCode,
             String companyId,
             String userId,
+            String agentId,
+            String externalTenantId,
             String externalUserId,
             String source,
             String objectType,
@@ -376,5 +471,8 @@ public class EmbedTokenService {
         public boolean can(String permission) {
             return permissions != null && permissions.contains(permission);
         }
+    }
+
+    private record SourceBinding(String agentId, String externalTenantId) {
     }
 }

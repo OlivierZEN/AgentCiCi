@@ -5,6 +5,8 @@ import com.codehouse.ciciassistant.embed.domain.EmbedAppDefinitionEntity;
 import com.codehouse.ciciassistant.embed.domain.EmbedAppDefinitionRepository;
 import com.codehouse.ciciassistant.embed.domain.MeetingSessionEntity;
 import com.codehouse.ciciassistant.embed.domain.MeetingSessionRepository;
+import com.codehouse.ciciassistant.embed.domain.SisiEmbedSessionEntity;
+import com.codehouse.ciciassistant.embed.domain.SisiEmbedSessionRepository;
 import com.codehouse.ciciassistant.embed.domain.CompanyEmbedAppConfigEntity;
 import com.codehouse.ciciassistant.embed.domain.CompanyEmbedAppConfigRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -30,17 +32,20 @@ public class EmbedAppService {
     private final EmbedAppDefinitionRepository definitionRepository;
     private final CompanyEmbedAppConfigRepository configRepository;
     private final MeetingSessionRepository meetingSessionRepository;
+    private final SisiEmbedSessionRepository sisiEmbedSessionRepository;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
 
     public EmbedAppService(EmbedAppDefinitionRepository definitionRepository,
                            CompanyEmbedAppConfigRepository configRepository,
                            MeetingSessionRepository meetingSessionRepository,
+                           SisiEmbedSessionRepository sisiEmbedSessionRepository,
                            UserRepository userRepository,
                            ObjectMapper objectMapper) {
         this.definitionRepository = definitionRepository;
         this.configRepository = configRepository;
         this.meetingSessionRepository = meetingSessionRepository;
+        this.sisiEmbedSessionRepository = sisiEmbedSessionRepository;
         this.userRepository = userRepository;
         this.objectMapper = objectMapper;
     }
@@ -65,6 +70,12 @@ public class EmbedAppService {
     public List<Map<String, Object>> recentSessions(String companyId, String appCode, int limit) {
         EmbedAppDefinitionEntity definition = requireDefinition(appCode);
         int size = Math.max(1, Math.min(limit, 50));
+        if ("sisi".equals(definition.getAppCode())) {
+            return sisiEmbedSessionRepository.findByCompanyIdOrderByUpdatedAtDesc(companyId, PageRequest.of(0, size))
+                    .stream()
+                    .map(this::sessionView)
+                    .toList();
+        }
         return meetingSessionRepository.findByCompanyIdAndAppCodeOrderByUpdatedAtDesc(companyId, definition.getAppCode(), PageRequest.of(0, size))
                 .stream()
                 .map(this::sessionView)
@@ -137,6 +148,10 @@ public class EmbedAppService {
 
     public List<String> scopeOverrides(CompanyEmbedAppConfigEntity config) {
         return readStringList(config.getScopeOverridesJson());
+    }
+
+    public Map<String, Object> sourceBindings(CompanyEmbedAppConfigEntity config) {
+        return readMap(config.getSourceBindingsJson());
     }
 
     public Map<String, Object> readDoc(EmbedAppDefinitionEntity definition) {
@@ -260,6 +275,25 @@ public class EmbedAppService {
         data.put("parentOrigin", session.getParentOrigin());
         data.put("traceId", session.getTraceId() == null ? "" : session.getTraceId());
         data.put("externalUserId", session.getExternalUserId() == null ? "" : session.getExternalUserId());
+        data.put("createdAt", session.getCreatedAt() == null ? "" : session.getCreatedAt().toString());
+        data.put("updatedAt", session.getUpdatedAt() == null ? "" : session.getUpdatedAt().toString());
+        return data;
+    }
+
+    private Map<String, Object> sessionView(SisiEmbedSessionEntity session) {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("sessionId", session.getChatSessionId());
+        data.put("status", session.getStatus());
+        data.put("source", session.getSource());
+        data.put("objectType", session.getObjectType());
+        data.put("objectId", session.getObjectId());
+        data.put("recordName", session.getRecordName() == null ? "" : session.getRecordName());
+        data.put("customerName", session.getCustomerName() == null ? "" : session.getCustomerName());
+        data.put("parentOrigin", session.getParentOrigin());
+        data.put("traceId", "");
+        data.put("externalTenantId", session.getExternalTenantId());
+        data.put("externalUserId", session.getExternalUserId());
+        data.put("agentId", session.getAgentId());
         data.put("createdAt", session.getCreatedAt() == null ? "" : session.getCreatedAt().toString());
         data.put("updatedAt", session.getUpdatedAt() == null ? "" : session.getUpdatedAt().toString());
         return data;

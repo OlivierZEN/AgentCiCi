@@ -89,6 +89,79 @@ class EmbedAppIntegrationTest {
     private MeetingMinutesService meetingMinutesService;
 
     @Test
+    void shouldBindSisiTokenToCloudccOrgUsernameAndStableBusinessConversation() throws Exception {
+        String adminToken = loginToken("13800138111");
+        String memberId = userRepository.findByCompanyIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
+        jdbcTemplate.update("UPDATE company_member SET cc_username = ? WHERE company_id = ? AND id = ?",
+                "cloudcc.sisi.user", "demo-org", memberId);
+        String plainKey = createPlainKey(memberId, "[\"embed:sisi\"]", "Sisi embed test key");
+
+        mockMvc.perform(put("/embed/v1/admin/apps/sisi/config")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "enabled": true,
+                                  "allowedOrigins": ["https://crm.example.com"],
+                                  "sourceBindings": {
+                                    "cloudcc": {
+                                      "externalTenantId": "cloudcc-org-sisi",
+                                      "agentId": "cici-system"
+                                    }
+                                  },
+                                  "tokenTtlSeconds": 600,
+                                  "scopeOverrides": ["chat:read", "chat:write", "attachment:write", "voice:input"]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.config.sourceBindings.cloudcc.externalTenantId").value("cloudcc-org-sisi"));
+
+        mockMvc.perform(post("/embed/v1/apps/sisi/tokens")
+                        .header("X-Cici-Api-Key", plainKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(sisiTokenRequest("wrong-org", "cloudcc.sisi.user")))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/embed/v1/apps/sisi/tokens")
+                        .header("X-Cici-Api-Key", plainKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(sisiTokenRequest("cloudcc-org-sisi", "unbound.user")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("CloudCC username is not bound to an active member"));
+
+        MvcResult issued = mockMvc.perform(post("/embed/v1/apps/sisi/tokens")
+                        .header("X-Cici-Api-Key", plainKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(sisiTokenRequest("cloudcc-org-sisi", "cloudcc.sisi.user")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.embedUrl").value("/embed/sisi"))
+                .andExpect(jsonPath("$.data.permissions[0]").value("chat:read"))
+                .andReturn();
+        String embedToken = objectMapper.readTree(issued.getResponse().getContentAsString(StandardCharsets.UTF_8))
+                .path("data").path("embedToken").asText();
+
+        MvcResult firstSession = mockMvc.perform(post("/embed/v1/apps/sisi/sessions")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + embedToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.productName").value("思思"))
+                .andExpect(jsonPath("$.data.externalTenantId").value("cloudcc-org-sisi"))
+                .andExpect(jsonPath("$.data.externalUserId").value("cloudcc.sisi.user"))
+                .andReturn();
+        String sessionId = objectMapper.readTree(firstSession.getResponse().getContentAsString(StandardCharsets.UTF_8))
+                .path("data").path("sessionId").asText();
+
+        mockMvc.perform(post("/embed/v1/apps/sisi/sessions")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + embedToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.sessionId").value(sessionId));
+
+        mockMvc.perform(get("/embed/v1/apps/sisi/sessions/{sessionId}/messages", sessionId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + embedToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.messages").isEmpty());
+    }
+
+    @Test
     void shouldIssueEmbedTokenCreateSessionAndSummarizeWithOriginGuard() throws Exception {
         String adminToken = loginToken("13800138111");
         String runAsUserId = userRepository.findByCompanyIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
@@ -331,17 +404,21 @@ class EmbedAppIntegrationTest {
     }
 
     private String createPlainKey(String runAsUserId) {
+        return createPlainKey(runAsUserId, "[\"embed:meeting\"]", "Embed test key");
+    }
+
+    private String createPlainKey(String runAsUserId, String scopesJson, String name) {
         AgentApiKeyGenerator.GeneratedKey generated = keyGenerator.generate(keyGenerator.newPublicId());
         credentialRepository.save(new AgentApiCredentialEntity(
                 generated.publicId(),
                 "demo-org",
                 "cici-system",
-                "Embed test key",
+                name,
                 generated.keyPrefix(),
                 generated.keyHash(),
                 runAsUserId,
                 "[]",
-                "[\"embed:meeting\"]",
+                scopesJson,
                 30,
                 3000,
                 16000,
@@ -351,6 +428,28 @@ class EmbedAppIntegrationTest {
                 Instant.now().plusSeconds(3600),
                 runAsUserId));
         return generated.plainKey();
+    }
+
+    private String sisiTokenRequest(String externalTenantId, String username) {
+        return """
+                {
+                  "source": "cloudcc",
+                  "parentOrigin": "https://crm.example.com",
+                  "externalTenantId": "%s",
+                  "user": {
+                    "externalUserId": "%s",
+                    "displayName": "思思测试用户"
+                  },
+                  "context": {
+                    "objectType": "Opportunity",
+                    "objectId": "006-sisi-001",
+                    "recordName": "思思续约商机",
+                    "customerName": "测试客户"
+                  },
+                  "permissions": ["chat:read", "chat:write", "attachment:write", "voice:input"],
+                  "ttlSeconds": 600
+                }
+                """.formatted(externalTenantId, username);
     }
 
     private String tokenRequest(String parentOrigin) {

@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-27T11:21:49Z
+updated_at: 2026-08-27T11:30:00Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,19 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-332 - 思思嵌入式智能应用生产落地
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-202-sisi-embedded-agent.md`
+- task_status_path: `.claw/tasks/TASK-332.md`
+- blocked_by: `none`
+- scope_files: `CloudCC Embed Token 身份绑定、会话隔离、思思运行 API、统一 JS SDK、页面/浮窗 UI、附件/语音/依据/确认、测试与本地环境验证`
+- completion_evidence: `空库迁移到 V124；EmbedAppIntegrationTest 3 项、后端附件/租户 16 项和 package；前端全量 57 文件/311 项与 production build；SDK 语法/稳定版本一致；页面/408px 浮窗/发送交互浏览器验证。`
+- next_action: `从本地 main 构建 backend/frontend 并更新 cc-local-stack，联合回读版本、迁移、健康与嵌入路由。`
 
 ### TASK-333 - 创建 DEMO 单页单对象完整配置示例
 

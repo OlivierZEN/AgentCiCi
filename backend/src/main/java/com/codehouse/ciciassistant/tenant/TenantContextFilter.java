@@ -63,44 +63,44 @@ public class TenantContextFilter extends OncePerRequestFilter {
                         TenantContext.setRoles(ecosystem.roles());
                         authenticated = true;
                     } else {
-                    Claims claims = jwtService.parse(bearer);
-                    String tokenType = claims.get("typ", String.class);
-                    if ("embed_app".equals(tokenType)) {
-                        if (isEmbedRuntimeRequest(request)) {
-                            filterChain.doFilter(request, response);
-                            return;
-                        }
-                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                        response.setContentType("application/json");
-                        response.getWriter().write(objectMapper.writeValueAsString(ApiResponse.fail("Embed token is not valid for this endpoint")));
-                        return;
-                    }
-                    if (!"platform".equals(tokenType) && !"embed_app".equals(tokenType)) {
-                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                        response.setContentType("application/json");
-                        response.getWriter().write(objectMapper.writeValueAsString(ApiResponse.fail("Legacy company token is no longer accepted")));
-                        return;
-                    }
-                    companyId = claims.get("company_id", String.class);
-                    TenantContext.setTokenType(tokenType == null || tokenType.isBlank() ? "company" : tokenType);
-                    TenantContext.setRoles(extractRoles(claims));
-                    authenticated = true;
-                    if ("platform".equals(tokenType)) {
-                        userId = claims.get("platform_account_id", String.class);
-                        if (userId == null || userId.isBlank()) {
-                            userId = claims.getSubject();
-                        }
-                        companyId = null;
-                    } else {
-                        if (!hasText(companyId)) {
+                        Claims claims = jwtService.parse(bearer);
+                        String tokenType = claims.get("typ", String.class);
+                        if ("embed_app".equals(tokenType)) {
+                            if (isEmbedRuntimeRequest(request)) {
+                                companyId = claims.get("company_id", String.class);
+                                String memberId = claims.get("member_id", String.class);
+                                userId = memberId == null || memberId.isBlank() ? claims.getSubject() : memberId;
+                                if (!hasText(companyId) || !hasText(userId)) {
+                                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                                    response.setContentType("application/json");
+                                    response.getWriter().write(objectMapper.writeValueAsString(ApiResponse.fail("Invalid embed identity")));
+                                    return;
+                                }
+                                TenantContext.setTokenType(tokenType);
+                                TenantContext.setRoles(extractRoles(claims));
+                                authenticated = true;
+                            } else {
+                                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                                response.setContentType("application/json");
+                                response.getWriter().write(objectMapper.writeValueAsString(ApiResponse.fail("Embed token is not valid for this endpoint")));
+                                return;
+                            }
+                        } else if ("platform".equals(tokenType)) {
+                            companyId = claims.get("company_id", String.class);
+                            TenantContext.setTokenType(tokenType);
+                            TenantContext.setRoles(extractRoles(claims));
+                            authenticated = true;
+                            userId = claims.get("platform_account_id", String.class);
+                            if (userId == null || userId.isBlank()) {
+                                userId = claims.getSubject();
+                            }
+                            companyId = null;
+                        } else {
                             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                             response.setContentType("application/json");
-                            response.getWriter().write(objectMapper.writeValueAsString(ApiResponse.fail("Invalid company token")));
+                            response.getWriter().write(objectMapper.writeValueAsString(ApiResponse.fail("Legacy company token is no longer accepted")));
                             return;
                         }
-                        String memberId = claims.get("member_id", String.class);
-                        userId = memberId == null || memberId.isBlank() ? claims.getSubject() : memberId;
-                    }
                     }
                 } catch (Exception ex) {
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
