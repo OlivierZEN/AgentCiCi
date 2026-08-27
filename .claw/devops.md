@@ -1,12 +1,20 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-08-26T04:23:30Z
+updated_at: 2026-08-27T03:25:54Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-27 TASK-331 CloudCC pagecomponent V16 生产热修复
+
+- 变更面仅为 CloudCC 高代码 pagecomponent：同一组件 ID `6a5628cee4b0a577cbba2088` 从 V15 发布到 V16，规范请求字段改为 `agentCompanyId`，仍兼容旧组件属性 `agentOrgId`。customPage `customer_interaction_workbench` 保持 V9 并继续引用同一 ID，注入验证返回 `issues=[]`，未执行不必要的 bind。
+- 发布期间系统 DNS 把 CloudCC API 解析到会重置连接的节点；仅为当前 CLI 进程启用 Go resolver 后完成重读和发布，未修改 `/etc/hosts`、系统 DNS、代理或网络设置。
+- 生产 CloudCC 登录态重载后显示“CloudCC CRM 已连接”，加载当前用户、客户队列、客户详情和 AI 助理；浏览器 error 日志为 0，未执行任何业务写操作。
+- AgentCiCi 生产仍为 `2.8.66 / e805c0ef7142`，应用与状态服务均未重建。源代码修复提交 `ebea2febe1d8a15f3c802f48a7ab7dee480bedbd` 已进入远程 `main`；后端旧字段 alias 随 `2.8.67` 常规发布。
+- 若组件需回滚，从修复前提交 `e8e3080987c0d0256b79658deacd4f0867ffe069` 重新打包并发布旧 Vue/UMD 到同一组件的新版本；customPage 引用无需改变。截图暴露的 CloudCC 安全标记不进入证据，需由管理员独立轮换。
 
 ## 2026-08-26 TASK-330 生产 `2.8.66`
 

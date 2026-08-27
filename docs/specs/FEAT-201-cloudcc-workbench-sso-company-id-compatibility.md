@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-201
 title: CloudCC 客户互动工作台 SSO company ID 契约兼容
-status: draft
+status: verified
 owner_role: fullstack-agent
 task_ids: TASK-331
 related_decisions: FEAT-135
 related_issues: ISSUE-2026-08-27-cloudcc-sso-company-id-contract-drift
-updated_at: 2026-08-27T03:18:15Z
+updated_at: 2026-08-27T03:25:54Z
 updated_by: codex
 ---
 
@@ -27,7 +27,7 @@ updated_by: codex
 - 页面属性优先读取 `agentCompanyId`，兼容旧 `agentOrgId` 配置。
 - 后端 `CloudccSsoTicketRequest.agentCompanyId` 使用 JSON alias 接受旧字段。
 - 自动化覆盖两条前端运行路径的真实请求体和后端新旧字段反序列化。
-- CloudCC 高代码 pagecomponent/customPage 发布回读、AgentCiCi UAT/生产发布与真实租户验证。
+- CloudCC 高代码 pagecomponent/customPage 发布回读与真实租户验证；后端 alias 进入 `main`，随下一次 AgentCiCi 标准候选发布。
 
 ### Out Of Scope
 
@@ -46,8 +46,8 @@ updated_by: codex
 
 - `POST /auth/cloudcc-sso/ticket` 的规范字段为 `agentCompanyId`；旧 `agentOrgId` 暂时兼容。
 - 无数据库 migration。
-- AgentCiCi backend/frontend 进入同一 `2.8.67` 候选；CloudCC pagecomponent 是独立高代码资源，发布后必须回读组件 ID、customPage 引用与运行请求。
-- 回滚 AgentCiCi 时恢复上一不可变镜像；回滚 pagecomponent 时恢复上一个已验证组件 ID/customPage 引用。Keycloak 与其他产品不参与回滚。
+- CloudCC pagecomponent 是独立高代码资源，发布后必须回读组件 ID、customPage 引用与真实运行状态。本次无需为恢复现有生产链路提前发布 AgentCiCi `2.8.67`。
+- pagecomponent 同 ID 升版时，从修复前 Git 提交重新发布旧 Vue/UMD；未来 AgentCiCi 发布若需回滚，则恢复上一不可变镜像。Keycloak 与其他产品不参与回滚。
 
 ## 验收标准
 
@@ -67,4 +67,7 @@ updated_by: codex
 
 - 已完成生产只读根因、运行健康和账号绑定存在性核对。
 - 已完成规范字段、旧属性/旧请求兼容和前后端契约测试；自动化、构建、pagecomponent dry-run 与静态门禁通过。
-- 当前 CloudCC customPage V9 引用 pagecomponent V15 id `6a5628cee4b0a577cbba2088`，作为发布前组件回滚点；UAT、生产和 CloudCC 元数据尚未修改。
+- 修复提交 `ebea2febe1d8a15f3c802f48a7ab7dee480bedbd` 已进入本地和远程 `main`。
+- CloudCC pagecomponent 同一 ID `6a5628cee4b0a577cbba2088` 已由 V15 升为 V16；customPage 保持 V9 并继续引用该 ID，注入验证 `issues=[]`。
+- 生产登录态重载后工作台显示“CloudCC CRM 已连接”，真实客户队列、客户详情和 AI 助理已加载，浏览器错误日志为 0。未代用户执行业务写操作；HUMAN 业务验收仍独立于技术回读。
+- AgentCiCi 生产保持 `2.8.66 / e805c0ef7142`，未重建应用或状态服务；后端 `JsonAlias` 等待 `2.8.67` 标准发布。

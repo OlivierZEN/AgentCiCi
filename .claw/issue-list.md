@@ -1,12 +1,14 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-08-27T03:12:39Z
+updated_at: 2026-08-27T03:25:54Z
 updated_by: codex
 status: active
 ---
 
 # Issue List
+
+## Resolved Issues
 
 ## ISSUE-2026-08-13-devautopilot-intake-history-mismatch
 
@@ -16,14 +18,15 @@ status: active
 - Resolution: TASK-296 增加同租户会话约束、产品经理 SERVICE `runtime.record.update`、乐观锁、规范语义逐字段回读、内容摘要和幂等纠正。首次 revision 2 回读进一步发现 Markdown `---` 被解析为 `--` 验收项且分类理由混入产品经理分析；最终规则拒绝纯标点语义项并独立保存 `classification_reason`。本地记录已纠正为 revision 3，4/5/4 条内容与草稿一致，重复调用不增加 revision。
 - Status: resolved locally; UAT/production unchanged.
 
-## Open Issues
+## ISSUE-2026-08-27-cloudcc-sso-company-id-contract-drift
 
-- ISSUE-2026-08-27-cloudcc-sso-company-id-contract-drift:
-  - Symptom: 生产租户 `org2sva14i4udjmi2t4s` 从 CloudCC 打开客户互动工作台时显示“CloudCC 身份信息不完整”，iframe 随后跳到不允许跨源嵌入的统一登录页。
-  - Verified root cause: CloudCC pagecomponent 和 UMD fallback 发送 `agentOrgId`，AgentCiCi 后端在 `30ffb3e3` 的顶层身份改名中把必填 DTO 字段改成 `agentCompanyId`，但未同步 pagecomponent。生产真实请求返回 HTTP 400；无凭据同结构探针明确返回 `agentCompanyId must not be blank`。
-  - Safety evidence: 请求在 DTO 校验阶段失败，尚未进入 runtime token、页面用户、成员绑定或 CloudCC accessToken 校验；生产只读数据库回读确认目标匹配成员 ACTIVE，用户名和安全标记字段非空，未读取秘密值。
-  - Resolution progress: TASK-331 采用 pagecomponent 发送规范 `agentCompanyId`、后端以 `JsonAlias` 过渡接受 `agentOrgId`，并补充双实现请求体与后端反序列化契约测试。
-  - Status: in progress; UAT/production unchanged.
+- Symptom: 生产租户 `org2sva14i4udjmi2t4s` 从 CloudCC 打开客户互动工作台时显示“CloudCC 身份信息不完整”，iframe 随后跳到不允许跨源嵌入的统一登录页。
+- Verified root cause: CloudCC pagecomponent 和 UMD fallback 发送 `agentOrgId`，AgentCiCi 后端在 `30ffb3e3` 的顶层身份改名中把必填 DTO 字段改成 `agentCompanyId`，但未同步 pagecomponent。生产真实请求返回 HTTP 400；无凭据同结构探针明确返回 `agentCompanyId must not be blank`。
+- Safety evidence: 请求在 DTO 校验阶段失败，尚未进入 runtime token、页面用户、成员绑定或 CloudCC accessToken 校验；生产只读数据库回读确认目标匹配成员 ACTIVE，用户名和安全标记字段非空，未读取秘密值。
+- Resolution: TASK-331 采用 pagecomponent 发送规范 `agentCompanyId`、后端以 `JsonAlias` 过渡接受 `agentOrgId`，并补充双实现请求体与后端反序列化契约测试。提交 `ebea2feb` 已进入远程 `main`；生产 CloudCC pagecomponent 同 ID 升至 V16，customPage V9 引用验证 `issues=[]`，登录态重载显示 CRM 已连接并加载真实工作台。
+- Status: resolved in production CloudCC component; AgentCiCi production stays on `2.8.66`, backend alias awaits the normal `2.8.67` release.
+
+## Open Issues
 
 - ISSUE-2026-08-17-devautopilot-keyword-routing:
   - Symptom: UAT 产品经理收到明确项目创建请求后没有写入；固定模型本地测试中，“创建项目”被回执门禁拦截，而“帮我建一个项目”反而触发只读项目查询并生成无冒号确认草案。

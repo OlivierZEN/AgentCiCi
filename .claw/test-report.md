@@ -1,25 +1,28 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-27T03:18:15Z
+updated_at: 2026-08-27T03:25:54Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-27T03:18:15Z
-last_run_status: passed_task_331_code_and_package_gates
+last_run_at: 2026-08-27T03:25:54Z
+last_run_status: passed_task_331_production_cloudcc_runtime
 ---
 
 # Test Report
 
 ## 2026-08-27 TASK-331 CloudCC 工作台 SSO company ID 契约修复
 
-- 状态：`passed_task_331_code_and_package_gates`；生产故障已只读定位，代码、自动化、构建与 CloudCC 打包预检通过，CloudCC pagecomponent/customPage 和 AgentCiCi 运行环境尚未修改。
+- 状态：`passed_task_331_production_cloudcc_runtime`；生产故障已修复，代码、自动化、构建、CloudCC 发布回读和受权登录态运行验证通过。
 - 生产故障同构：2026-08-27 10:52:52 CST 的真实 `/auth/cloudcc-sso/ticket` 返回 400；无凭据同结构探针返回 `agentCompanyId must not be blank`。生产组件 V15 的 `vueData.propObj` 仍为 `agentOrgId`；后端 DTO 要求 `agentCompanyId`。
 - 数据边界：目标租户与匹配成员各 1 条，成员 ACTIVE，CloudCC 用户名和安全标记字段非空；未读取、输出或复制安全标记值。请求在 DTO 校验阶段失败，账号绑定不是当前失败点。
 - 前端：定向 `CloudccEmbedSso.test.ts` 8 项通过；全量 56 个测试文件、309 项通过；TypeScript/Vite production build 与 UMD `node --check` 通过，仅有既有 bundle-size warning。
 - 后端：`AuthControllerTest` 3 项通过，覆盖规范 `agentCompanyId` 和旧 `agentOrgId` 反序列化；`mvn -q -DskipTests package` 通过。
-- CloudCC：`cc-customization-expert-msapi 2.2.28-msapi` provider doctor 选择严格 MSAPI；pagecomponent dry-run 通过，只打包受管组件源码、配置和预构建 bundle，并排除 env、token cache 与 `.claw-local`。当前 customPage V9 引用 pagecomponent V15 id `6a5628cee4b0a577cbba2088`，作为组件级回滚点。
+- CloudCC：`cc-customization-expert-msapi 2.2.28-msapi` provider doctor 选择严格 MSAPI；pagecomponent dry-run 通过，只打包受管组件源码、配置和预构建 bundle，并排除 env、token cache 与 `.claw-local`。发布将同一组件 ID `6a5628cee4b0a577cbba2088` 从 V15 更新为 V16；customPage 保持 V9 并继续引用该 ID，`verify injectionPage --stale-policy warning` 返回 `status=passed, issues=[]`，无需额外 bind。
 - 静态门禁：`git diff --check` 和 `cc-local-stack/scripts/check-no-environment-domains.sh` 通过。首次从子仓错误路径调用域名脚本返回不存在，改用受管 `cc-local-stack` 入口后通过。
 - 治理校验：`validate-state.py .claw` 首次发现 FEAT-201 状态值不在枚举，已改为合法 `draft`；复核仍受既有 goals 时间格式、历史规格 front matter/status、完成任务未归档和 references 索引债务阻断，不归因于 TASK-331。
+- Git：修复提交 `ebea2febe1d8a15f3c802f48a7ab7dee480bedbd` 已推送，发布时本地 `main` 与 `origin/main` 相同。
+- 生产登录态：重载目标 CloudCC 自定义页后，iframe 保持在 AgentCiCi 工作台，显示“CloudCC CRM 已连接”，加载当前用户、客户队列、客户详情和 AI 助理；原“身份信息不完整”和 SSO 拒绝连接均消失，浏览器 error 日志为 0。未通过页面执行业务写操作，因此该结果是受权运行技术验证，不替代用户最终业务确认。
+- 发布边界：AgentCiCi 生产仍为 `2.8.66 / e805c0ef7142`，未重建 backend/frontend 或状态服务。后端 `JsonAlias` 已在 `main`，等待下一次 `2.8.67` 标准发布；组件回滚来源为修复前提交 `e8e3080987c0d0256b79658deacd4f0867ffe069`。
 
 ## 2026-08-26 TASK-330 生产发布
 
