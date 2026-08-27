@@ -1,12 +1,20 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-08-27T03:25:54Z
+updated_at: 2026-08-27T11:21:49Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-27 TASK-333 本地开发环境
+
+- AgentCiCi backend/frontend 从本地 `main@5f6ce44a` 构建为 `2.8.67-dev.5f6ce44`。Docker Hub `node:22-alpine` 拉取被本机凭据助手等待阻断后，未使用漂移基础镜像：前端改用已通过的宿主机 production build，backend 使用宿主机 Maven package；两者均在既有本地 JRE/nginx 运行镜像上覆盖最终 `main` 的 JAR、静态资源和受管配置，并重写 OCI version/revision 标签。
+- backend/frontend 镜像 ID 为 `sha256:34c05e8f04e6a6f524f3d287115db168fd5910f737eeff0acce6139954bfbbf1` / `sha256:c97c5ec31c447473b86d2185484a9a3c9e2cfadd9cce1e022595164fcccce186`；容器环境、镜像标签和 backend `/system/version` 均回读 `2.8.67-dev.5f6ce44 / 5f6ce44a`。
+- 仅以现有受管 Compose 依次 `--no-deps --force-recreate backend` 与 `cici-frontend`；两容器 healthy/restart=0，Nginx 配置有效，15 分钟 backend severe、frontend HTTP 5xx/nginx severe 均为 0。PostgreSQL repeatable migration `demo example application` 成功，数据库回读样例应用、版本和可选依赖完整；HTTPS 示例路由 200，匿名配置 API 为 JSON 401。
+- Semattice、DevAutopilot、PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak 和 Nginx 未重建；本次不新增/切换跨项目契约，按最小影响门禁未执行完整 `./stack verify`。标准 `./stack version/status` 仍被既有 Semattice 基础版本漂移 `config=1.0.7 / repository=1.0.8` 失败关闭，本任务未修改 local-stack 或 Semattice 仓库。
+- 浏览器无可复用的本地平台登录态，受保护示例路由正确进入运营平台安全登录。HUMAN 登录后的列表、详情和单对象页面待确认；远程 `main`、UAT、生产、ACR 和 Git tag 均未修改。
 
 ## 2026-08-27 TASK-331 CloudCC pagecomponent V16 生产热修复
 

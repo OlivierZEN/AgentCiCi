@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 5
-updated_at: 2026-08-27T03:25:54Z
+updated_at: 2026-08-27T11:21:49Z
 updated_by: codex
 phase: implementation
-active_task: TASK-325
-next_action: "TASK-325 先对齐本地 frontend 与 backend 的 main 基线并联合回读，再进入 HUMAN 对话验收。"
+active_task: TASK-333
+next_action: "HUMAN 登录本地运营平台，确认 DEMO示例应用在列表、详情和单对象示例页的视觉与交互；UAT/生产发布另行授权。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- `TASK-333 / FEAT-203` 已实现并更新本地开发环境：`DEMO示例应用 / demo-example / 1.0.0` 由幂等 repeatable migration 登记为已发布的 `PLATFORM_BASE + PLATFORM_ROUTE + initializationEngine=NONE` 应用，声明唯一可选 Semattice 依赖但不创建运行连接；示例页只读取目录 API 并展示一个 `ApplicationConfiguration` 对象，Provider 全参数明确为未写入/未测试参考。实现提交 `62ad71d4` 与迁移顺序修订 `5f6ce44a` 已进入本地 `main`，未推远程。后端 2 项、package、前端聚焦 3 文件/15 项、全量 57 文件/312 项、production build 和 diff check 通过。backend/frontend 运行 `2.8.67-dev.5f6ce44 / 5f6ce44a`，镜像/容器/API 指纹一致、healthy/restart=0；Flyway repeatable、数据库对象、HTTPS 路由 200、运行 bundle 文案与匿名 API 401 通过。浏览器无本地平台登录态，登录态列表/详情/示例页待 HUMAN；UAT/生产未修改。
 
 - `TASK-331 / FEAT-201` 已完成并恢复生产 CloudCC 工作台：根因是 pagecomponent/UMD 仍发送 `agentOrgId`，而 AgentCiCi 后端自 `30ffb3e3` 起要求 `agentCompanyId`，请求在账号绑定校验前返回 400。提交 `ebea2febe1d8` 已进入本地与远程 `main`；前端 56 文件/309 项、build、UMD check、后端 3 项与 package、pagecomponent dry-run、域名门禁和 diff check 通过。CloudCC pagecomponent 在同一 ID `6a5628cee4b0a577cbba2088` 上由 V15 升至 V16，customPage 保持 V9 且引用验证 `issues=[]`。生产登录态重载显示“CloudCC CRM 已连接”，真实客户队列、详情与 AI 助理均加载，浏览器错误日志为 0；未执行业务写操作。AgentCiCi 生产保持 `2.8.66 / e805c0ef7142`，后端旧字段 alias 等待 `2.8.67` 常规发布。
 

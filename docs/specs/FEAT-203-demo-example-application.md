@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-203
 title: 应用中心 DEMO 单页单对象完整配置示例
-status: in_implementation
+status: implemented
 owner_role: fullstack-agent
 task_ids: TASK-333
 related_decisions: FEAT-191, FEAT-193
 related_issues: none
-updated_at: 2026-08-27T09:21:25Z
+updated_at: 2026-08-27T11:21:49Z
 updated_by: codex
 ---
 

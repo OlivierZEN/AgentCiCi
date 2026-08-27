@@ -1,14 +1,24 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-27T03:25:54Z
+updated_at: 2026-08-27T11:21:49Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-27T03:25:54Z
-last_run_status: passed_task_331_production_cloudcc_runtime
+last_run_at: 2026-08-27T11:21:49Z
+last_run_status: passed_task_333_local_technical_pending_human_visual
 ---
 
 # Test Report
+
+## 2026-08-27 TASK-333 DEMO 示例应用本地技术验收
+
+- 状态：`passed_task_333_local_technical_pending_human_visual`；代码、自动化、迁移、数据库、镜像、运行版本、HTTPS 路由和匿名边界通过，登录态视觉/交互待 HUMAN。
+- 自动化：`TenantApplicationCatalogServiceTest` 2 项通过；前端聚焦 3 文件/15 项、全量 57 文件/312 项通过；`mvn -q -f backend/pom.xml -DskipTests package` 与 production build 通过，build 仅有既有大 chunk 警告；`git diff --check` 通过。
+- 迁移与数据：Flyway 日志显示 repeatable migration `demo example application` 成功执行。数据库回读应用为 `demo-example / DEMO示例应用 / PUBLISHED / PLATFORM_BASE / PLATFORM_ROUTE / demo-example.page / 1.0.0 / NONE`；唯一依赖为 `semattice >=1.0.0 / OPTIONAL / AUTO_PROVISION_ALLOWED`，没有写入 Provider 运行连接或 Secret。
+- 本地主线与制品：实现提交 `62ad71d4`、迁移顺序修订 `5f6ce44a` 均进入本地 `main`，远程未推送。backend/frontend 镜像分别为 `sha256:34c05e8f04e6a6f524f3d287115db168fd5910f737eeff0acce6139954bfbbf1` / `sha256:c97c5ec31c447473b86d2185484a9a3c9e2cfadd9cce1e022595164fcccce186`，标签均为 `2.8.67-dev.5f6ce44 / 5f6ce44a`。
+- 运行回读：backend/frontend 容器环境、镜像 ID 与 backend `/system/version` 一致，两容器 healthy/restart=0，`/actuator/health=UP`。`https://cici.localhost/platform/internal-applications/demo-example/example=200`，首页引用带版本指纹的 JS/CSS，运行 JS 包含 `DEMO示例应用`；匿名目录 API 返回 JSON 401。15 分钟窗口 backend severe=0、frontend HTTP 5xx=0、nginx severe=0。
+- 浏览器边界：未登录浏览器访问示例页后到达“运营平台安全登录”；未读取或代填平台凭据。登录态应用中心列表、详情入口和单对象页面待 HUMAN 目视确认，不以静态 200、数据库或自动化替代。
+- 治理校验：新规格状态已修正为合法值；全局 `validate-state.py .claw` 仍受仓库既有历史时间、状态、归档和 references 债务阻断，本任务未批量修改历史事实。UAT/生产未修改。
 
 ## 2026-08-27 TASK-331 CloudCC 工作台 SSO company ID 契约修复
 

@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-27T09:21:25Z
+updated_at: 2026-08-27T11:21:49Z
 updated_by: codex
 board_status: active
 ---
@@ -17,7 +17,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-333 - 创建 DEMO 单页单对象完整配置示例
 
-- status: `in_progress`
+- status: `review`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - claimed_by: `codex`
@@ -25,7 +25,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-333.md`
 - blocked_by: `none`
 - scope_files: `demo-example 目录 seed、平台基础投影、安全相对路由、单页单对象配置回读、全参数参考和本地全栈验证`
-- next_action: `实现目录 seed、通用平台基础投影、安全相对路由、示例页及聚焦测试。`
+- completion_evidence: `本地 main@5f6ce44a；后端 2 项与 package；前端 3 文件/15 项、全量 57 文件/312 项和 production build；repeatable migration 与数据库 readback；backend/frontend 2.8.67-dev.5f6ce44 healthy/restart=0；HTTPS 路由 200、匿名 API 401。`
+- next_action: `HUMAN 登录本地运营平台，确认列表、详情入口和单对象示例页；UAT/生产发布另行授权。`
 
 ### TASK-325 - 产品经理项目改名确定性执行与可信回执
 
