@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 5
-updated_at: 2026-08-27T11:21:49Z
+updated_at: 2026-08-27T11:30:00Z
 updated_by: codex
 phase: implementation
-active_task: TASK-333
-next_action: "HUMAN 登录本地运营平台，确认 DEMO示例应用在列表、详情和单对象示例页的视觉与交互；UAT/生产发布另行授权。"
+active_task: TASK-332
+next_action: "从本地 main 构建 backend/frontend 并更新 cc-local-stack，联合回读版本、迁移、健康与嵌入路由。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- `TASK-332 / FEAT-202` 已完成实现与本地制品前门禁：思思固定为 AgentCiCi 内部受治理智能体的外部映射，首个接入为 CloudCC 组织 ID + CloudCC 绑定用户名 + 短时 Embed Token；统一 SDK 支持页面与浮窗，覆盖流式对话、历史、附件、语音、依据、工具过程、人工确认和可信回执。空 PostgreSQL 16.9 schema 已迁移到 V124；EmbedAppIntegrationTest 3 项、后端附件/租户 16 项与 package、前端全量 57 文件/311 项和 production build、SDK 语法/稳定版本一致、页面/408px 浮窗/发送交互浏览器验证通过。下一步仅从本地 main 构建并更新本地全栈；未授权远程推送、UAT 或生产发布。
 
 - `TASK-333 / FEAT-203` 已实现并更新本地开发环境：`DEMO示例应用 / demo-example / 1.0.0` 由幂等 repeatable migration 登记为已发布的 `PLATFORM_BASE + PLATFORM_ROUTE + initializationEngine=NONE` 应用，声明唯一可选 Semattice 依赖但不创建运行连接；示例页只读取目录 API 并展示一个 `ApplicationConfiguration` 对象，Provider 全参数明确为未写入/未测试参考。实现提交 `62ad71d4` 与迁移顺序修订 `5f6ce44a` 已进入本地 `main`，未推远程。后端 2 项、package、前端聚焦 3 文件/15 项、全量 57 文件/312 项、production build 和 diff check 通过。backend/frontend 运行 `2.8.67-dev.5f6ce44 / 5f6ce44a`，镜像/容器/API 指纹一致、healthy/restart=0；Flyway repeatable、数据库对象、HTTPS 路由 200、运行 bundle 文案与匿名 API 401 通过。浏览器无本地平台登录态，登录态列表/详情/示例页待 HUMAN；UAT/生产未修改。
 

@@ -96,12 +96,26 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
             session.close(CloseStatus.NOT_ACCEPTABLE.withReason("invalid token"));
             return;
         }
+        if ("embed_app".equals(claims.get("typ", String.class))) {
+            List<String> permissions = claimStrings(claims.get("permissions"));
+            if (!permissions.contains("voice:input") && !permissions.contains("meeting:start")) {
+                session.close(CloseStatus.POLICY_VIOLATION.withReason("voice permission denied"));
+                return;
+            }
+        }
         String companyId = String.valueOf(claims.get("company_id"));
         String memberId = claims.get("member_id", String.class);
         String userId = memberId == null || memberId.isBlank() ? claims.getSubject() : memberId;
         SessionCtx ctx = new SessionCtx(session, companyId, userId);
         sessions.put(session.getId(), ctx);
         sendClientEvent(session, Map.of("type", "status", "message", "connected"));
+    }
+
+    private static List<String> claimStrings(Object raw) {
+        if (!(raw instanceof List<?> values)) {
+            return List.of();
+        }
+        return values.stream().filter(java.util.Objects::nonNull).map(String::valueOf).toList();
     }
 
     @Override

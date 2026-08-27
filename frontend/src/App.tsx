@@ -28,6 +28,7 @@ import AdminSkillsListPage from "./admin/pages/AdminSkillsListPage";
 import AdminEvaluationPage from "./admin/pages/AdminEvaluationPage";
 import AdminOntologyPage from "./admin/pages/AdminOntologyPage";
 import EmbedMeetingMinutesPage from "./embed/EmbedMeetingMinutesPage";
+import SisiEmbedPage from "./embed/SisiEmbedPage";
 import PlatformGuard from "./platform/PlatformGuard";
 import PlatformLogin from "./platform/PlatformLogin";
 import PlatformShell from "./platform/PlatformShell";
@@ -72,6 +73,7 @@ const router = createBrowserRouter(createRoutesFromElements(
         <Route path="/pricing/global" element={<Navigate to="/global/pricing" replace />} />
         <Route path="/autoservice/*" element={<Navigate to="/solutions" replace />} />
         <Route path="/embed/meeting-minutes" element={<EmbedMeetingMinutesPage />} />
+        <Route path="/embed/sisi" element={<SisiEmbedPage />} />
         <Route path="/mobile/wechat-kf" element={<WecomKfMobilePage />} />
         <Route path="/admin/login" element={<Navigate to="/app" replace />} />
         <Route path="/admin" element={<AdminGuard />}>

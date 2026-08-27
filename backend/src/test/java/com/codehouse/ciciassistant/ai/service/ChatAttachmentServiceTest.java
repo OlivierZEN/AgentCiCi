@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import com.codehouse.ciciassistant.ai.domain.ChatAttachmentEntity;
 import com.codehouse.ciciassistant.ai.domain.ChatAttachmentRepository;
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -135,6 +136,29 @@ class ChatAttachmentServiceTest {
                 .isInstanceOfSatisfying(ResponseStatusException.class, exception -> {
                     assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
                     assertThat(exception.getReason()).isEqualTo("ATTACHMENT_NOT_FOUND");
+                });
+    }
+
+    @Test
+    void detectsSupportedBusinessDocumentsWithoutTrustingFilenameAlone() {
+        assertThat(ChatAttachmentService.detectAttachmentType(
+                "客户续约计划".getBytes(StandardCharsets.UTF_8), "plan.md", "text/markdown"))
+                .isEqualTo("text/markdown");
+        assertThat(ChatAttachmentService.detectAttachmentType(
+                "{\"risk\":\"medium\"}".getBytes(StandardCharsets.UTF_8), "risk.json", "application/json"))
+                .isEqualTo("application/json");
+        assertThat(ChatAttachmentService.detectAttachmentType(
+                "%PDF-1.7\n".getBytes(StandardCharsets.ISO_8859_1), "evidence.pdf", "application/pdf"))
+                .isEqualTo("application/pdf");
+    }
+
+    @Test
+    void rejectsBinaryPayloadDisguisedAsTextDocument() {
+        assertThatThrownBy(() -> ChatAttachmentService.detectAttachmentType(
+                new byte[] { 0x01, 0x00, 0x02 }, "note.txt", "text/plain"))
+                .isInstanceOfSatisfying(ResponseStatusException.class, exception -> {
+                    assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+                    assertThat(exception.getReason()).isEqualTo("UNSUPPORTED_ATTACHMENT_TYPE");
                 });
     }
 }

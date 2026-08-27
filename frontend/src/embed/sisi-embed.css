@@ -1,0 +1,242 @@
+:root {
+  color-scheme: light;
+}
+
+body:has(.sisi-shell) {
+  margin: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+.sisi-shell {
+  --sisi-ink: #201d18;
+  --sisi-muted: #746e63;
+  --sisi-paper: #fbf8f1;
+  --sisi-panel: #f3eee4;
+  --sisi-card: #fffdf8;
+  --sisi-line: #ded5c6;
+  --sisi-gold: #a37a2b;
+  --sisi-gold-soft: #e7d9b8;
+  --sisi-vermilion: #b74632;
+  --sisi-green: #4f725c;
+  width: 100%;
+  height: 100dvh;
+  color: var(--sisi-ink);
+  background: var(--sisi-paper);
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 14px;
+  letter-spacing: .01em;
+  display: grid;
+  grid-template-rows: 58px minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.sisi-shell *, .sisi-shell *::before, .sisi-shell *::after { box-sizing: border-box; }
+.sisi-shell button, .sisi-shell textarea { font: inherit; }
+.sisi-shell button { color: inherit; }
+
+.sisi-header {
+  position: relative;
+  z-index: 3;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--sisi-line);
+  background: rgba(251, 248, 241, .97);
+}
+
+.sisi-brand { display: flex; align-items: center; gap: 10px; }
+.sisi-brand > div { display: flex; align-items: baseline; gap: 8px; }
+.sisi-brand strong { font-family: "Songti SC", STSong, serif; font-size: 20px; letter-spacing: .12em; }
+.sisi-brand span:not(.sisi-seal) { color: var(--sisi-muted); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+
+.sisi-seal {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 8px 8px 10px 7px;
+  color: #fff8eb;
+  background: var(--sisi-vermilion);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.2);
+  font-family: "FZKai-Z03", "Kaiti SC", STKaiti, serif;
+  font-size: 20px;
+  transform: rotate(-2deg);
+}
+
+.sisi-header__context {
+  min-width: 0;
+  justify-self: center;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--sisi-muted);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sisi-status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sisi-green); box-shadow: 0 0 0 3px rgba(79, 114, 92, .11); }
+.sisi-header__actions { display: flex; align-items: center; gap: 5px; }
+.sisi-icon-button {
+  width: 32px; height: 32px; display: grid; place-items: center;
+  border: 1px solid transparent; border-radius: 8px; background: transparent; cursor: pointer;
+}
+.sisi-icon-button:hover { border-color: var(--sisi-line); background: var(--sisi-card); }
+
+.sisi-workspace {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 264px minmax(460px, 1fr) 286px;
+  overflow: hidden;
+}
+
+.sisi-context-rail, .sisi-evidence-rail {
+  min-width: 0;
+  overflow-y: auto;
+  background: var(--sisi-panel);
+  transition: width 180ms ease, opacity 180ms ease, transform 180ms ease;
+}
+.sisi-context-rail { border-right: 1px solid var(--sisi-line); padding: 18px 14px; }
+.sisi-evidence-rail { border-left: 1px solid var(--sisi-line); padding: 18px 14px; }
+
+.sisi-context-card {
+  padding: 17px;
+  border: 1px solid var(--sisi-line);
+  border-radius: 14px;
+  background: var(--sisi-card);
+  box-shadow: 0 6px 18px rgba(54, 43, 25, .05);
+}
+.sisi-eyebrow { color: var(--sisi-gold); font-size: 11px; letter-spacing: .12em; }
+.sisi-context-card h2 { margin: 10px 0 4px; font-family: "Songti SC", STSong, serif; font-size: 18px; line-height: 1.35; }
+.sisi-context-card > p { margin: 0 0 15px; color: var(--sisi-muted); font-size: 12px; }
+.sisi-context-card dl { margin: 0; padding-top: 11px; border-top: 1px solid var(--sisi-line); }
+.sisi-context-card dl div { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; font-size: 12px; }
+.sisi-context-card dt { color: var(--sisi-muted); max-width: 46%; overflow: hidden; text-overflow: ellipsis; }
+.sisi-context-card dd { margin: 0; text-align: right; font-weight: 600; overflow-wrap: anywhere; }
+
+.sisi-history { margin-top: 22px; }
+.sisi-section-title { min-height: 30px; display: flex; align-items: center; justify-content: space-between; color: var(--sisi-muted); font-size: 12px; }
+.sisi-section-title > span { display: flex; align-items: center; gap: 7px; font-weight: 600; }
+.sisi-section-title button { display: grid; place-items: center; border: 0; background: transparent; cursor: pointer; }
+.sisi-history > button {
+  width: 100%; min-height: 40px; padding: 8px 7px; display: flex; align-items: center; gap: 8px;
+  border: 0; border-bottom: 1px solid rgba(196, 184, 164, .6); background: transparent; cursor: pointer; text-align: left;
+}
+.sisi-history > button span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+.sisi-history > button svg { color: var(--sisi-gold); opacity: 0; transform: translateX(-4px); transition: 120ms ease; }
+.sisi-history > button:hover svg { opacity: 1; transform: none; }
+.sisi-empty-copy { color: var(--sisi-muted); font-size: 12px; }
+.sisi-identity-note { margin-top: 20px; padding: 12px; display: flex; gap: 9px; border: 1px solid rgba(79, 114, 92, .24); border-radius: 11px; color: var(--sisi-green); background: rgba(255,255,255,.45); font-size: 11px; line-height: 1.55; }
+
+.sisi-conversation { min-width: 0; min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr) auto; background: var(--sisi-paper); }
+.sisi-messages { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 26px clamp(24px, 6vw, 82px) 18px; scroll-behavior: smooth; }
+.sisi-loading { height: 100%; display: grid; place-content: center; justify-items: center; gap: 12px; color: var(--sisi-muted); }
+.spin { animation: sisi-spin .9s linear infinite; }
+@keyframes sisi-spin { to { transform: rotate(360deg); } }
+
+.sisi-welcome { min-height: 100%; padding-bottom: 11vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.sisi-seal--hero { width: 56px; height: 56px; border-radius: 14px 13px 15px 12px; font-size: 32px; box-shadow: 0 8px 24px rgba(183, 70, 50, .18); }
+.sisi-welcome h1 { margin: 18px 0 8px; font-family: "Songti SC", STSong, serif; font-size: clamp(24px, 3vw, 34px); font-weight: 600; letter-spacing: .08em; }
+.sisi-welcome > p { max-width: 520px; margin: 0; color: var(--sisi-muted); line-height: 1.8; }
+.sisi-suggestions { max-width: 680px; margin-top: 28px; display: flex; flex-wrap: wrap; justify-content: center; gap: 9px; }
+.sisi-suggestions button {
+  padding: 9px 13px; display: flex; align-items: center; gap: 7px; border: 1px solid var(--sisi-line); border-radius: 999px;
+  background: var(--sisi-card); cursor: pointer; font-size: 12px; box-shadow: 0 3px 10px rgba(54, 43, 25, .04);
+}
+.sisi-suggestions button:hover { border-color: var(--sisi-gold-soft); color: #755315; transform: translateY(-1px); }
+
+.sisi-message { max-width: 780px; margin: 0 auto 24px; display: flex; gap: 11px; animation: sisi-reveal 180ms ease both; }
+@keyframes sisi-reveal { from { opacity: 0; transform: translateY(5px); } }
+.sisi-message--user { justify-content: flex-end; }
+.sisi-message__body { min-width: 0; max-width: min(88%, 680px); }
+.sisi-message--user .sisi-message__body { display: flex; flex-direction: column; align-items: flex-end; }
+.sisi-seal--message { width: 28px; height: 28px; margin-top: 19px; border-radius: 7px; font-size: 16px; }
+.sisi-message__name { display: block; margin: 0 0 6px 2px; color: var(--sisi-muted); font-size: 11px; }
+.sisi-bubble { line-height: 1.72; overflow-wrap: anywhere; }
+.sisi-message--assistant .sisi-bubble { padding-top: 1px; }
+.sisi-message--user .sisi-bubble { padding: 10px 14px; border-radius: 15px 15px 4px 15px; background: #e8dfcf; }
+.sisi-bubble p { margin: 0 0 9px; }
+.sisi-bubble p:last-child { margin-bottom: 0; }
+.sisi-bubble ol, .sisi-bubble ul { margin: 7px 0; padding-left: 23px; }
+.sisi-bubble pre { max-width: 100%; padding: 12px; overflow-x: auto; border: 1px solid var(--sisi-line); border-radius: 9px; background: #ede7dc; }
+.sisi-bubble code { font-family: "SFMono-Regular", Consolas, monospace; font-size: .9em; }
+.sisi-message__attachments { margin-bottom: 6px; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
+.sisi-message__attachments span { padding: 5px 8px; display: flex; align-items: center; gap: 5px; border: 1px solid var(--sisi-line); border-radius: 7px; color: var(--sisi-muted); background: var(--sisi-card); font-size: 11px; }
+.sisi-confirm { margin-top: 13px; padding: 9px 12px; display: flex; align-items: center; gap: 7px; border: 1px solid rgba(183, 70, 50, .35); border-radius: 9px; color: var(--sisi-vermilion); background: #fff9f4; cursor: pointer; font-weight: 600; }
+.sisi-confirm:hover { background: #fff1e7; }
+
+.sisi-composer-wrap { padding: 0 clamp(20px, 5vw, 70px) 12px; }
+.sisi-composer { max-width: 820px; margin: 0 auto; padding: 10px 11px 9px; border: 1px solid #cfc3b2; border-radius: 17px; background: var(--sisi-card); box-shadow: 0 9px 28px rgba(65, 51, 28, .09); transition: border-color 140ms ease, box-shadow 140ms ease; }
+.sisi-composer:focus-within { border-color: var(--sisi-gold); box-shadow: 0 10px 32px rgba(123, 88, 25, .12); }
+.sisi-composer--listening { border-color: var(--sisi-vermilion); }
+.sisi-composer__input { width: 100%; min-height: 30px; max-height: 150px; padding: 3px 5px 6px; resize: none; border: 0; outline: 0; color: var(--sisi-ink); background: transparent; line-height: 1.6; }
+.sisi-composer__input::placeholder { color: #a29a8d; }
+.sisi-composer__tools { display: flex; align-items: center; gap: 3px; }
+.sisi-composer__tools > button:not(.sisi-send) { width: 31px; height: 31px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; cursor: pointer; }
+.sisi-composer__tools > button:hover:not(:disabled) { background: var(--sisi-panel); }
+.sisi-composer__tools > button.is-active { color: var(--sisi-vermilion); background: #f8e9e4; }
+.sisi-composer__tools button:disabled { cursor: not-allowed; opacity: .38; }
+.sisi-composer__hint { margin-left: 5px; flex: 1; color: #9b9388; font-size: 10px; }
+.sisi-send { width: 33px; height: 33px; display: grid; place-items: center; border: 0; border-radius: 10px; color: #fffdf8 !important; background: var(--sisi-ink); cursor: pointer; }
+.sisi-send:hover:not(:disabled) { background: var(--sisi-vermilion); }
+.sisi-disclaimer { max-width: 820px; margin: 7px auto 0; color: #928b80; font-size: 9px; text-align: center; }
+.sisi-attachment-strip { max-width: 820px; margin: 0 auto 7px; display: flex; gap: 6px; overflow-x: auto; }
+.sisi-attachment-strip > span { flex: 0 0 auto; padding: 6px 6px 6px 9px; display: flex; align-items: center; gap: 5px; border: 1px solid var(--sisi-line); border-radius: 8px; background: var(--sisi-card); font-size: 11px; }
+.sisi-attachment-strip button { width: 20px; height: 20px; display: grid; place-items: center; border: 0; background: transparent; cursor: pointer; }
+
+.sisi-evidence { margin-bottom: 8px; padding: 11px; display: grid; grid-template-columns: 27px minmax(0,1fr) auto; align-items: start; gap: 8px; border: 1px solid var(--sisi-line); border-radius: 11px; color: inherit; background: var(--sisi-card); text-decoration: none; }
+.sisi-evidence > span { width: 27px; height: 27px; display: grid; place-items: center; border-radius: 7px; color: var(--sisi-gold); background: #f1e7d2; }
+.sisi-evidence--tool > span { color: var(--sisi-green); background: #e5eee7; }
+.sisi-evidence--security > span { color: var(--sisi-vermilion); background: #f5e5df; }
+.sisi-evidence strong { display: block; font-size: 12px; }
+.sisi-evidence p { margin: 4px 0 0; color: var(--sisi-muted); font-size: 10px; line-height: 1.45; }
+.sisi-evidence > svg { margin-top: 6px; color: var(--sisi-muted); }
+.sisi-evidence:hover { border-color: var(--sisi-gold-soft); }
+.sisi-evidence-empty { margin-top: 18px; padding: 22px 12px; border: 1px dashed #cdbfa9; border-radius: 12px; color: var(--sisi-muted); text-align: center; font-size: 11px; line-height: 1.7; }
+.sisi-boundary { margin-top: 18px; padding: 12px; border-top: 1px solid var(--sisi-line); color: var(--sisi-muted); font-size: 10px; overflow-wrap: anywhere; }
+.sisi-boundary > span { display: flex; align-items: center; gap: 6px; color: var(--sisi-green); font-weight: 600; font-size: 11px; }
+.sisi-boundary p { margin: 8px 0 0; }
+
+.bubble-thinking { min-width: 40px; padding: 8px 0; display: inline-flex; gap: 4px; }
+.bubble-thinking__dot { width: 5px; height: 5px; border-radius: 50%; background: var(--sisi-muted); animation: sisi-pulse 1.2s infinite ease-in-out; }
+.bubble-thinking__dot:nth-child(2) { animation-delay: .12s; }
+.bubble-thinking__dot:nth-child(3) { animation-delay: .24s; }
+@keyframes sisi-pulse { 0%, 70%, 100% { opacity: .25; transform: translateY(0); } 35% { opacity: 1; transform: translateY(-3px); } }
+
+.sisi-shell--float {
+  border: 1px solid rgba(106, 87, 57, .35);
+  border-radius: 18px;
+  box-shadow: 0 20px 70px rgba(37, 29, 18, .25);
+}
+.sisi-shell--float .sisi-header { grid-template-columns: 1fr auto; padding: 0 13px; }
+.sisi-shell--float .sisi-header__context { display: none; }
+.sisi-shell--float .sisi-workspace { grid-template-columns: minmax(0, 1fr); }
+.sisi-shell--float .sisi-messages { padding: 20px 16px 12px; }
+.sisi-shell--float .sisi-composer-wrap { padding: 0 12px 10px; }
+.sisi-shell--float .sisi-message__body { max-width: 88%; }
+.sisi-shell--float .sisi-composer__hint, .sisi-shell--float .sisi-disclaimer { display: none; }
+.sisi-shell--float .sisi-welcome { padding: 18px 10px 12vh; }
+.sisi-shell--float .sisi-welcome h1 { font-size: 25px; }
+.sisi-shell--float .sisi-welcome > p { font-size: 12px; }
+.sisi-shell--float .sisi-suggestions { align-items: stretch; flex-direction: column; width: 100%; margin-top: 21px; }
+.sisi-shell--float .sisi-suggestions button { justify-content: center; }
+
+.sisi-shell--left-closed .sisi-workspace { grid-template-columns: 0 minmax(460px, 1fr) 286px; }
+.sisi-shell--left-closed .sisi-context-rail { width: 0; padding-left: 0; padding-right: 0; opacity: 0; transform: translateX(-12px); overflow: hidden; }
+.sisi-shell--right-closed .sisi-workspace { grid-template-columns: 264px minmax(460px, 1fr) 0; }
+.sisi-shell--right-closed .sisi-evidence-rail { width: 0; padding-left: 0; padding-right: 0; opacity: 0; transform: translateX(12px); overflow: hidden; }
+
+@media (max-width: 980px) {
+  .sisi-shell--page .sisi-workspace { grid-template-columns: 220px minmax(0, 1fr); }
+  .sisi-shell--page .sisi-evidence-rail { display: none; }
+  .sisi-shell--page .sisi-messages { padding-left: 24px; padding-right: 24px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sisi-shell *, .sisi-shell *::before, .sisi-shell *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

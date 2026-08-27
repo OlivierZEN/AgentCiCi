@@ -59,6 +59,8 @@ type SessionRow = {
   parentOrigin: string;
   traceId: string;
   externalUserId: string;
+  externalTenantId?: string;
+  agentId?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -141,6 +143,8 @@ export default function AdminEmbedAppsPage() {
     runAsUserId: "",
     scopeOverrides: [] as string[],
     tokenTtlSeconds: 900,
+    externalTenantId: "",
+    agentId: "cici-system",
   });
   const [debugForm, setDebugForm] = useState({
     source: "cloudcc",
@@ -151,6 +155,7 @@ export default function AdminEmbedAppsPage() {
     customerName: "调试客户",
     externalUserId: "debug-user",
     displayName: "调试用户",
+    externalTenantId: "",
   });
   const [tokenIssue, setTokenIssue] = useState<TokenIssue | null>(null);
 
@@ -190,11 +195,14 @@ export default function AdminEmbedAppsPage() {
         runAsUserId: app.config.runAsUserId ?? "",
         scopeOverrides: app.config.scopeOverrides?.length ? app.config.scopeOverrides : app.requiredScopes,
         tokenTtlSeconds: app.config.tokenTtlSeconds ?? app.defaultTokenTtlSeconds,
+        externalTenantId: String((app.config.sourceBindings?.cloudcc as Record<string, unknown> | undefined)?.externalTenantId ?? ""),
+        agentId: String((app.config.sourceBindings?.cloudcc as Record<string, unknown> | undefined)?.agentId ?? "cici-system"),
       });
       setDebugForm((prev) => ({
         ...prev,
         source: app.supportedSources[0] ?? prev.source,
         parentOrigin: app.config.allowedOrigins?.[0] ?? prev.parentOrigin,
+        externalTenantId: String((app.config.sourceBindings?.cloudcc as Record<string, unknown> | undefined)?.externalTenantId ?? prev.externalTenantId),
       }));
       setTokenIssue(null);
     } catch (err) {
@@ -241,6 +249,12 @@ export default function AdminEmbedAppsPage() {
           runAsUserId: configForm.runAsUserId,
           scopeOverrides: configForm.scopeOverrides,
           tokenTtlSeconds: Number(configForm.tokenTtlSeconds),
+          sourceBindings: detail.appCode === "sisi" ? {
+            cloudcc: {
+              externalTenantId: configForm.externalTenantId.trim(),
+              agentId: configForm.agentId.trim(),
+            },
+          } : detail.config.sourceBindings,
         }),
       });
       setDetail(saved);
@@ -265,6 +279,7 @@ export default function AdminEmbedAppsPage() {
         body: JSON.stringify({
           source: debugForm.source,
           parentOrigin: debugForm.parentOrigin,
+          externalTenantId: debugForm.externalTenantId,
           user: {
             externalUserId: debugForm.externalUserId,
             displayName: debugForm.displayName,
@@ -300,7 +315,22 @@ export default function AdminEmbedAppsPage() {
 
   const selectedApp = detail ?? apps.find((app) => app.appCode === selectedAppCode) ?? apps[0] ?? null;
   const cloudccExample = selectedApp
-    ? codeBlock(`
+    ? selectedApp.appCode === "sisi" ? codeBlock(`
+<div id="sisi-agent" style="height: 720px"></div>
+<script src="${baseUrl}${selectedApp.stableSdkUrl}"></script>
+<script>
+  const sisi = window.AgentCiCiSisi.create({
+    mode: "page", // 切换为 float 即使用右侧悬浮面板
+    container: "#sisi-agent",
+    tokenProvider: () => fetchEmbedTokenFromCloudCCServer({
+      cloudccOrgId: currentOrg.id,
+      username: currentUser.username,
+      objectType: record.objectType,
+      objectId: record.id
+    })
+  });
+</script>
+`) : codeBlock(`
 <script src="${baseUrl}${selectedApp.stableSdkUrl}"></script>
 <script>
   const embedToken = await fetchEmbedTokenFromCloudCCServer();
@@ -328,13 +358,15 @@ curl -X POST "${baseUrl}/embed/v1/apps/${selectedApp.appCode}/tokens" \\
   -d '{
     "source": "cloudcc",
     "parentOrigin": "https://crm.example.com",
+    "externalTenantId": "cloudcc-org-id",
+    "user": { "externalUserId": "cloudcc-bound-username" },
     "context": {
       "objectType": "Opportunity",
       "objectId": "006xx000001",
       "recordName": "华东区续费商机",
       "customerName": "某某集团"
     },
-    "permissions": ["meeting:start", "meeting:summary", "crm:writeback"],
+    "permissions": ${selectedApp.appCode === "sisi" ? '["chat:read", "chat:write", "attachment:write", "voice:input"]' : '["meeting:start", "meeting:summary", "crm:writeback"]'},
     "ttlSeconds": 600
   }'
 `)
@@ -445,7 +477,7 @@ curl -X POST "${baseUrl}/embed/v1/apps/${selectedApp.appCode}/tokens" \\
                   </div>
                 </dl>
                 <div className="embed-apps-rule-list">
-                  <p>用于 CRM 记录页内启动会议听记、生成 AI 纪要，并在用户确认后进入写回流程。</p>
+                  <p>{selectedApp.appCode === "sisi" ? "用于 CRM 记录页内与 AgentCiCi 受治理智能体持续对话、检索知识、上传附件、语音输入并执行工具。" : "用于 CRM 记录页内启动会议听记、生成 AI 纪要，并在用户确认后进入写回流程。"}</p>
                   <p>短期 token 绑定来源域名、业务对象和权限 scope，浏览器不接触长期 API Key。</p>
                   <p>后续新增客户摘要、工单助手或商机建议时，继续从此目录统一接入。</p>
                 </div>
@@ -473,6 +505,16 @@ curl -X POST "${baseUrl}/embed/v1/apps/${selectedApp.appCode}/tokens" \\
                   <small>每行一个 origin。为空时仅允许本地开发 origin。</small>
                 </label>
                 <div className="embed-apps-form__grid">
+                  {selectedApp.appCode === "sisi" && <>
+                    <label>
+                      <span>CloudCC 组织 ID</span>
+                      <input value={configForm.externalTenantId} onChange={(event) => setConfigForm((prev) => ({ ...prev, externalTenantId: event.target.value }))} placeholder="外部租户唯一标识" />
+                    </label>
+                    <label>
+                      <span>映射智能体 ID</span>
+                      <input value={configForm.agentId} onChange={(event) => setConfigForm((prev) => ({ ...prev, agentId: event.target.value }))} placeholder="cici-system" />
+                    </label>
+                  </>}
                   <label>
                     <span>默认 run-as 用户</span>
                     <select
@@ -551,6 +593,10 @@ curl -X POST "${baseUrl}/embed/v1/apps/${selectedApp.appCode}/tokens" \\
                     <span>父页面 origin</span>
                     <input value={debugForm.parentOrigin} onChange={(event) => setDebugForm((prev) => ({ ...prev, parentOrigin: event.target.value }))} />
                   </label>
+                  {selectedApp.appCode === "sisi" && <label>
+                    <span>CloudCC 组织 ID</span>
+                    <input value={debugForm.externalTenantId} onChange={(event) => setDebugForm((prev) => ({ ...prev, externalTenantId: event.target.value }))} />
+                  </label>}
                   <label>
                     <span>对象类型</span>
                     <input value={debugForm.objectType} onChange={(event) => setDebugForm((prev) => ({ ...prev, objectType: event.target.value }))} />
@@ -586,8 +632,10 @@ curl -X POST "${baseUrl}/embed/v1/apps/${selectedApp.appCode}/tokens" \\
                         <span>使用当前一次性 token 加载嵌入页，真实录音仍需要浏览器授予麦克风权限。</span>
                       </div>
                       <iframe
-                        title="会议纪要嵌入页调试预览"
-                        src={`${baseUrl}${tokenIssue.embedUrl}?token=${encodeURIComponent(tokenIssue.embedToken)}&mode=admin-debug`}
+                        title={`${selectedApp.name}嵌入页调试预览`}
+                        src={selectedApp.appCode === "sisi"
+                          ? `${baseUrl}${tokenIssue.embedUrl}?mode=page#token=${encodeURIComponent(tokenIssue.embedToken)}`
+                          : `${baseUrl}${tokenIssue.embedUrl}?token=${encodeURIComponent(tokenIssue.embedToken)}&mode=admin-debug`}
                         allow="microphone"
                       />
                     </div>

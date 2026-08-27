@@ -8,6 +8,7 @@ import com.codehouse.ciciassistant.auth.service.JwtService;
 import com.codehouse.ciciassistant.auth.service.OfficialAccessTokenService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -118,5 +119,40 @@ class TenantContextFilterTest {
 
         assertThat(response.getStatus()).isNotEqualTo(401);
         assertThat(chain.getRequest()).isSameAs(request);
+    }
+
+    @Test
+    void shouldScopeEmbedTokenToEmbedRuntimeAndExposeBoundIdentityDuringRequest() throws Exception {
+        JwtService jwtService = mock(JwtService.class);
+        Claims claims = mock(Claims.class);
+        when(jwtService.parse("embed-token")).thenReturn(claims);
+        when(claims.get("typ", String.class)).thenReturn("embed_app");
+        when(claims.get("company_id", String.class)).thenReturn("company-1");
+        when(claims.get("member_id", String.class)).thenReturn("member-1");
+        when(claims.get("roles")).thenReturn(java.util.List.of("MEMBER"));
+        TenantContextFilter embedFilter = new TenantContextFilter(
+                jwtService, mock(OfficialAccessTokenService.class), new ObjectMapper(), false);
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/embed/v1/apps/sisi/sessions");
+        request.addHeader("Authorization", "Bearer embed-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        AtomicBoolean reached = new AtomicBoolean();
+
+        embedFilter.doFilter(request, response, (req, res) -> {
+            reached.set(true);
+            assertThat(TenantContext.requireCompanyId()).isEqualTo("company-1");
+            assertThat(TenantContext.getUserId()).contains("member-1");
+            assertThat(TenantContext.getRoles()).containsExactly("MEMBER");
+            assertThat(TenantContext.getTokenType()).contains("embed_app");
+        });
+
+        assertThat(reached).isTrue();
+        assertThat(response.getStatus()).isEqualTo(200);
+
+        MockHttpServletRequest protectedRequest = new MockHttpServletRequest("GET", "/auth/me");
+        protectedRequest.addHeader("Authorization", "Bearer embed-token");
+        MockHttpServletResponse protectedResponse = new MockHttpServletResponse();
+        embedFilter.doFilter(protectedRequest, protectedResponse, new MockFilterChain());
+        assertThat(protectedResponse.getStatus()).isEqualTo(401);
+        assertThat(protectedResponse.getContentAsString()).contains("Embed token is not valid for this endpoint");
     }
 }
