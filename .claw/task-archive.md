@@ -1,7 +1,7 @@
 ---
 kind: task-archive
 version: 4
-updated_at: 2026-08-27T03:25:54Z
+updated_at: 2026-08-27T11:54:55Z
 updated_by: codex
 archive_status: active
 ---
@@ -12,6 +12,7 @@ Historical task cards have been removed from the hot board. Keep details in task
 
 ## Archived Tasks
 
+- TASK-332 — done — 思思固定产品、CloudCC 组织/用户名/短时 Embed Token 身份映射、受治理 Agent 运行时、统一页面/浮窗 SDK、附件/语音/依据/确认已落地；`93572887` 进入本地 `main`，backend/frontend `2.8.67-dev.9357288`、V124、完整本地技术验证与正式页面浏览器门禁通过，真实 CloudCC HUMAN 集成验收及 UAT/生产另行授权。
 - TASK-331 — done — `agentOrgId`/`agentCompanyId` 契约漂移已修复；提交 `ebea2feb` 进入远程 `main`，CloudCC pagecomponent 同 ID 发布 V16，customPage V9 引用验证无问题，生产登录态重载显示 CRM 已连接并加载真实客户工作台。
 - TASK-330 — done — 用户确认 UAT HUMAN 验收后，Semattice `1.0.7` 先发布并通过 AgentCiCi 生产 SERVICE 7×87 探测；AgentCiCi `2.8.66 / e805c0ef7142` 随后完成不可变双镜像、完整备份、仅应用容器切换、V123、健康与稳定窗口门禁。
 - TASK-328 — done — 运维中心部署安装在线指南已通过 UAT HUMAN 验收，并随 AgentCiCi `2.8.66` 发布生产。

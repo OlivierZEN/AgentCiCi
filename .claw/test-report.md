@@ -1,14 +1,24 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-27T11:21:49Z
+updated_at: 2026-08-27T11:54:55Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-27T11:21:49Z
-last_run_status: passed_task_333_local_technical_pending_human_visual
+last_run_at: 2026-08-27T11:54:55Z
+last_run_status: passed_task_332_local_technical_pending_cloudcc_human
 ---
 
 # Test Report
+
+## 2026-08-27 TASK-332 思思嵌入式智能应用本地技术验收
+
+- 状态：`passed_task_332_local_technical_pending_cloudcc_human`；代码、身份负向、迁移、SDK、页面/浮窗、运行制品和本地技术环境通过，真实 CloudCC 宿主的换票与登录用户业务链路待 HUMAN。
+- 自动化：一次性 PostgreSQL 16.9 空 schema 迁移至 V124，`EmbedAppIntegrationTest` 3 项通过；`ChatAttachmentServiceTest + TenantContextFilterTest` 共 16 项、模型身份聚焦测试和 backend production package 通过。最终本地 `main` 前端全量 58 文件/314 项、production build、SDK 语法/稳定版一致、域名门禁和 diff check 通过；build 仅保留既有大 chunk warning。
+- 主线与制品：实现 `935728872674de7cdcb0178ad976f22150a2c66d` 进入本地 `main`。backend/frontend 镜像为 `sha256:a2471ce5fe9e6cf7fd9b5ef255dee308a428faf195eccd156418f0fda38698ed` / `sha256:020a61966c716fdd5f157126dfb1cd1d65b9835a997559c4df2afea8a7a48ce8`，标签、容器环境、backend `/system/version` 和前端版本资源均为 `2.8.67-dev.9357288 / 935728872674`。
+- 运行与迁移：只 force-recreate backend/frontend；两者 healthy/restart=0。Flyway `124|sisi embedded agent|true`，目录 `sisi|思思|ENABLED|1.0.0`，`sisi_embed_session` 存在；`/embed/sisi` 和两个 SDK 为 200，SDK 均 7,178 bytes 且 SHA-256 同为 `74faff9552825d0cc610d416006bccda08dc0c4ad35c568698ae79fb9e9693fc`。完整受管 `scripts/verify.sh` 通过，证明基础设施、数据库隔离、TLS、OIDC、健康/版本和匿名授权边界。
+- 浏览器：正式 `https://cici.localhost/embed/sisi` 无 Token 时显示身份校验边界、三栏界面、固定“思”形象和“CloudCC 身份安全接入”，输入/附件/语音保持禁用，console 0 error/warning；页面、408px 浮窗和真实发送交互此前也已通过 Chromium 验证。
+- 稳定与最小影响：20 秒后 backend severe=0、frontend HTTP 5xx/severe=0；PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak、Nginx、Semattice、DevAutopilot 未重建且 restart=0。标准 `./stack version/status/up` 仍被既有 Semattice `config=1.0.7 / repository=1.0.8` 失败关闭，本轮未越权修改该产品；直接执行同一受管完整验证脚本已通过。
+- 边界：远程 `main` 仍停留在 `6a73435d`，本地领先 4 个提交；未 push、未打 tag、未写 ACR、未修改 UAT/生产。真实 CloudCC API Key 换票、已登录用户对话、语音/附件和高风险动作回读不能由本地匿名页面替代。
 
 ## 2026-08-27 TASK-333 DEMO 示例应用本地技术验收
 

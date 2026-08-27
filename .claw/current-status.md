@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 5
-updated_at: 2026-08-27T11:30:00Z
+updated_at: 2026-08-27T11:54:55Z
 updated_by: codex
-phase: implementation
-active_task: TASK-332
-next_action: "从本地 main 构建 backend/frontend 并更新 cc-local-stack，联合回读版本、迁移、健康与嵌入路由。"
+phase: review
+active_task: null
+next_action: "HUMAN 在真实 CloudCC 宿主用服务端 API Key 换取短时 Embed Token，验证已登录用户、业务对象上下文、语音/附件、高风险确认与回读；远程推送及 UAT/生产另行授权。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-332 / FEAT-202` 已完成实现与本地制品前门禁：思思固定为 AgentCiCi 内部受治理智能体的外部映射，首个接入为 CloudCC 组织 ID + CloudCC 绑定用户名 + 短时 Embed Token；统一 SDK 支持页面与浮窗，覆盖流式对话、历史、附件、语音、依据、工具过程、人工确认和可信回执。空 PostgreSQL 16.9 schema 已迁移到 V124；EmbedAppIntegrationTest 3 项、后端附件/租户 16 项与 package、前端全量 57 文件/311 项和 production build、SDK 语法/稳定版本一致、页面/408px 浮窗/发送交互浏览器验证通过。下一步仅从本地 main 构建并更新本地全栈；未授权远程推送、UAT 或生产发布。
+- `TASK-332 / FEAT-202` 已完成实现和本地技术交付：思思固定为 AgentCiCi 内部受治理智能体的外部映射，以 CloudCC 组织 ID + CloudCC 绑定用户名 + 短时 Embed Token 接入；统一 SDK 支持页面/浮窗，覆盖流式对话、历史、附件、语音、依据、工具过程、服务端确认和可信回执。实现 `935728872674` 已进入本地 `main`；空 PostgreSQL 16.9 迁移、Embed 身份链集成 3 项、后端附件/租户 16 项、模型身份聚焦、package、最终前端全量 58 文件/314 项、production build、SDK/域名/diff 门禁通过。backend/frontend 从同一提交构建为 `2.8.67-dev.9357288`，镜像、环境、版本 API 和页面制品一致，healthy/restart=0；V124、应用目录、会话表、两个 SDK、正式页面、受管完整技术验证和稳定日志通过。正式无 Token 页面经 Chromium 目视且 console 0；真实 CloudCC 服务端换票与登录用户业务验收、远程推送、UAT 和生产仍待独立授权。
 
 - `TASK-333 / FEAT-203` 已实现并更新本地开发环境：`DEMO示例应用 / demo-example / 1.0.0` 由幂等 repeatable migration 登记为已发布的 `PLATFORM_BASE + PLATFORM_ROUTE + initializationEngine=NONE` 应用，声明唯一可选 Semattice 依赖但不创建运行连接；示例页只读取目录 API 并展示一个 `ApplicationConfiguration` 对象，Provider 全参数明确为未写入/未测试参考。实现提交 `62ad71d4` 与迁移顺序修订 `5f6ce44a` 已进入本地 `main`，未推远程。后端 2 项、package、前端聚焦 3 文件/15 项、全量 57 文件/312 项、production build 和 diff check 通过。backend/frontend 运行 `2.8.67-dev.5f6ce44 / 5f6ce44a`，镜像/容器/API 指纹一致、healthy/restart=0；Flyway repeatable、数据库对象、HTTPS 路由 200、运行 bundle 文案与匿名 API 401 通过。浏览器无本地平台登录态，登录态列表/详情/示例页待 HUMAN；UAT/生产未修改。
 

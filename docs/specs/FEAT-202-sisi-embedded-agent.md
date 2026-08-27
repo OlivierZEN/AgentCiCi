@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-202
 title: 思思嵌入式智能应用
-status: implementation
+status: implemented
 owner_role: fullstack-agent
 task_ids: TASK-332
 related_decisions: FEAT-032,FEAT-179,FEAT-197
 related_issues: none
-updated_at: 2026-08-27T09:45:00Z
+updated_at: 2026-08-27T11:54:55Z
 updated_by: codex
 ---
 
@@ -129,3 +129,4 @@ updated_by: codex
 - 2026-08-27：用户确认定位、CloudCC 身份模型、统一 SDK、完整多模态范围、固定名称形象、视觉探针 B/C 组合及最终 north-star mock。
 - 2026-08-27：进入实现，目标为本地生产可用代码和技术验证；UAT/生产发布仍需独立授权。
 - 2026-08-27：实现完成并通过 PostgreSQL V124/Embed 身份链集成测试、后端聚焦测试、前端全量测试与构建、SDK 语法和 Chromium 页面/408px 浮窗交互验收；等待归并本地 `main` 后更新统一开发环境。
+- 2026-08-27：实现提交 `93572887` 已进入本地 `main` 并构建为 backend/frontend `2.8.67-dev.9357288`；V124、应用目录、SDK、正式页面、运行指纹、完整本地技术验证和稳定日志通过。真实 CloudCC 宿主换票与业务验收、远程推送及 UAT/生产发布继续作为独立授权门禁。

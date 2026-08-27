@@ -1,12 +1,19 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-08-27T11:21:49Z
+updated_at: 2026-08-27T11:54:55Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-27 TASK-332 本地开发环境
+
+- AgentCiCi backend/frontend 从本地 `main@935728872674` 以受管 release Dockerfile 构建为 `2.8.67-dev.9357288`；镜像 ID 为 `sha256:a2471ce5fe9e6cf7fd9b5ef255dee308a428faf195eccd156418f0fda38698ed` / `sha256:020a61966c716fdd5f157126dfb1cd1d65b9835a997559c4df2afea8a7a48ce8`，镜像标签、容器环境、backend 版本 API 和前端带版本资源一致。
+- 仅使用现有受管 Compose 依次 `--no-deps --force-recreate backend` 与 `cici-frontend`；两容器 healthy/restart=0，V124 `sisi embedded agent`、应用目录、会话表、稳定/版本 SDK 和正式页面回读通过。20 秒稳定窗口 backend severe=0、frontend HTTP 5xx/severe=0。
+- PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak、Nginx、Semattice 和 DevAutopilot 未重建且 restart=0；直接执行受管 `scripts/verify.sh` 已通过完整基础设施、隔离、TLS、OIDC、健康/版本与匿名鉴权门禁。
+- 标准 `./stack version/status/up` 继续被既有 Semattice 基础版本漂移 `config=1.0.7 / repository=1.0.8` 失败关闭；本任务未修改 local-stack 或 Semattice 仓库。浏览器正式路由无 Token 边界和 console 通过，真实 CloudCC 宿主换票与登录用户业务验收待 HUMAN。远程、UAT、生产、ACR 和 tag 均未修改。
 
 ## 2026-08-27 TASK-333 本地开发环境
 
