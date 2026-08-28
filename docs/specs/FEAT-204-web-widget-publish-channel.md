@@ -32,6 +32,7 @@ Agent Builder 已有独立“发布渠道”页签，但 Web 浮窗仍只有占�
 - `publishConfigs.web`：稳定 `widgetKey`、允许来源、`runAsUserId`、显示名称、启动文案、Token TTL、每分钟限额和默认折叠状态。
 - Agent Builder Web 浮窗配置表单、状态摘要、受控预览、安装代码和复制动作。
 - `GET /public/web-widgets/{widgetKey}` 与 `POST /public/web-widgets/{widgetKey}/tokens`。
+- 产品 Nginx 将 `/public/**` 明确代理到 backend，避免 GET 被 SPA fallback 吞掉、POST 返回静态站点 405。
 - 公开端点只解析启用的 `web` 渠道配置，要求 Agent 启用且存在已发布版本。
 - 校验请求来源、运行成员 ACTIVE、该成员对目标 Agent 具备 RUN 权限；使用 Redis 进行按 widget/IP 的分钟限流，Redis 不可用时失败关闭。
 - 短时 Token 仅含 `chat:read/chat:write`，来源为 `website`，访客 ID 使用浏览器生成并受长度/格式约束；不授予附件、语音或外部写权限。

@@ -34,6 +34,7 @@ updated_by: codex
 - `org3gxskla32gln3bvop` 已有 `sales-agent / 售前跟进 Agent`，当前无已发布版本，渠道为 `dingtalk,wechat`。
 - `FEAT-202` 已交付 `sisi@1.0.0.js`、`/embed/sisi` 和短时 Embed Token 会话链路；外部受信宿主仍必须用服务端 API Key 换票。
 - Agent Builder 后端已按 Agent/渠道保存 `publishConfigs`，Web UI 当前仍是“配置页即将开放”占位。
+- 本地首次部署验收发现前端 Nginx 未代理 `/public/**`：GET 回落为 SPA HTML、POST 为 405；已纳入本任务修复并要求真实端点复验。
 
 ## 下一步
 
