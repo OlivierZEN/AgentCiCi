@@ -822,7 +822,7 @@ export default function PlatformModelsPage() {
                                   ) : null}
                                   <button
                                     type="button"
-                                    className="model-row-icon-btn"
+                                    className="cici-product-icon-button model-row-icon-btn"
                                     title="从平台已选模型移除"
                                     onClick={() => void toggleSelectedModel(name)}
                                   >

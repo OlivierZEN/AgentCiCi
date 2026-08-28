@@ -4613,7 +4613,7 @@ export default function AgentBuilderShell({
                         </button>
                         <button
                           type="button"
-                          className="cici-builder-resource__icon-btn"
+                          className="cici-product-icon-button cici-builder-resource__icon-btn"
                           onClick={() => removeSkillBinding(binding.skillCode)}
                           aria-label="移除"
                         >
@@ -4658,7 +4658,7 @@ export default function AgentBuilderShell({
                         <div className="cici-builder-resource__row-actions">
                           <button
                             type="button"
-                            className="cici-builder-resource__icon-btn"
+                            className="cici-product-icon-button cici-builder-resource__icon-btn"
                             onClick={() => toggleCollectionValue("knowledgeBaseIds", id)}
                             aria-label="移除"
                           >
@@ -4737,7 +4737,7 @@ export default function AgentBuilderShell({
                           <span className="cici-builder-badge">{level}</span>
                           <button
                             type="button"
-                            className="cici-builder-resource__icon-btn"
+                            className="cici-product-icon-button cici-builder-resource__icon-btn"
                             onClick={() => toggleCollectionValue("toolIds", id)}
                             aria-label="移除"
                           >

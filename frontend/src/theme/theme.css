@@ -446,8 +446,8 @@
 
 :root[data-theme] .cici-composer__mic {
   color: var(--theme-text-secondary);
-  background: var(--theme-surface-muted);
-  border-color: var(--theme-line);
+  background: transparent;
+  border-color: transparent;
 }
 
 :root[data-theme] .cici-workbench__send-btn {
@@ -648,7 +648,12 @@
   caret-color: var(--theme-accent);
 }
 
-:root[data-theme] .customer-workbench__composer-icon,
+:root[data-theme] .customer-workbench__composer-icon {
+  color: var(--theme-accent-strong);
+  background: transparent;
+  border-color: transparent;
+}
+
 :root[data-theme] .customer-workbench__send {
   color: var(--theme-accent-strong);
   background: var(--theme-accent-soft);
@@ -2159,6 +2164,19 @@
   color: #ffffff;
   background: var(--theme-accent);
   border-color: var(--theme-accent);
+}
+
+/* Shared bare-icon invariant: component themes may change icon color, never add a background tile. */
+.cici-product-icon-button,
+.cici-product-icon-button:hover:not(:disabled),
+.cici-product-icon-button:focus,
+.cici-product-icon-button:focus-visible,
+.cici-product-icon-button:active,
+.cici-product-icon-button[aria-pressed="true"],
+.cici-product-icon-button.is-active,
+.cici-product-icon-button.is-recording {
+  background: transparent !important;
+  background-image: none !important;
 }
 
 :root[data-theme="galaxy"] .admin-main .embed-apps-primary,

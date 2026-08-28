@@ -192,8 +192,8 @@ body:has(.sisi-shell) {
 .sisi-composer__input::placeholder { color: #a29a8d; }
 .sisi-composer__tools { display: flex; align-items: center; gap: 3px; }
 .sisi-composer__tools > button:not(.sisi-send) { width: 31px; height: 31px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; cursor: pointer; }
-.sisi-composer__tools > button:hover:not(:disabled) { background: var(--sisi-panel); }
-.sisi-composer__tools > button.is-active { color: var(--sisi-vermilion); background: #f8e9e4; }
+.sisi-composer__tools > button:hover:not(:disabled) { background: transparent; color: var(--sisi-gold); }
+.sisi-composer__tools > button.is-active { color: var(--sisi-vermilion); background: transparent; }
 .sisi-composer__tools button:disabled { cursor: not-allowed; opacity: .38; }
 .sisi-composer__hint { margin-left: 5px; flex: 1; color: #9b9388; font-size: 10px; }
 .sisi-send { width: 33px; height: 33px; flex: 0 0 33px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 10px; color: var(--sisi-card) !important; background: var(--sisi-gold); cursor: pointer; line-height: 0; }

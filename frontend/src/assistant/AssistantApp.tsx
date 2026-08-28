@@ -4927,7 +4927,7 @@ export default function AssistantApp() {
                         <div className="cici-workbench__composer-actions">
                           <button
                             type="button"
-                            className={`cici-composer__mic${listening ? " cici-composer__mic--on" : ""}`}
+                            className={`cici-product-icon-button cici-composer__mic${listening ? " cici-composer__mic--on" : ""}`}
                             onClick={() => (listening ? stopSpeechInput() : startSpeechInput())}
                             disabled={!speechSupported}
                             title={listening ? "结束语音并生成文字" : "开始语音输入"}
@@ -5667,7 +5667,7 @@ export default function AssistantApp() {
                   />
                   <button
                     type="button"
-                    className="cici-composer__mic"
+                    className="cici-product-icon-button cici-composer__mic"
                     onClick={() => uploadInputRef.current?.click()}
                     disabled={chatLoading || !activeConversation}
                     title="选择图片"
@@ -5679,7 +5679,7 @@ export default function AssistantApp() {
                   </button>
                   <button
                     type="button"
-                    className={`cici-composer__mic${listening ? " cici-composer__mic--on" : ""}`}
+                    className={`cici-product-icon-button cici-composer__mic${listening ? " cici-composer__mic--on" : ""}`}
                     onClick={() => (listening ? stopSpeechInput() : startSpeechInput())}
                     disabled={!speechSupported || !activeConversation}
                     title={listening ? "结束语音并生成文字" : "开始语音输入"}

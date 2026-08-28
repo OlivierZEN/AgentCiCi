@@ -1099,7 +1099,7 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
           <div className="customer-workbench__composer-actions">
             <button
               type="button"
-              className={`customer-workbench__composer-icon${listening ? " is-recording" : ""}`}
+              className={`cici-product-icon-button customer-workbench__composer-icon${listening ? " is-recording" : ""}`}
               onClick={() => void startVoice()}
               aria-label={listening ? "停止语音输入" : "语音输入"}
               disabled={!speechSupported || assistantReplying}

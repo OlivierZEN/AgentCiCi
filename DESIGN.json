@@ -274,7 +274,7 @@
       "iconControls": [
         "Product toolbar, panel-header, inline utility, and dialog-close icons must reuse the shared cici-product-icon-button primitive instead of styling a raw button ad hoc.",
         "Bare icon buttons must reset inherited native/global button chrome in default, hover, focus, focus-visible, active, pressed, and selected states: no border, no box shadow, no raised transform, no gradient, and no browser appearance.",
-        "Bare icon buttons may use one subtle warm-ivory hover/focus background and a restrained keyboard-only outline; they must never render a second nested frame or persistent selected background.",
+        "Bare icon buttons stay transparent in default, hover, focus, active, pressed, selected, listening, and recording states across every public, authenticated, admin, and platform page; pointer feedback changes only the icon color, while keyboard focus may add one restrained outline.",
         "Mode switches must reuse the shared cici-product-mode-switch primitive. The container stays transparent and frameless; only the direct mode buttons may carry one intentional state layer.",
         "Desktop screenshot review for new product pages must inspect computed styles for toolbar and icon buttons and reject inherited box-shadow or hover translateY."
       ],
@@ -291,7 +291,7 @@
         "Modal windows use a blocking overlay, role=dialog, aria-modal=true, a labelled heading, an opaque warm ivory surface, and a fixed footer when actions are present.",
         "Modal footers use secondary buttons for cancel or close actions and primary champagne-gold buttons for confirm or save actions.",
         "Close controls are quiet icon buttons without bordered button blocks.",
-      "The top-right close x must render as a bare icon or glyph with no visible border, no bordered square or circle, and no button chrome; hover and focus may use a subtle tinted background but must remain borderless."
+      "The top-right close x must render as a bare icon or glyph with no visible border, no bordered square or circle, and no button chrome; hover changes only icon color, while keyboard focus may add one restrained outline on a transparent background."
     ],
     "managementForms": [
       "Creation and inspection must remain separate in authenticated management pages: lists and detail canvases are for scanning and viewing, while create and edit flows open an explicit modal unless a feature spec requires a dedicated route.",

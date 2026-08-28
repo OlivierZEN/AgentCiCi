@@ -486,7 +486,7 @@ export function IntegrationSettingsPage({ token, apiBase, title, subtitle, class
               <div className="integration-card__actions">
                 <button
                   type="button"
-                  className="integration-icon-btn"
+                  className="cici-product-icon-button integration-icon-btn"
                   onClick={() => openEdit(app)}
                   aria-label="编辑应用配置"
                   title="编辑"

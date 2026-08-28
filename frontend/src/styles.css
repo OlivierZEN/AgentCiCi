@@ -2889,8 +2889,8 @@ button:disabled {
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--surface);
+  border: 0;
+  background: transparent;
   color: var(--text-muted);
   display: inline-flex;
   align-items: center;
@@ -2900,11 +2900,11 @@ button:disabled {
 }
 
 .icon-btn:hover:not(:disabled) {
-  background: var(--surface-2);
-  border-color: var(--border-strong);
+  background: transparent;
+  border-color: transparent;
   color: var(--text);
   transform: none;
-  box-shadow: var(--shadow);
+  box-shadow: none;
 }
 
 .icon-btn--primary {
@@ -8784,9 +8784,9 @@ h1,
 .model-row-icon-btn {
   width: 22px;
   height: 22px;
-  border-radius: 50%;
-  border: 1px solid #d8d8d8;
-  background: #fff;
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
   color: #555;
   font-size: 13px;
   display: inline-flex;
@@ -8797,7 +8797,7 @@ h1,
 }
 
 .model-row-icon-btn:hover:not(:disabled) {
-  background: #f4f4f4;
+  background: transparent;
   color: #222;
 }
 
@@ -15790,15 +15790,15 @@ td.skills-data-table__actions > * {
 
 .admin-main > .admin-page .model-row-icon-btn,
 .admin-main > .admin-page .integration-icon-btn {
-  border-color: var(--admin-line);
-  background: var(--admin-panel);
+  border-color: transparent;
+  background: transparent;
   color: var(--admin-muted);
 }
 
 .admin-main > .admin-page .model-row-icon-btn:hover:not(:disabled),
 .admin-main > .admin-page .integration-icon-btn:hover {
-  border-color: var(--admin-line-strong);
-  background: var(--admin-panel-2);
+  border-color: transparent;
+  background: transparent;
   color: var(--admin-accent-strong);
 }
 
@@ -19177,7 +19177,7 @@ td.skills-data-table__actions > * {
 
 .cici-product-icon-button:hover:not(:disabled),
 .cici-product-icon-button:focus-visible {
-  background: #faf4e8;
+  background: transparent;
   color: #876223;
 }
 
@@ -19813,7 +19813,7 @@ td.skills-data-table__actions > * {
 
 .skill-governance__icon-button:hover,
 .skill-governance__icon-button:focus-visible {
-  background: var(--platform-panel-2);
+  background: transparent;
   color: var(--platform-accent-strong);
 }
 
@@ -21515,7 +21515,7 @@ td.skills-data-table__actions > * {
   cursor: pointer;
 }
 
-.system-api-icon-button:hover { color: var(--platform-heading); background: var(--platform-panel-2); }
+.system-api-icon-button:hover { color: var(--platform-heading); background: transparent; }
 
 .system-api-drawer__body {
   flex: 1;

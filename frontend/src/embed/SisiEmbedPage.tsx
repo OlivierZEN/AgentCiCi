@@ -401,9 +401,9 @@ export default function SisiEmbedPage() {
           <span>{loading ? "身份校验中" : notice}</span>
         </div>
         <div className="sisi-header__actions">
-          {mode === "page" && <button className="sisi-icon-button" onClick={() => setLeftOpen((value) => !value)} title="切换业务侧栏"><PanelLeftClose size={17} /></button>}
-          <button className="sisi-icon-button" onClick={() => postHost("embed:expand")} title="展开"><Maximize2 size={17} /></button>
-          {mode === "float" && <button className="sisi-icon-button" onClick={() => postHost("embed:close")} title="关闭"><X size={18} /></button>}
+          {mode === "page" && <button className="cici-product-icon-button sisi-icon-button" onClick={() => setLeftOpen((value) => !value)} title="切换业务侧栏"><PanelLeftClose size={17} /></button>}
+          <button className="cici-product-icon-button sisi-icon-button" onClick={() => postHost("embed:expand")} title="展开"><Maximize2 size={17} /></button>
+          {mode === "float" && <button className="cici-product-icon-button sisi-icon-button" onClick={() => postHost("embed:close")} title="关闭"><X size={18} /></button>}
         </div>
       </header>
 
@@ -452,9 +452,9 @@ export default function SisiEmbedPage() {
               <div className="sisi-composer__tools">
                 {mode === "page" && <>
                   <input ref={fileRef} type="file" accept={ACCEPT} multiple hidden onChange={upload} />
-                  <button onClick={() => fileRef.current?.click()} disabled={!session || sending} title="上传附件"><Paperclip size={18} /></button>
+                  <button className="cici-product-icon-button" onClick={() => fileRef.current?.click()} disabled={!session || sending} title="上传附件"><Paperclip size={18} /></button>
                 </>}
-                <button onClick={() => void toggleVoice()} disabled={!session || sending} className={listening ? "is-active" : ""} title="语音输入">{listening ? <CircleStop size={18} /> : <Mic size={18} />}</button>
+                <button onClick={() => void toggleVoice()} disabled={!session || sending} className={`cici-product-icon-button${listening ? " is-active" : ""}`} title="语音输入">{listening ? <CircleStop size={18} /> : <Mic size={18} />}</button>
                 <span className="sisi-composer__hint">Enter 发送 · Shift+Enter 换行</span>
                 <button className="sisi-send" onClick={() => void send()} disabled={!draft.trim() || !session || sending} title="发送">{sending ? <LoaderCircle className="spin" size={18} /> : <ArrowUp size={18} />}</button>
               </div>

@@ -4857,7 +4857,7 @@
 }
 
 .cici-builder-resource__icon-btn:hover {
-  background: rgba(244, 91, 102, 0.12);
+  background: transparent;
   color: #c1353f;
 }
 
@@ -6163,13 +6163,12 @@
   color: var(--text-tertiary);
 }
 .cici-composer__mic:hover {
-  background: var(--surface-hover);
+  background: transparent;
   color: var(--text-secondary);
 }
 .cici-composer__mic--on {
-  background: var(--badge);
-  color: #fff;
-  animation: pulse 1.5s infinite;
+  background: transparent;
+  color: var(--badge);
 }
 @keyframes pulse {
   0%,100% { box-shadow: 0 0 0 0 rgba(232,86,79,0.4); }
@@ -7637,15 +7636,15 @@
   width: 32px;
   height: 32px;
   border-radius: 10px;
-  border: 1px solid rgba(185, 150, 82, 0.24);
-  background: #fffdf8;
+  border: 0;
+  background: transparent;
   color: rgba(91, 82, 66, 0.72);
   box-shadow: none;
 }
 
 .cici-workbench__composer .cici-composer__mic:hover {
-  background: rgba(244, 231, 199, 0.38);
-  border-color: rgba(185, 150, 82, 0.42);
+  background: transparent;
+  border-color: transparent;
   color: var(--workbench-ink);
 }
 
@@ -13444,7 +13443,7 @@
 }
 
 .cici-builder-resource__icon-btn:hover {
-  background: #fff3ef;
+  background: transparent;
   color: #b42318;
 }
 
@@ -14302,7 +14301,7 @@
 
 .customer-workbench .cici-product-icon-button:hover:not(:disabled),
 .customer-workbench .cici-product-icon-button:focus-visible {
-  background: #faf4e8;
+  background: transparent;
   color: #876223;
 }
 
@@ -15766,13 +15765,13 @@
   padding: 0;
   border-radius: 999px;
   border-color: transparent;
-  background: #f7f0e5;
+  background: transparent;
   color: #6b604f;
 }
 
 .customer-workbench__composer .customer-workbench__composer-icon.is-recording {
-  background: #bd842a;
-  color: #fffdf8;
+  background: transparent;
+  color: #bd842a;
 }
 
 .customer-workbench__composer .customer-workbench__composer-icon:disabled {
@@ -18236,13 +18235,17 @@
 }
 
 .ai-table-list__theme-trigger:hover,
-.ai-table-list__tool-button:hover,
+.ai-table-list__tool-button:hover {
+  color: var(--theme-accent-strong);
+  background: var(--theme-surface-muted);
+}
+
 .ai-table-list__tool-icon:hover,
 .ai-table-list__help:hover,
 .ai-table-list__objects-heading button:hover,
 .ai-table-list__detail-head > button:hover {
   color: var(--theme-accent-strong);
-  background: var(--theme-surface-muted);
+  background: transparent;
 }
 
 .ai-table-list__theme-swatch {
@@ -18828,7 +18831,7 @@
 
 .ai-table-list__action-cell button:hover {
   color: var(--theme-accent-strong);
-  background: var(--theme-surface-muted);
+  background: transparent;
 }
 
 .ai-table-list__status {

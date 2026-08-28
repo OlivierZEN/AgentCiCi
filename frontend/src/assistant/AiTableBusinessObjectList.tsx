@@ -273,13 +273,13 @@ export function AiTableBusinessObjectList() {
               </button>)}
             </div> : null}
           </div>
-          <button type="button" className="ai-table-list__help" aria-label="AI表格使用说明" title="AI表格为当前权限范围内的只读业务数据"><CircleHelp size={17} aria-hidden="true" /></button>
+          <button type="button" className="cici-product-icon-button ai-table-list__help" aria-label="AI表格使用说明" title="AI表格为当前权限范围内的只读业务数据"><CircleHelp size={17} aria-hidden="true" /></button>
         </div>
       </header>
 
       <div className="ai-table-list__layout">
         <aside className="ai-table-list__objects" aria-label="业务对象目录">
-          <div className="ai-table-list__objects-heading"><span>业务对象</span><button type="button" aria-label="业务对象说明" title="仅展示当前已发布应用模型中的对象"><CircleHelp size={14} aria-hidden="true" /></button></div>
+          <div className="ai-table-list__objects-heading"><span>业务对象</span><button type="button" className="cici-product-icon-button" aria-label="业务对象说明" title="仅展示当前已发布应用模型中的对象"><CircleHelp size={14} aria-hidden="true" /></button></div>
           <div className="ai-table-list__object-total"><Database size={15} aria-hidden="true" /><span>已发布应用对象</span><strong>{catalog?.objects.length ?? "—"}</strong></div>
           <nav>
             {catalogLoading ? <div className="ai-table-list__object-loading">正在读取对象目录…</div> : null}
@@ -302,7 +302,7 @@ export function AiTableBusinessObjectList() {
           </div>
 
           <div className="ai-table-list__filterline">
-            <div className="ai-table-list__search"><Search size={16} aria-hidden="true" /><input value={query} onChange={(event) => setQuery(event.target.value)} disabled={!activeObject || !searchSupported} placeholder={searchSupported ? `按${recordPage?.queryFieldLabel || activeObject?.searchFieldLabel || "已索引字段"}前缀搜索` : "该对象尚未配置可查询的文本索引"} aria-label={`搜索${activeObject?.label || "业务对象"}`} />{query ? <button type="button" onClick={() => setQuery("")} aria-label="清除搜索"><X size={14} aria-hidden="true" /></button> : null}</div>
+            <div className="ai-table-list__search"><Search size={16} aria-hidden="true" /><input value={query} onChange={(event) => setQuery(event.target.value)} disabled={!activeObject || !searchSupported} placeholder={searchSupported ? `按${recordPage?.queryFieldLabel || activeObject?.searchFieldLabel || "已索引字段"}前缀搜索` : "该对象尚未配置可查询的文本索引"} aria-label={`搜索${activeObject?.label || "业务对象"}`} />{query ? <button type="button" className="cici-product-icon-button" onClick={() => setQuery("")} aria-label="清除搜索"><X size={14} aria-hidden="true" /></button> : null}</div>
             <div className="ai-table-list__toolbar">
               <div className="ai-table-list__columns-picker">
                 <button type="button" className="ai-table-list__tool-button" onClick={() => setColumnMenuOpen((open) => !open)} disabled={!activeObject} aria-expanded={columnMenuOpen} aria-haspopup="menu"><Columns3 size={16} aria-hidden="true" />表头</button>
@@ -324,7 +324,7 @@ export function AiTableBusinessObjectList() {
               <tbody>
                 {recordPage?.records.map((record) => <tr key={record.id} onClick={() => setSelectedRecord(record)} className={selectedRecord?.id === record.id ? "is-open" : ""}>
                   {activeFields.map((field, index) => <td key={field.apiName} className={index === 0 ? "is-primary" : ""}>{formatValue(record.data[field.apiName])}</td>)}
-                  <td className="ai-table-list__action-cell"><button type="button" onClick={(event) => { event.stopPropagation(); setSelectedRecord(record); }} aria-label={`查看 ${record.id}`} title="查看详情"><ChevronRight size={16} aria-hidden="true" /></button></td>
+                  <td className="ai-table-list__action-cell"><button type="button" className="cici-product-icon-button" onClick={(event) => { event.stopPropagation(); setSelectedRecord(record); }} aria-label={`查看 ${record.id}`} title="查看详情"><ChevronRight size={16} aria-hidden="true" /></button></td>
                 </tr>)}
                 {!recordsLoading && !recordsError && activeObject && !recordPage?.records.length ? <tr><td className="ai-table-list__empty" colSpan={Math.max(2, activeFields.length + 1)}><FileWarning size={24} aria-hidden="true" /><strong>{appliedQuery ? "没有匹配的业务记录" : "当前权限范围内暂无业务记录"}</strong><span>{appliedQuery ? "可清除关键词后重新查询" : "记录创建或获授权后会在这里显示"}</span>{appliedQuery ? <button type="button" onClick={() => setQuery("")}>清除查询</button> : null}</td></tr> : null}
                 {recordsLoading ? <tr><td className="ai-table-list__empty" colSpan={Math.max(2, activeFields.length + 1)}><RefreshCw className="is-spinning" size={22} aria-hidden="true" /><strong>正在读取业务记录</strong><span>数据仍在当前用户的权限范围内加载</span></td></tr> : null}
@@ -333,12 +333,12 @@ export function AiTableBusinessObjectList() {
             </table>
           </div>
 
-          <footer className="ai-table-list__footer"><span>第 {page} 页{recordPage?.nextCursor ? " · 可继续加载" : " · 已到当前结果末页"}</span><div className="ai-table-list__pagination"><button type="button" onClick={goPrevious} disabled={page === 1} aria-label="上一页"><ChevronLeft size={15} aria-hidden="true" /></button><button type="button" className="is-active" aria-current="page">{page}</button><button type="button" onClick={goNext} disabled={!recordPage?.nextCursor || recordsLoading} aria-label="下一页"><ChevronRight size={15} aria-hidden="true" /></button></div></footer>
+          <footer className="ai-table-list__footer"><span>第 {page} 页{recordPage?.nextCursor ? " · 可继续加载" : " · 已到当前结果末页"}</span><div className="ai-table-list__pagination"><button type="button" className="cici-product-icon-button" onClick={goPrevious} disabled={page === 1} aria-label="上一页"><ChevronLeft size={15} aria-hidden="true" /></button><button type="button" className="is-active" aria-current="page">{page}</button><button type="button" className="cici-product-icon-button" onClick={goNext} disabled={!recordPage?.nextCursor || recordsLoading} aria-label="下一页"><ChevronRight size={15} aria-hidden="true" /></button></div></footer>
         </main>
       </div>
 
       {selectedRecord && activeObject ? <aside className="ai-table-list__detail" aria-label={`${selectedRecord.id}详情`}>
-        <div className="ai-table-list__detail-head"><div><span>记录详情</span><h3>{formatValue(selectedRecord.data[activeFields[0]?.apiName || ""])}</h3><small>{selectedRecord.id}</small></div><button type="button" onClick={() => setSelectedRecord(null)} aria-label="关闭详情"><X size={18} aria-hidden="true" /></button></div>
+        <div className="ai-table-list__detail-head"><div><span>记录详情</span><h3>{formatValue(selectedRecord.data[activeFields[0]?.apiName || ""])}</h3><small>{selectedRecord.id}</small></div><button type="button" className="cici-product-icon-button" onClick={() => setSelectedRecord(null)} aria-label="关闭详情"><X size={18} aria-hidden="true" /></button></div>
         <div className="ai-table-list__detail-body"><div className="ai-table-list__detail-status"><span className="ai-table-list__app-mark"><Database size={18} aria-hidden="true" /></span><div><strong>{activeObject.label}</strong><small>当前权限可读取字段</small></div></div><dl>{activeObject.fields.map((field) => <div key={field.apiName}><dt>{field.label}</dt><dd>{formatValue(selectedRecord.data[field.apiName])}</dd></div>)}</dl><div className="ai-table-list__detail-note"><CircleHelp size={15} aria-hidden="true" /><span>字段值仅来自当前成员被授权读取的真实业务记录。</span></div></div>
         <footer className="ai-table-list__detail-foot"><button type="button" onClick={() => setSelectedRecord(null)}>关闭</button></footer>
       </aside> : null}

@@ -436,7 +436,7 @@ export default function PlatformSystemApisPage() {
       {provider && selectedApi && !isDocs ? (
         <div className="system-api-drawer-layer" onMouseDown={() => navigate(providerPath(provider.code))}>
           <aside className="system-api-drawer" role="dialog" aria-modal="true" aria-labelledby="system-api-drawer-title" onMouseDown={(event) => event.stopPropagation()}>
-            <header className="system-api-drawer__head"><div><span>{provider.name} · API 速览</span><h2 id="system-api-drawer-title">{selectedApi.title}</h2><code>{selectedApi.id}</code><p>{selectedApi.summary}</p></div><button type="button" className="system-api-icon-button" aria-label="关闭 API 详情" onClick={() => navigate(providerPath(provider.code))}><X size={20} /></button></header>
+            <header className="system-api-drawer__head"><div><span>{provider.name} · API 速览</span><h2 id="system-api-drawer-title">{selectedApi.title}</h2><code>{selectedApi.id}</code><p>{selectedApi.summary}</p></div><button type="button" className="cici-product-icon-button system-api-icon-button" aria-label="关闭 API 详情" onClick={() => navigate(providerPath(provider.code))}><X size={20} /></button></header>
             <div className="system-api-drawer__body">
               <div className="system-api-drawer__route"><code className={`system-api-method is-${selectedApi.method.toLowerCase()}`}>{selectedApi.method}</code><code>{selectedApi.path}</code></div>
               {selectedApi.authGuide ? <section className="system-api-auth-summary"><span>鉴权结论</span><strong>{systemApiKeycloakVerdict(selectedApi)}</strong><p>请使用 {selectedApi.authGuide.acceptedToken}。新应用登记、Audience、Scope 和公司上下文要求见完整调用文档。</p></section> : null}
@@ -454,7 +454,7 @@ export default function PlatformSystemApisPage() {
       {applicationForm ? (
         <div className="tenant-lifecycle__modal-backdrop platform-modal-scope" role="presentation" onMouseDown={() => !applicationBusy && setApplicationForm(null)}>
           <div className="tenant-lifecycle__modal system-api-application-modal" role="dialog" aria-modal="true" aria-labelledby="system-api-application-title" onMouseDown={(event) => event.stopPropagation()}>
-            <div className="tenant-lifecycle__modal-head"><div><p className="platform-section-label">Keycloak Trust</p><h2 id="system-api-application-title" className="platform-console__heading">{applications.some((item) => item.appCode === applicationForm.appCode) ? "编辑受信应用" : "登记受信应用"}</h2></div><button type="button" className="system-api-icon-button" onClick={() => setApplicationForm(null)} disabled={applicationBusy} aria-label="关闭"><X size={19} /></button></div>
+            <div className="tenant-lifecycle__modal-head"><div><p className="platform-section-label">Keycloak Trust</p><h2 id="system-api-application-title" className="platform-console__heading">{applications.some((item) => item.appCode === applicationForm.appCode) ? "编辑受信应用" : "登记受信应用"}</h2></div><button type="button" className="cici-product-icon-button system-api-icon-button" onClick={() => setApplicationForm(null)} disabled={applicationBusy} aria-label="关闭"><X size={19} /></button></div>
             <div className="tenant-lifecycle__modal-body">
               <p className="skills-data-table__summary system-api-application-modal__intro">这里只登记公开标识与授权范围，不保存 Keycloak Client Secret。应用代码来自平台治理，不由运行时请求传入。</p>
               <div className="platform-console__form-grid system-api-application-form">

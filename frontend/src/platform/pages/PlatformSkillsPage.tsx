@@ -992,7 +992,7 @@ export default function PlatformSkillsPage() {
                 <td>v{skill.currentTemplateVersionNo ?? 1}<span className="skill-governance__cell-note">{skill.versionCount} 个版本</span></td>
                 <td><span className={`skill-governance__status ${needsReview ? "is-warning" : "is-success"}`}>{needsReview ? "待检查" : skill.enabled ? "已启用" : "已停用"}</span></td>
                 <td>{riskLabel(skill.riskLevel)}</td><td>{skill.agentBindingCount}</td><td>{formatTs(skill.updatedAt)}</td>
-                <td><button type="button" className="skill-governance__icon-button" aria-label={`查看 ${skill.name}`} onClick={(event) => { event.stopPropagation(); navigate(`/platform/skills/${skill.id}`); }}><MoreHorizontal size={18} /></button></td>
+                <td><button type="button" className="cici-product-icon-button skill-governance__icon-button" aria-label={`查看 ${skill.name}`} onClick={(event) => { event.stopPropagation(); navigate(`/platform/skills/${skill.id}`); }}><MoreHorizontal size={18} /></button></td>
               </tr>;
             })}</tbody>
           </table>
@@ -1018,7 +1018,7 @@ export default function PlatformSkillsPage() {
       {isSkillDrawerOpen && selectedSkill ? (
         <div className="skill-governance__drawer-layer" onMouseDown={() => navigate("/platform/skills")}>
           <aside className="skill-governance__drawer" role="dialog" aria-modal="true" aria-labelledby="skill-drawer-title" onMouseDown={(event) => event.stopPropagation()}>
-            <header className="skill-governance__drawer-head"><div><span>标准技能速览</span><h2 id="skill-drawer-title">{selectedSkill.name}</h2><p>{selectedSkill.description}</p></div><button type="button" className="skill-governance__icon-button" aria-label="关闭详情" onClick={() => navigate("/platform/skills")}><X size={20} /></button></header>
+            <header className="skill-governance__drawer-head"><div><span>标准技能速览</span><h2 id="skill-drawer-title">{selectedSkill.name}</h2><p>{selectedSkill.description}</p></div><button type="button" className="cici-product-icon-button skill-governance__icon-button" aria-label="关闭详情" onClick={() => navigate("/platform/skills")}><X size={20} /></button></header>
             <div className="skill-governance__drawer-body">
               <div className="skill-governance__drawer-summary"><span className={`skill-governance__status ${selectedSkill.enabled ? "is-success" : "is-warning"}`}>{selectedSkill.enabled ? "已启用" : "已停用"}</span><span>v{selectedSkill.currentTemplateVersionNo ?? 1} 当前版本</span><span>{riskLabel(selectedSkill.riskLevel)}</span><span>{selectedSkill.agentBindingCount} 个 Agent</span><span>{selectedSkill.impact?.publishedWorkflowCount ?? 0} 个已发布工作流</span></div>
               <nav className="skill-governance__text-tabs skill-governance__drawer-tabs" aria-label="技能速览内容">

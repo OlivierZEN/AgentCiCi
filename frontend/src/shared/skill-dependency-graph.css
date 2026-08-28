@@ -71,7 +71,7 @@
 
 .skill-dag__icon-button:hover:not(:disabled),
 .skill-dag__icon-button:focus-visible {
-  background: var(--skill-dag-surface-muted);
+  background: transparent;
   color: var(--skill-dag-accent);
 }
 
