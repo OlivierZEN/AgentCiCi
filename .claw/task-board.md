@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-28T07:51:00Z
+updated_at: 2026-08-28T08:35:14Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,20 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-335 - Web 浮窗流式回复空白修复
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `frontend-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-204-web-widget-publish-channel.md`
+- task_status_path: `.claw/tasks/TASK-335.md`
+- blocked_by: `none`
+- related_issues: `ISSUE-2026-08-28-web-widget-empty-stream`
+- scope_files: `Sisi Embed SSE delta 文本契约、兼容解析、回归测试、本地 main 制品与真实官网浮窗验证`
+- completion_evidence: `后端规范负载为 {text}；前端聚焦 4 项、全量 58 文件/318 项、production build、域名/diff 门禁通过；本地运行回归待执行。`
+- next_action: `提交本地 main，从同一提交重建 backend/frontend，并在官网浮窗发送截图原问题验证非空回复与执行成功记录。`
 
 ### TASK-334 - Web 浮窗发布渠道与官网售前智能体
 

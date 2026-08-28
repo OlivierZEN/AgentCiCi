@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-08-27T03:25:54Z
+updated_at: 2026-08-28T08:35:14Z
 updated_by: codex
 status: active
 ---
@@ -27,6 +27,12 @@ status: active
 - Status: resolved in production CloudCC component; AgentCiCi production stays on `2.8.66`, backend alias awaits the normal `2.8.67` release.
 
 ## Open Issues
+
+- ISSUE-2026-08-28-web-widget-empty-stream:
+  - Symptom: 官网 Web 浮窗提交问题后完成请求，但 assistant 气泡显示“本次未返回文字内容。”。
+  - Verified root cause: AgentCiCi 后端规范 `delta` 事件发送 `{ "text": "..." }`；`SisiEmbedPage.consumeStream` 只读取 `content` 或 `delta` 字段，所有真实模型文本增量被忽略，最终空消息触发 `ChatMarkdown` 兜底。
+  - Resolution progress: TASK-335 增加规范 `text` 字段解析并保留纯文本、`content`、`delta` 兼容；聚焦 4 项、前端全量 58 文件/318 项、production build、域名与 diff 门禁通过。
+  - Status: code verified; local `cici.localhost` runtime and real website conversation pending.
 
 - ISSUE-2026-08-17-devautopilot-keyword-routing:
   - Symptom: UAT 产品经理收到明确项目创建请求后没有写入；固定模型本地测试中，“创建项目”被回执门禁拦截，而“帮我建一个项目”反而触发只读项目查询并生成无冒号确认草案。

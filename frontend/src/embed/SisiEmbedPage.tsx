@@ -22,6 +22,7 @@ import { ChangeEvent, KeyboardEvent, useCallback, useEffect, useMemo, useRef, us
 import ChatMarkdown from "../components/ChatMarkdown";
 import { useAsrVoiceInput } from "../shared/useAsrVoiceInput";
 import { exactConfirmation } from "./sisiEmbedContract";
+import { streamDeltaText } from "./sisiEmbedStream";
 import "./sisi-embed.css";
 
 type Envelope<T> = { success?: boolean; data?: T; message?: string };
@@ -259,7 +260,7 @@ export default function SisiEmbedPage() {
         let payload: unknown = raw;
         try { payload = JSON.parse(raw); } catch { /* delta can be plain text */ }
         if (eventName === "delta") {
-          const delta = typeof payload === "string" ? payload : text((payload as Record<string, unknown>)?.content ?? (payload as Record<string, unknown>)?.delta);
+          const delta = streamDeltaText(payload);
           setMessages((current) => current.map((item) => item.id === assistantId ? { ...item, content: item.content + delta } : item));
         } else if (eventName === "tool_call" || eventName === "tool_result") {
           const details = payload as Record<string, unknown>;

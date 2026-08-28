@@ -4,10 +4,10 @@ feature_id: FEAT-204
 title: Web 浮窗发布渠道与官网售前智能体
 status: verified
 owner_role: fullstack-agent
-task_ids: TASK-334
+task_ids: TASK-334,TASK-335
 related_decisions: FEAT-202
-related_issues: none
-updated_at: 2026-08-28T07:51:00Z
+related_issues: ISSUE-2026-08-28-web-widget-empty-stream
+updated_at: 2026-08-28T08:35:14Z
 updated_by: codex
 ---
 
@@ -105,10 +105,18 @@ Agent Builder 已有独立“发布渠道”页签，但 Web 浮窗仍只有占�
 7. 本地 backend/frontend 均从 AgentCiCi 本地 `main` 同一提交构建，`https://cici.localhost/` 路由、健康、restart、版本 API、镜像标签和页面制品一致。
 8. 远程 main、UAT 与生产保持不变。
 
+## 流式响应兼容要求
+
+- Embed 页面必须以 AgentCiCi 后端规范 `delta` 负载 `{ "text": "..." }` 作为首选文本字段。
+- 为兼容历史代理实现，可继续接受纯文本、`content` 和 `delta`，但不得用兼容字段取代服务端规范。
+- 流结束后若真实增量存在，assistant 气泡必须展示完整正文；“本次未返回文字内容。”只用于服务端确实未产生任何文本的场景。
+- 回归必须包含解析单测、本地正式制品和官网真实模型问答，不能只以 curl 收到 SSE 作为前端成功证据。
+
 ## 实现进展
 
 - 2026-08-28：完成现状扫描和安全方案；进入实现。
 - 2026-08-28：实现、自动化、本地 main、V125、demo 发布、公开安全负例、真实模型会话和浏览器验收通过；进入用户 review。demo 现用唯一 ACTIVE OWNER，非 demo 发布前必须替换为专用 RUN-only 成员。
+- 2026-08-28：用户回报官网浮窗回复为空；定位为 Embed 消费方漏读规范 `{text}`，TASK-335 已完成代码与自动化修复，等待本地正式制品真实对话回归。
 
 ## 交接说明
 
