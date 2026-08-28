@@ -185,8 +185,10 @@ public class SisiEmbedRuntimeService {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("sessionId", session.getChatSessionId());
         data.put("appCode", "sisi");
-        data.put("productName", "思思");
+        String assistantName = String.valueOf(token.context().getOrDefault("assistantName", "")).trim();
+        data.put("productName", assistantName.isBlank() ? "思思" : assistantName);
         data.put("agentId", session.getAgentId());
+        data.put("source", token.source());
         data.put("externalTenantId", session.getExternalTenantId());
         data.put("externalUserId", session.getExternalUserId());
         data.put("parentOrigin", token.parentOrigin());

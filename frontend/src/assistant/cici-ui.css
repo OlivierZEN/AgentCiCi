@@ -13883,6 +13883,140 @@
   color: #876223;
 }
 
+.admin-main > .cici-builder--full .cici-builder-publish-form--web {
+  align-items: start;
+}
+
+.admin-main > .cici-builder--full .cici-builder-field--wide {
+  grid-column: 1 / -1;
+}
+
+.admin-main > .cici-builder--full .cici-builder-field > small {
+  color: #7c6d59;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.cici-builder-web-key-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.cici-builder-inline-action {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(185, 150, 82, 0.56);
+  border-radius: 8px;
+  background: #fffdf8;
+  color: #876223;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cici-builder-inline-action:hover,
+.cici-builder-inline-action:focus-visible {
+  border-color: #b99652;
+  color: #5f4319;
+  outline: 2px solid rgba(185, 150, 82, 0.22);
+  outline-offset: 1px;
+}
+
+.cici-builder-web-preview {
+  position: relative;
+  min-height: 270px;
+  padding: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(222, 210, 187, 0.72);
+  border-radius: 10px;
+  background: #f8f1e5;
+}
+
+.cici-builder-web-preview__window {
+  width: min(330px, calc(100% - 16px));
+  margin-left: auto;
+  padding: 0 16px 18px;
+  border: 1px solid rgba(185, 150, 82, 0.44);
+  border-radius: 14px;
+  background: #fffdf8;
+  box-shadow: 0 12px 30px rgba(67, 49, 22, 0.12);
+}
+
+.cici-builder-web-preview__window header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 50px;
+  border-bottom: 1px solid rgba(222, 210, 187, 0.62);
+}
+
+.cici-builder-web-preview__window header span,
+.cici-builder-web-preview > button span {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 9px;
+  background: #9b4b38;
+  color: #fff8eb;
+  font-weight: 800;
+}
+
+.cici-builder-web-preview__window p {
+  margin: 18px 0 10px;
+  color: #2b2217;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.cici-builder-web-preview__window small {
+  color: #7c6d59;
+  font-size: 11px;
+}
+
+.cici-builder-web-preview > button {
+  display: flex;
+  min-height: 46px;
+  margin: 14px 0 0 auto;
+  padding: 0 15px 0 8px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(185, 150, 82, 0.52);
+  border-radius: 23px;
+  background: #fffdf8;
+  color: #2b2217;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cici-builder-publish-install__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.cici-builder-publish-install__head p {
+  margin-top: 5px;
+}
+
+.cici-builder-publish-install pre {
+  max-height: 320px;
+  margin: 14px 0 0;
+  padding: 14px;
+  overflow: auto;
+  border: 1px solid rgba(222, 210, 187, 0.72);
+  border-radius: 8px;
+  background: #2b261f;
+  color: #f8f1e5;
+  font-size: 11px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
 .admin-main > .cici-builder--full .cici-builder-avatar-row {
   min-height: 58px;
   align-items: center;

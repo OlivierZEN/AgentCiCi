@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
+import WebsiteSalesWidget from "./WebsiteSalesWidget";
 import "./agentcici-website.css";
 
 type Locale = "zh" | "en";
@@ -749,6 +750,7 @@ export default function AgentCiciWebsite() {
           <a href={copy.shared.platformLoginHref}>{copy.shared.platformLoginLabel}</a>
         </div>
       </footer>
+      <WebsiteSalesWidget />
     </main>
   );
 }

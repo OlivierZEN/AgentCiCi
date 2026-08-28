@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-27T11:54:55Z
+updated_at: 2026-08-28T06:51:53Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,19 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-334 - Web 浮窗发布渠道与官网售前智能体
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-204-web-widget-publish-channel.md`
+- task_status_path: `.claw/tasks/TASK-334.md`
+- blocked_by: `none`
+- scope_files: `Agent Builder Web 浮窗配置、短时公开访客 Token、来源与限流门禁、统一 SDK、官网挂载、目标租户发布与本地全栈验收`
+- completion_evidence: `pending`
+- next_action: `实现 Web 浮窗配置和公开访客令牌闭环，补齐测试后将 sales-agent 发布到本地 demo 租户并从本地 main 更新 cici.localhost。`
 
 ### TASK-333 - 创建 DEMO 单页单对象完整配置示例
 

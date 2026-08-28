@@ -20,6 +20,8 @@ import {
   resolveAgentAfterDelete,
   resolveAgentChannels,
   resolveAgentDetailTarget,
+  toPublishConfig,
+  webWidgetInstallSnippet,
   type BaseModelOption,
 } from "./AgentBuilderShell";
 
@@ -315,5 +317,48 @@ describe("resolveAgentChannels", () => {
 
   it("keeps valid API channels and drops unknown values", () => {
     expect(resolveAgentChannels(["api", "unknown", "web"], ["wechat"])).toEqual(["api", "web"]);
+  });
+});
+
+describe("Web widget publish configuration", () => {
+  it("hydrates persisted web channel fields without inventing a tenant or identity", () => {
+    const config = toPublishConfig({
+      web: {
+        enabled: true,
+        widgetKey: "ww_1234567890abcdef12345678",
+        allowedOrigins: ["https://portal.example.test"],
+        runAsUserId: "member-1",
+        assistantName: "售前跟进智能体",
+        launcherLabel: "咨询售前",
+        welcomeMessage: "你好",
+        defaultOpen: false,
+        tokenTtlSeconds: 600,
+        rateLimitPerMinute: 20,
+      },
+    });
+
+    expect(config.web).toMatchObject({
+      widgetKey: "ww_1234567890abcdef12345678",
+      allowedOrigins: ["https://portal.example.test"],
+      runAsUserId: "member-1",
+      launcherLabel: "咨询售前",
+      tokenTtlSeconds: 600,
+    });
+  });
+
+  it("generates install code with a non-secret widget key and deployment-owned origin placeholder", () => {
+    const config = toPublishConfig({ web: {
+      widgetKey: "ww_1234567890abcdef12345678",
+      launcherLabel: "咨询售前",
+      defaultOpen: false,
+    } });
+    const snippet = webWidgetInstallSnippet(config.web);
+
+    expect(snippet).toContain("{{AGENTCICI_ORIGIN}}/sdk/sisi@1.1.0.js");
+    expect(snippet).toContain("ww_1234567890abcdef12345678");
+    expect(snippet).toContain("/public/web-widgets/");
+    expect(snippet).not.toContain("companyId");
+    expect(snippet).not.toContain("runAsUserId");
+    expect(snippet).not.toContain("Api-Key");
   });
 });

@@ -56,8 +56,30 @@ type FeishuPublishConfig = {
   autoSyncSchedulesOnPublish: boolean;
 };
 
+type WebPublishConfig = {
+  enabled: boolean;
+  widgetKey: string;
+  allowedOrigins: string[];
+  runAsUserId: string;
+  assistantName: string;
+  launcherLabel: string;
+  welcomeMessage: string;
+  defaultOpen: boolean;
+  tokenTtlSeconds: number;
+  rateLimitPerMinute: number;
+};
+
 type PublishConfigDraft = {
   feishu: FeishuPublishConfig;
+  web: WebPublishConfig;
+};
+
+type PublishRunAsOption = {
+  id: string;
+  nickname?: string;
+  mobile?: string;
+  roleCode?: string;
+  memberStatus?: string;
 };
 
 type AgentRecord = {
@@ -557,6 +579,18 @@ function createPublishConfigDraft(): PublishConfigDraft {
       pairingCommandHint: "配对",
       autoSyncSchedulesOnPublish: true,
     },
+    web: {
+      enabled: true,
+      widgetKey: "",
+      allowedOrigins: [],
+      runAsUserId: "",
+      assistantName: "AgentCiCi",
+      launcherLabel: "咨询售前",
+      welcomeMessage: "你好，请告诉我你想了解的业务场景。",
+      defaultOpen: false,
+      tokenTtlSeconds: 600,
+      rateLimitPerMinute: 20,
+    },
   };
 }
 
@@ -565,7 +599,55 @@ function clonePublishConfigDraft(config: PublishConfigDraft): PublishConfigDraft
     feishu: {
       ...config.feishu,
     },
+    web: {
+      ...config.web,
+      allowedOrigins: [...config.web.allowedOrigins],
+    },
   };
+}
+
+function generateWebWidgetKey(): string {
+  return `ww_${crypto.randomUUID().replace(/-/g, "")}`;
+}
+
+export function webWidgetInstallSnippet(config: WebPublishConfig): string {
+  const key = JSON.stringify(config.widgetKey || "ww_your_widget_key");
+  const launcher = JSON.stringify(config.launcherLabel || "咨询智能体");
+  const defaultOpen = config.defaultOpen ? "true" : "false";
+  return `<script src="{{AGENTCICI_ORIGIN}}/sdk/sisi@1.1.0.js"></script>
+<script>
+  const serviceOrigin = "{{AGENTCICI_ORIGIN}}";
+  const widgetKey = ${key};
+  const visitorStorageKey = "agentcici-web-widget-visitor";
+  let visitorId = localStorage.getItem(visitorStorageKey);
+  if (!visitorId) {
+    visitorId = crypto.randomUUID();
+    localStorage.setItem(visitorStorageKey, visitorId);
+  }
+  AgentCiCiSisi.create({
+    mode: "float",
+    open: ${defaultOpen},
+    launcherLabel: ${launcher},
+    tokenProvider: async () => {
+      const response = await fetch(
+        serviceOrigin + "/public/web-widgets/" + widgetKey + "/tokens",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            visitorId,
+            parentOrigin: location.origin,
+            pagePath: location.pathname,
+            locale: document.documentElement.lang || "zh-CN"
+          })
+        }
+      );
+      const body = await response.json();
+      if (!response.ok || !body.success) throw new Error(body.message || "Web widget token failed");
+      return body.data.embedToken;
+    }
+  });
+</script>`;
 }
 
 function escapeMermaidLabel(value: string): string {
@@ -1465,7 +1547,7 @@ function persistPayloadDigest(draft: AgentDraft, publishConfig: PublishConfigDra
   return JSON.stringify({
     ...draft,
     companyId,
-    publishConfig: publishConfig.feishu,
+    publishConfig,
   });
 }
 
@@ -1522,8 +1604,10 @@ function slugifyAgentId(name: string): string {
   return `${core}-${Date.now().toString().slice(-6)}`;
 }
 
-function toPublishConfig(configs?: Record<string, unknown>): PublishConfigDraft {
+export function toPublishConfig(configs?: Record<string, unknown>): PublishConfigDraft {
   const rawFeishu = (configs?.feishu ?? {}) as Record<string, unknown>;
+  const rawWeb = (configs?.web ?? {}) as Record<string, unknown>;
+  const defaultConfig = createPublishConfigDraft();
   return {
     feishu: {
       appId: typeof rawFeishu.appId === "string" ? rawFeishu.appId : "",
@@ -1533,6 +1617,20 @@ function toPublishConfig(configs?: Record<string, unknown>): PublishConfigDraft 
       autoSyncSchedulesOnPublish: typeof rawFeishu.autoSyncSchedulesOnPublish === "boolean"
         ? rawFeishu.autoSyncSchedulesOnPublish
         : true,
+    },
+    web: {
+      enabled: typeof rawWeb.enabled === "boolean" ? rawWeb.enabled : true,
+      widgetKey: typeof rawWeb.widgetKey === "string" ? rawWeb.widgetKey : "",
+      allowedOrigins: Array.isArray(rawWeb.allowedOrigins)
+        ? rawWeb.allowedOrigins.filter((item): item is string => typeof item === "string")
+        : [],
+      runAsUserId: typeof rawWeb.runAsUserId === "string" ? rawWeb.runAsUserId : "",
+      assistantName: typeof rawWeb.assistantName === "string" ? rawWeb.assistantName : defaultConfig.web.assistantName,
+      launcherLabel: typeof rawWeb.launcherLabel === "string" ? rawWeb.launcherLabel : defaultConfig.web.launcherLabel,
+      welcomeMessage: typeof rawWeb.welcomeMessage === "string" ? rawWeb.welcomeMessage : defaultConfig.web.welcomeMessage,
+      defaultOpen: typeof rawWeb.defaultOpen === "boolean" ? rawWeb.defaultOpen : defaultConfig.web.defaultOpen,
+      tokenTtlSeconds: typeof rawWeb.tokenTtlSeconds === "number" ? rawWeb.tokenTtlSeconds : defaultConfig.web.tokenTtlSeconds,
+      rateLimitPerMinute: typeof rawWeb.rateLimitPerMinute === "number" ? rawWeb.rateLimitPerMinute : defaultConfig.web.rateLimitPerMinute,
     },
   };
 }
@@ -1622,6 +1720,7 @@ export default function AgentBuilderShell({
   const [draft, setDraft] = useState<AgentDraft>(() => createDraft(companyId, []));
   const [avatarCropSource, setAvatarCropSource] = useState("");
   const [publishConfig, setPublishConfig] = useState<PublishConfigDraft>(() => createPublishConfigDraft());
+  const [publishRunAsOptions, setPublishRunAsOptions] = useState<PublishRunAsOption[]>([]);
   const [searchText, setSearchText] = useState("");
   const [notice, setNoticeText] = useState("自然语言 Spec 已作为主输入，编译结果默认显示流程图预览。");
   const [noticeVisible, setNoticeVisible] = useState(true);
@@ -1821,6 +1920,24 @@ export default function AgentBuilderShell({
       cancelled = true;
     };
   }, [commitSelectedAgentId, focusAgentId, kbs, companyId, token]);
+
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    const loadRunAsOptions = async () => {
+      try {
+        const response = await fetch("/api/admin/users", { headers: { Authorization: `Bearer ${token}` } });
+        const { body } = await safeFetchJson<PublishRunAsOption[]>(response);
+        if (!cancelled && response.ok && body?.success && Array.isArray(body.data)) {
+          setPublishRunAsOptions(body.data.filter((item) => item.memberStatus === "ACTIVE"));
+        }
+      } catch {
+        if (!cancelled) setPublishRunAsOptions([]);
+      }
+    };
+    void loadRunAsOptions();
+    return () => { cancelled = true; };
+  }, [token]);
 
   useEffect(() => {
     if (!token) return;
@@ -2359,6 +2476,16 @@ export default function AgentBuilderShell({
     }));
   };
 
+  const updateWebPublishConfig = <K extends keyof WebPublishConfig>(key: K, value: WebPublishConfig[K]) => {
+    setPublishConfig((current) => ({
+      ...current,
+      web: {
+        ...current.web,
+        [key]: value,
+      },
+    }));
+  };
+
   const updateSkillBinding = (skillCode: string, patch: Partial<AgentSkillBindingDraft>) => {
     setDraft((current) => ({
       ...current,
@@ -2650,7 +2777,7 @@ export default function AgentBuilderShell({
           knowledgeBaseIds: nextDraft.knowledgeBaseIds,
           toolIds: nextDraft.toolIds,
           channels: nextDraft.channels,
-          publishConfigs: { feishu: createPublishConfigDraft().feishu },
+          publishConfigs: createPublishConfigDraft(),
         }),
       });
       const { body } = await safeFetchJson<AgentApiRecord>(response);
@@ -2842,7 +2969,15 @@ export default function AgentBuilderShell({
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ publishConfigs: { feishu: operationPublishConfig.feishu } }),
+        body: JSON.stringify({
+          publishConfigs: {
+            feishu: operationPublishConfig.feishu,
+            web: {
+              ...operationPublishConfig.web,
+              enabled: operationDraft.channels.includes("web"),
+            },
+          },
+        }),
       });
       const { body: publishConfigBody } = await safeFetchJson<unknown>(publishConfigRes);
       if (!publishConfigRes.ok || !publishConfigBody?.success) {
@@ -2878,7 +3013,13 @@ export default function AgentBuilderShell({
           knowledgeBaseIds: operationDraft.knowledgeBaseIds,
           toolIds: operationDraft.toolIds,
           channels: operationDraft.channels,
-          publishConfigs: { feishu: operationPublishConfig.feishu },
+          publishConfigs: {
+            feishu: operationPublishConfig.feishu,
+            web: {
+              ...operationPublishConfig.web,
+              enabled: operationDraft.channels.includes("web"),
+            },
+          },
           skillBindings: skillsBody.data?.bindings ?? operationDraft.skillBindings,
         },
         companyId,
@@ -3121,10 +3262,25 @@ export default function AgentBuilderShell({
     return persistPayloadDigest(draft, publishConfig, companyId) !== persistedDraftDigest;
   }, [draft, companyId, persistedDraftDigest, publishConfig]);
   const publishBlockedByCompileGate = !publishReadyFromCompile;
-  const publishBlocked = agentWriteBlocked || isPublishing || isCompiling || compileStaleBlocksPublish || publishBlockedByCompileGate;
+  const webPublishConfigBlocked = draft.channels.includes("web") && (
+    !publishConfig.web.widgetKey
+    || !publishConfig.web.runAsUserId
+    || publishConfig.web.allowedOrigins.length === 0
+    || publishConfig.web.allowedOrigins.some((origin) => {
+      try {
+        const parsed = new URL(origin);
+        return parsed.origin !== origin || !["http:", "https:"].includes(parsed.protocol);
+      } catch {
+        return true;
+      }
+    })
+  );
+  const publishBlocked = agentWriteBlocked || isPublishing || isCompiling || compileStaleBlocksPublish || publishBlockedByCompileGate || webPublishConfigBlocked;
   const publishBlockedTitle = agentWriteBlocked
     ? "正在加载选中的智能体。"
-    : (publishBlockedByCompileGate
+    : (webPublishConfigBlocked
+      ? "Web 浮窗发布配置不完整：请生成入口键、选择 ACTIVE 运行成员并填写有效 Origin。"
+      : publishBlockedByCompileGate
       ? "请先执行「智能体编译」，且编译结果检测到变化并生成新版本后，才可发布。"
       : (compileStaleBlocksPublish
         ? "请先完成「智能体编译」，使编译产物与当前草稿一致后再发布。"
@@ -3600,6 +3756,127 @@ export default function AgentBuilderShell({
           <div className="cici-builder-publish-note">
             <strong>建议流程</strong>
             <p>先在这里补全飞书凭证，再到工作台生成配对码，最后用飞书机器人单聊完成绑定验证。</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (activePublishChannel === "web") {
+      const installationCode = webWidgetInstallSnippet(publishConfig.web);
+      const selectedRunAs = publishRunAsOptions.find((item) => item.id === publishConfig.web.runAsUserId);
+      return (
+        <div className="cici-builder-publish-panel__body">
+          <div className="cici-builder-publish-panel__hero">
+            <div>
+              <h3>Web 浮窗配置</h3>
+              <p>为已发布 Agent 生成受限公开入口，访客只获得短时聊天权限，长期密钥不会进入浏览器。</p>
+            </div>
+            <button
+              type="button"
+              className={`cici-choice-chip${activePublishEnabled ? " is-active" : ""}`}
+              onClick={() => toggleCollectionValue("channels", "web")}
+            >
+              {activePublishEnabled ? "已启用 Web 浮窗" : "启用 Web 浮窗"}
+            </button>
+          </div>
+
+          <div className="cici-builder-publish-panel__stats">
+            <article className="cici-builder-publish-stat">
+              <span>接入方式</span>
+              <strong>短时访客会话</strong>
+              <small>来源、Agent、运行身份和权限均由服务端配置约束。</small>
+            </article>
+            <article className="cici-builder-publish-stat">
+              <span>公开入口</span>
+              <strong>{publishConfig.web.widgetKey ? "已生成" : "待生成"}</strong>
+              <small>入口键不是密钥，但用于定位唯一发布配置。</small>
+            </article>
+            <article className="cici-builder-publish-stat">
+              <span>线上状态</span>
+              <strong>{publishedVersionNo != null ? (activePublishEnabled ? "可签发" : "未启用") : "未发布"}</strong>
+              <small>只有已发布版本和有效 RUN 身份可以签发访客 Token。</small>
+            </article>
+          </div>
+
+          <div className="cici-builder-publish-form cici-builder-publish-form--web">
+            <label className="cici-builder-field cici-builder-field--wide">
+              <span>公开入口键</span>
+              <span className="cici-builder-web-key-row">
+                <input value={publishConfig.web.widgetKey} readOnly placeholder="尚未生成" />
+                <button type="button" className="cici-builder-inline-action" onClick={() => updateWebPublishConfig("widgetKey", generateWebWidgetKey())}>
+                  {publishConfig.web.widgetKey ? "重新生成" : "生成入口键"}
+                </button>
+              </span>
+              <small>重新生成后，旧安装代码会立即失效。</small>
+            </label>
+            <label className="cici-builder-field">
+              <span>运行成员</span>
+              <select value={publishConfig.web.runAsUserId} onChange={(event) => updateWebPublishConfig("runAsUserId", event.target.value)}>
+                <option value="">选择 ACTIVE 成员</option>
+                {publishRunAsOptions.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.nickname || item.mobile || item.id} · {item.roleCode || "ORG_USER"}
+                  </option>
+                ))}
+              </select>
+              <small>{selectedRunAs ? "签发时仍会回读 ACTIVE 与 RUN 权限。" : "建议使用只具备该 Agent RUN 权限的专用成员。"}</small>
+            </label>
+            <label className="cici-builder-field">
+              <span>智能体显示名</span>
+              <input value={publishConfig.web.assistantName} onChange={(event) => updateWebPublishConfig("assistantName", event.target.value)} maxLength={80} />
+            </label>
+            <label className="cici-builder-field">
+              <span>启动器文案</span>
+              <input value={publishConfig.web.launcherLabel} onChange={(event) => updateWebPublishConfig("launcherLabel", event.target.value)} maxLength={40} />
+            </label>
+            <label className="cici-builder-field cici-builder-field--wide">
+              <span>欢迎语</span>
+              <textarea value={publishConfig.web.welcomeMessage} onChange={(event) => updateWebPublishConfig("welcomeMessage", event.target.value)} rows={3} maxLength={240} />
+            </label>
+            <label className="cici-builder-field cici-builder-field--wide">
+              <span>允许来源</span>
+              <textarea
+                value={publishConfig.web.allowedOrigins.join("\n")}
+                onChange={(event) => updateWebPublishConfig("allowedOrigins", event.target.value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean))}
+                rows={3}
+                placeholder={"每行一个 Origin，例如 https://portal.example.test"}
+              />
+              <small>只填写 Origin，不含路径；Token 请求的 Origin 与 parentOrigin 必须一致。</small>
+            </label>
+            <label className="cici-builder-field">
+              <span>Token 有效期（秒）</span>
+              <input type="number" min={60} max={900} value={publishConfig.web.tokenTtlSeconds} onChange={(event) => updateWebPublishConfig("tokenTtlSeconds", Number(event.target.value))} />
+            </label>
+            <label className="cici-builder-field">
+              <span>每 IP 每分钟上限</span>
+              <input type="number" min={1} max={120} value={publishConfig.web.rateLimitPerMinute} onChange={(event) => updateWebPublishConfig("rateLimitPerMinute", Number(event.target.value))} />
+            </label>
+            <label className="cici-builder-field cici-builder-field--checkbox cici-builder-field--wide">
+              <input type="checkbox" checked={publishConfig.web.defaultOpen} onChange={(event) => updateWebPublishConfig("defaultOpen", event.target.checked)} />
+              <span>页面加载后自动展开（官网和门户默认建议关闭）</span>
+            </label>
+          </div>
+
+          <div className="cici-builder-web-preview" aria-label="Web 浮窗预览">
+            <div className="cici-builder-web-preview__window">
+              <header><span aria-hidden="true">Ci</span><strong>{publishConfig.web.assistantName || "AgentCiCi"}</strong></header>
+              <p>{publishConfig.web.welcomeMessage || "你好，请告诉我你想了解的业务场景。"}</p>
+              <small>预览不签发 Token，也不连接真实业务数据。</small>
+            </div>
+            <button type="button"><span aria-hidden="true">Ci</span>{publishConfig.web.launcherLabel || "咨询智能体"}</button>
+          </div>
+
+          <div className="cici-builder-publish-note cici-builder-publish-install">
+            <div className="cici-builder-publish-install__head">
+              <div><strong>安装代码</strong><p>把占位 Origin 替换为部署配置；代码只含非秘密入口键。</p></div>
+              <button type="button" className="cici-builder-inline-action" onClick={() => {
+                void navigator.clipboard.writeText(installationCode).then(
+                  () => setNotice("Web 浮窗安装代码已复制。"),
+                  () => setNotice("复制失败，请手动选择代码。"),
+                );
+              }}>复制代码</button>
+            </div>
+            <pre><code>{installationCode}</code></pre>
           </div>
         </div>
       );

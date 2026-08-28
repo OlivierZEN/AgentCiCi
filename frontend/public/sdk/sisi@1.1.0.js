@@ -167,6 +167,6 @@
   global.AgentCiCiSisi = Object.freeze({
     version: "1.1.0",
     create: instance,
-    open: function (options) { var app = instance(Object.assign({}, options, { mode: "float", open: true })); return app; }
+    open: function (options) { return instance(Object.assign({}, options, { mode: "float", open: true })); }
   });
 })(window);

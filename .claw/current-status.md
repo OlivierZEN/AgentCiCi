@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 5
-updated_at: 2026-08-27T11:54:55Z
+updated_at: 2026-08-28T06:51:53Z
 updated_by: codex
-phase: review
-active_task: null
-next_action: "HUMAN 在真实 CloudCC 宿主用服务端 API Key 换取短时 Embed Token，验证已登录用户、业务对象上下文、语音/附件、高风险确认与回读；远程推送及 UAT/生产另行授权。"
+phase: implementation
+active_task: TASK-334
+next_action: "实现 FEAT-204 的 Agent Builder Web 浮窗配置、公开访客短时 Token 和官网挂载；随后在 org3gxskla32gln3bvop 配置并发布 sales-agent，从本地 main 更新 cici.localhost。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- `TASK-334 / FEAT-204` 实施中：目标是补齐 Agent Builder 的 Web 浮窗发布配置，并在 AgentCiCi 官网挂载指定 demo 租户的“售前跟进 Agent”。现状回读 `org3gxskla32gln3bvop` 已有 `sales-agent / 售前跟进 Agent`，但尚无已发布版本，渠道只有 `dingtalk,wechat`；现有 `sisi@1.0.0.js` 已提供页面/浮窗和短时 Embed Token 基础，但官网匿名访客不能持有 API Key。方案以稳定 `widgetKey` 查找已发布 Web 渠道配置，服务端校验允许来源、最小 RUN 身份并限流后签发短时访客 Token；官网只注入 `widgetKey`，不写死租户、成员或环境地址。
 
 - `TASK-332 / FEAT-202` 已完成实现和本地技术交付：思思固定为 AgentCiCi 内部受治理智能体的外部映射，以 CloudCC 组织 ID + CloudCC 绑定用户名 + 短时 Embed Token 接入；统一 SDK 支持页面/浮窗，覆盖流式对话、历史、附件、语音、依据、工具过程、服务端确认和可信回执。实现 `935728872674` 已进入本地 `main`；空 PostgreSQL 16.9 迁移、Embed 身份链集成 3 项、后端附件/租户 16 项、模型身份聚焦、package、最终前端全量 58 文件/314 项、production build、SDK/域名/diff 门禁通过。backend/frontend 从同一提交构建为 `2.8.67-dev.9357288`，镜像、环境、版本 API 和页面制品一致，healthy/restart=0；V124、应用目录、会话表、两个 SDK、正式页面、受管完整技术验证和稳定日志通过。正式无 Token 页面经 Chromium 目视且 console 0；真实 CloudCC 服务端换票与登录用户业务验收、远程推送、UAT 和生产仍待独立授权。
 

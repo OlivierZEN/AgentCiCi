@@ -10,5 +10,7 @@ public interface AgentPublishConfigRepository extends JpaRepository<AgentPublish
 
     Optional<AgentPublishConfigEntity> findByCompanyIdAndAgentIdAndChannelId(String companyId, String agentId, String channelId);
 
+    List<AgentPublishConfigEntity> findByChannelIdOrderByUpdatedAtDesc(String channelId);
+
     void deleteByCompanyIdAndAgentId(String companyId, String agentId);
 }

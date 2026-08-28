@@ -50,6 +50,14 @@ public class AgentPublishConfigEntity {
         return channelId;
     }
 
+    public String getCompanyId() {
+        return companyId;
+    }
+
+    public String getAgentId() {
+        return agentId;
+    }
+
     public String getConfigJson() {
         return configJson;
     }

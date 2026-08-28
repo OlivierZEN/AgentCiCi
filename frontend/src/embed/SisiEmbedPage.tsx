@@ -30,6 +30,7 @@ type SessionView = {
   sessionId: string;
   productName: string;
   agentId: string;
+  source?: string;
   parentOrigin: string;
   permissions: string[];
   context?: Record<string, unknown>;
@@ -201,8 +202,15 @@ export default function SisiEmbedPage() {
         const history = await api<{ messages: Array<Omit<ChatMessage, "id">> }>(
           `/embed/v1/apps/${APP_CODE}/sessions/${encodeURIComponent(next.sessionId)}/messages`);
         if (cancelled) return;
-        setMessages(history.messages.map((item, index) => ({ ...item, id: `history-${index}-${item.createdAt ?? ""}` })));
-        setNotice("已通过 CloudCC 身份校验");
+        const historyMessages = history.messages.map((item, index) => ({ ...item, id: `history-${index}-${item.createdAt ?? ""}` }));
+        const welcomeMessage = text(next.context?.welcomeMessage).trim();
+        setMessages(historyMessages.length > 0 || !welcomeMessage ? historyMessages : [{
+          id: "widget-welcome",
+          role: "assistant",
+          content: welcomeMessage,
+          createdAt: new Date().toISOString(),
+        }]);
+        setNotice(next.source === "website" ? "已建立安全访客会话" : "已通过 CloudCC 身份校验");
         postHost("embed:ready", { sessionId: next.sessionId, agentId: next.agentId });
       } catch (error) {
         if (!cancelled) {
@@ -383,8 +391,8 @@ export default function SisiEmbedPage() {
     <main className={`sisi-shell sisi-shell--${mode} ${leftOpen ? "" : "sisi-shell--left-closed"} ${rightOpen ? "" : "sisi-shell--right-closed"}`} data-theme={session?.themeCode || "gilded"}>
       <header className="sisi-header">
         <div className="sisi-brand">
-          <span className="sisi-seal" aria-hidden="true">思</span>
-          <div><strong>思思</strong><span>AI Agent</span></div>
+          <span className="sisi-seal" aria-hidden="true">Ci</span>
+          <div><strong>{session?.productName || "AgentCiCi"}</strong><span>AI Agent</span></div>
         </div>
         <div className="sisi-header__context">
           <span className="sisi-status-dot" />
