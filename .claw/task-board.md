@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-28T11:26:38Z
+updated_at: 2026-08-28T13:08:03Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,19 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-340 - 工作台发送后输入框立即清空
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `frontend-agent`
+- claimed_by: `codex`
+- task_status_path: `.claw/tasks/TASK-340.md`
+- blocked_by: `none`
+- related_issues: `none`
+- scope_files: `工作台消息提交时序、回车与发送按钮一致性、聚焦回归、本地 frontend 验证`
+- completion_evidence: `待验证。`
+- next_action: `完成聚焦/全量测试与 production build，提交本地 main 并更新本地 frontend。`
 
 ### TASK-339 - 裸图标按钮全局透明交互治理
 

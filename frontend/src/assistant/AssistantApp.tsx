@@ -58,6 +58,10 @@ const FRONT_LOGIN_MODE_CONFIG: FrontLoginMode = "login_mode2";
 const FRONT_LOGIN_USER_MODE_CONFIG: LoginMode = "agent";
 const CHAT_LOADING_STALE_TIMEOUT_MS = 180000;
 
+export function acceptComposerDraft(input: string): { question: string; nextInput: "" } {
+  return { question: input.trim(), nextInput: "" };
+}
+
 type CompanyOption = { companyId: string; companyName: string; memberId: string; roleCode: string; current?: boolean };
 type AuthPayload = { token: string; companyId: string; companyName?: string; userId: string; memberId?: string; accountId?: string; roles: string[] };
 type LoginPayload = AuthPayload & { requiresCompanySelection?: boolean; companies?: CompanyOption[] };
@@ -3590,8 +3594,10 @@ export default function AssistantApp() {
     if (workspaceTab !== "workbench" && !activeConversation) {
       return;
     }
-    const cleanQuestion = question.trim();
+    const acceptedDraft = acceptComposerDraft(question);
+    const cleanQuestion = acceptedDraft.question;
     const displayQuestion = cleanQuestion || "请分析这些图片。";
+    setInput(acceptedDraft.nextInput);
     const firstLine = displayQuestion.split("\n")[0]?.trim() || displayQuestion;
     const nextConversationTitle = firstLine.slice(0, 24);
     const timestamp = formatWorkbenchTime();
@@ -3865,7 +3871,6 @@ export default function AssistantApp() {
       if (!isWorkbench) {
         await loadConversationThreads(conversationId);
       }
-      setInput("");
       setComposerAttachments((prev) => prev.filter(
         (attachment) => !requestClientAttachmentIds.includes(attachment.clientAttachmentId),
       ));
