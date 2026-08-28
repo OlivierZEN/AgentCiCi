@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 6
-updated_at: 2026-08-28T13:20:00Z
+updated_at: 2026-08-28T13:50:00Z
 updated_by: codex
 phase: implementation
-active_task: TASK-341
-next_action: "从本地 main 构建 backend/frontend，完成 V126、Keycloak MCP Server、应用绑定和 DevAutopilot query 全链路；远程、UAT 与生产不修改。"
+active_task: TASK-343
+next_action: "继续 TASK-343 的 Web 浮窗头像实现与验证；INT-029 已完成本地技术闭环，远程、UAT 与生产未修改。"
 read_next:
   goals: false
   decisions: false
@@ -24,7 +24,7 @@ read_next:
 
 - `TASK-343 / FEAT-204` 进行中：用户要求官网/门户 Web 浮窗显示系统内智能体头像。只读确认 demo `org3gxskla32gln3bvop / sales-agent / 客服-Mary` 已发布且保存 WebP 头像；根因是公开配置和 website 会话没有投影 `avatar_base64`，SDK/Embed 固定渲染 `Ci/思`。方案由服务端按已发布 Agent Definition 输出公开头像、会话按 Token 绑定的公司/Agent 回读且不把 Base64 放入 JWT，启动器、标题、欢迎态和消息统一消费；受信 page 嵌入不变。
 
-- `TASK-341 / FEAT-205 / INT-029` 已实现 `App Version → MCP Provider → Tool 集合 → Tenant MCP Server` 正式绑定、Keycloak client_credentials/Secret 加密、精确 Server 路由和管理 UI；DevAutopilot 六工具不能通过未绑定的全局 MCP 路径绕过应用治理。后端聚焦测试/package、前端 production build 与 diff check 通过，等待本地 main 提交和 `cici.localhost` 全链路验收。
+- `TASK-341 / FEAT-205 / INT-029` 已完成本地技术闭环：`d42e4673 + 59cb5a02` 实现 `App Version → MCP Provider → Tool 集合 → Tenant MCP Server` 正式绑定、Keycloak client_credentials/Secret 加密、精确 Server 路由和管理 UI；未绑定的全局 MCP 路径不能暴露 DevAutopilot 六工具。后端聚焦测试/package、前端 production build 与 diff check 通过；在并行主线推进后，backend/frontend 从最新本地 `main@9191e5a3eacf` 运行当前唯一 DEV 基础版本 `2.8.68-dev.9191e5a`、healthy/restart=0，该提交包含 INT-029。租户绑定 PUT/GET 200 且 `ACTIVE`，工具缓存 `ready/6`，Secret 未回传，真实 Keycloak SERVICE → DevAutopilot MCP → AgentCiCi OACT → Semattice query 成功；专用验收项目 create/readback/delete-to-trash 回执 revision `1→2`。标准 stack verify 仅被任务外 Semattice `1.0.7/1.0.8` 漂移失败关闭；远程/UAT/生产未修改。
 
 - `TASK-342 / FEAT-188` 已在用户确认 UAT HUMAN 验收通过后，将冻结候选 `2.8.67-beta.1 / 2970bea75208` 原样晋级为生产 `2.8.67`。正式 tag 与 UAT tag peeled commit 一致；backend/frontend linux/amd64 ACR index digest 为 `sha256:2b6be2564f0eef09f064e4ce345d585cc4bc1f3c00408d0f358ab8f82bfac615` / `sha256:6ec9501ec3cdfdf1118ab1ec9f647223ecfb843440603d83e054577c539dd6a4`，未更新 `latest`。完整回滚点 `/opt/cici/backups/20260828T130242Z-before-2.8.67` 共 14 项、351,001,019 bytes，校验通过，应用回滚目标 `2.8.66`。仅重建 backend/frontend，四个状态服务 ID 不变；六容器 healthy/restart=0，health UP、V125 与 repeatable migration、Nginx、公开 smoke、匿名 JSON 401、数据计数不变和累计 100 秒稳定窗口通过。生产登录态图片识别尚未代替 HUMAN 执行。
 

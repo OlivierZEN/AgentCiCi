@@ -31,7 +31,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-341 - 外部应用 MCP Provider 正式绑定
 
-- status: `in_progress`
+- status: `done`
 - priority: `critical`
 - owner_role: `integration-agent`
 - claimed_by: `codex`
@@ -41,8 +41,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - related_issues: `none`
 - scope_files: `应用版本 Provider/Tool 模型、Keycloak MCP Server 鉴权、租户绑定、精确工具路由、管理 UI`
-- completion_evidence: `后端聚焦测试/package 与前端 production build 已通过；等待本地 main 制品和 Keycloak 真实链路。`
-- next_action: `独立提交本地 main，并在 cici.localhost 全栈完成 V126、绑定、tools/list 和 query 验收。`
+- completion_evidence: `d42e4673 + 59cb5a02；后端聚焦测试/package、前端 build；最新本地 main@9191e5a3 运行 2.8.68-dev.9191e5a、healthy/restart=0；租户绑定 ACTIVE；Keycloak MCP 发现 ready/6；Secret 未回传；真实 query 及 create/readback/delete-to-trash revision 1→2 成功。`
+- next_action: `如需推广到 UAT，按 INT-029 提供方先发布、SERVICE 探测、消费方再发布；本任务不推送远端。`
 
 ### TASK-340 - 工作台发送后输入框立即清空
 
