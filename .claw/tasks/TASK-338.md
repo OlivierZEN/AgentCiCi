@@ -2,8 +2,8 @@
 kind: task-status
 task_id: TASK-338
 feature_id: FEAT-188
-status: review
-updated_at: 2026-08-28T10:54:15Z
+status: done
+updated_at: 2026-08-28T13:12:49Z
 updated_by: codex
 owner_role: release-agent
 spec_path: docs/specs/FEAT-188-conversation-image-paste-attachments.md
@@ -27,4 +27,4 @@ spec_path: docs/specs/FEAT-188-conversation-image-paste-attachments.md
 
 ## HUMAN 验收
 
-- 待已登录 UAT 用户粘贴图片并确认实际识别结果；技术健康和匿名边界不替代该业务接受。
+- 用户已明确确认 UAT 图片识别验收通过；冻结候选随后由 TASK-342 原样晋级生产。

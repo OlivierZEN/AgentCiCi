@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 6
-updated_at: 2026-08-28T14:30:00+08:00
+updated_at: 2026-08-28T13:20:00Z
 updated_by: codex
 phase: implementation
 active_task: TASK-341
@@ -24,13 +24,15 @@ read_next:
 
 - `TASK-341 / FEAT-205 / INT-029` 已实现 `App Version → MCP Provider → Tool 集合 → Tenant MCP Server` 正式绑定、Keycloak client_credentials/Secret 加密、精确 Server 路由和管理 UI；DevAutopilot 六工具不能通过未绑定的全局 MCP 路径绕过应用治理。后端聚焦测试/package、前端 production build 与 diff check 通过，等待本地 main 提交和 `cici.localhost` 全链路验收。
 
+- `TASK-342 / FEAT-188` 已在用户确认 UAT HUMAN 验收通过后，将冻结候选 `2.8.67-beta.1 / 2970bea75208` 原样晋级为生产 `2.8.67`。正式 tag 与 UAT tag peeled commit 一致；backend/frontend linux/amd64 ACR index digest 为 `sha256:2b6be2564f0eef09f064e4ce345d585cc4bc1f3c00408d0f358ab8f82bfac615` / `sha256:6ec9501ec3cdfdf1118ab1ec9f647223ecfb843440603d83e054577c539dd6a4`，未更新 `latest`。完整回滚点 `/opt/cici/backups/20260828T130242Z-before-2.8.67` 共 14 项、351,001,019 bytes，校验通过，应用回滚目标 `2.8.66`。仅重建 backend/frontend，四个状态服务 ID 不变；六容器 healthy/restart=0，health UP、V125 与 repeatable migration、Nginx、公开 smoke、匿名 JSON 401、数据计数不变和累计 100 秒稳定窗口通过。生产登录态图片识别尚未代替 HUMAN 执行。
+
 - `TASK-339 / FEAT-204` 已完成 Web 浮窗话筒及跨页面裸图标背景治理：直接来源是 `sisi-composer` hover 使用 CRM 主题 `--sisi-panel`，公共 `cici-product-icon-button` 也仍允许浅色 hover 背景。现已将公开页、前台、后台、平台页和共享依赖图的裸图标控件统一为透明背景、仅图标变色，并以共享原语和静态契约阻止回归。实现 `a64a1ede7d23` 进入本地 main；聚焦 3 文件/22 项、前端全量 59 文件/324 项、production build、域名与 diff 门禁通过。backend/frontend 同为 `2.8.67-dev.a64a1ed`、healthy/restart=0；官网话筒默认/hover 背景透明、图标转 CRM 蓝、console 0，远程/UAT/生产未修改，进入用户 review。
 
-- `TASK-338 / FEAT-188` 已完成 AgentCiCi UAT `2.8.67-beta.1 / 2970bea75208` 技术发布。远程 `main`、annotated tag、backend/frontend linux/amd64 不可变 digest 与运行 commit 一致，未更新 `latest`；完整备份 `/data/apps/agentcici/backups/20260828T104754Z-before-2.8.67-beta.1` 的 12 项工件、PostgreSQL catalog、KB/Qdrant tar、Qdrant 原生 snapshot、旧应用镜像和 SHA-256 均通过，应用回滚目标为 `2.8.66-beta.3`。仅重建 backend/frontend，四个状态服务 ID 不变；六容器 healthy/restart=0，health UP、V125、Nginx、公开 smoke、匿名 JSON 401 与 30 秒稳定窗口通过。本候选未新增或切换跨项目契约；UAT 登录态图片识别待 HUMAN，生产未修改。
+- `TASK-338 / FEAT-188` 已完成 AgentCiCi UAT `2.8.67-beta.1 / 2970bea75208` 技术发布。远程 `main`、annotated tag、backend/frontend linux/amd64 不可变 digest 与运行 commit 一致，未更新 `latest`；完整备份 `/data/apps/agentcici/backups/20260828T104754Z-before-2.8.67-beta.1` 的 12 项工件、PostgreSQL catalog、KB/Qdrant tar、Qdrant 原生 snapshot、旧应用镜像和 SHA-256 均通过，应用回滚目标为 `2.8.66-beta.3`。仅重建 backend/frontend，四个状态服务 ID 不变；六容器 healthy/restart=0，health UP、V125、Nginx、公开 smoke、匿名 JSON 401 与 30 秒稳定窗口通过。本候选未新增或切换跨项目契约；用户已确认 UAT 登录态图片识别 HUMAN 验收通过，并由 TASK-342 晋级生产。
 
 - `TASK-337 / FEAT-204` 已按用户截图完成官网 Web 浮窗视觉和输入区修正：公开 website 浮窗与启动器采用 CRM 标准蓝；发送按钮固定右侧并统一 `33 × 33` 尺寸/禁用态；浮窗移除附件入口但 `page` 模式继续保留；标题栏 hover 背景/边框透明并保留键盘焦点。实现 `beef1cedd4056` 已进入本地 main；聚焦 6 项、前端全量 58 文件/320 项、production build、SDK/域名/diff 门禁通过。backend/frontend 同为 `2.8.67-dev.beef1ce`、healthy/restart=0；官网真实非空回复、视觉对照和 console 0 通过。远程、UAT、生产未修改，进入用户 review。
 
-- `TASK-336 / FEAT-188` 已修复普通租户图片会话误报 `409 VISION_MODEL_REQUIRED`：能力门禁已与运行路由统一读取平台治理事实源，同时保留受信来源和失败关闭。实现 `036c12a0d006` 进入本地 main；红/绿目标测试、附件/模型身份 57 项和 package 通过。backend/frontend 同为 `2.8.67-dev.036c12a`、healthy/restart=0；普通租户用用户原截图真实回归，`qwen3.7-plus` 分别识别出 `409` 和 `VISION_MODEL_REQUIRED`，浏览器 console 0。状态服务未替换；远程、UAT、生产未修改，进入用户 review。
+- `TASK-336 / FEAT-188` 已修复普通租户图片会话误报 `409 VISION_MODEL_REQUIRED`：能力门禁已与运行路由统一读取平台治理事实源，同时保留受信来源和失败关闭。实现 `036c12a0d006` 进入远程 main 和冻结 `2970bea75208`；红/绿目标测试、附件/模型身份 57 项和 package 通过，本地真实图片回归成功。修复已通过用户 UAT HUMAN 验收并随生产 `2.8.67` 发布；生产登录态业务接受仍待 HUMAN。
 
 - `TASK-335 / FEAT-204` 已修复官网 Web 浮窗“本次未返回文字内容”：根因是后端规范 SSE `delta` 负载为 `{text}`，嵌入页只消费 `content/delta`，导致真实模型增量全部丢弃。`d47afb41c66d` 已进入本地 `main`，统一解析规范与兼容字段；聚焦 4 项、前端全量 58 文件/318 项、production build、域名和 diff 门禁通过。backend/frontend 同为 `2.8.67-dev.d47afb4`、healthy/restart=0；官网用截图原问题真实回归，页面返回 678 字完整正文，数据库消息完整，Trace `COMPLETED/model_call_count=2`，浏览器 console 0。其他服务持续运行且未替换；远程、UAT、生产未修改，进入用户 review。
 

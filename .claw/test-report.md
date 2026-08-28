@@ -1,14 +1,25 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-28T11:26:38Z
+updated_at: 2026-08-28T13:20:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-28T11:26:38Z
-last_run_status: passed_task_339_local_runtime_pending_user_review
+last_run_at: 2026-08-28T13:20:00Z
+last_run_status: passed_task_342_production_technical_pending_human_image_acceptance
 ---
 
 # Test Report
+
+## 2026-08-28 TASK-342 生产 `2.8.67`
+
+- 状态：`passed_task_342_production_technical_pending_human_image_acceptance`；用户已确认 UAT HUMAN 验收通过，冻结源码、不可变正式制品、备份、最小切换、运行指纹、迁移、健康、公开/匿名、数据守恒和累计 100 秒稳定窗口通过。
+- Source：`2.8.67-beta.1^{}`、`2.8.67^{}` 与生产运行 commit 均为 `2970bea75208`，远程 `main@2be977b09fcb` 包含该提交；本地后续 TASK-337/339/340/341 均未进入候选。
+- Artifact：backend/frontend linux/amd64 index digest 为 `sha256:2b6be2564f0eef09f064e4ce345d585cc4bc1f3c00408d0f358ab8f82bfac615` / `sha256:6ec9501ec3cdfdf1118ab1ec9f647223ecfb843440603d83e054577c539dd6a4`；label 为 `2.8.67 / 2970bea75208`，未更新 `latest`。
+- Recovery：完整备份 `/opt/cici/backups/20260828T130242Z-before-2.8.67` 共 14 项、351,001,019 bytes；全部非空且 `0600`，PostgreSQL catalog、KB/Qdrant tar、Qdrant 原生 snapshot、旧镜像 gzip 与 SHA-256 清单通过。应用回滚目标 `2.8.66`，数据恢复另行授权。
+- Runtime：只重建 backend/frontend；四状态服务 ID 不变。六容器 healthy/restart=0，health UP，version/commit/image/digest 一致，Nginx 有效；Flyway V125 与 repeatable migration success。
+- Edge：生产首页、`/app`、`/embed/sisi`、DEMO 路由和 SDK 为 200；DevAutopilot、Semattice、Keycloak smoke 通过；HTTP 301；匿名 `/auth/me`、`/ai/sessions`、`/skills` 和 Embed 附件 API 为 JSON 401。
+- Data：知识库表发布前后均为 9/35/661，Qdrant 均为 1 collection/549 points。累计 100 秒内六容器状态/restart 不变，backend severe=0，frontend 5xx/upstream=0。
+- 验收边界：UAT 图片识别 HUMAN 接受由用户明确确认；本轮没有创建或使用生产登录凭据，生产真实图片上传与模型识别仍待已登录 HUMAN，不以技术门禁替代。
 
 ## 2026-08-28 TASK-339 裸图标按钮透明背景治理
 
@@ -23,7 +34,7 @@ last_run_status: passed_task_339_local_runtime_pending_user_review
 
 ## 2026-08-28 TASK-338 UAT `2.8.67-beta.1`
 
-- 状态：`passed_task_338_uat_technical_pending_human_image_acceptance`；冻结源码、不可变制品、备份、最小切换、运行指纹、迁移、健康、公开/匿名和稳定窗口通过，登录态图片识别待 HUMAN。
+- 状态：`passed_task_338_uat_human_accepted`；冻结源码、不可变制品、备份、最小切换、运行指纹、迁移、健康、公开/匿名和稳定窗口通过，用户随后明确确认登录态图片识别 HUMAN 验收通过。
 - Source：修复 `036c12a0d006` 与验证记录 `2970bea75208` 已进入远程 `main`；annotated tag `2.8.67-beta.1^{}` 和运行 commit 均为 `2970bea75208`。本地后续 TASK-337 提交未进入本候选。
 - 构建门禁：冻结工作树前端 58 文件/318 项、production build，后端附件/模型身份聚焦测试与 package、`git diff --check` 通过。
 - Artifact：backend index digest `sha256:927692d90475cabeded150a776e24d31a9dcbfd45f29273dd9d870de50aab74d`，frontend index digest `sha256:79a2f1e08967a0e85e65d73d5facafcecfc5ed8349c449007323d7acd958d49f`；均含 linux/amd64，label 为 `2.8.67-beta.1 / 2970bea75208`，未更新 `latest`。
@@ -31,7 +42,7 @@ last_run_status: passed_task_339_local_runtime_pending_user_review
 - Runtime：只 `--no-deps --force-recreate backend frontend`；database、Redis、RabbitMQ、Qdrant ID 不变。六容器 healthy/restart=0，backend health UP，version/commit/image/digest 一致，Nginx 有效；Flyway V125 success，随后 repeatable `demo example application` success。
 - Edge：UAT 首页、Keycloak discovery、Semattice health/version、DevAutopilot integrated health 通过；`/app`、`/embed/sisi`、DEMO 路由与 SDK 为 200，匿名 `/auth/me`、`/ai/sessions`、`/skills` 和 Embed 附件 API 均为 JSON 401。
 - 稳定：独立 30 秒窗口六容器状态/restart 不变，backend severe=0，frontend 5xx/upstream=0。本候选没有新增、切换或启用跨项目契约；生产未修改。
-- 验收边界：未使用或创建 UAT 登录凭据，未代替用户执行真实图片会话；图片上传、模型实际识别和租户业务结果仍待已登录 HUMAN 验收。
+- 验收边界：发布执行过程未使用或创建 UAT 登录凭据、未代替用户执行真实图片会话；实际业务结果由用户后续明确确认，不把技术门禁当作该确认。
 
 ## 2026-08-28 TASK-337 官网 Web 浮窗 CRM 标准蓝与输入区修正
 

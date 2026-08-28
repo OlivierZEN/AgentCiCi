@@ -5,9 +5,9 @@ title: 对话框连续粘贴图片附件
 status: verified
 primary_project: agentcici
 owner_role: fullstack-agent
-task_ids: TASK-309,TASK-336,TASK-338
+task_ids: TASK-309,TASK-336,TASK-338,TASK-342
 related_issues: ISSUE-2026-08-28-vision-capability-scope
-updated_at: 2026-08-28T10:54:15Z
+updated_at: 2026-08-28T13:12:49Z
 updated_by: codex
 ---
 
@@ -94,3 +94,9 @@ DevAutopilot 需求 `REQ-6F34ECF3` 的端到端任务 `019ffeb0-88a0-739f-afcb-6
 - 修复已随冻结 `2970bea75208` 发布为 UAT `2.8.67-beta.1`；远程 `main`、tag、前后端不可变镜像和运行 commit 一致，未更新 `latest`。
 - 完整备份、最小 backend/frontend 切换、四状态服务 ID 保持、六容器健康、V125、Nginx、公开/匿名门禁和稳定窗口通过；生产保持 `2.8.66`。
 - 技术发布不替代登录态业务接受；需由已登录 UAT 用户粘贴图片，确认上传成功、模型实际识别内容且不再返回错误 `VISION_MODEL_REQUIRED`。
+
+## 2026-08-28 生产发布
+
+- 用户明确确认 UAT HUMAN 验收通过；冻结 `2.8.67-beta.1 / 2970bea75208` 原样晋级为生产 `2.8.67`，正式与 UAT tag、运行 commit 一致，本地后续功能未混入候选。
+- backend/frontend 正式不可变 digest、完整备份与 `2.8.66` 回滚点、最小切换、四状态服务 ID 保持、六容器健康、V125、Nginx、公开/匿名门禁、数据计数守恒和累计 100 秒稳定窗口通过。
+- 技术发布未代替生产登录用户执行真实图片上传或模型识别；生产 HUMAN 业务接受仍需由已登录用户完成。
