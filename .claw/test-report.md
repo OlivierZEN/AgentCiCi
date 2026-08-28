@@ -1,14 +1,24 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-28T09:27:08Z
+updated_at: 2026-08-28T10:30:09Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-28T09:27:08Z
-last_run_status: passed_task_336_local_runtime_pending_user_review
+last_run_at: 2026-08-28T10:30:09Z
+last_run_status: passed_task_337_local_runtime_pending_user_review
 ---
 
 # Test Report
+
+## 2026-08-28 TASK-337 官网 Web 浮窗 CRM 标准蓝与输入区修正
+
+- 状态：`passed_task_337_local_runtime_pending_user_review`；代码、自动化、同提交制品、官网真实浮窗、视觉对照与非空回复通过，等待用户目视确认。
+- 自动化：`SisiEmbedPage.test.ts` 6 项、前端全量 58 文件/320 项、production build、两个 SDK `node --check`、业务前端新增行环境域名扫描和 `git diff --check` 通过；build 仅保留既有大 chunk warning。
+- 主线与制品：实现 `beef1cedd4056` 已进入本地 `main`；backend/frontend 镜像分别为 `sha256:577085a682627aa3fc763d1c4c5aecc748f4b0d8b94b1a474f72399b33980274` / `sha256:b90c4bbc16e4eafaa75a794adc56fe4e3d81231243a32008e1602c12a7a8bd20`，label、容器环境、版本 API 和页面资源均为 `2.8.67-dev.beef1ce / beef1cedd4056`；两容器 healthy/restart=0。
+- 视觉与交互：官网启动器回读白底、CRM 蓝标记和蓝灰结构线；浮窗根主题为 `crm-blue`。附件按钮为 0；语音在左、发送在右且为 `33 × 33`；可用发送态为 `#1677d2`。关闭按钮 hover 背景/边框透明、图标转蓝；键盘焦点轮廓保留。
+- 真实回复：官网浮窗发送“请用一句话确认Web浮窗发送功能正常”后返回“Web浮窗发送功能运行正常。”，页面 console `0 error / 0 warning`；设计对照 `final result: passed`。
+- 环境：backend health=`UP`，frontend Nginx 配置有效，`/`、`/public/website-widget`、`/sdk/sisi@1.1.0.js` 和 `/embed/sisi?mode=float` 均为 200；近 10 分钟 backend severe=0、frontend 5xx=0。PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak、Nginx、Semattice、DevAutopilot ID 摘要发布前后同为 `cbb50a0424ec...`。
+- 边界：运行时继续使用 Git 忽略的官网 widget override；未修改 local-stack 跟踪文件。标准全栈门禁仍受任务外 Semattice `config=1.0.7 / repository=1.0.8` 漂移约束；远程、UAT、生产未修改。
 
 ## 2026-08-28 TASK-336 图片识别视觉能力范围修复
 

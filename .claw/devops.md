@@ -1,12 +1,20 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-08-28T09:27:08Z
+updated_at: 2026-08-28T10:30:09Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-28 TASK-337 本地开发环境
+
+- AgentCiCi backend/frontend 从本地 `main@beef1cedd4056` 以受管 release Dockerfile 构建为 `2.8.67-dev.beef1ce`；镜像 ID 为 `sha256:577085a682627aa3fc763d1c4c5aecc748f4b0d8b94b1a474f72399b33980274` / `sha256:b90c4bbc16e4eafaa75a794adc56fe4e3d81231243a32008e1602c12a7a8bd20`，镜像标签、容器环境、backend 版本 API 和前端资源一致。
+- 仅以现有 Compose 和 Git 忽略的官网 widget override `--no-deps --force-recreate backend cici-frontend` 替换两项无状态服务；两者 healthy/restart=0，backend health=`UP`，frontend Nginx 配置有效。
+- `https://cici.localhost/` 官网真实浮窗回读 `crm-blue`，附件入口 0、发送按钮靠右且 `33 × 33`，关闭 hover 背景与边框透明；真实发送后收到非空回复，console error/warning=0。
+- `/`、公开 widget 配置、稳定 SDK 与 float embed 均为 200；近 10 分钟 backend severe=0、frontend 5xx=0。PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak、Nginx、Semattice 和 DevAutopilot 容器 ID 未变化。
+- 本任务未新增或切换跨项目契约；标准 `./stack verify` 仍受既有 Semattice `config=1.0.7 / repository=1.0.8` 漂移约束。远程、UAT、生产、ACR 和 Git tag 未修改。
 
 ## 2026-08-28 TASK-336 本地开发环境
 

@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-28T09:25:13Z
+updated_at: 2026-08-28T10:30:09Z
 updated_by: codex
 board_status: active
 ---
@@ -17,7 +17,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-337 - 官网 Web 浮窗 CRM 标准蓝与输入区修正
 
-- status: `in_progress`
+- status: `review`
 - priority: `high`
 - owner_role: `frontend-agent`
 - claimed_by: `codex`
@@ -26,8 +26,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - related_issues: `none`
 - scope_files: `官网 Web 浮窗主题、SDK 启动器、输入工具栏、附件入口、标题栏 hover、视觉回归`
-- completion_evidence: `源码已按截图标注调整；自动化、本地 main 制品与浏览器回归待完成。`
-- next_action: `完成前端测试与构建，提交本地 main，从同一提交重建 backend/frontend 并做官网浮窗视觉与真实回复回归。`
+- completion_evidence: `本地 main@beef1cedd4056；聚焦 6 项、前端全量 58 文件/320 项、production build、SDK/域名/diff 门禁；backend/frontend 2.8.67-dev.beef1ce healthy/restart=0；官网 CRM 蓝、无附件、发送靠右、关闭 hover 透明、真实非空回复和 console 0。`
+- next_action: `由用户目视确认当前官网浮窗；远程推送、UAT 与生产另行授权。`
 
 ### TASK-336 - 普通租户图片识别视觉能力误判修复
 

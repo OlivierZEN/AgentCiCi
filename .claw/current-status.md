@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 5
-updated_at: 2026-08-28T09:25:13Z
+updated_at: 2026-08-28T10:30:09Z
 updated_by: codex
-phase: implementation
+phase: review
 active_task: TASK-337
-next_action: "完成官网 Web 浮窗 CRM 蓝、输入区和 hover 修正的自动化，提交本地 main，从同一提交重建 backend/frontend，并在 https://cici.localhost/ 做视觉与真实回复回归。"
+next_action: "由用户目视确认当前官网浮窗的 CRM 蓝、发送按钮、附件入口和标题栏 hover；远程、UAT 与生产另行授权。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-337 / FEAT-204` 正在按用户截图修正官网 Web 浮窗：公开 website 浮窗默认采用既有 CRM 标准蓝；发送按钮固定到工具栏右侧并统一尺寸/禁用态；浮窗移除附件入口但 `page` 模式继续保留；标题栏展开/关闭 hover 去除背景框并保留键盘焦点。源码已调整，自动化、本地 main 制品和浏览器回归待完成；远程、UAT、生产未修改。
+- `TASK-337 / FEAT-204` 已按用户截图完成官网 Web 浮窗视觉和输入区修正：公开 website 浮窗与启动器采用 CRM 标准蓝；发送按钮固定右侧并统一 `33 × 33` 尺寸/禁用态；浮窗移除附件入口但 `page` 模式继续保留；标题栏 hover 背景/边框透明并保留键盘焦点。实现 `beef1cedd4056` 已进入本地 main；聚焦 6 项、前端全量 58 文件/320 项、production build、SDK/域名/diff 门禁通过。backend/frontend 同为 `2.8.67-dev.beef1ce`、healthy/restart=0；官网真实非空回复、视觉对照和 console 0 通过。远程、UAT、生产未修改，进入用户 review。
 
 - `TASK-336 / FEAT-188` 已修复普通租户图片会话误报 `409 VISION_MODEL_REQUIRED`：能力门禁已与运行路由统一读取平台治理事实源，同时保留受信来源和失败关闭。实现 `036c12a0d006` 进入本地 main；红/绿目标测试、附件/模型身份 57 项和 package 通过。backend/frontend 同为 `2.8.67-dev.036c12a`、healthy/restart=0；普通租户用用户原截图真实回归，`qwen3.7-plus` 分别识别出 `409` 和 `VISION_MODEL_REQUIRED`，浏览器 console 0。状态服务未替换；远程、UAT、生产未修改，进入用户 review。
 

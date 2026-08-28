@@ -7,7 +7,7 @@ owner_role: fullstack-agent
 task_ids: TASK-334,TASK-335,TASK-337
 related_decisions: FEAT-202
 related_issues: ISSUE-2026-08-28-web-widget-empty-stream
-updated_at: 2026-08-28T09:25:13Z
+updated_at: 2026-08-28T10:30:09Z
 updated_by: codex
 ---
 
@@ -120,7 +120,7 @@ Agent Builder 已有独立“发布渠道”页签，但 Web 浮窗仍只有占�
 - 2026-08-28：完成现状扫描和安全方案；进入实现。
 - 2026-08-28：实现、自动化、本地 main、V125、demo 发布、公开安全负例、真实模型会话和浏览器验收通过；进入用户 review。demo 现用唯一 ACTIVE OWNER，非 demo 发布前必须替换为专用 RUN-only 成员。
 - 2026-08-28：用户回报官网浮窗回复为空；定位为 Embed 消费方漏读规范 `{text}`。TASK-335 已进入本地 main，同提交前后端制品与官网原问题真实回归通过，进入用户 review。
-- 2026-08-28：按用户截图进入 TASK-337，统一官网浮窗 CRM 标准蓝、发送按钮布局、公开附件入口和标题栏 hover；源码已调整，自动化与本地正式环境回归待完成。
+- 2026-08-28：TASK-337 已完成官网浮窗 CRM 标准蓝、发送按钮布局、公开附件入口和标题栏 hover 修正；实现进入本地 main，同提交前后端制品、自动化、视觉对照和真实非空回复通过，进入用户 review。
 
 ## 交接说明
 
