@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 5
-updated_at: 2026-08-28T08:35:14Z
+updated_at: 2026-08-28T08:54:54Z
 updated_by: codex
-phase: implementation
+phase: review
 active_task: TASK-335
-next_action: "从 TASK-335 本地 main 提交构建 backend/frontend，更新 https://cici.localhost/ 并用截图原问题验证 Web 浮窗返回非空正文。"
+next_action: "由用户目视确认 https://cici.localhost/ 官网浮窗已返回完整正文；远程推送、UAT 与生产另行授权。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-335 / FEAT-204` 正在修复官网 Web 浮窗“本次未返回文字内容”：后端规范 SSE `delta` 负载为 `{text}`，嵌入页只消费 `content/delta`，导致真实模型增量全部丢弃。修复已统一抽取规范与兼容字段解析；聚焦 4 项、前端全量 58 文件/318 项、production build、域名和 diff 门禁通过。本地 main 提交、同提交前后端制品与真实官网对话回归待执行；远程、UAT、生产未修改。
+- `TASK-335 / FEAT-204` 已修复官网 Web 浮窗“本次未返回文字内容”：根因是后端规范 SSE `delta` 负载为 `{text}`，嵌入页只消费 `content/delta`，导致真实模型增量全部丢弃。`d47afb41c66d` 已进入本地 `main`，统一解析规范与兼容字段；聚焦 4 项、前端全量 58 文件/318 项、production build、域名和 diff 门禁通过。backend/frontend 同为 `2.8.67-dev.d47afb4`、healthy/restart=0；官网用截图原问题真实回归，页面返回 678 字完整正文，数据库消息完整，Trace `COMPLETED/model_call_count=2`，浏览器 console 0。其他服务持续运行且未替换；远程、UAT、生产未修改，进入用户 review。
 
 - `TASK-334 / FEAT-204` 已完成实现与本地真实链路，进入 review：Agent Builder 的 Web 浮窗可配置入口键、来源、运行成员、显示文案、TTL、限流、默认状态、预览和安装代码；官网以 backend 运行参数挂载 `sisi@1.1.0.js`。公开配置/Token 只解析已发布 Web Agent，精确校验 Origin、ACTIVE+RUN 身份并以 Redis 失败关闭，Token 仅含 `chat:read/chat:write`。实现与两轮部署缺口修复已进入本地 `main@ee4a59a62c51`；前端全量 58 文件/316 项、后端聚焦测试/package、production build、域名和 diff 门禁通过。demo 租户 `org3gxskla32gln3bvop` 的 `sales-agent` 已编译并发布 v1，Web 渠道启用；真实 website 会话完成模型回答，执行日志 `CHANNEL:SUCCESS`。backend/frontend 同为 `2.8.67-dev.ee4a59a`、healthy/restart=0，V125、公开 API/CORS 正负例、版本 API、浏览器默认折叠/展开/欢迎语和 console 0 通过。状态服务与其他应用未替换；标准 `./stack verify` 仍被无关的 Semattice `config=1.0.7 / repository=1.0.8` 漂移阻断。demo 当前仅有一个 ACTIVE OWNER，进入非 demo 环境前必须改为专用 RUN-only 成员；远程、UAT、生产未修改。
 

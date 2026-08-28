@@ -2,11 +2,11 @@
 kind: task-status
 task_id: TASK-335
 feature_id: FEAT-204
-status: in_progress
+status: review
 priority: critical
 owner_role: frontend-agent
 claimed_by: codex
-updated_at: 2026-08-28T08:35:14Z
+updated_at: 2026-08-28T08:54:54Z
 updated_by: codex
 ---
 
@@ -31,7 +31,9 @@ updated_by: codex
 - 后端 `ChatOrchestratorService.safeSendDelta` 与 Agent OpenAPI 测试均以 `Map.of("text", text)` 发送 `delta`。
 - `SisiEmbedPage.consumeStream` 只读取 `content ?? delta`，规范 `text` 被忽略；流结束后空字符串由 `ChatMarkdown` 显示为兜底文案。
 - 修复已抽取 `streamDeltaText`，聚焦 4 项、前端全量 58 文件/318 项、production build、域名门禁和 diff check 通过。
+- 实现提交 `d47afb41c66d` 已进入本地 `main`；backend/frontend 从该提交构建为 `2.8.67-dev.d47afb4`，两容器 healthy/restart=0，版本 API、镜像 label 与运行环境一致。
+- 真实官网浮窗刷新新制品后发送“我需要一个能跟客户在线沟通的智能软件”，页面展示 678 字完整回答；数据库同问题 user/assistant 历史完整，最新 `sisi_embed` Trace 为 `COMPLETED`、model_call_count=2，浏览器 error/warning=0。
 
 ## 下一步
 
-- 提交到本地 `main`，重建并回归本地全栈官网浮窗。
+- 由用户目视确认当前官网浮窗；远程推送、UAT 与生产另行授权。

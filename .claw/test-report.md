@@ -1,14 +1,24 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-28T07:51:00Z
+updated_at: 2026-08-28T08:54:54Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-28T07:51:00Z
-last_run_status: passed_task_334_local_runtime_pending_user_review
+last_run_at: 2026-08-28T08:54:54Z
+last_run_status: passed_task_335_local_runtime_pending_user_review
 ---
 
 # Test Report
+
+## 2026-08-28 TASK-335 Web 浮窗流式回复空白修复
+
+- 状态：`passed_task_335_local_runtime_pending_user_review`；代码、自动化、同提交制品、真实官网对话、消息持久化、Trace 和浏览器错误门禁通过，等待用户目视确认。
+- 根因同构：后端 `ChatOrchestratorService.safeSendDelta` 和 OpenAPI 测试均发送 `{text}`；旧 Embed 消费方只读取 `content/delta`，因此 SSE 已成功、模型正文已持久化，但页面累积内容仍为空并触发兜底。
+- 自动化：`SisiEmbedPage.test.ts` 4 项通过，新增规范 `text` 与纯文本/`content`/`delta` 兼容覆盖；前端全量 58 文件/318 项、production build、环境域名扫描与 `git diff --check` 通过。build 仅保留既有大 chunk warning。
+- 主线与制品：实现 `d47afb41c66d` 已进入本地 `main`。backend/frontend 镜像分别为 `sha256:f19364266f020314cc0958cf79ae74f98e4b2c09ed577d8a0e79dc025bf5496f` / `sha256:6168caf9e3ee23a4b7527db7d28d321a7fce72bb5b3d813142d90be5f0739390`，label、容器环境、版本 API 和页面资源均为 `2.8.67-dev.d47afb4 / d47afb41c66d`；两容器 healthy/restart=0。
+- 真实业务链路：官网正式浮窗发送截图原问题“我需要一个能跟客户在线沟通的智能软件”，页面展示 678 字完整回复，包含核心信息、功能对比与下一步建议；数据库最新 user=18 字、assistant=678 字，Trace 为 `sisi_embed/COMPLETED/model_call_count=2/tool_call_count=0`。
+- 浏览器与稳定性：刷新到新制品后对话完整显示，不包含“本次未返回文字内容。”；console error/warning=0。backend 启动后无 ERROR/Exception/Failed；PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak、Nginx、Semattice、DevAutopilot 持续运行且未重建。
+- 边界：标准全栈门禁仍受任务外 Semattice `config=1.0.7 / repository=1.0.8` 漂移约束，本次未修改该产品或 local-stack 既有跟踪改动。远程、UAT、生产未修改。
 
 ## 2026-08-28 TASK-334 Web 浮窗与官网售前智能体
 

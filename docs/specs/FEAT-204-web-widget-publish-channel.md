@@ -7,7 +7,7 @@ owner_role: fullstack-agent
 task_ids: TASK-334,TASK-335
 related_decisions: FEAT-202
 related_issues: ISSUE-2026-08-28-web-widget-empty-stream
-updated_at: 2026-08-28T08:35:14Z
+updated_at: 2026-08-28T08:54:54Z
 updated_by: codex
 ---
 
@@ -116,7 +116,7 @@ Agent Builder 已有独立“发布渠道”页签，但 Web 浮窗仍只有占�
 
 - 2026-08-28：完成现状扫描和安全方案；进入实现。
 - 2026-08-28：实现、自动化、本地 main、V125、demo 发布、公开安全负例、真实模型会话和浏览器验收通过；进入用户 review。demo 现用唯一 ACTIVE OWNER，非 demo 发布前必须替换为专用 RUN-only 成员。
-- 2026-08-28：用户回报官网浮窗回复为空；定位为 Embed 消费方漏读规范 `{text}`，TASK-335 已完成代码与自动化修复，等待本地正式制品真实对话回归。
+- 2026-08-28：用户回报官网浮窗回复为空；定位为 Embed 消费方漏读规范 `{text}`。TASK-335 已进入本地 main，同提交前后端制品与官网原问题真实回归通过，进入用户 review。
 
 ## 交接说明
 

@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-28T08:35:14Z
+updated_at: 2026-08-28T08:54:54Z
 updated_by: codex
 board_status: active
 ---
@@ -17,7 +17,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-335 - Web 浮窗流式回复空白修复
 
-- status: `in_progress`
+- status: `review`
 - priority: `critical`
 - owner_role: `frontend-agent`
 - claimed_by: `codex`
@@ -26,8 +26,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - related_issues: `ISSUE-2026-08-28-web-widget-empty-stream`
 - scope_files: `Sisi Embed SSE delta 文本契约、兼容解析、回归测试、本地 main 制品与真实官网浮窗验证`
-- completion_evidence: `后端规范负载为 {text}；前端聚焦 4 项、全量 58 文件/318 项、production build、域名/diff 门禁通过；本地运行回归待执行。`
-- next_action: `提交本地 main，从同一提交重建 backend/frontend，并在官网浮窗发送截图原问题验证非空回复与执行成功记录。`
+- completion_evidence: `本地 main@d47afb41c66d；后端规范负载为 {text}；前端聚焦 4 项、全量 58 文件/318 项、production build、域名/diff 门禁；backend/frontend 2.8.67-dev.d47afb4 healthy/restart=0；官网原问题返回 678 字正文，Trace COMPLETED/model_call_count=2，浏览器 console 0。`
+- next_action: `由用户目视确认当前官网浮窗；远程推送、UAT 与生产另行授权。`
 
 ### TASK-334 - Web 浮窗发布渠道与官网售前智能体
 
