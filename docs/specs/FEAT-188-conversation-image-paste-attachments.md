@@ -5,9 +5,9 @@ title: 对话框连续粘贴图片附件
 status: verified
 primary_project: agentcici
 owner_role: fullstack-agent
-task_ids: TASK-309,TASK-336
+task_ids: TASK-309,TASK-336,TASK-338
 related_issues: ISSUE-2026-08-28-vision-capability-scope
-updated_at: 2026-08-28T09:27:08Z
+updated_at: 2026-08-28T10:54:15Z
 updated_by: codex
 ---
 
@@ -88,3 +88,9 @@ DevAutopilot 需求 `REQ-6F34ECF3` 的端到端任务 `019ffeb0-88a0-739f-afcb-6
 - 修复只统一能力事实源，不按模型名推断、不把未确认模型放行，也不改变附件、租户隔离或失败不落消息的既有契约。
 - 验收新增：任意普通租户使用平台已确认 `vision` 的当前聊天模型时必须通过门禁；未确认能力仍返回 `VISION_MODEL_REQUIRED`。
 - 本地验收：实现 `036c12a0d006` 进入本地 main，backend/frontend 同为 `2.8.67-dev.036c12a`；已登录普通租户真实粘贴用户原截图，`qwen3.7-plus` 分别识别出 `409` 和 `VISION_MODEL_REQUIRED`，能力误判已消除。远程、UAT、生产未修改。
+
+## 2026-08-28 UAT 技术发布
+
+- 修复已随冻结 `2970bea75208` 发布为 UAT `2.8.67-beta.1`；远程 `main`、tag、前后端不可变镜像和运行 commit 一致，未更新 `latest`。
+- 完整备份、最小 backend/frontend 切换、四状态服务 ID 保持、六容器健康、V125、Nginx、公开/匿名门禁和稳定窗口通过；生产保持 `2.8.66`。
+- 技术发布不替代登录态业务接受；需由已登录 UAT 用户粘贴图片，确认上传成功、模型实际识别内容且不再返回错误 `VISION_MODEL_REQUIRED`。

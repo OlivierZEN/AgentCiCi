@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 5
-updated_at: 2026-08-28T10:30:09Z
+updated_at: 2026-08-28T10:54:15Z
 updated_by: codex
 phase: review
-active_task: TASK-337
-next_action: "由用户目视确认当前官网浮窗的 CRM 蓝、发送按钮、附件入口和标题栏 hover；远程、UAT 与生产另行授权。"
+active_task: TASK-338
+next_action: "由已登录 UAT 用户粘贴图片执行真实识别并确认结果；技术发布已完成，生产保持 2.8.66。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- `TASK-338 / FEAT-188` 已完成 AgentCiCi UAT `2.8.67-beta.1 / 2970bea75208` 技术发布。远程 `main`、annotated tag、backend/frontend linux/amd64 不可变 digest 与运行 commit 一致，未更新 `latest`；完整备份 `/data/apps/agentcici/backups/20260828T104754Z-before-2.8.67-beta.1` 的 12 项工件、PostgreSQL catalog、KB/Qdrant tar、Qdrant 原生 snapshot、旧应用镜像和 SHA-256 均通过，应用回滚目标为 `2.8.66-beta.3`。仅重建 backend/frontend，四个状态服务 ID 不变；六容器 healthy/restart=0，health UP、V125、Nginx、公开 smoke、匿名 JSON 401 与 30 秒稳定窗口通过。本候选未新增或切换跨项目契约；UAT 登录态图片识别待 HUMAN，生产未修改。
 
 - `TASK-337 / FEAT-204` 已按用户截图完成官网 Web 浮窗视觉和输入区修正：公开 website 浮窗与启动器采用 CRM 标准蓝；发送按钮固定右侧并统一 `33 × 33` 尺寸/禁用态；浮窗移除附件入口但 `page` 模式继续保留；标题栏 hover 背景/边框透明并保留键盘焦点。实现 `beef1cedd4056` 已进入本地 main；聚焦 6 项、前端全量 58 文件/320 项、production build、SDK/域名/diff 门禁通过。backend/frontend 同为 `2.8.67-dev.beef1ce`、healthy/restart=0；官网真实非空回复、视觉对照和 console 0 通过。远程、UAT、生产未修改，进入用户 review。
 

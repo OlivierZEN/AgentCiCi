@@ -1,12 +1,19 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-08-28T10:30:09Z
+updated_at: 2026-08-28T10:54:15Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-28 TASK-338 UAT `2.8.67-beta.1`
+
+- 冻结提交与 annotated tag 为 `2970bea75208a05d65c00c08333bc73cc072e607` / `2.8.67-beta.1`，远程 `main` 包含修复 `036c12a0d006`。backend/frontend ACR index digest 分别为 `sha256:927692d90475cabeded150a776e24d31a9dcbfd45f29273dd9d870de50aab74d` / `sha256:79a2f1e08967a0e85e65d73d5facafcecfc5ed8349c449007323d7acd958d49f`，均含 linux/amd64，未更新 `latest`。
+- 完整备份 `/data/apps/agentcici/backups/20260828T104754Z-before-2.8.67-beta.1` 含 12 项、317,026,856 bytes 的 Compose/env、PostgreSQL、KB、Qdrant 存储与原生 snapshot、旧应用镜像、容器状态、回滚说明和 SHA-256 清单；均非空且 `0600`，dump catalog、tar、gzip 与清单通过。即时应用回滚目标为 `2.8.66-beta.3`，数据恢复需单独批准。
+- UAT 只以非机密临时变量渲染版本；仅 `--no-deps --force-recreate backend frontend`。database、Redis、RabbitMQ、Qdrant ID 不变，六容器 healthy/restart=0；运行 version/commit/label/digest 一致，health UP、V125、Nginx、公开 smoke 和匿名 JSON 401 通过。
+- 独立 30 秒稳定窗口 backend severe=0、frontend 5xx/upstream=0。本候选未新增或切换跨项目契约；登录态图片识别待 HUMAN，生产保持 `2.8.66 / e805c0ef7142`。
 
 ## 2026-08-28 TASK-337 本地开发环境
 

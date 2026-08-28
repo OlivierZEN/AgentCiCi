@@ -1,14 +1,26 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-28T10:30:09Z
+updated_at: 2026-08-28T10:54:15Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-28T10:30:09Z
-last_run_status: passed_task_337_local_runtime_pending_user_review
+last_run_at: 2026-08-28T10:54:15Z
+last_run_status: passed_task_338_uat_technical_pending_human_image_acceptance
 ---
 
 # Test Report
+
+## 2026-08-28 TASK-338 UAT `2.8.67-beta.1`
+
+- 状态：`passed_task_338_uat_technical_pending_human_image_acceptance`；冻结源码、不可变制品、备份、最小切换、运行指纹、迁移、健康、公开/匿名和稳定窗口通过，登录态图片识别待 HUMAN。
+- Source：修复 `036c12a0d006` 与验证记录 `2970bea75208` 已进入远程 `main`；annotated tag `2.8.67-beta.1^{}` 和运行 commit 均为 `2970bea75208`。本地后续 TASK-337 提交未进入本候选。
+- 构建门禁：冻结工作树前端 58 文件/318 项、production build，后端附件/模型身份聚焦测试与 package、`git diff --check` 通过。
+- Artifact：backend index digest `sha256:927692d90475cabeded150a776e24d31a9dcbfd45f29273dd9d870de50aab74d`，frontend index digest `sha256:79a2f1e08967a0e85e65d73d5facafcecfc5ed8349c449007323d7acd958d49f`；均含 linux/amd64，label 为 `2.8.67-beta.1 / 2970bea75208`，未更新 `latest`。
+- Recovery：完整备份 `/data/apps/agentcici/backups/20260828T104754Z-before-2.8.67-beta.1` 共 12 项、317,026,856 bytes；文件非空且 `0600`，PostgreSQL catalog、KB/Qdrant tar、Qdrant 原生 snapshot、旧应用镜像 gzip 与 SHA-256 清单通过。应用回滚目标 `2.8.66-beta.3`，数据恢复需另行授权。
+- Runtime：只 `--no-deps --force-recreate backend frontend`；database、Redis、RabbitMQ、Qdrant ID 不变。六容器 healthy/restart=0，backend health UP，version/commit/image/digest 一致，Nginx 有效；Flyway V125 success，随后 repeatable `demo example application` success。
+- Edge：UAT 首页、Keycloak discovery、Semattice health/version、DevAutopilot integrated health 通过；`/app`、`/embed/sisi`、DEMO 路由与 SDK 为 200，匿名 `/auth/me`、`/ai/sessions`、`/skills` 和 Embed 附件 API 均为 JSON 401。
+- 稳定：独立 30 秒窗口六容器状态/restart 不变，backend severe=0，frontend 5xx/upstream=0。本候选没有新增、切换或启用跨项目契约；生产未修改。
+- 验收边界：未使用或创建 UAT 登录凭据，未代替用户执行真实图片会话；图片上传、模型实际识别和租户业务结果仍待已登录 HUMAN 验收。
 
 ## 2026-08-28 TASK-337 官网 Web 浮窗 CRM 标准蓝与输入区修正
 
