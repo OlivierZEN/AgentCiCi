@@ -47,6 +47,7 @@ type ApplicationVersion = {
   manifestDigest: string;
   status: string;
   dependencies: ApplicationDependency[];
+  mcpProviders: Array<{ providerKey: string; authType: string; audience?: string | null; requiredScope?: string | null; tools: Array<{ name: string; riskLevel: string; confirmationRequired: boolean }> }>;
   createdBy: string;
   validatedBy?: string | null;
   validatedAt?: string | null;
@@ -112,6 +113,10 @@ type VersionForm = {
   initializationEngine: string;
   steps: ApplicationStep[];
   dependencies: ApplicationDependency[];
+  mcpProviderKey: string;
+  mcpAudience: string;
+  mcpRequiredScope: string;
+  mcpTools: string;
 };
 
 type ConnectionForm = {
@@ -151,6 +156,10 @@ const EMPTY_VERSION: VersionForm = {
   initializationEngine: "NONE",
   steps: [],
   dependencies: [],
+  mcpProviderKey: "",
+  mcpAudience: "",
+  mcpRequiredScope: "",
+  mcpTools: "",
 };
 
 const EMPTY_CONNECTION: ConnectionForm = {
@@ -363,6 +372,19 @@ export default function PlatformInternalApplicationsPage() {
         body: JSON.stringify({
           ...versionForm,
           providerBindingKey: versionForm.providerBindingKey.trim() || null,
+          mcpProviders: versionForm.mcpProviderKey.trim() ? [{
+            providerKey: versionForm.mcpProviderKey.trim(),
+            transportType: "streamableHttp",
+            authType: "KEYCLOAK_CLIENT_CREDENTIALS",
+            audience: versionForm.mcpAudience.trim(),
+            requiredScope: versionForm.mcpRequiredScope.trim(),
+            tools: versionForm.mcpTools.split(/[\n,]/).map((value) => value.trim()).filter(Boolean).map((name) => ({
+              name,
+              schemaDigest: null,
+              riskLevel: name.endsWith("_query") ? "LOW" : "HIGH",
+              confirmationRequired: !name.endsWith("_query"),
+            })),
+          }] : [],
         }),
       });
       const { body } = await safeFetchJson(response);
@@ -663,8 +685,16 @@ function VersionModal({ form, setForm, busy, firstField, connections, applicatio
         }}><option value="">请选择依赖应用</option>{applications.map((application) => <option value={application.appCode} key={application.appCode} disabled={form.dependencies.some((item, itemIndex) => itemIndex !== index && item.appCode === application.appCode)}>{application.displayName} · {application.appCode} · {application.defaultVersion}</option>)}</select><input aria-label={`依赖 ${index + 1} 版本约束`} value={dependency.versionConstraint} onChange={(event) => setForm((current) => ({ ...current, dependencies: current.dependencies.map((item, itemIndex) => itemIndex === index ? { ...item, versionConstraint: event.target.value } : item) }))} placeholder=">=1.0.0" required /><select aria-label={`依赖 ${index + 1} 类型`} value={dependency.dependencyType} onChange={(event) => setForm((current) => ({ ...current, dependencies: current.dependencies.map((item, itemIndex) => itemIndex === index ? { ...item, dependencyType: event.target.value } : item) }))}><option value="REQUIRED_RUNTIME">运行强依赖</option><option value="REQUIRED_ACTIVATION">开通强依赖</option><option value="OPTIONAL">可选依赖</option></select><select aria-label={`依赖 ${index + 1} 开通策略`} value={dependency.activationPolicy} onChange={(event) => setForm((current) => ({ ...current, dependencies: current.dependencies.map((item, itemIndex) => itemIndex === index ? { ...item, activationPolicy: event.target.value } : item) }))}><option value="REQUIRE_EXISTING">要求已开通</option><option value="AUTO_PROVISION_ALLOWED">允许联动计划</option></select><button type="button" aria-label="删除依赖" onClick={() => setForm((current) => ({ ...current, dependencies: current.dependencies.filter((_, itemIndex) => itemIndex !== index) }))}><X size={15} /></button></div>)}
         {!applications.length ? <p className="internal-application-version-empty">当前没有其他已发布应用可作为依赖。</p> : null}
       </section>
+      <section className="internal-application-version-section"><div className="internal-application-version-section__head"><div><strong>MCP Provider 与专属工具</strong><span>版本只声明逻辑Provider、Keycloak资源边界和允许工具；租户再绑定“工具”页面中已配置的MCP服务器。</span></div></div>
+        <div className="internal-application-version-basics">
+          <label><span>Provider Key</span><input value={form.mcpProviderKey} onChange={(event) => setForm((current) => ({ ...current, mcpProviderKey: event.target.value.toLowerCase() }))} placeholder="devautopilot.mcp" /></label>
+          <label><span>Keycloak Audience</span><input value={form.mcpAudience} disabled={!form.mcpProviderKey} required={Boolean(form.mcpProviderKey)} onChange={(event) => setForm((current) => ({ ...current, mcpAudience: event.target.value }))} placeholder="devautopilot-mcp" /></label>
+          <label><span>Required Scope</span><input value={form.mcpRequiredScope} disabled={!form.mcpProviderKey} required={Boolean(form.mcpProviderKey)} onChange={(event) => setForm((current) => ({ ...current, mcpRequiredScope: event.target.value }))} placeholder="devautopilot:mcp" /></label>
+        </div>
+        <label className="internal-application-version-mcp-tools"><span>允许工具</span><textarea value={form.mcpTools} disabled={!form.mcpProviderKey} required={Boolean(form.mcpProviderKey)} onChange={(event) => setForm((current) => ({ ...current, mcpTools: event.target.value }))} rows={5} placeholder={"每行一个工具名，例如：\nsemattice_project_delivery_query\nsemattice_project_delivery_create"} /><small>工具发现时必须全部存在，否则租户绑定失败关闭；查询默认为低风险，其余工具要求人工确认。</small></label>
+      </section>
     </div>
-    <div className="tenant-lifecycle__modal-foot"><button type="button" className="platform-button platform-button--secondary" onClick={onClose} disabled={busy}>取消</button><button type="submit" className="platform-button platform-button--primary" disabled={busy || !validSemanticVersion(form.version) || (form.initializationEngine === "SAGA_V1" && (!form.providerBindingKey || !form.steps.length))}>{busy ? "正在创建…" : "创建版本草稿"}</button></div>
+    <div className="tenant-lifecycle__modal-foot"><button type="button" className="platform-button platform-button--secondary" onClick={onClose} disabled={busy}>取消</button><button type="submit" className="platform-button platform-button--primary" disabled={busy || !validSemanticVersion(form.version) || (form.initializationEngine === "SAGA_V1" && (!form.providerBindingKey || !form.steps.length)) || (Boolean(form.mcpProviderKey) && (!form.mcpAudience.trim() || !form.mcpRequiredScope.trim() || !form.mcpTools.trim()))}>{busy ? "正在创建…" : "创建版本草稿"}</button></div>
   </form></div>;
 }
 

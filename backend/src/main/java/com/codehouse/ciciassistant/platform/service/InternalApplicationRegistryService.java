@@ -35,7 +35,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class InternalApplicationRegistryService {
 
-    public static final String MANIFEST_SCHEMA = "tenant-application/v1";
+    public static final String MANIFEST_SCHEMA = "tenant-application/v2";
+    private static final Set<String> SUPPORTED_MANIFEST_SCHEMAS = Set.of("tenant-application/v1", MANIFEST_SCHEMA);
     public static final String STATUS_DRAFT = "DRAFT";
     public static final String STATUS_PUBLISHED = "PUBLISHED";
     public static final String STATUS_SUSPENDED = "SUSPENDED";
@@ -124,6 +125,7 @@ public class InternalApplicationRegistryService {
                 readJson(rs.getString("manifest_json")),
                 rs.getString("manifest_digest"),
                 rs.getString("version_status"),
+                mcpProviders(rs.getString("id")),
                 dependencies(rs.getString("id")),
                 rs.getString("created_by"),
                 rs.getString("validated_by"),
@@ -216,6 +218,23 @@ public class InternalApplicationRegistryService {
                         VALUES (?,?,?,?,?,?)
                         """, UUID.randomUUID().toString(), versionId, dependency.appCode(),
                         dependency.versionConstraint(), dependency.dependencyType(), dependency.activationPolicy());
+            }
+            for (McpProviderCommand provider : normalized.mcpProviders()) {
+                String providerId = UUID.randomUUID().toString();
+                jdbc.update("""
+                        INSERT INTO application_version_mcp_provider(
+                            id,application_version_id,provider_key,transport_type,auth_type,audience,required_scope)
+                        VALUES (?,?,?,?,?,?,?)
+                        """, providerId, versionId, provider.providerKey(), provider.transportType(), provider.authType(),
+                        provider.audience(), provider.requiredScope());
+                for (McpToolCommand tool : provider.tools()) {
+                    jdbc.update("""
+                            INSERT INTO application_version_mcp_tool(
+                                id,provider_id,tool_name,schema_digest,risk_level,confirmation_required)
+                            VALUES (?,?,?,?,?,?)
+                            """, UUID.randomUUID().toString(), providerId, tool.name(), tool.schemaDigest(),
+                            tool.riskLevel(), tool.confirmationRequired());
+                }
             }
         } catch (DataIntegrityViolationException exception) {
             throw new ConflictException("Internal application version or dependency conflicts with the catalog");
@@ -344,9 +363,27 @@ public class InternalApplicationRegistryService {
                 rs.getString("activation_policy")), versionId);
     }
 
+    private List<McpProviderView> mcpProviders(String versionId) {
+        return jdbc.query("""
+                SELECT id,provider_key,transport_type,auth_type,audience,required_scope
+                FROM application_version_mcp_provider
+                WHERE application_version_id=? ORDER BY provider_key
+                """, (rs, rowNum) -> new McpProviderView(rs.getString("provider_key"),
+                rs.getString("transport_type"), rs.getString("auth_type"), rs.getString("audience"),
+                rs.getString("required_scope"), mcpTools(rs.getString("id"))), versionId);
+    }
+
+    private List<McpToolView> mcpTools(String providerId) {
+        return jdbc.query("""
+                SELECT tool_name,schema_digest,risk_level,confirmation_required
+                FROM application_version_mcp_tool WHERE provider_id=? ORDER BY tool_name
+                """, (rs, rowNum) -> new McpToolView(rs.getString("tool_name"), rs.getString("schema_digest"),
+                rs.getString("risk_level"), rs.getBoolean("confirmation_required")), providerId);
+    }
+
     private void validateManifest(VersionView version) {
         JsonNode manifest = version.manifest();
-        if (!MANIFEST_SCHEMA.equals(manifest.path("schemaVersion").asText())) {
+        if (!SUPPORTED_MANIFEST_SCHEMAS.contains(manifest.path("schemaVersion").asText())) {
             throw new IllegalArgumentException("Unsupported manifest schema version");
         }
         String engine = normalizeEnum(manifest.path("initializationEngine").asText(),
@@ -371,6 +408,24 @@ public class InternalApplicationRegistryService {
                 throw new IllegalArgumentException("Manifest step codes must be unique");
             }
         });
+        if (MANIFEST_SCHEMA.equals(manifest.path("schemaVersion").asText())) {
+            JsonNode providers = manifest.path("mcpProviders");
+            if (!providers.isArray() || providers.size() > 16) {
+                throw new IllegalArgumentException("mcpProviders must be an array with at most 16 entries");
+            }
+            Set<String> providerKeys = new HashSet<>();
+            providers.forEach(provider -> {
+                String key = normalizeIdentifier(provider.path("providerKey").asText(), "providerKey", false);
+                if (!providerKeys.add(key)) throw new IllegalArgumentException("MCP provider keys must be unique");
+                if (!"streamableHttp".equals(provider.path("transportType").asText())) {
+                    throw new IllegalArgumentException("Only streamableHttp MCP transport is supported");
+                }
+                normalizeEnum(provider.path("authType").asText(), "authType", Set.of("NONE", "KEYCLOAK_CLIENT_CREDENTIALS"));
+                if (!provider.path("tools").isArray() || provider.path("tools").isEmpty()) {
+                    throw new IllegalArgumentException("Each MCP provider requires at least one tool");
+                }
+            });
+        }
         rejectDeploymentAddress(version.manifest().toString(), "manifest");
     }
 
@@ -512,7 +567,48 @@ public class InternalApplicationRegistryService {
             throw new IllegalArgumentException("Provider callback steps require providerBindingKey");
         }
         List<DependencyCommand> dependencies = normalizeDependencies(command.dependencies());
-        return new NormalizedVersion(version, providerBindingKey, engine, List.copyOf(steps), dependencies);
+        List<McpProviderCommand> mcpProviders = normalizeMcpProviders(command.mcpProviders());
+        return new NormalizedVersion(version, providerBindingKey, engine, List.copyOf(steps), dependencies, mcpProviders);
+    }
+
+    private List<McpProviderCommand> normalizeMcpProviders(List<McpProviderCommand> values) {
+        if (values == null || values.isEmpty()) return List.of();
+        if (values.size() > 16) throw new IllegalArgumentException("A version supports at most 16 MCP providers");
+        Map<String, McpProviderCommand> normalized = new LinkedHashMap<>();
+        for (McpProviderCommand provider : values) {
+            String key = normalizeIdentifier(provider.providerKey(), "providerKey", false);
+            if (!"streamableHttp".equals(provider.transportType())) {
+                throw new IllegalArgumentException("Only streamableHttp MCP transport is supported");
+            }
+            String authType = normalizeEnum(provider.authType(), "authType", Set.of("NONE", "KEYCLOAK_CLIENT_CREDENTIALS"));
+            String audience = provider.audience() == null || provider.audience().isBlank()
+                    ? null : requireText(provider.audience(), "audience", 256);
+            String requiredScope = provider.requiredScope() == null || provider.requiredScope().isBlank()
+                    ? null : requireText(provider.requiredScope(), "requiredScope", 256);
+            if ("KEYCLOAK_CLIENT_CREDENTIALS".equals(authType) && (audience == null || requiredScope == null)) {
+                throw new IllegalArgumentException("Keycloak MCP providers require audience and requiredScope");
+            }
+            if (provider.tools() == null || provider.tools().isEmpty() || provider.tools().size() > 128) {
+                throw new IllegalArgumentException("Each MCP provider requires 1 to 128 tools");
+            }
+            Map<String, McpToolCommand> tools = new LinkedHashMap<>();
+            for (McpToolCommand tool : provider.tools()) {
+                String name = normalizeIdentifier(tool.name(), "tool.name", false);
+                String digest = tool.schemaDigest() == null || tool.schemaDigest().isBlank()
+                        ? null : tool.schemaDigest().trim().toLowerCase(Locale.ROOT);
+                if (digest != null && !digest.matches("^[0-9a-f]{64}$")) {
+                    throw new IllegalArgumentException("Invalid tool schemaDigest");
+                }
+                String risk = normalizeEnum(tool.riskLevel(), "tool.riskLevel", Set.of("LOW", "MEDIUM", "HIGH"));
+                if (tools.putIfAbsent(name, new McpToolCommand(name, digest, risk, tool.confirmationRequired())) != null) {
+                    throw new IllegalArgumentException("MCP tool names must be unique per provider");
+                }
+            }
+            McpProviderCommand item = new McpProviderCommand(key, "streamableHttp", authType,
+                    audience, requiredScope, List.copyOf(tools.values()));
+            if (normalized.putIfAbsent(key, item) != null) throw new IllegalArgumentException("MCP provider keys must be unique");
+        }
+        return List.copyOf(normalized.values());
     }
 
     private List<DependencyCommand> normalizeDependencies(List<DependencyCommand> values) {
@@ -551,6 +647,23 @@ public class InternalApplicationRegistryService {
             item.put("type", step.type());
             item.put("capability", step.capability());
             item.put("contractVersion", step.contractVersion());
+        });
+        ArrayNode providers = manifest.putArray("mcpProviders");
+        version.mcpProviders().forEach(provider -> {
+            ObjectNode item = providers.addObject();
+            item.put("providerKey", provider.providerKey());
+            item.put("transportType", provider.transportType());
+            item.put("authType", provider.authType());
+            if (provider.audience() != null) item.put("audience", provider.audience());
+            if (provider.requiredScope() != null) item.put("requiredScope", provider.requiredScope());
+            ArrayNode tools = item.putArray("tools");
+            provider.tools().forEach(tool -> {
+                ObjectNode toolNode = tools.addObject();
+                toolNode.put("name", tool.name());
+                if (tool.schemaDigest() != null) toolNode.put("schemaDigest", tool.schemaDigest());
+                toolNode.put("riskLevel", tool.riskLevel());
+                toolNode.put("confirmationRequired", tool.confirmationRequired());
+            });
         });
         return manifest;
     }
@@ -663,8 +776,15 @@ public class InternalApplicationRegistryService {
             String providerBindingKey,
             String initializationEngine,
             List<StepCommand> steps,
-            List<DependencyCommand> dependencies) {
+            List<DependencyCommand> dependencies,
+            List<McpProviderCommand> mcpProviders) {
     }
+
+    public record McpProviderCommand(String providerKey, String transportType, String authType,
+                                     String audience, String requiredScope, List<McpToolCommand> tools) {}
+
+    public record McpToolCommand(String name, String schemaDigest, String riskLevel,
+                                 boolean confirmationRequired) {}
 
     public record StepCommand(String code, String type, String capability, String contractVersion) {
     }
@@ -706,6 +826,7 @@ public class InternalApplicationRegistryService {
             JsonNode manifest,
             String manifestDigest,
             String status,
+            List<McpProviderView> mcpProviders,
             List<DependencyView> dependencies,
             String createdBy,
             String validatedBy,
@@ -722,6 +843,12 @@ public class InternalApplicationRegistryService {
             String dependencyType,
             String activationPolicy) {
     }
+
+    public record McpProviderView(String providerKey, String transportType, String authType,
+                                  String audience, String requiredScope, List<McpToolView> tools) {}
+
+    public record McpToolView(String name, String schemaDigest, String riskLevel,
+                              boolean confirmationRequired) {}
 
     public record ValidationView(
             String appCode,
@@ -748,7 +875,8 @@ public class InternalApplicationRegistryService {
             String providerBindingKey,
             String initializationEngine,
             List<StepCommand> steps,
-            List<DependencyCommand> dependencies) {
+            List<DependencyCommand> dependencies,
+            List<McpProviderCommand> mcpProviders) {
     }
 
     private record Edge(String from, String to) {

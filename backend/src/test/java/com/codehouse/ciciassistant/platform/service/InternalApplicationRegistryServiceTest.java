@@ -59,6 +59,7 @@ class InternalApplicationRegistryServiceTest {
                 "SAGA_V1",
                 List.of(new InternalApplicationRegistryService.StepCommand(
                         "activate", "PROVIDER_CALLBACK", "tenant.activate", "v1")),
+                List.of(),
                 List.of());
 
         assertThatThrownBy(() -> service.createVersion(

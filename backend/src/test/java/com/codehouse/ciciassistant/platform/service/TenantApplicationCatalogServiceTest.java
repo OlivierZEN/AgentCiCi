@@ -133,7 +133,7 @@ class TenantApplicationCatalogServiceTest {
         VersionView version = new VersionView(
                 application.appCode() + "-1", application.appCode(), "1.0.0", "tenant-application/v1",
                 null, "NONE", new ObjectMapper().createObjectNode(), "0".repeat(64), "PUBLISHED",
-                dependencies, "seed", "seed", Instant.now(), "seed", Instant.now(), Instant.now(), Instant.now());
+                List.of(), dependencies, "seed", "seed", Instant.now(), "seed", Instant.now(), Instant.now(), Instant.now());
         return new ApplicationDetailView(application, List.of(version));
     }
 }

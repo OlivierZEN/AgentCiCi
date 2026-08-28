@@ -5,6 +5,7 @@ import com.codehouse.ciciassistant.crmanalysis.service.CrmProductSalesAnalysisTo
 import com.codehouse.ciciassistant.email.service.EmailToolService;
 import com.codehouse.ciciassistant.memory.service.UserMemoryService;
 import com.codehouse.ciciassistant.mcp.service.McpServerService;
+import com.codehouse.ciciassistant.mcp.service.ApplicationMcpBindingService;
 import com.codehouse.ciciassistant.mcp.service.McpServerService.ResolvedTool;
 import com.codehouse.ciciassistant.platform.service.PlatformGovernanceService;
 import com.codehouse.ciciassistant.security.service.SafetyGatewayService;
@@ -29,6 +30,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +47,10 @@ public class ToolOrchestratorService {
 
     static final String TOOL_MEMORY_REMEMBER = "memory_remember";
     static final String TOOL_MEMORY_FORGET = "memory_forget";
+    private static final Set<String> DEV_AUTOPILOT_TOOL_NAMES = Set.of(
+            "semattice_project_delivery_query", "semattice_project_delivery_create",
+            "semattice_project_delivery_update", "semattice_project_delivery_transfer",
+            "semattice_project_delivery_delete", "semattice_project_delivery_review");
 
     private final McpServerService mcpServerService;
     private final CloudccOpenApiService cloudccOpenApiService;
@@ -64,6 +70,7 @@ public class ToolOrchestratorService {
     private SematticeProjectDeliveryTransferToolService sematticeProjectDeliveryTransferToolService;
     private final SafetyGatewayService safetyGatewayService;
     private final ObjectMapper objectMapper;
+    private ApplicationMcpBindingService applicationMcpBindings;
     private AssistantScheduleToolService assistantScheduleToolService;
 
     public ToolOrchestratorService(McpServerService mcpServerService,
@@ -127,6 +134,11 @@ public class ToolOrchestratorService {
         this.sematticeProjectDeliveryTransferToolService = sematticeProjectDeliveryTransferToolService;
     }
 
+    @Autowired(required = false)
+    void setApplicationMcpBindingService(ApplicationMcpBindingService applicationMcpBindings) {
+        this.applicationMcpBindings = applicationMcpBindings;
+    }
+
     /**
      * Get all available tools for the org in OpenAI function-calling format.
      * Includes both MCP-discovered tools and built-in native tools.
@@ -166,12 +178,16 @@ public class ToolOrchestratorService {
                 CrmProductSalesAnalysisToolService.toolDescription(),
                 CrmProductSalesAnalysisToolService.toolSchema(objectMapper),
                 companyId);
-        addBuiltInTool(result, normalizedAllowedToolNames, SematticeProjectDeliveryToolService.TOOL_NAME,
-                SematticeProjectDeliveryToolService.toolDescription(),
-                SematticeProjectDeliveryToolService.toolSchema(objectMapper), companyId);
-        addBuiltInTool(result, normalizedAllowedToolNames, SematticeProjectDeliveryReviewToolService.TOOL_NAME,
-                SematticeProjectDeliveryReviewToolService.toolDescription(),
-                SematticeProjectDeliveryReviewToolService.toolSchema(objectMapper), companyId);
+        if (!hasExternalDevAutopilotTool(companyId, SematticeProjectDeliveryToolService.TOOL_NAME)) {
+            addBuiltInTool(result, normalizedAllowedToolNames, SematticeProjectDeliveryToolService.TOOL_NAME,
+                    SematticeProjectDeliveryToolService.toolDescription(),
+                    SematticeProjectDeliveryToolService.toolSchema(objectMapper), companyId);
+        }
+        if (!hasExternalDevAutopilotTool(companyId, SematticeProjectDeliveryReviewToolService.TOOL_NAME)) {
+            addBuiltInTool(result, normalizedAllowedToolNames, SematticeProjectDeliveryReviewToolService.TOOL_NAME,
+                    SematticeProjectDeliveryReviewToolService.toolDescription(),
+                    SematticeProjectDeliveryReviewToolService.toolSchema(objectMapper), companyId);
+        }
 
         // Memory built-in tools (always available, no skill restriction)
         result.add(buildMemoryRememberTool());
@@ -228,29 +244,34 @@ public class ToolOrchestratorService {
                 })
                 .toList());
 
-        // 2. MCP-discovered tools
+        // 2. Application-bound MCP tools. These names are never exposed through the global
+        // MCP path, so merely configuring a server cannot bypass the application contract.
+        if (applicationMcpBindings != null) {
+            for (ResolvedTool tool : applicationMcpBindings.tools(companyId, "devautopilot")) {
+                addResolvedMcpTool(result, normalizedAllowedToolNames, tool);
+            }
+        }
+
+        // 3. Generic MCP-discovered tools
         List<ResolvedTool> mcpTools = mcpServerService.getAllToolsForOrg(companyId);
         for (ResolvedTool tool : mcpTools) {
-            if (!isAllowed(normalizedAllowedToolNames, tool.name(), true)) {
-                continue;
-            }
-            Map<String, Object> parameters;
-            try {
-                JsonNode schema = tool.inputSchema();
-                parameters = objectMapper.convertValue(schema, new TypeReference<Map<String, Object>>() {});
-            } catch (Exception e) {
-                parameters = Map.of("type", "object", "properties", Map.of());
-            }
-            result.add(Map.of(
-                    "type", "function",
-                    "function", Map.of(
-                            "name", tool.name(),
-                            "description", tool.description(),
-                            "parameters", parameters
-                    )
-            ));
+            if (DEV_AUTOPILOT_TOOL_NAMES.contains(tool.name())) continue;
+            addResolvedMcpTool(result, normalizedAllowedToolNames, tool);
         }
         return result;
+    }
+
+    private void addResolvedMcpTool(List<Map<String, Object>> result, List<String> allowedToolNames,
+                                    ResolvedTool tool) {
+        if (!isAllowed(allowedToolNames, tool.name(), true)) return;
+        Map<String, Object> parameters;
+        try {
+            parameters = objectMapper.convertValue(tool.inputSchema(), new TypeReference<Map<String, Object>>() {});
+        } catch (Exception e) {
+            parameters = Map.of("type", "object", "properties", Map.of());
+        }
+        result.add(Map.of("type", "function", "function", Map.of(
+                "name", tool.name(), "description", tool.description(), "parameters", parameters)));
     }
 
     private void addBuiltInTool(List<Map<String, Object>> result, List<String> allowedToolNames,
@@ -320,6 +341,11 @@ public class ToolOrchestratorService {
             return "Tool call blocked by security gateway: " + canonicalToolName;
         }
         String safeArgumentsJson = inputDecision.safeText();
+
+        if (hasExternalDevAutopilotTool(companyId, canonicalToolName)) {
+            return safeToolResult(companyId, userId, canonicalToolName,
+                    applicationMcpBindings.execute(companyId, userId, "devautopilot", canonicalToolName, safeArgumentsJson));
+        }
 
         if (canonicalToolName != null && canonicalToolName.startsWith(SkillApiToolService.TOOL_PREFIX)) {
             if (normalizedAllowedToolNames.isEmpty() || !normalizedAllowedToolNames.contains(canonicalToolName)) {
@@ -603,5 +629,10 @@ public class ToolOrchestratorService {
             return true;
         }
         return mcpTool && ToolNameNormalizer.containsMcpWildcard(allowedToolNames);
+    }
+
+    private boolean hasExternalDevAutopilotTool(String companyId, String toolName) {
+        return applicationMcpBindings != null && toolName != null
+                && applicationMcpBindings.hasTool(companyId, "devautopilot", toolName);
     }
 }

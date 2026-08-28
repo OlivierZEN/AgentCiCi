@@ -38,7 +38,8 @@ public class McpServerController {
     public ApiResponse<Map<String, Object>> create(@Valid @RequestBody CreateRequest req) {
         String companyId = TenantContext.requireCompanyId();
         McpServerEntity entity = service.create(companyId, req.name(), req.description(),
-                req.transportType(), req.url(), req.headers(), req.timeoutSeconds());
+                req.transportType(), req.url(), req.headers(), req.timeoutSeconds(), req.authType(), req.tokenUrl(),
+                req.clientId(), req.clientSecret(), req.tokenAudience(), req.tokenScopes());
         return ApiResponse.ok(toMap(entity));
     }
 
@@ -47,7 +48,8 @@ public class McpServerController {
                                                    @Valid @RequestBody UpdateRequest req) {
         String companyId = TenantContext.requireCompanyId();
         McpServerEntity entity = service.update(companyId, id, req.name(), req.description(),
-                req.transportType(), req.url(), req.headers(), req.timeoutSeconds(), req.enabled());
+                req.transportType(), req.url(), req.headers(), req.timeoutSeconds(), req.enabled(), req.authType(),
+                req.tokenUrl(), req.clientId(), req.clientSecret(), req.tokenAudience(), req.tokenScopes());
         return ApiResponse.ok(toMap(entity));
     }
 
@@ -105,6 +107,12 @@ public class McpServerController {
                 Map.entry("transportType", e.getTransportType()),
                 Map.entry("url", e.getUrl()),
                 Map.entry("headers", e.getHeaders() == null ? "" : e.getHeaders()),
+                Map.entry("authType", e.getAuthType()),
+                Map.entry("tokenUrl", e.getTokenUrl() == null ? "" : e.getTokenUrl()),
+                Map.entry("clientId", e.getClientId() == null ? "" : e.getClientId()),
+                Map.entry("clientSecretConfigured", e.hasClientSecret()),
+                Map.entry("tokenAudience", e.getTokenAudience() == null ? "" : e.getTokenAudience()),
+                Map.entry("tokenScopes", e.getTokenScopes() == null ? "" : e.getTokenScopes()),
                 Map.entry("timeoutSeconds", e.getTimeoutSeconds()),
                 Map.entry("enabled", e.isEnabled()),
                 Map.entry("createdAt", e.getCreatedAt().toString()),
@@ -142,7 +150,13 @@ public class McpServerController {
             @NotBlank String transportType,
             @NotBlank String url,
             String headers,
-            int timeoutSeconds
+            int timeoutSeconds,
+            String authType,
+            String tokenUrl,
+            String clientId,
+            String clientSecret,
+            String tokenAudience,
+            String tokenScopes
     ) {
         public CreateRequest {
             if (timeoutSeconds <= 0) timeoutSeconds = 60;
@@ -156,7 +170,13 @@ public class McpServerController {
             @NotBlank String url,
             String headers,
             int timeoutSeconds,
-            boolean enabled
+            boolean enabled,
+            String authType,
+            String tokenUrl,
+            String clientId,
+            String clientSecret,
+            String tokenAudience,
+            String tokenScopes
     ) {
         public UpdateRequest {
             if (timeoutSeconds <= 0) timeoutSeconds = 60;

@@ -2,6 +2,7 @@ package com.codehouse.ciciassistant.mcp.service;
 
 import com.codehouse.ciciassistant.integration.service.CloudccAccessTokenService;
 import com.codehouse.ciciassistant.integration.service.CloudccAccessTokenService.CloudccSessionContext;
+import com.codehouse.ciciassistant.common.crypto.SecretCipherService;
 import com.codehouse.ciciassistant.mcp.domain.McpServerEntity;
 import com.codehouse.ciciassistant.mcp.domain.McpServerRepository;
 import com.codehouse.ciciassistant.mcp.service.McpClient.McpTool;
@@ -32,6 +33,8 @@ public class McpServerService {
     private final McpClient mcpClient;
     private final CloudccAccessTokenService cloudccAccessTokenService;
     private final ObjectMapper objectMapper;
+    private final McpAuthenticationService authenticationService;
+    private final SecretCipherService secretCipherService;
 
     /** serverId → cached tool list */
     private final ConcurrentHashMap<Long, List<McpTool>> toolCache = new ConcurrentHashMap<>();
@@ -49,11 +52,15 @@ public class McpServerService {
             McpServerRepository repository,
             McpClient mcpClient,
             CloudccAccessTokenService cloudccAccessTokenService,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            McpAuthenticationService authenticationService,
+            SecretCipherService secretCipherService) {
         this.repository = repository;
         this.mcpClient = mcpClient;
         this.cloudccAccessTokenService = cloudccAccessTokenService;
         this.objectMapper = objectMapper;
+        this.authenticationService = authenticationService;
+        this.secretCipherService = secretCipherService;
     }
 
     // ── CRUD ──
@@ -66,8 +73,18 @@ public class McpServerService {
     public McpServerEntity create(String companyId, String name, String description,
                                   String transportType, String url, String headers,
                                   int timeoutSeconds) {
+        return create(companyId, name, description, transportType, url, headers, timeoutSeconds,
+                "NONE", null, null, null, null, null);
+    }
+
+    @Transactional
+    public McpServerEntity create(String companyId, String name, String description,
+                                  String transportType, String url, String headers, int timeoutSeconds,
+                                  String authType, String tokenUrl, String clientId, String clientSecret,
+                                  String tokenAudience, String tokenScopes) {
         McpServerEntity entity = new McpServerEntity(companyId, name, description,
                 transportType, url, headers, timeoutSeconds);
+        applyAuthentication(entity, authType, tokenUrl, clientId, clientSecret, tokenAudience, tokenScopes, false);
         return repository.save(entity);
     }
 
@@ -75,6 +92,15 @@ public class McpServerService {
     public McpServerEntity update(String companyId, Long id, String name, String description,
                                   String transportType, String url, String headers,
                                   int timeoutSeconds, boolean enabled) {
+        return update(companyId, id, name, description, transportType, url, headers, timeoutSeconds, enabled,
+                "NONE", null, null, null, null, null);
+    }
+
+    @Transactional
+    public McpServerEntity update(String companyId, Long id, String name, String description,
+                                  String transportType, String url, String headers, int timeoutSeconds, boolean enabled,
+                                  String authType, String tokenUrl, String clientId, String clientSecret,
+                                  String tokenAudience, String tokenScopes) {
         McpServerEntity entity = repository.findByIdAndCompanyId(id, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("MCP Server not found"));
         entity.setName(name);
@@ -84,6 +110,7 @@ public class McpServerService {
         entity.setHeaders(headers);
         entity.setTimeoutSeconds(timeoutSeconds);
         entity.setEnabled(enabled);
+        applyAuthentication(entity, authType, tokenUrl, clientId, clientSecret, tokenAudience, tokenScopes, true);
         clearDatabaseCache(entity);
         entity.touch();
         invalidateCache(id);
@@ -262,6 +289,30 @@ public class McpServerService {
         return "Tool not found: " + toolName;
     }
 
+    /** Executes only on the explicitly bound server; never falls back to a same-named tool elsewhere. */
+    public String executeToolOnServer(String companyId, String userId, Long serverId,
+                                      String toolName, String argumentsJson) {
+        McpServerEntity server = repository.findByIdAndCompanyId(serverId, companyId)
+                .filter(McpServerEntity::isEnabled)
+                .orElseThrow(() -> new IllegalArgumentException("MCP Server not found or disabled"));
+        McpTool declared = getTools(companyId, serverId).stream()
+                .filter(tool -> tool.name().equals(toolName)).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("MCP tool is not exposed by the bound server"));
+        try {
+            Map<String, String> extraHeaders = resolveDynamicHeaders(server, companyId, userId);
+            String args = argumentsJson;
+            if (isCloudccRelatedServer(server)) {
+                Optional<CloudccSessionContext> ctx = cloudccAccessTokenService.getSessionContext(companyId, userId);
+                if (ctx.isEmpty()) return "CloudCC 调用失败：无法获取访问令牌。";
+                args = mergeCloudccToolArguments(args, ctx.get(), declared.inputSchema());
+            }
+            return rewriteKnownToolFailure(toolName, mcpClient.callTool(server, toolName, args, extraHeaders));
+        } catch (Exception exception) {
+            log.error("Bound MCP tool call failed: serverId={}, tool={}, error={}", serverId, toolName, exception.getMessage());
+            return "Tool execution failed: " + exception.getMessage();
+        }
+    }
+
     // ── Health Check ──
 
     public Map<String, Object> healthCheck(String companyId, Long serverId) throws Exception {
@@ -282,6 +333,7 @@ public class McpServerService {
             }
         }
         mcpClient.clearSession(serverId);
+        authenticationService.invalidate(serverId);
     }
 
     private void replaceHotCache(Long serverId, McpServerEntity server, List<McpTool> tools) {
@@ -380,24 +432,51 @@ public class McpServerService {
     }
 
     private Map<String, String> resolveDynamicHeaders(McpServerEntity server, String companyId, String userId) {
+        Map<String, String> transportAuth = authenticationService.headers(server);
         if (!isCloudccRelatedServer(server)) {
-            return Map.of();
+            return transportAuth;
         }
         String uid = userId;
         if (uid == null || uid.isBlank()) {
             uid = com.codehouse.ciciassistant.tenant.TenantContext.getUserId().orElse("");
         }
         if (uid.isBlank()) {
-            return Map.of();
+            return transportAuth;
         }
         Optional<CloudccSessionContext> ctx = cloudccAccessTokenService.getSessionContext(companyId, uid);
         if (ctx.isEmpty()) {
-            return Map.of();
+            return transportAuth;
         }
-        return Map.of(
-                "accessToken", ctx.get().accessToken(),
-                "base_url", ensureUrlWithScheme(ctx.get().baseUrl())
-        );
+        Map<String, String> headers = new java.util.LinkedHashMap<>(transportAuth);
+        headers.put("accessToken", ctx.get().accessToken());
+        headers.put("base_url", ensureUrlWithScheme(ctx.get().baseUrl()));
+        return Map.copyOf(headers);
+    }
+
+    private void applyAuthentication(McpServerEntity entity, String authType, String tokenUrl, String clientId,
+                                     String clientSecret, String audience, String scopes, boolean preserveSecret) {
+        String normalized = authType == null || authType.isBlank() ? "NONE" : authType.trim().toUpperCase();
+        if ("NONE".equals(normalized)) {
+            entity.clearAuthentication();
+            return;
+        }
+        if (!"KEYCLOAK_CLIENT_CREDENTIALS".equals(normalized)) {
+            throw new IllegalArgumentException("Unsupported MCP authType");
+        }
+        if (tokenUrl == null || tokenUrl.isBlank() || clientId == null || clientId.isBlank()) {
+            throw new IllegalArgumentException("Keycloak tokenUrl and clientId are required");
+        }
+        String cipher = entity.getClientSecretCipher();
+        String iv = entity.getClientSecretIv();
+        if (clientSecret != null && !clientSecret.isBlank()) {
+            SecretCipherService.EncryptedSecret encrypted = secretCipherService.encryptUtf8(clientSecret.trim());
+            cipher = encrypted.cipherBase64();
+            iv = encrypted.ivBase64();
+        } else if (!preserveSecret || cipher == null || iv == null) {
+            throw new IllegalArgumentException("Keycloak clientSecret is required");
+        }
+        entity.setKeycloakAuthentication(tokenUrl.trim(), clientId.trim(), cipher, iv,
+                audience == null ? null : audience.trim(), scopes == null ? null : scopes.trim());
     }
 
     /**

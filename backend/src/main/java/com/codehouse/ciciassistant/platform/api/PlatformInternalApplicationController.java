@@ -176,7 +176,8 @@ public class PlatformInternalApplicationController {
             @Size(max = 128) String providerBindingKey,
             @NotBlank String initializationEngine,
             @Size(max = 32) List<@Valid StepRequest> steps,
-            @Size(max = 32) List<@Valid DependencyRequest> dependencies) {
+            @Size(max = 32) List<@Valid DependencyRequest> dependencies,
+            @Size(max = 16) List<@Valid McpProviderRequest> mcpProviders) {
 
         private InternalApplicationRegistryService.VersionCommand toCommand() {
             return new InternalApplicationRegistryService.VersionCommand(
@@ -184,7 +185,31 @@ public class PlatformInternalApplicationController {
                     providerBindingKey,
                     initializationEngine,
                     steps == null ? List.of() : steps.stream().map(StepRequest::toCommand).toList(),
-                    dependencies == null ? List.of() : dependencies.stream().map(DependencyRequest::toCommand).toList());
+                    dependencies == null ? List.of() : dependencies.stream().map(DependencyRequest::toCommand).toList(),
+                    mcpProviders == null ? List.of() : mcpProviders.stream().map(McpProviderRequest::toCommand).toList());
+        }
+    }
+
+    public record McpProviderRequest(
+            @NotBlank @Pattern(regexp = "^[a-z][a-z0-9._-]{1,127}$") String providerKey,
+            @NotBlank String transportType,
+            @NotBlank String authType,
+            @Size(max = 256) String audience,
+            @Size(max = 256) String requiredScope,
+            @Size(min = 1, max = 128) List<@Valid McpToolRequest> tools) {
+        private InternalApplicationRegistryService.McpProviderCommand toCommand() {
+            return new InternalApplicationRegistryService.McpProviderCommand(providerKey, transportType, authType,
+                    audience, requiredScope, tools == null ? List.of() : tools.stream().map(McpToolRequest::toCommand).toList());
+        }
+    }
+
+    public record McpToolRequest(
+            @NotBlank @Pattern(regexp = "^[a-z][a-z0-9._-]{1,127}$") String name,
+            @Pattern(regexp = "^$|^[0-9a-f]{64}$") String schemaDigest,
+            @NotBlank String riskLevel,
+            boolean confirmationRequired) {
+        private InternalApplicationRegistryService.McpToolCommand toCommand() {
+            return new InternalApplicationRegistryService.McpToolCommand(name, schemaDigest, riskLevel, confirmationRequired);
         }
     }
 

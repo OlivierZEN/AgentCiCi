@@ -18,6 +18,12 @@ type McpServer = {
   toolCacheLastAttemptAt: string;
   toolCacheErrorMessage: string;
   toolCacheVersion?: string;
+  authType: string;
+  tokenUrl: string;
+  clientId: string;
+  clientSecretConfigured: boolean;
+  tokenAudience: string;
+  tokenScopes: string;
 };
 type McpTool = { name: string; description: string; inputSchema: string };
 type McpToolPrefs = Record<string, { enabled: boolean; autoApprove: boolean }>;
@@ -43,6 +49,7 @@ type BuiltinTool = {
 
 type TopTab = "builtin" | "mcp";
 type McpView = "list" | "detail";
+type ApplicationMcpBinding = { id: string; appCode: string; version: string; providerKey: string; serverId: number; serverName: string; status: string };
 
 const TRANSPORT_OPTIONS = [
   { value: "streamableHttp", label: "可流式传输的 HTTP (streamableHttp)" },
@@ -141,7 +148,11 @@ export default function AdminToolsPage() {
   const [mcpView, setMcpView] = useState<McpView>("list");
   const [showModal, setShowModal] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
-  const [detailTab, setDetailTab] = useState<"general" | "tools">("general");
+  const [detailTab, setDetailTab] = useState<"general" | "tools" | "applications">("general");
+  const [applicationBindings, setApplicationBindings] = useState<ApplicationMcpBinding[]>([]);
+  const [bindingAppCode, setBindingAppCode] = useState("");
+  const [bindingVersion, setBindingVersion] = useState("");
+  const [bindingProviderKey, setBindingProviderKey] = useState("");
   const [connecting, setConnecting] = useState(false);
   const [discovering, setDiscovering] = useState(false);
   const [toolCacheStatus, setToolCacheStatus] = useState("empty");
@@ -156,6 +167,12 @@ export default function AdminToolsPage() {
   const [fHeaders, setFHeaders] = useState("");
   const [fTimeout, setFTimeout] = useState(60);
   const [fEnabled, setFEnabled] = useState(true);
+  const [fAuthType, setFAuthType] = useState("NONE");
+  const [fTokenUrl, setFTokenUrl] = useState("");
+  const [fClientId, setFClientId] = useState("");
+  const [fClientSecret, setFClientSecret] = useState("");
+  const [fTokenAudience, setFTokenAudience] = useState("");
+  const [fTokenScopes, setFTokenScopes] = useState("");
 
   const flash = (msg: string) => {
     setNotice(msg);
@@ -186,7 +203,13 @@ export default function AdminToolsPage() {
 
   const saveServer = async () => {
     if (!fName.trim() || !fUrl.trim()) { flash("名称和 URL 必填"); return; }
-    const body = { name: fName, description: fDesc, transportType: fType, url: fUrl, headers: fHeaders, timeoutSeconds: fTimeout, enabled: fEnabled };
+    if (fAuthType === "KEYCLOAK_CLIENT_CREDENTIALS" && (!fTokenUrl.trim() || !fClientId.trim() || (!editId && !fClientSecret.trim()))) {
+      flash("Keycloak Token URL、Client ID 和首次配置的 Client Secret 必填"); return;
+    }
+    const body = { name: fName, description: fDesc, transportType: fType, url: fUrl, headers: fHeaders, timeoutSeconds: fTimeout, enabled: fEnabled,
+      authType: fAuthType, tokenUrl: fAuthType === "NONE" ? null : fTokenUrl, clientId: fAuthType === "NONE" ? null : fClientId,
+      clientSecret: fAuthType === "NONE" ? null : (fClientSecret.trim() || null), tokenAudience: fAuthType === "NONE" ? null : fTokenAudience,
+      tokenScopes: fAuthType === "NONE" ? null : fTokenScopes };
     const isEdit = editId !== null;
     const url = isEdit ? `/mcp-servers/${editId}` : "/mcp-servers";
     const method = isEdit ? "PUT" : "POST";
@@ -309,6 +332,25 @@ export default function AdminToolsPage() {
     setToolCacheStatus(srv.toolCacheStatus ?? "empty");
     setToolCacheUpdatedAt(srv.toolCacheUpdatedAt ?? "");
     setToolCacheErrorMessage(srv.toolCacheErrorMessage ?? "");
+    setApplicationBindings([]);
+  };
+
+  const loadApplicationBindings = async () => {
+    if (!bindingAppCode.trim()) return;
+    const r = await fetch(`/tenant-applications/${encodeURIComponent(bindingAppCode.trim())}/mcp-bindings`, { headers: hdr() });
+    const j = await r.json();
+    if (!j.success) { flash(`读取应用绑定失败：${j.message}`); return; }
+    setApplicationBindings((j.data ?? []) as ApplicationMcpBinding[]);
+  };
+
+  const bindSelectedServer = async () => {
+    if (!selected || !bindingAppCode.trim() || !bindingVersion.trim() || !bindingProviderKey.trim()) { flash("应用代码、版本和 Provider Key 必填"); return; }
+    const r = await fetch(`/tenant-applications/${encodeURIComponent(bindingAppCode.trim())}/mcp-bindings/${encodeURIComponent(bindingProviderKey.trim())}`, {
+      method: "PUT", headers: { "Content-Type": "application/json", ...hdr() }, body: JSON.stringify({ version: bindingVersion.trim(), serverId: selected.id }),
+    });
+    const j = await r.json();
+    if (!j.success) { flash(`绑定失败：${j.message}`); return; }
+    flash("应用专属工具已绑定"); await loadApplicationBindings();
   };
 
   const setToolPref = (toolName: string, patch: Partial<{ enabled: boolean; autoApprove: boolean }>) => {
@@ -332,6 +374,8 @@ export default function AdminToolsPage() {
       setEditId(srv.id);
       setFName(srv.name); setFDesc(srv.description); setFType(srv.transportType);
       setFUrl(srv.url); setFHeaders(srv.headers); setFTimeout(srv.timeoutSeconds); setFEnabled(srv.enabled);
+      setFAuthType(srv.authType || "NONE"); setFTokenUrl(srv.tokenUrl || ""); setFClientId(srv.clientId || "");
+      setFClientSecret(""); setFTokenAudience(srv.tokenAudience || ""); setFTokenScopes(srv.tokenScopes || "");
     } else {
       resetForm();
     }
@@ -341,6 +385,7 @@ export default function AdminToolsPage() {
   const resetForm = () => {
     setEditId(null); setFName(""); setFDesc(""); setFType("streamableHttp");
     setFUrl(""); setFHeaders(""); setFTimeout(60); setFEnabled(true);
+    setFAuthType("NONE"); setFTokenUrl(""); setFClientId(""); setFClientSecret(""); setFTokenAudience(""); setFTokenScopes("");
   };
 
   useEffect(() => {
@@ -488,6 +533,10 @@ export default function AdminToolsPage() {
                   <svg viewBox="0 0 20 20" width="18" height="18" fill="none"><path d="M10 3v2M10 15v2M3 10h2M15 10h2M5.6 5.6l1.4 1.4M13 13l1.4 1.4M14.4 5.6l-1.4 1.4M7 13l-1.4 1.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/><circle cx="10" cy="10" r="3" stroke="currentColor" strokeWidth="1.4"/></svg>
                   工具 ({selected.toolCacheCount ?? 0})
                 </button>
+                <button type="button" className={`cici-kb-sidebar__link ${detailTab === "applications" ? "active" : ""}`} onClick={() => setDetailTab("applications")}>
+                  <svg viewBox="0 0 20 20" width="18" height="18" fill="none"><rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" strokeWidth="1.4"/><path d="M7 8h6M7 12h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
+                  应用绑定
+                </button>
               </nav>
               <div className="cici-kb-sidebar__footer">
                 <button type="button" className="cici-btn cici-btn--ghost cici-btn--sm cici-btn--full" onClick={() => { setMcpView("list"); setSelected(null); setTools([]); }}>
@@ -531,6 +580,14 @@ export default function AdminToolsPage() {
                       <span className="mcp-field-row__label">请求头</span>
                       <pre className="mcp-field-row__pre">{selected.headers || "无自定义请求头"}</pre>
                     </div>
+                    <div className="mcp-field-row">
+                      <span className="mcp-field-row__label">身份认证</span>
+                      <span className="mcp-field-row__value">{selected.authType === "KEYCLOAK_CLIENT_CREDENTIALS" ? `Keycloak Client Credentials · ${selected.clientId}` : "无"}</span>
+                    </div>
+                    {selected.authType === "KEYCLOAK_CLIENT_CREDENTIALS" && <div className="mcp-field-row">
+                      <span className="mcp-field-row__label">Audience / Scope</span>
+                      <span className="mcp-field-row__value mcp-field-row__value--mono">{selected.tokenAudience} · {selected.tokenScopes}</span>
+                    </div>}
                     <div className="mcp-field-row">
                       <span className="mcp-field-row__label">超时</span>
                       <span className="mcp-field-row__value">{selected.timeoutSeconds} 秒</span>
@@ -608,6 +665,18 @@ export default function AdminToolsPage() {
                   </div>
                 </div>
               )}
+              {detailTab === "applications" && (
+                <div className="mcp-tools-tab">
+                  <div className="mcp-tools-tab__header"><div className="mcp-tools-tab__summary"><h2 className="cici-kb-main__title">绑定应用版本</h2><p>把当前连接精确绑定到应用版本声明的 Provider；绑定时会重新发现工具并校验完整白名单。</p></div></div>
+                  <div className="mcp-modal-row">
+                    <label className="cici-field admin-tools__field-flex"><span className="cici-field__label">应用代码</span><input className="cici-field__input" value={bindingAppCode} onChange={e => setBindingAppCode(e.target.value.toLowerCase())} placeholder="devautopilot" /></label>
+                    <label className="cici-field admin-tools__field-flex"><span className="cici-field__label">应用版本</span><input className="cici-field__input" value={bindingVersion} onChange={e => setBindingVersion(e.target.value)} placeholder="1.0.0" /></label>
+                    <label className="cici-field admin-tools__field-flex"><span className="cici-field__label">Provider Key</span><input className="cici-field__input" value={bindingProviderKey} onChange={e => setBindingProviderKey(e.target.value.toLowerCase())} placeholder="devautopilot.mcp" /></label>
+                  </div>
+                  <div className="cici-modal__actions"><button type="button" className="cici-btn cici-btn--ghost" onClick={() => void loadApplicationBindings()}>读取绑定</button><button type="button" className="cici-btn cici-btn--primary" onClick={() => void bindSelectedServer()}>校验并绑定当前服务器</button></div>
+                  {applicationBindings.map(binding => <div className="mcp-tool-row" key={binding.id}><div className="mcp-tool-row__main"><div className="mcp-tool-row__name">{binding.appCode}@{binding.version} · {binding.providerKey}</div><div className="mcp-tool-row__desc">{binding.serverName} · {binding.status}</div></div></div>)}
+                </div>
+              )}
             </main>
           </div>
         )}
@@ -670,9 +739,22 @@ export default function AdminToolsPage() {
             </label>
             <label className="cici-field">
               <span className="cici-field__label">请求头</span>
-              <textarea className="cici-field__textarea" value={fHeaders} onChange={e => setFHeaders(e.target.value)} placeholder={"Content-Type=application/json\nAuthorization=Bearer token"} rows={3} />
-              <span className="cici-field__hint-text">每行一个 Key=Value，选填</span>
+              <textarea className="cici-field__textarea" value={fHeaders} onChange={e => setFHeaders(e.target.value)} placeholder={"X-Custom-Header=value"} rows={2} />
+              <span className="cici-field__hint-text">每行一个 Key=Value；不要在这里保存 Bearer Token。</span>
             </label>
+            <label className="cici-field"><span className="cici-field__label">身份认证</span><select className="cici-field__input" value={fAuthType} onChange={e => setFAuthType(e.target.value)}><option value="NONE">无</option><option value="KEYCLOAK_CLIENT_CREDENTIALS">Keycloak Client Credentials</option></select></label>
+            {fAuthType === "KEYCLOAK_CLIENT_CREDENTIALS" && <>
+              <label className="cici-field"><span className="cici-field__label">Keycloak Token URL<span className="cici-field__required">*</span></span><input className="cici-field__input" value={fTokenUrl} onChange={e => setFTokenUrl(e.target.value)} placeholder="由当前环境Keycloak提供" /></label>
+              <div className="mcp-modal-row">
+                <label className="cici-field admin-tools__field-flex"><span className="cici-field__label">Client ID<span className="cici-field__required">*</span></span><input className="cici-field__input" value={fClientId} onChange={e => setFClientId(e.target.value)} autoComplete="off" /></label>
+                <label className="cici-field admin-tools__field-flex"><span className="cici-field__label">Client Secret{editId ? "（留空保持不变）" : "*"}</span><input className="cici-field__input" type="password" value={fClientSecret} onChange={e => setFClientSecret(e.target.value)} autoComplete="new-password" /></label>
+              </div>
+              <div className="mcp-modal-row">
+                <label className="cici-field admin-tools__field-flex"><span className="cici-field__label">Audience</span><input className="cici-field__input" value={fTokenAudience} onChange={e => setFTokenAudience(e.target.value)} placeholder="devautopilot-mcp" /></label>
+                <label className="cici-field admin-tools__field-flex"><span className="cici-field__label">Scope</span><input className="cici-field__input" value={fTokenScopes} onChange={e => setFTokenScopes(e.target.value)} placeholder="devautopilot:mcp" /></label>
+              </div>
+              <span className="cici-field__hint-text">Secret由后端AES-GCM加密保存；运行时只换取短时Keycloak Access Token。</span>
+            </>}
             <div className="mcp-modal-row">
               <label className="cici-field admin-tools__field-flex">
                 <span className="cici-field__label">超时（秒）</span>

@@ -1,11 +1,11 @@
 ---
 kind: current-status
-version: 5
-updated_at: 2026-08-28T11:26:38Z
+version: 6
+updated_at: 2026-08-28T14:30:00+08:00
 updated_by: codex
-phase: review
-active_task: TASK-339
-next_action: "由用户目视确认当前官网浮窗的话筒透明 hover；远程推送、UAT 与生产另行授权。"
+phase: implementation
+active_task: TASK-341
+next_action: "从本地 main 构建 backend/frontend，完成 V126、Keycloak MCP Server、应用绑定和 DevAutopilot query 全链路；远程、UAT 与生产不修改。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- `TASK-341 / FEAT-205 / INT-029` 已实现 `App Version → MCP Provider → Tool 集合 → Tenant MCP Server` 正式绑定、Keycloak client_credentials/Secret 加密、精确 Server 路由和管理 UI；DevAutopilot 六工具不能通过未绑定的全局 MCP 路径绕过应用治理。后端聚焦测试/package、前端 production build 与 diff check 通过，等待本地 main 提交和 `cici.localhost` 全链路验收。
 
 - `TASK-339 / FEAT-204` 已完成 Web 浮窗话筒及跨页面裸图标背景治理：直接来源是 `sisi-composer` hover 使用 CRM 主题 `--sisi-panel`，公共 `cici-product-icon-button` 也仍允许浅色 hover 背景。现已将公开页、前台、后台、平台页和共享依赖图的裸图标控件统一为透明背景、仅图标变色，并以共享原语和静态契约阻止回归。实现 `a64a1ede7d23` 进入本地 main；聚焦 3 文件/22 项、前端全量 59 文件/324 项、production build、域名与 diff 门禁通过。backend/frontend 同为 `2.8.67-dev.a64a1ed`、healthy/restart=0；官网话筒默认/hover 背景透明、图标转 CRM 蓝、console 0，远程/UAT/生产未修改，进入用户 review。
 

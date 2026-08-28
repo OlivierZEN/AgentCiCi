@@ -29,6 +29,27 @@ public class McpServerEntity {
     @Column(columnDefinition = "TEXT")
     private String headers;
 
+    @Column(name = "auth_type", nullable = false, length = 48)
+    private String authType = "NONE";
+
+    @Column(name = "token_url", length = 1024)
+    private String tokenUrl;
+
+    @Column(name = "client_id", length = 256)
+    private String clientId;
+
+    @Column(name = "client_secret_cipher", columnDefinition = "TEXT")
+    private String clientSecretCipher;
+
+    @Column(name = "client_secret_iv", columnDefinition = "TEXT")
+    private String clientSecretIv;
+
+    @Column(name = "token_audience", length = 256)
+    private String tokenAudience;
+
+    @Column(name = "token_scopes", length = 1000)
+    private String tokenScopes;
+
     @Column(name = "timeout_seconds", nullable = false)
     private int timeoutSeconds = 60;
 
@@ -83,6 +104,14 @@ public class McpServerEntity {
     public String getTransportType() { return transportType; }
     public String getUrl() { return url; }
     public String getHeaders() { return headers; }
+    public String getAuthType() { return authType; }
+    public String getTokenUrl() { return tokenUrl; }
+    public String getClientId() { return clientId; }
+    public String getClientSecretCipher() { return clientSecretCipher; }
+    public String getClientSecretIv() { return clientSecretIv; }
+    public String getTokenAudience() { return tokenAudience; }
+    public String getTokenScopes() { return tokenScopes; }
+    public boolean hasClientSecret() { return clientSecretCipher != null && !clientSecretCipher.isBlank(); }
     public int getTimeoutSeconds() { return timeoutSeconds; }
     public boolean isEnabled() { return enabled; }
     public Instant getCreatedAt() { return createdAt; }
@@ -100,6 +129,25 @@ public class McpServerEntity {
     public void setTransportType(String transportType) { this.transportType = transportType; }
     public void setUrl(String url) { this.url = url; }
     public void setHeaders(String headers) { this.headers = headers; }
+    public void setKeycloakAuthentication(String tokenUrl, String clientId, String clientSecretCipher,
+                                           String clientSecretIv, String tokenAudience, String tokenScopes) {
+        this.authType = "KEYCLOAK_CLIENT_CREDENTIALS";
+        this.tokenUrl = tokenUrl;
+        this.clientId = clientId;
+        this.clientSecretCipher = clientSecretCipher;
+        this.clientSecretIv = clientSecretIv;
+        this.tokenAudience = tokenAudience;
+        this.tokenScopes = tokenScopes;
+    }
+    public void clearAuthentication() {
+        this.authType = "NONE";
+        this.tokenUrl = null;
+        this.clientId = null;
+        this.clientSecretCipher = null;
+        this.clientSecretIv = null;
+        this.tokenAudience = null;
+        this.tokenScopes = null;
+    }
     public void setTimeoutSeconds(int timeoutSeconds) { this.timeoutSeconds = timeoutSeconds; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
     public void setToolCacheJson(String toolCacheJson) { this.toolCacheJson = toolCacheJson; }

@@ -15,6 +15,21 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-341 - 外部应用 MCP Provider 正式绑定
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `integration-agent`
+- claimed_by: `codex`
+- integration_id: `INT-029`
+- spec_path: `docs/specs/FEAT-205-application-version-mcp-binding.md`
+- task_status_path: `.claw/tasks/TASK-341.md`
+- blocked_by: `none`
+- related_issues: `none`
+- scope_files: `应用版本 Provider/Tool 模型、Keycloak MCP Server 鉴权、租户绑定、精确工具路由、管理 UI`
+- completion_evidence: `后端聚焦测试/package 与前端 production build 已通过；等待本地 main 制品和 Keycloak 真实链路。`
+- next_action: `独立提交本地 main，并在 cici.localhost 全栈完成 V126、绑定、tools/list 和 query 验收。`
+
 ### TASK-340 - 工作台发送后输入框立即清空
 
 - status: `in_progress`
