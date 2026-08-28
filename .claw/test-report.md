@@ -1,14 +1,24 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-28T13:20:00Z
+updated_at: 2026-08-28T14:11:32Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-28T13:20:00Z
-last_run_status: passed_task_342_production_technical_pending_human_image_acceptance
+last_run_at: 2026-08-28T14:11:32Z
+last_run_status: passed_task_343_local_runtime_pending_user_review
 ---
 
 # Test Report
+
+## 2026-08-28 TASK-343 Web 浮窗系统智能体头像
+
+- 状态：`passed_task_343_local_runtime_pending_user_review`；数据权威来源、安全边界、自动化、同提交本地制品和真实浏览器头像回读通过，等待用户目视确认。
+- 自动化：后端 `PublicWebWidgetServiceTest,SisiEmbedRuntimeServiceTest` 与 package 通过；前端聚焦 3 文件/34 项、最终聚焦 2 文件/30 项、全量 60 文件/328 项与 production build 通过；两个 SDK `node --check`、环境域名门禁和 diff check 通过。build 仅有既有大 chunk warning。
+- 数据与安全：demo `org3gxskla32gln3bvop / sales-agent / 客服-Mary` 公开配置返回 11,707 字符 WebP data URL，不返回 `companyId/runAsUserId`；JWT 断言不含头像正文。website 会话按 Token 绑定的公司/Agent 回读启用智能体，CloudCC 固定身份链路不变。
+- Runtime：实现 `9191e5a3eacf` 已进入本地 main；backend/frontend 为 `2.8.68-dev.9191e5a`，最终镜像 `sha256:a62be82f3008` / `sha256:d528b5cf6cd8`，healthy/restart=0，health UP、Nginx 有效，官网、float embed、稳定 SDK、公开 widget 均为 200。
+- 浏览器：官网启动器含 1 张 256×256 WebP 系统头像；展开浮窗后标题栏与 3 条智能体消息共 4 张均为同一 256×256 WebP，名称 `Mary`，无通用 `Ci/M` 图片回退。
+- 治理：`validate-state.py .claw` 已执行，输出没有 TASK-343/FEAT-204 新 finding；全局仍因既有历史任务未归档、旧状态/front matter 与 references 索引债务返回 1，本任务未跨范围清理历史事实。
+- 边界：第一次 release Docker 构建因 Docker Hub 拉取 `node:22-alpine` 连接重置失败且未替换容器；改用同一 main 的已验证主机构建产物和既有 JRE/Nginx 基础镜像完成最小重建。远程、UAT、生产、ACR 与 tag 未修改。
 
 ## 2026-08-28 TASK-342 生产 `2.8.67`
 

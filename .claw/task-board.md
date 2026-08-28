@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-28T13:20:00Z
+updated_at: 2026-08-28T14:11:32Z
 updated_by: codex
 board_status: active
 ---
@@ -17,7 +17,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-343 - Web 浮窗使用系统智能体头像
 
-- status: `in_progress`
+- status: `review`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - claimed_by: `codex`
@@ -26,8 +26,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - related_issues: `none`
 - scope_files: `公开 Web 配置、website 会话头像投影、SDK 启动器、Embed 标题/消息头像、Agent Builder 预览与安装代码`
-- completion_evidence: `已确认 demo sales-agent 存在已发布 WebP 头像；实现与运行验证进行中。`
-- next_action: `完成聚焦/全量测试和本地同提交制品，浏览器复核官网浮窗三处头像。`
+- completion_evidence: `实现 9191e5a3 已进入本地 main；后端聚焦/package、前端 60 文件/328 项/build、SDK/域名/diff 门禁通过；2.8.68-dev.9191e5a 同提交双制品 healthy/restart=0；浏览器确认启动器、标题栏和消息区加载同一 256×256 系统 WebP 头像。`
+- next_action: `等待用户目视确认；远程 push、UAT 和生产发布需另行授权。`
 
 ### TASK-341 - 外部应用 MCP Provider 正式绑定
 

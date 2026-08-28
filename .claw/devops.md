@@ -1,12 +1,20 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-08-28T13:20:00Z
+updated_at: 2026-08-28T14:11:32Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-28 TASK-343 本地开发环境
+
+- AgentCiCi backend/frontend 的代码制品提交为本地 `main@9191e5a3eacf`，运行版本均为 `2.8.68-dev.9191e5a`；最终镜像 ID 分别为 `sha256:a62be82f300811a19fc1b3be2711925a0fa385cb14a895c21dc2e61e82ccae93` / `sha256:d528b5cf6cd84c21a956fde9b378f97691360ce26991e5de3c4c6dfcfa804cca`，label、容器环境、version API 与页面资源一致。当前 main 后续仅增加治理证据，不改变该代码制品。
+- 第一次受管 release Dockerfile 构建在拉取 Docker Hub `node:22-alpine` 时连接重置，失败发生在容器替换前；随后从同一 main 完成 Maven/frontend 主机构建，将产物覆入既有已验证本地 JRE/Nginx 镜像并重标记，未修改受管 Compose 或业务源码中的环境地址。
+- 只以 `--no-deps --force-recreate backend cici-frontend` 最小替换两项无状态服务；两者 healthy/restart=0，backend health UP，frontend Nginx 配置有效。PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak 和 Nginx 未重建。
+- `https://cici.localhost/`、`/embed/sisi?mode=float`、`/sdk/sisi@1.1.0.js` 和公开 widget 均为 200；demo 公开配置返回系统 WebP 头像且不泄露内部身份。浏览器确认外层启动器和浮窗标题/消息均加载自然尺寸 256×256 的同一系统头像。
+- 本任务不新增或切换跨项目契约，未执行完整 stack verify；远程、UAT、生产、ACR 和 Git tag 未修改。
 
 ## 2026-08-28 TASK-342 生产 `2.8.67`
 

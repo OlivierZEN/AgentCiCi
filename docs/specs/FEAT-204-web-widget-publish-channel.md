@@ -7,7 +7,7 @@ owner_role: fullstack-agent
 task_ids: TASK-334,TASK-335,TASK-337,TASK-339,TASK-343
 related_decisions: FEAT-202
 related_issues: ISSUE-2026-08-28-web-widget-empty-stream
-updated_at: 2026-08-28T10:30:09Z
+updated_at: 2026-08-28T14:11:32Z
 updated_by: codex
 ---
 
@@ -129,7 +129,7 @@ Base64 头像不得写入短时 JWT。website 会话以已验证 Token 中的 `c
 - 2026-08-28：用户回报官网浮窗回复为空；定位为 Embed 消费方漏读规范 `{text}`。TASK-335 已进入本地 main，同提交前后端制品与官网原问题真实回归通过，进入用户 review。
 - 2026-08-28：TASK-337 已完成官网浮窗 CRM 标准蓝、发送按钮布局、公开附件入口和标题栏 hover 修正；实现进入本地 main，同提交前后端制品、自动化、视觉对照和真实非空回复通过，进入用户 review。
 - 2026-08-28：TASK-339 根据后续截图定位话筒浅蓝框来自 `sisi-composer` 的主题 hover 背景，同时发现公共裸图标原语仍允许浅色背景；现改为跨页面透明背景、图标变色反馈，并增加静态契约门禁。
-- 2026-08-28：TASK-343 根据用户截图补齐 Web 浮窗身份素材链路；demo `sales-agent / 客服-Mary` 已确认存在已发布 WebP 系统头像，公开配置、website 会话、SDK、Embed 和 Agent Builder 预览进入实现。
+- 2026-08-28：TASK-343 已补齐 Web 浮窗身份素材链路；公开配置、website 会话、SDK、Embed 和 Agent Builder 预览均从服务端权威 Agent Definition 读取头像，JWT 不携带 Base64。实现 `9191e5a3eacf` 进入本地 main，自动化、同提交双制品、公开配置和官网浏览器三处头像回读通过，进入用户 review。
 
 ## 交接说明
 

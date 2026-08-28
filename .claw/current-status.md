@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 6
-updated_at: 2026-08-28T13:50:00Z
+updated_at: 2026-08-28T14:11:32Z
 updated_by: codex
 phase: implementation
 active_task: TASK-343
-next_action: "继续 TASK-343 的 Web 浮窗头像实现与验证；INT-029 已完成本地技术闭环，远程、UAT 与生产未修改。"
+next_action: "等待用户目视确认 TASK-343；远程 push、UAT 与生产发布均需另行授权。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-343 / FEAT-204` 进行中：用户要求官网/门户 Web 浮窗显示系统内智能体头像。只读确认 demo `org3gxskla32gln3bvop / sales-agent / 客服-Mary` 已发布且保存 WebP 头像；根因是公开配置和 website 会话没有投影 `avatar_base64`，SDK/Embed 固定渲染 `Ci/思`。方案由服务端按已发布 Agent Definition 输出公开头像、会话按 Token 绑定的公司/Agent 回读且不把 Base64 放入 JWT，启动器、标题、欢迎态和消息统一消费；受信 page 嵌入不变。
+- `TASK-343 / FEAT-204` 已完成本地技术闭环，进入用户 review：根因是公开配置和 website 会话未投影 Agent Definition 的 `avatar_base64`，SDK/Embed 固定渲染 `Ci/思`。实现 `9191e5a3eacf` 已进入本地 main，服务端以已发布智能体为权威来源且 JWT 不承载 Base64；启动器、标题、欢迎态、消息和 Builder 预览统一消费，受信 `page` 嵌入固定思思身份不变。后端聚焦/package、前端 60 文件/328 项/build、SDK/域名/diff 门禁通过；demo 公开配置返回 11,707 字符 WebP 且不泄露内部身份。本地双制品为 `2.8.68-dev.9191e5a`、healthy/restart=0；浏览器确认启动器 1 张、浮窗内 4 张头像均加载同一 256×256 系统 WebP。远程、UAT、生产未修改。
 
 - `TASK-341 / FEAT-205 / INT-029` 已完成本地技术闭环：`d42e4673 + 59cb5a02` 实现 `App Version → MCP Provider → Tool 集合 → Tenant MCP Server` 正式绑定、Keycloak client_credentials/Secret 加密、精确 Server 路由和管理 UI；未绑定的全局 MCP 路径不能暴露 DevAutopilot 六工具。后端聚焦测试/package、前端 production build 与 diff check 通过；在并行主线推进后，backend/frontend 从最新本地 `main@9191e5a3eacf` 运行当前唯一 DEV 基础版本 `2.8.68-dev.9191e5a`、healthy/restart=0，该提交包含 INT-029。租户绑定 PUT/GET 200 且 `ACTIVE`，工具缓存 `ready/6`，Secret 未回传，真实 Keycloak SERVICE → DevAutopilot MCP → AgentCiCi OACT → Semattice query 成功；专用验收项目 create/readback/delete-to-trash 回执 revision `1→2`。标准 stack verify 仅被任务外 Semattice `1.0.7/1.0.8` 漂移失败关闭；远程/UAT/生产未修改。
 
