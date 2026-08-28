@@ -34,6 +34,7 @@ public class PublicWebWidgetCorsConfig {
         FilterRegistrationBean<CorsFilter> registration = new FilterRegistrationBean<>(new CorsFilter(source));
         registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 1);
         registration.setName("publicWebWidgetCorsFilter");
+        registration.addUrlPatterns("/public/web-widgets/*");
         return registration;
     }
 

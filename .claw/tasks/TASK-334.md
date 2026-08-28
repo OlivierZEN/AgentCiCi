@@ -35,6 +35,7 @@ updated_by: codex
 - `FEAT-202` 已交付 `sisi@1.0.0.js`、`/embed/sisi` 和短时 Embed Token 会话链路；外部受信宿主仍必须用服务端 API Key 换票。
 - Agent Builder 后端已按 Agent/渠道保存 `publishConfigs`，Web UI 当前仍是“配置页即将开放”占位。
 - 本地首次部署验收发现前端 Nginx 未代理 `/public/**`：GET 回落为 SPA HTML、POST 为 405；已纳入本任务修复并要求真实端点复验。
+- 二次门禁发现既有 OpenAPI CORS Filter 全局拦截其他 OPTIONS，且 `/system/version` 回落为 SPA；已收窄 Filter URL pattern 并补版本代理。
 
 ## 下一步
 

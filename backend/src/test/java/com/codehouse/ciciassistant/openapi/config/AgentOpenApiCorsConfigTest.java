@@ -58,6 +58,17 @@ class AgentOpenApiCorsConfigTest {
                 .contains("DELETE");
     }
 
+    @Test
+    void shouldRegisterOnlyForOpenApiOwnedPaths() {
+        AgentOpenApiProperties properties = new AgentOpenApiProperties();
+        properties.setCorsAllowedOrigins(List.of("*"));
+        FilterRegistrationBean<CorsFilter> registration =
+                new AgentOpenApiCorsConfig().agentOpenApiCorsFilter(properties);
+
+        assertThat(registration.getUrlPatterns())
+                .containsExactlyInAnyOrder("/openapi/v1/*", "/auth/cloudcc-sso/*");
+    }
+
     private CorsFilter corsFilter(String allowedOrigin) {
         AgentOpenApiProperties properties = new AgentOpenApiProperties();
         properties.setCorsAllowedOrigins(List.of(allowedOrigin));

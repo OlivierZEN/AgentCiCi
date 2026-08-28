@@ -42,6 +42,7 @@ public class AgentOpenApiCorsConfig {
         FilterRegistrationBean<CorsFilter> registration = new FilterRegistrationBean<>(new CorsFilter(source));
         registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
         registration.setName("agentOpenApiCorsFilter");
+        registration.addUrlPatterns("/openapi/v1/*", "/auth/cloudcc-sso/*");
         return registration;
     }
 }
