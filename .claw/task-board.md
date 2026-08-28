@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-28T11:12:13Z
+updated_at: 2026-08-28T11:26:38Z
 updated_by: codex
 board_status: active
 ---
@@ -17,7 +17,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-339 - 裸图标按钮全局透明交互治理
 
-- status: `in_progress`
+- status: `review`
 - priority: `high`
 - owner_role: `frontend-agent`
 - claimed_by: `codex`
@@ -26,8 +26,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - related_issues: `none`
 - scope_files: `共享裸图标原语、Sisi 输入区、跨页面图标控件、设计契约、静态回归门禁、本地视觉验证`
-- completion_evidence: `聚焦 3 文件/22 项、前端全量 59 文件/324 项、production build、域名和 diff 门禁已通过；本地 main/制品/浏览器证据待补。`
-- next_action: `提交到本地 main，从该提交重建 frontend，并在 cici.localhost 回读话筒 hover computed style 与 console。`
+- completion_evidence: `本地 main@a64a1ede7d23；聚焦 3 文件/22 项、前端全量 59 文件/324 项、production build、域名/diff 门禁；backend/frontend 2.8.67-dev.a64a1ed healthy/restart=0；话筒默认/hover 背景透明、图标转 CRM 蓝、console 0。`
+- next_action: `由用户目视确认当前官网浮窗；远程推送、UAT 与生产另行授权。`
 
 ### TASK-338 - 图片识别修复 UAT 2.8.67-beta.1 技术发布
 

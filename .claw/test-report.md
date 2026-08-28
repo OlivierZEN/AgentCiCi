@@ -1,14 +1,25 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-28T10:54:15Z
+updated_at: 2026-08-28T11:26:38Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-28T10:54:15Z
-last_run_status: passed_task_338_uat_technical_pending_human_image_acceptance
+last_run_at: 2026-08-28T11:26:38Z
+last_run_status: passed_task_339_local_runtime_pending_user_review
 ---
 
 # Test Report
+
+## 2026-08-28 TASK-339 裸图标按钮透明背景治理
+
+- 状态：`passed_task_339_local_runtime_pending_user_review`；根因、共享原语、跨页面迁移、静态门禁、同提交制品和官网真实视觉回读通过，等待用户目视确认。
+- 根因：Sisi 输入工具栏 hover 直接把 `--sisi-panel` 设为按钮背景，在 CRM 蓝主题下得到截图中的 `#e8f0fa` 浅蓝块；公共 `cici-product-icon-button` 同时允许 `#faf4e8` hover/focus 背景，因此同类局部覆盖可能跨页复发。
+- 自动化：聚焦 `iconButtonContract + SisiEmbedPage + theme` 3 文件/22 项通过；前端全量 59 文件/324 项通过；production build、`DESIGN.json` 解析、裸图标 CSS 扫描、环境域名门禁和 diff check 通过。build 仅有既有大 chunk warning。
+- 主线与制品：实现 `a64a1ede7d23` 已进入本地 `main`；backend/frontend 镜像分别为 `sha256:1a9410567149` / `sha256:ff8fe07c50f4`，运行均为 `2.8.67-dev.a64a1ed / a64a1ede7d23`，healthy/restart=0。
+- 浏览器：官网浮窗展开后，话筒默认 computed style 为透明背景、background-image none、box-shadow none；真实鼠标 hover 的 `hovered=true`，背景与阴影保持不变，图标由 `rgb(23,35,61)` 变为 `rgb(22,119,210)`。发送按钮、历史非空回复正常，console 0 error/warning。
+- 环境：`/`、公开 widget、float embed 与稳定 SDK 均为 200，Nginx 配置有效；近 5 分钟 backend severe=0、frontend 5xx/severe=0。仅替换 backend/frontend，八个基础设施/兄弟产品容器 ID 不变。
+- 治理校验：本任务新增 TASK/规格/front matter 均可读；全局 `validate-state.py .claw` 仍被仓库既有历史时间格式、旧规格状态/缺字段、完成任务未归档与 references 索引债务阻断，本任务未批量修改历史事实。
+- 边界：未修改 Web Token、会话、附件或语音服务端契约；远程、UAT、生产、ACR 与 tag 未修改。
 
 ## 2026-08-28 TASK-338 UAT `2.8.67-beta.1`
 

@@ -1,3 +1,22 @@
+# TASK-339 裸图标按钮透明背景 QA
+
+## 根因与设计决定
+
+- 用户截图中的浅蓝框不是浏览器默认样式：Sisi 输入工具栏 hover 把 CRM 蓝主题的 `--sisi-panel=#e8f0fa` 设为话筒背景；公共裸图标按钮也仍允许浅色 hover/focus 背景。
+- 设计事实源已改为跨公开页、前台、后台和平台页的统一规则：裸图标按钮所有指针、状态与录音态保持透明，hover 只改变图标颜色；键盘 `focus-visible` 保留克制轮廓。
+- 共享 `cici-product-icon-button` 使用收口后的透明背景不变量；已审计的 Sisi、前台助手、客户工作台、Agent Builder、Admin、Platform、AI 表格和技能依赖图均接入或清除局部不透明覆盖。
+
+## 浏览器结果
+
+- 本地正式入口：`https://cici.localhost/`，`1280 × 720`，官网售前浮窗展开。
+- 默认态：话筒 `background-color=rgba(0,0,0,0)`、`background-image=none`、`box-shadow=none`，图标 `rgb(23,35,61)`。
+- hover：浏览器确认 `hovered=true`；背景、背景图和阴影保持透明/none，图标变为 CRM 蓝 `rgb(22,119,210)`，未出现圆角浅蓝背景块。
+- 发送按钮、已有非空回复和浮窗布局未回归；页面 console `0 error / 0 warning`。
+
+final result: passed
+
+---
+
 # TASK-337 官网 Web 浮窗视觉 QA
 
 ## Comparison setup

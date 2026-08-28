@@ -1,12 +1,19 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-08-28T10:54:15Z
+updated_at: 2026-08-28T11:26:38Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-28 TASK-339 本地开发环境
+
+- AgentCiCi backend/frontend 从本地 `main@a64a1ede7d23` 以受管 release Dockerfile 构建为 `2.8.67-dev.a64a1ed`；镜像 ID 分别为 `sha256:1a9410567149` / `sha256:ff8fe07c50f4`，image label、容器环境、backend version API 和前端带版本资源一致。
+- 只以现有 Compose 与 Git 忽略的官网 widget override `--no-deps --force-recreate backend cici-frontend` 替换两个无状态服务；两容器 healthy/restart=0，backend health=UP，frontend Nginx 有效。
+- `https://cici.localhost/`、公开 widget、float embed 与稳定 SDK 均为 200；运行 CSS 含 Sisi 话筒 hover `background:transparent`。浏览器 computed style 证明默认/hover 均透明且无阴影，hover 仅把图标改为 CRM 蓝；console 0 error/warning。
+- 近 5 分钟 backend severe=0、frontend 5xx/severe=0。PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak、Nginx、Semattice 和 DevAutopilot 容器 ID 未变化；本任务未新增或切换跨项目契约，未执行完整 stack verify。远程、UAT、生产、ACR 和 tag 未修改。
 
 ## 2026-08-28 TASK-338 UAT `2.8.67-beta.1`
 

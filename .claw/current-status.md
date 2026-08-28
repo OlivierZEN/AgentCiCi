@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 5
-updated_at: 2026-08-28T11:12:13Z
+updated_at: 2026-08-28T11:26:38Z
 updated_by: codex
 phase: review
 active_task: TASK-339
-next_action: "提交裸图标透明背景治理到本地 main，从该提交重建 frontend，并在 cici.localhost 完成话筒 hover 视觉回读。"
+next_action: "由用户目视确认当前官网浮窗的话筒透明 hover；远程推送、UAT 与生产另行授权。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-339 / FEAT-204` 已定位 Web 浮窗话筒浅蓝背景并完成代码治理：直接来源是 `sisi-composer` hover 使用 CRM 主题 `--sisi-panel`，公共 `cici-product-icon-button` 也仍允许浅色 hover 背景。现已将公开页、前台、后台、平台页和共享依赖图的裸图标控件统一为透明背景、仅图标变色，并以共享原语和静态契约阻止回归。聚焦 3 文件/22 项、前端全量 59 文件/324 项、production build、域名与 diff 门禁通过；本地 main、制品与浏览器证据待补，远程/UAT/生产未修改。
+- `TASK-339 / FEAT-204` 已完成 Web 浮窗话筒及跨页面裸图标背景治理：直接来源是 `sisi-composer` hover 使用 CRM 主题 `--sisi-panel`，公共 `cici-product-icon-button` 也仍允许浅色 hover 背景。现已将公开页、前台、后台、平台页和共享依赖图的裸图标控件统一为透明背景、仅图标变色，并以共享原语和静态契约阻止回归。实现 `a64a1ede7d23` 进入本地 main；聚焦 3 文件/22 项、前端全量 59 文件/324 项、production build、域名与 diff 门禁通过。backend/frontend 同为 `2.8.67-dev.a64a1ed`、healthy/restart=0；官网话筒默认/hover 背景透明、图标转 CRM 蓝、console 0，远程/UAT/生产未修改，进入用户 review。
 
 - `TASK-338 / FEAT-188` 已完成 AgentCiCi UAT `2.8.67-beta.1 / 2970bea75208` 技术发布。远程 `main`、annotated tag、backend/frontend linux/amd64 不可变 digest 与运行 commit 一致，未更新 `latest`；完整备份 `/data/apps/agentcici/backups/20260828T104754Z-before-2.8.67-beta.1` 的 12 项工件、PostgreSQL catalog、KB/Qdrant tar、Qdrant 原生 snapshot、旧应用镜像和 SHA-256 均通过，应用回滚目标为 `2.8.66-beta.3`。仅重建 backend/frontend，四个状态服务 ID 不变；六容器 healthy/restart=0，health UP、V125、Nginx、公开 smoke、匿名 JSON 401 与 30 秒稳定窗口通过。本候选未新增或切换跨项目契约；UAT 登录态图片识别待 HUMAN，生产未修改。
 
