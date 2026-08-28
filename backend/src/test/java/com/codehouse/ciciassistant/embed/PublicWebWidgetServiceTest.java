@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.codehouse.ciciassistant.agent.domain.AgentChannelBindingRepository;
@@ -25,9 +26,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
@@ -41,6 +44,7 @@ class PublicWebWidgetServiceTest {
     private static final String AGENT_ID = "sales-agent";
     private static final String USER_ID = "member-1";
     private static final String ORIGIN = "https://portal.example.test";
+    private static final String AGENT_AVATAR = "data:image/webp;base64,d2ViLXdpZGdldC1hdmF0YXI=";
 
     private AgentPublishConfigRepository configs;
     private AgentDefinitionRepository agents;
@@ -90,6 +94,7 @@ class PublicWebWidgetServiceTest {
 
         assertThat(service.publicConfig(WIDGET_KEY))
                 .containsEntry("assistantName", "售前跟进智能体")
+                .containsEntry("agentAvatarBase64", AGENT_AVATAR)
                 .containsEntry("sdkUrl", "/sdk/sisi@1.1.0.js")
                 .doesNotContainKeys("companyId", "runAsUserId");
 
@@ -101,6 +106,11 @@ class PublicWebWidgetServiceTest {
         assertThat(token.embedToken()).isEqualTo("signed-widget-token");
         assertThat(token.permissions()).containsExactly("chat:read", "chat:write");
         assertThat(token.ttlSeconds()).isEqualTo(600);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Map<String, Object>> claims = ArgumentCaptor.forClass(Map.class);
+        verify(jwt).issueToken(any(String.class), claims.capture(), eq(600L));
+        assertThat(claims.getValue()).doesNotContainKey("agentAvatarBase64");
+        assertThat((Map<String, Object>) claims.getValue().get("context")).doesNotContainKey("agentAvatarBase64");
     }
 
     @Test
@@ -179,7 +189,7 @@ class PublicWebWidgetServiceTest {
         AgentPublishConfigEntity config = webConfig();
         AgentDefinitionEntity agent = new AgentDefinitionEntity(
                 COMPANY_ID, AGENT_ID, "售前跟进 Agent", "summary", "hello", "model", "prompt", "handoff",
-                "BALANCED", "COPILOT", "v1", "", false, true);
+                "BALANCED", "COPILOT", "v1", AGENT_AVATAR, false, true);
         if (published) agent.setPublishedVersionId(1L);
         UserEntity user = mock(UserEntity.class);
         when(user.getId()).thenReturn(USER_ID);

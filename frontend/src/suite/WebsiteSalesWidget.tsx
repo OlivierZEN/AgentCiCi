@@ -3,6 +3,7 @@ import { useEffect } from "react";
 type WidgetConfig = {
   widgetKey: string;
   assistantName: string;
+  agentAvatarBase64?: string;
   launcherLabel: string;
   welcomeMessage: string;
   defaultOpen: boolean;
@@ -67,8 +68,8 @@ export default function WebsiteSalesWidget() {
           mode: "float",
           open: config.defaultOpen,
           assistantName: config.assistantName,
+          launcherAvatar: config.agentAvatarBase64,
           launcherLabel: config.launcherLabel,
-          launcherInitial: "Ci",
           tokenProvider: async () => {
             const tokenResponse = await fetch(`/public/web-widgets/${encodeURIComponent(config.widgetKey)}/tokens`, {
               method: "POST",

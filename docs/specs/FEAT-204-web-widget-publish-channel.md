@@ -4,7 +4,7 @@ feature_id: FEAT-204
 title: Web 浮窗发布渠道与官网售前智能体
 status: verified
 owner_role: fullstack-agent
-task_ids: TASK-334,TASK-335,TASK-337,TASK-339
+task_ids: TASK-334,TASK-335,TASK-337,TASK-339,TASK-343
 related_decisions: FEAT-202
 related_issues: ISSUE-2026-08-28-web-widget-empty-stream
 updated_at: 2026-08-28T10:30:09Z
@@ -32,6 +32,7 @@ Agent Builder 已有独立“发布渠道”页签，但 Web 浮窗仍只有占�
 - `publishConfigs.web`：稳定 `widgetKey`、允许来源、`runAsUserId`、显示名称、启动文案、Token TTL、每分钟限额和默认折叠状态。
 - Agent Builder Web 浮窗配置表单、状态摘要、受控预览、安装代码和复制动作。
 - `GET /public/web-widgets/{widgetKey}` 与 `POST /public/web-widgets/{widgetKey}/tokens`。
+- 公开 Web 配置与 website 会话从已发布 Agent Definition 回读系统智能体头像；官网启动器、浮窗标题、欢迎态与智能体消息使用同一头像。
 - 产品 Nginx 将 `/public/**` 明确代理到 backend，避免 GET 被 SPA fallback 吞掉、POST 返回静态站点 405。
 - OpenAPI 与 Web Widget CORS Filter 必须分别限定 URL pattern，不能用全局 Filter 抢先拒绝另一契约的预检请求。
 - 公开端点只解析启用的 `web` 渠道配置，要求 Agent 启用且存在已发布版本。
@@ -59,6 +60,7 @@ Agent Builder 已有独立“发布渠道”页签，但 Web 浮窗仍只有占�
 - 允许来源一行一个 Origin；保存时由后端规范化并在公开签发时精确校验。
 - 安装代码不包含租户/成员/密钥，只包含 SDK 相对入口和 `widgetKey`；复制为显式用户动作。
 - 预览使用当前配置的显示名称、启动文案和默认折叠状态，不签发真实访客 Token。
+- 预览头像直接来自当前 Agent Definition 草稿；实际安装代码不固化图片，而是在运行时读取公开 Web 配置中的服务端权威头像。
 
 ### 官网
 
@@ -68,13 +70,16 @@ Agent Builder 已有独立“发布渠道”页签，但 Web 浮窗仍只有占�
 - 标题栏图标按钮 hover 不显示背景框，只用图标色反馈；键盘 `focus-visible` 仍显示可访问性轮廓。
 - 输入区话筒在默认、hover、listening 和 focus 状态都保持透明，不生成主题色背景块；该约束由公共 `cici-product-icon-button` 承担，并同步适用于公开页、前台、后台和平台页的裸图标按钮。
 - 后端默认入口键未配置或公开配置不可用时不渲染启动器，不阻断官网首屏、表单或导航。
+- 官网启动器、浮窗标题、欢迎态和智能体消息统一渲染系统内 Agent Definition 头像；为空或图片加载失败时回退为智能体名称首字，不回退为另一智能体图片。
 - Token 过期时 SDK 重新调用同源 Token Provider；访客 ID 只保存在浏览器本地并使用随机 UUID。
 
 ## 服务端契约与安全
 
 ### 公开配置
 
-`GET /public/web-widgets/{widgetKey}` 返回公开展示字段、SDK/Embed 相对路径和 Token TTL。它不返回公司、运行成员、内部配置 JSON、权限明细或发布记录 ID。
+`GET /public/web-widgets/{widgetKey}` 返回公开展示字段、系统智能体头像、SDK/Embed 相对路径和 Token TTL。头像是已发布 Web Agent 面向访客的公开身份素材；接口仍不返回公司、运行成员、内部配置 JSON、权限明细或发布记录 ID。
+
+Base64 头像不得写入短时 JWT。website 会话以已验证 Token 中的 `companyId + agentId` 在服务端重新读取启用的 Agent Definition 并投影头像；客户端配置不能覆盖该字段。`source=cloudcc` 的受信 page 嵌入继续保持 FEAT-202 的固定思思身份。
 
 ### Token 签发
 
@@ -108,6 +113,7 @@ Agent Builder 已有独立“发布渠道”页签，但 Web 浮窗仍只有占�
 6. `sales-agent` 在 `org3gxskla32gln3bvop` 启用 Web 渠道并有已发布版本；官网真实浮窗完成一轮问答并留下会话/执行记录。
 7. 本地 backend/frontend 均从 AgentCiCi 本地 `main` 同一提交构建，`https://cici.localhost/` 路由、健康、restart、版本 API、镜像标签和页面制品一致。
 8. 远程 main、UAT 与生产保持不变。
+9. demo `sales-agent` 的系统头像必须在启动器、浮窗标题、欢迎态和智能体消息中一致显示；公开配置和会话响应均可追溯到 Agent Definition，JWT 不承载头像正文。
 
 ## 流式响应兼容要求
 
@@ -123,6 +129,7 @@ Agent Builder 已有独立“发布渠道”页签，但 Web 浮窗仍只有占�
 - 2026-08-28：用户回报官网浮窗回复为空；定位为 Embed 消费方漏读规范 `{text}`。TASK-335 已进入本地 main，同提交前后端制品与官网原问题真实回归通过，进入用户 review。
 - 2026-08-28：TASK-337 已完成官网浮窗 CRM 标准蓝、发送按钮布局、公开附件入口和标题栏 hover 修正；实现进入本地 main，同提交前后端制品、自动化、视觉对照和真实非空回复通过，进入用户 review。
 - 2026-08-28：TASK-339 根据后续截图定位话筒浅蓝框来自 `sisi-composer` 的主题 hover 背景，同时发现公共裸图标原语仍允许浅色背景；现改为跨页面透明背景、图标变色反馈，并增加静态契约门禁。
+- 2026-08-28：TASK-343 根据用户截图补齐 Web 浮窗身份素材链路；demo `sales-agent / 客服-Mary` 已确认存在已发布 WebP 系统头像，公开配置、website 会话、SDK、Embed 和 Agent Builder 预览进入实现。
 
 ## 交接说明
 

@@ -16,6 +16,11 @@
     return normalized || fallback;
   }
 
+  function avatar(value) {
+    var normalized = typeof value === "string" ? value.trim() : "";
+    return /^data:image\/(?:png|jpe?g|webp);base64,/i.test(normalized) ? normalized : "";
+  }
+
   function instance(options) {
     var config = Object.assign({ mode: "float", width: 408, height: 680, zIndex: 2147483000 }, options || {});
     var mode = config.mode === "page" ? "page" : "float";
@@ -25,6 +30,7 @@
     var assistantName = text(config.assistantName, "AgentCiCi");
     var launcherLabel = text(config.launcherLabel, "咨询智能体");
     var launcherInitial = text(config.launcherInitial, "Ci").slice(0, 2);
+    var launcherAvatar = avatar(config.launcherAvatar);
     var host = document.createElement("div");
     var iframe = document.createElement("iframe");
     var launcher = null;
@@ -59,6 +65,14 @@
       var mark = document.createElement("span");
       mark.setAttribute("aria-hidden", "true");
       mark.textContent = launcherInitial;
+      if (launcherAvatar) {
+        var avatarImage = document.createElement("img");
+        avatarImage.alt = "";
+        avatarImage.src = launcherAvatar;
+        avatarImage.style.cssText = "position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover;";
+        avatarImage.addEventListener("error", function () { avatarImage.remove(); }, { once: true });
+        mark.appendChild(avatarImage);
+      }
       var label = document.createElement("span");
       label.textContent = launcherLabel;
       launcher.appendChild(mark);
@@ -69,7 +83,7 @@
         "border:1px solid #cbd8e8", "border-radius:24px", "color:#17233d", "background:#ffffff",
         "box-shadow:0 8px 28px rgba(16,43,75,.18)", "font:600 14px system-ui,sans-serif", "cursor:pointer"
       ].join(";");
-      mark.style.cssText = "width:32px;height:32px;display:grid;place-items:center;border-radius:9px;color:#ffffff;background:#1677d2;font:700 15px system-ui,sans-serif;";
+      mark.style.cssText = "position:relative;width:32px;height:32px;display:grid;place-items:center;overflow:hidden;border-radius:9px;color:#ffffff;background:#1677d2;font:700 15px system-ui,sans-serif;";
       launcher.addEventListener("click", function () { opened ? api.close() : api.open(); });
       document.body.appendChild(launcher);
     }

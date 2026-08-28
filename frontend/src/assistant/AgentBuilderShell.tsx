@@ -612,10 +612,10 @@ function generateWebWidgetKey(): string {
 
 export function webWidgetInstallSnippet(config: WebPublishConfig): string {
   const key = JSON.stringify(config.widgetKey || "ww_your_widget_key");
-  const launcher = JSON.stringify(config.launcherLabel || "咨询智能体");
   const defaultOpen = config.defaultOpen ? "true" : "false";
   return `<script src="{{AGENTCICI_ORIGIN}}/sdk/sisi@1.1.0.js"></script>
 <script>
+  (async () => {
   const serviceOrigin = "{{AGENTCICI_ORIGIN}}";
   const widgetKey = ${key};
   const visitorStorageKey = "agentcici-web-widget-visitor";
@@ -624,10 +624,16 @@ export function webWidgetInstallSnippet(config: WebPublishConfig): string {
     visitorId = crypto.randomUUID();
     localStorage.setItem(visitorStorageKey, visitorId);
   }
+  const configResponse = await fetch(serviceOrigin + "/public/web-widgets/" + widgetKey);
+  const configBody = await configResponse.json();
+  if (!configResponse.ok || !configBody.success) throw new Error(configBody.message || "Web widget config failed");
+  const widgetConfig = configBody.data;
   AgentCiCiSisi.create({
     mode: "float",
     open: ${defaultOpen},
-    launcherLabel: ${launcher},
+    assistantName: widgetConfig.assistantName,
+    launcherLabel: widgetConfig.launcherLabel,
+    launcherAvatar: widgetConfig.agentAvatarBase64,
     tokenProvider: async () => {
       const response = await fetch(
         serviceOrigin + "/public/web-widgets/" + widgetKey + "/tokens",
@@ -647,6 +653,7 @@ export function webWidgetInstallSnippet(config: WebPublishConfig): string {
       return body.data.embedToken;
     }
   });
+  })();
 </script>`;
 }
 
@@ -3859,11 +3866,11 @@ export default function AgentBuilderShell({
 
           <div className="cici-builder-web-preview" aria-label="Web 浮窗预览">
             <div className="cici-builder-web-preview__window">
-              <header><span aria-hidden="true">Ci</span><strong>{publishConfig.web.assistantName || "AgentCiCi"}</strong></header>
+              <header><span aria-hidden="true">{draft.avatarBase64 ? <img src={draft.avatarBase64} alt="" /> : getDisplayInitial(draft.name, "智").slice(0, 1)}</span><strong>{publishConfig.web.assistantName || "AgentCiCi"}</strong></header>
               <p>{publishConfig.web.welcomeMessage || "你好，请告诉我你想了解的业务场景。"}</p>
               <small>预览不签发 Token，也不连接真实业务数据。</small>
             </div>
-            <button type="button"><span aria-hidden="true">Ci</span>{publishConfig.web.launcherLabel || "咨询智能体"}</button>
+            <button type="button"><span aria-hidden="true">{draft.avatarBase64 ? <img src={draft.avatarBase64} alt="" /> : getDisplayInitial(draft.name, "智").slice(0, 1)}</span>{publishConfig.web.launcherLabel || "咨询智能体"}</button>
           </div>
 
           <div className="cici-builder-publish-note cici-builder-publish-install">

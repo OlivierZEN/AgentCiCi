@@ -357,6 +357,7 @@ describe("Web widget publish configuration", () => {
     expect(snippet).toContain("{{AGENTCICI_ORIGIN}}/sdk/sisi@1.1.0.js");
     expect(snippet).toContain("ww_1234567890abcdef12345678");
     expect(snippet).toContain("/public/web-widgets/");
+    expect(snippet).toContain("widgetConfig.agentAvatarBase64");
     expect(snippet).not.toContain("companyId");
     expect(snippet).not.toContain("runAsUserId");
     expect(snippet).not.toContain("Api-Key");

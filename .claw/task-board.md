@@ -15,6 +15,20 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-343 - Web 浮窗使用系统智能体头像
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-204-web-widget-publish-channel.md`
+- task_status_path: `.claw/tasks/TASK-343.md`
+- blocked_by: `none`
+- related_issues: `none`
+- scope_files: `公开 Web 配置、website 会话头像投影、SDK 启动器、Embed 标题/消息头像、Agent Builder 预览与安装代码`
+- completion_evidence: `已确认 demo sales-agent 存在已发布 WebP 头像；实现与运行验证进行中。`
+- next_action: `完成聚焦/全量测试和本地同提交制品，浏览器复核官网浮窗三处头像。`
+
 ### TASK-341 - 外部应用 MCP Provider 正式绑定
 
 - status: `in_progress`

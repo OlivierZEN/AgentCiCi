@@ -31,6 +31,7 @@ type HostMessage = { source?: string; type?: string; token?: string; payload?: R
 type SessionView = {
   sessionId: string;
   productName: string;
+  agentAvatarBase64?: string;
   agentId: string;
   source?: string;
   parentOrigin: string;
@@ -56,6 +57,21 @@ const APP_CODE = "sisi";
 const SDK_SOURCE = "agentcici-sisi-embed";
 const ACCEPT = ".png,.jpg,.jpeg,.webp,.txt,.md,.csv,.json,.pdf,.docx";
 const SUGGESTIONS = ["总结当前客户进展", "查找最近一次沟通", "生成下一步跟进建议"];
+
+function SisiAgentAvatar({ session, variant }: { session: SessionView | null; variant: "brand" | "hero" | "message" }) {
+  const websiteAgent = session?.source === "website";
+  const avatar = websiteAgent ? text(session?.agentAvatarBase64).trim() : "";
+  const [failedAvatar, setFailedAvatar] = useState("");
+  const websiteFallback = text(session?.productName).trim().slice(0, 1) || "智";
+  const fallback = websiteAgent ? websiteFallback : variant === "brand" ? "Ci" : "思";
+  const modifier = variant === "brand" ? "" : ` sisi-seal--${variant}`;
+  return (
+    <span className={`sisi-seal${modifier}`} aria-hidden="true">
+      {fallback}
+      {avatar && avatar !== failedAvatar ? <img src={avatar} alt="" onError={() => setFailedAvatar(avatar)} /> : null}
+    </span>
+  );
+}
 
 function parseHashToken() {
   const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
@@ -388,12 +404,15 @@ export default function SisiEmbedPage() {
     const values = session?.context ?? {};
     return Object.entries(values).filter(([, value]) => typeof value !== "object").slice(0, 5);
   }, [session?.context]);
+  const assistantDisplayName = session?.source === "website"
+    ? session.productName || "智能体"
+    : "思思";
 
   return (
     <main className={`sisi-shell sisi-shell--${mode} ${leftOpen ? "" : "sisi-shell--left-closed"} ${rightOpen ? "" : "sisi-shell--right-closed"}`} data-theme={resolveSisiTheme(mode, session)}>
       <header className="sisi-header">
         <div className="sisi-brand">
-          <span className="sisi-seal" aria-hidden="true">Ci</span>
+          <SisiAgentAvatar session={session} variant="brand" />
           <div><strong>{session?.productName || "AgentCiCi"}</strong><span>AI Agent</span></div>
         </div>
         <div className="sisi-header__context">
@@ -425,19 +444,19 @@ export default function SisiEmbedPage() {
           <div className="sisi-identity-note"><ShieldCheck size={16} /><span>CloudCC 身份安全接入<br />无需登录 AgentCiCi</span></div>
         </aside>}
 
-        <section className="sisi-conversation" aria-label="思思对话">
+        <section className="sisi-conversation" aria-label={`${assistantDisplayName}对话`}>
           <div className="sisi-messages" ref={listRef} aria-live="polite">
             {loading && <div className="sisi-loading"><LoaderCircle className="spin" /><span>正在建立安全会话…</span></div>}
             {!loading && messages.length === 0 && <div className="sisi-welcome">
-              <span className="sisi-seal sisi-seal--hero">思</span>
-              <h1>你好，我是思思</h1>
+              <SisiAgentAvatar session={session} variant="hero" />
+              <h1>你好，我是{assistantDisplayName}</h1>
               <p>我已进入当前业务场景，可以基于你有权访问的数据进行分析、检索和执行。</p>
               <div className="sisi-suggestions">{SUGGESTIONS.map((item) => <button key={item} onClick={() => void send(item)}><Sparkles size={14} />{item}</button>)}</div>
             </div>}
             {messages.map((message) => <article key={message.id} className={`sisi-message sisi-message--${message.role}`}>
-              {message.role === "assistant" && <span className="sisi-seal sisi-seal--message">思</span>}
+              {message.role === "assistant" && <SisiAgentAvatar session={session} variant="message" />}
               <div className="sisi-message__body">
-                {message.role === "assistant" && <span className="sisi-message__name">思思</span>}
+                {message.role === "assistant" && <span className="sisi-message__name">{assistantDisplayName}</span>}
                 {message.attachments?.length ? <div className="sisi-message__attachments">{message.attachments.map((item) => <span key={item.id}>{item.contentType.startsWith("image/") ? <ImageIcon size={13} /> : <FileText size={13} />}{item.name}</span>)}</div> : null}
                 <div className="sisi-bubble"><ChatMarkdown content={message.content} busy={message.busy} /></div>
                 {message.confirmation && <button className="sisi-confirm" onClick={() => { postHost("embed:action-confirmed", { phrase: message.confirmation }); void send(message.confirmation); }}><ShieldCheck size={15} />确认并回复“{message.confirmation}”</button>}
@@ -448,7 +467,7 @@ export default function SisiEmbedPage() {
           <div className="sisi-composer-wrap">
             {attachments.length > 0 && <div className="sisi-attachment-strip">{attachments.map((item) => <span key={item.id}>{item.contentType.startsWith("image/") ? <ImageIcon size={13} /> : <FileText size={13} />}{item.name}<button onClick={() => setAttachments((current) => current.filter((entry) => entry.id !== item.id))}><X size={12} /></button></span>)}</div>}
             <div className={`sisi-composer ${listening ? "sisi-composer--listening" : ""}`}>
-              <textarea className="sisi-composer__input" value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onKeyDown} placeholder={listening ? "正在聆听…" : "问思思，或交代一个任务…"} rows={1} disabled={!session || sending} />
+              <textarea className="sisi-composer__input" value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onKeyDown} placeholder={listening ? "正在聆听…" : `问${assistantDisplayName}，或交代一个任务…`} rows={1} disabled={!session || sending} />
               <div className="sisi-composer__tools">
                 {mode === "page" && <>
                   <input ref={fileRef} type="file" accept={ACCEPT} multiple hidden onChange={upload} />

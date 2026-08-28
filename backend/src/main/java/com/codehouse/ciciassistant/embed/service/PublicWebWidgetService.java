@@ -72,6 +72,7 @@ public class PublicWebWidgetService {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("widgetKey", widget.config().widgetKey());
         data.put("assistantName", widget.config().assistantName());
+        data.put("agentAvatarBase64", avatar(widget.agent()));
         data.put("launcherLabel", widget.config().launcherLabel());
         data.put("welcomeMessage", widget.config().welcomeMessage());
         data.put("defaultOpen", widget.config().defaultOpen());
@@ -286,6 +287,11 @@ public class PublicWebWidgetService {
 
     private String fallback(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : clip(value, 160);
+    }
+
+    private String avatar(AgentDefinitionEntity agent) {
+        String value = agent == null ? null : agent.getAvatarBase64();
+        return value == null ? "" : value.trim();
     }
 
     private String requireText(String value, String field) {

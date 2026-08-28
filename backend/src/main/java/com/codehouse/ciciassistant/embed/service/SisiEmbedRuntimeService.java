@@ -1,5 +1,7 @@
 package com.codehouse.ciciassistant.embed.service;
 
+import com.codehouse.ciciassistant.agent.domain.AgentDefinitionEntity;
+import com.codehouse.ciciassistant.agent.domain.AgentDefinitionRepository;
 import com.codehouse.ciciassistant.ai.service.ChatAttachmentService;
 import com.codehouse.ciciassistant.ai.service.ChatOrchestratorService;
 import com.codehouse.ciciassistant.auth.ProductThemeCodes;
@@ -31,17 +33,20 @@ public class SisiEmbedRuntimeService {
     private final ChatOrchestratorService chatOrchestratorService;
     private final ChatAttachmentService attachmentService;
     private final UserRepository userRepository;
+    private final AgentDefinitionRepository agentDefinitionRepository;
     private final ObjectMapper objectMapper;
 
     public SisiEmbedRuntimeService(SisiEmbedSessionRepository sessionRepository,
                                    ChatOrchestratorService chatOrchestratorService,
                                    ChatAttachmentService attachmentService,
                                    UserRepository userRepository,
+                                   AgentDefinitionRepository agentDefinitionRepository,
                                    ObjectMapper objectMapper) {
         this.sessionRepository = sessionRepository;
         this.chatOrchestratorService = chatOrchestratorService;
         this.attachmentService = attachmentService;
         this.userRepository = userRepository;
+        this.agentDefinitionRepository = agentDefinitionRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -187,6 +192,7 @@ public class SisiEmbedRuntimeService {
         data.put("appCode", "sisi");
         String assistantName = String.valueOf(token.context().getOrDefault("assistantName", "")).trim();
         data.put("productName", assistantName.isBlank() ? "思思" : assistantName);
+        data.put("agentAvatarBase64", websiteAgentAvatar(token));
         data.put("agentId", session.getAgentId());
         data.put("source", token.source());
         data.put("externalTenantId", session.getExternalTenantId());
@@ -202,6 +208,17 @@ public class SisiEmbedRuntimeService {
                 .orElse(ProductThemeCodes.DEFAULT));
         data.put("updatedAt", session.getUpdatedAt().toString());
         return data;
+    }
+
+    private String websiteAgentAvatar(EmbedTokenService.AuthenticatedEmbedToken token) {
+        if (!"website".equals(token.source())) {
+            return "";
+        }
+        return agentDefinitionRepository
+                .findByCompanyIdAndAgentIdAndEnabledTrue(token.companyId(), token.agentId())
+                .map(AgentDefinitionEntity::getAvatarBase64)
+                .map(String::trim)
+                .orElse("");
     }
 
     private Map<String, Object> trustedContext(EmbedTokenService.AuthenticatedEmbedToken token) {

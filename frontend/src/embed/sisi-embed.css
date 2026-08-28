@@ -67,6 +67,7 @@ body:has(.sisi-shell) {
 .sisi-brand span:not(.sisi-seal) { color: var(--sisi-muted); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
 
 .sisi-seal {
+  position: relative;
   width: 34px;
   height: 34px;
   flex: 0 0 auto;
@@ -79,6 +80,17 @@ body:has(.sisi-shell) {
   font-family: "FZKai-Z03", "Kaiti SC", STKaiti, serif;
   font-size: 20px;
   transform: rotate(-2deg);
+  overflow: hidden;
+}
+
+.sisi-seal img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  transform: rotate(2deg) scale(1.04);
 }
 
 .sisi-header__context {

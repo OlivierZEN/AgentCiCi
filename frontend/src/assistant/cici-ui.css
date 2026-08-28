@@ -13953,6 +13953,7 @@
 
 .cici-builder-web-preview__window header span,
 .cici-builder-web-preview > button span {
+  position: relative;
   display: grid;
   width: 30px;
   height: 30px;
@@ -13961,6 +13962,17 @@
   background: #9b4b38;
   color: #fff8eb;
   font-weight: 800;
+  overflow: hidden;
+}
+
+.cici-builder-web-preview__window header span img,
+.cici-builder-web-preview > button span img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
 }
 
 .cici-builder-web-preview__window p {
