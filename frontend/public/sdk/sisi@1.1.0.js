@@ -66,10 +66,10 @@
       launcher.style.cssText = [
         "position:fixed", "right:" + (config.right || 24) + "px", "bottom:" + (config.bottom || 24) + "px",
         "z-index:" + config.zIndex, "height:48px", "padding:0 16px 0 9px", "display:flex", "align-items:center", "gap:9px",
-        "border:1px solid rgba(92,67,25,.3)", "border-radius:24px", "color:#242019", "background:#fffaf0",
-        "box-shadow:0 8px 28px rgba(43,33,19,.2)", "font:600 14px system-ui,sans-serif", "cursor:pointer"
+        "border:1px solid #cbd8e8", "border-radius:24px", "color:#17233d", "background:#ffffff",
+        "box-shadow:0 8px 28px rgba(16,43,75,.18)", "font:600 14px system-ui,sans-serif", "cursor:pointer"
       ].join(";");
-      mark.style.cssText = "width:32px;height:32px;display:grid;place-items:center;border-radius:9px;color:#fff8eb;background:#9b4b38;font:700 15px system-ui,sans-serif;";
+      mark.style.cssText = "width:32px;height:32px;display:grid;place-items:center;border-radius:9px;color:#ffffff;background:#1677d2;font:700 15px system-ui,sans-serif;";
       launcher.addEventListener("click", function () { opened ? api.close() : api.open(); });
       document.body.appendChild(launcher);
     }

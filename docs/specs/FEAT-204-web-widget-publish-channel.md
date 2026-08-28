@@ -4,10 +4,10 @@ feature_id: FEAT-204
 title: Web 浮窗发布渠道与官网售前智能体
 status: verified
 owner_role: fullstack-agent
-task_ids: TASK-334,TASK-335
+task_ids: TASK-334,TASK-335,TASK-337
 related_decisions: FEAT-202
 related_issues: ISSUE-2026-08-28-web-widget-empty-stream
-updated_at: 2026-08-28T08:54:54Z
+updated_at: 2026-08-28T09:25:13Z
 updated_by: codex
 ---
 
@@ -63,6 +63,9 @@ Agent Builder 已有独立“发布渠道”页签，但 Web 浮窗仍只有占�
 ### 官网
 
 - 官网是品牌表面，但浮窗保持克制企业语气：默认折叠，启动器显示“咨询售前”，展开后复用 `FEAT-202` 对话界面。
+- 公开官网浮窗与启动器默认采用产品既有 `crm-blue` 标准主题；不覆盖受信 `page` 嵌入显式选择的其他主题。
+- 浮窗输入工具栏只保留语音与靠右发送动作，不展示公开访客无权限使用的附件入口；`page` 模式继续保留附件能力。
+- 标题栏图标按钮 hover 不显示背景框，只用图标色反馈；键盘 `focus-visible` 仍显示可访问性轮廓。
 - 后端默认入口键未配置或公开配置不可用时不渲染启动器，不阻断官网首屏、表单或导航。
 - Token 过期时 SDK 重新调用同源 Token Provider；访客 ID 只保存在浏览器本地并使用随机 UUID。
 
@@ -117,6 +120,7 @@ Agent Builder 已有独立“发布渠道”页签，但 Web 浮窗仍只有占�
 - 2026-08-28：完成现状扫描和安全方案；进入实现。
 - 2026-08-28：实现、自动化、本地 main、V125、demo 发布、公开安全负例、真实模型会话和浏览器验收通过；进入用户 review。demo 现用唯一 ACTIVE OWNER，非 demo 发布前必须替换为专用 RUN-only 成员。
 - 2026-08-28：用户回报官网浮窗回复为空；定位为 Embed 消费方漏读规范 `{text}`。TASK-335 已进入本地 main，同提交前后端制品与官网原问题真实回归通过，进入用户 review。
+- 2026-08-28：按用户截图进入 TASK-337，统一官网浮窗 CRM 标准蓝、发送按钮布局、公开附件入口和标题栏 hover；源码已调整，自动化与本地正式环境回归待完成。
 
 ## 交接说明
 

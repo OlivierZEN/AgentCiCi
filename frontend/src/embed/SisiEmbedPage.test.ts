@@ -1,6 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { exactConfirmation } from "./sisiEmbedContract";
 import { streamDeltaText } from "./sisiEmbedStream";
+import { resolveSisiTheme } from "./sisiEmbedTheme";
+
+describe("Sisi embedded theme", () => {
+  it("uses CRM standard blue for the public website float", () => {
+    expect(resolveSisiTheme("float", null)).toBe("crm-blue");
+    expect(resolveSisiTheme("float", { source: "website", themeCode: "gilded" })).toBe("crm-blue");
+  });
+
+  it("preserves the configured theme for trusted page embedding", () => {
+    expect(resolveSisiTheme("page", { source: "cloudcc", themeCode: "ocean" })).toBe("ocean");
+    expect(resolveSisiTheme("page", { source: "cloudcc" })).toBe("gilded");
+  });
+});
 
 describe("Sisi embedded confirmation boundary", () => {
   it("only extracts an exact server-provided confirmation phrase", () => {

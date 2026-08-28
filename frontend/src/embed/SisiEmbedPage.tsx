@@ -23,6 +23,7 @@ import ChatMarkdown from "../components/ChatMarkdown";
 import { useAsrVoiceInput } from "../shared/useAsrVoiceInput";
 import { exactConfirmation } from "./sisiEmbedContract";
 import { streamDeltaText } from "./sisiEmbedStream";
+import { resolveSisiTheme } from "./sisiEmbedTheme";
 import "./sisi-embed.css";
 
 type Envelope<T> = { success?: boolean; data?: T; message?: string };
@@ -389,7 +390,7 @@ export default function SisiEmbedPage() {
   }, [session?.context]);
 
   return (
-    <main className={`sisi-shell sisi-shell--${mode} ${leftOpen ? "" : "sisi-shell--left-closed"} ${rightOpen ? "" : "sisi-shell--right-closed"}`} data-theme={session?.themeCode || "gilded"}>
+    <main className={`sisi-shell sisi-shell--${mode} ${leftOpen ? "" : "sisi-shell--left-closed"} ${rightOpen ? "" : "sisi-shell--right-closed"}`} data-theme={resolveSisiTheme(mode, session)}>
       <header className="sisi-header">
         <div className="sisi-brand">
           <span className="sisi-seal" aria-hidden="true">Ci</span>
@@ -449,8 +450,10 @@ export default function SisiEmbedPage() {
             <div className={`sisi-composer ${listening ? "sisi-composer--listening" : ""}`}>
               <textarea className="sisi-composer__input" value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onKeyDown} placeholder={listening ? "正在聆听…" : "问思思，或交代一个任务…"} rows={1} disabled={!session || sending} />
               <div className="sisi-composer__tools">
-                <input ref={fileRef} type="file" accept={ACCEPT} multiple hidden onChange={upload} />
-                <button onClick={() => fileRef.current?.click()} disabled={!session || sending} title="上传附件"><Paperclip size={18} /></button>
+                {mode === "page" && <>
+                  <input ref={fileRef} type="file" accept={ACCEPT} multiple hidden onChange={upload} />
+                  <button onClick={() => fileRef.current?.click()} disabled={!session || sending} title="上传附件"><Paperclip size={18} /></button>
+                </>}
                 <button onClick={() => void toggleVoice()} disabled={!session || sending} className={listening ? "is-active" : ""} title="语音输入">{listening ? <CircleStop size={18} /> : <Mic size={18} />}</button>
                 <span className="sisi-composer__hint">Enter 发送 · Shift+Enter 换行</span>
                 <button className="sisi-send" onClick={() => void send()} disabled={!draft.trim() || !session || sending} title="发送">{sending ? <LoaderCircle className="spin" size={18} /> : <ArrowUp size={18} />}</button>

@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-28T09:13:00Z
+updated_at: 2026-08-28T09:25:13Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,20 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-337 - 官网 Web 浮窗 CRM 标准蓝与输入区修正
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `frontend-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-204-web-widget-publish-channel.md`
+- task_status_path: `.claw/tasks/TASK-337.md`
+- blocked_by: `none`
+- related_issues: `none`
+- scope_files: `官网 Web 浮窗主题、SDK 启动器、输入工具栏、附件入口、标题栏 hover、视觉回归`
+- completion_evidence: `源码已按截图标注调整；自动化、本地 main 制品与浏览器回归待完成。`
+- next_action: `完成前端测试与构建，提交本地 main，从同一提交重建 backend/frontend 并做官网浮窗视觉与真实回复回归。`
 
 ### TASK-336 - 普通租户图片识别视觉能力误判修复
 
