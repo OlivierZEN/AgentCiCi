@@ -7,7 +7,7 @@ primary_project: agentcici
 owner_role: fullstack-agent
 task_ids: TASK-309,TASK-336
 related_issues: ISSUE-2026-08-28-vision-capability-scope
-updated_at: 2026-08-28T09:13:00Z
+updated_at: 2026-08-28T09:27:08Z
 updated_by: codex
 ---
 
@@ -87,3 +87,4 @@ DevAutopilot 需求 `REQ-6F34ECF3` 的端到端任务 `019ffeb0-88a0-739f-afcb-6
 - 运行模型路由、凭据和能力目录均由平台治理组织统一管理；旧视觉门禁却用业务组织 ID 查 `model_provider_config`，普通租户没有该行，因此即使平台 `chat` 模型已确认 `vision` 也会被误判。
 - 修复只统一能力事实源，不按模型名推断、不把未确认模型放行，也不改变附件、租户隔离或失败不落消息的既有契约。
 - 验收新增：任意普通租户使用平台已确认 `vision` 的当前聊天模型时必须通过门禁；未确认能力仍返回 `VISION_MODEL_REQUIRED`。
+- 本地验收：实现 `036c12a0d006` 进入本地 main，backend/frontend 同为 `2.8.67-dev.036c12a`；已登录普通租户真实粘贴用户原截图，`qwen3.7-plus` 分别识别出 `409` 和 `VISION_MODEL_REQUIRED`，能力误判已消除。远程、UAT、生产未修改。

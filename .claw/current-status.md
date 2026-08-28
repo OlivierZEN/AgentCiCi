@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-336 / FEAT-188` 正在修复截图中的 `409 VISION_MODEL_REQUIRED`：平台 `chat` 实际路由为已由运营确认 `vision` 的 `aliyun-bailian/qwen3.7-plus`，但旧门禁错误以业务组织 ID 查询平台级能力目录，导致普通租户一律误判。代码已改为与运行路由使用同一平台治理事实源；修复前红测、修复后聚焦测试、附件/模型身份 57 项、backend package 与 diff check 通过。待提交本地 main、同提交构建前后端并完成真实图片会话回归；远程、UAT、生产未修改。
+- `TASK-336 / FEAT-188` 已修复普通租户图片会话误报 `409 VISION_MODEL_REQUIRED`：能力门禁已与运行路由统一读取平台治理事实源，同时保留受信来源和失败关闭。实现 `036c12a0d006` 进入本地 main；红/绿目标测试、附件/模型身份 57 项和 package 通过。backend/frontend 同为 `2.8.67-dev.036c12a`、healthy/restart=0；普通租户用用户原截图真实回归，`qwen3.7-plus` 分别识别出 `409` 和 `VISION_MODEL_REQUIRED`，浏览器 console 0。状态服务未替换；远程、UAT、生产未修改，进入用户 review。
 
 - `TASK-335 / FEAT-204` 已修复官网 Web 浮窗“本次未返回文字内容”：根因是后端规范 SSE `delta` 负载为 `{text}`，嵌入页只消费 `content/delta`，导致真实模型增量全部丢弃。`d47afb41c66d` 已进入本地 `main`，统一解析规范与兼容字段；聚焦 4 项、前端全量 58 文件/318 项、production build、域名和 diff 门禁通过。backend/frontend 同为 `2.8.67-dev.d47afb4`、healthy/restart=0；官网用截图原问题真实回归，页面返回 678 字完整正文，数据库消息完整，Trace `COMPLETED/model_call_count=2`，浏览器 console 0。其他服务持续运行且未替换；远程、UAT、生产未修改，进入用户 review。
 

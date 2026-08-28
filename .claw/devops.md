@@ -1,12 +1,19 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-08-27T11:54:55Z
+updated_at: 2026-08-28T09:27:08Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-28 TASK-336 本地开发环境
+
+- AgentCiCi backend/frontend 从本地 `main@036c12a0d006` 以受管 release Dockerfile 构建为 `2.8.67-dev.036c12a`；镜像 ID 为 `sha256:ef82f9a5648a724cce57175789d026b91fb24c6ac695d6d4faf40d8bfa4ea8e0` / `sha256:228feab79313e3e2832d81034d05a7a688c25edbcef003af9e2194934e24a1ee`，镜像标签、容器环境、backend 版本 API 和前端资源一致。
+- 仅以现有 Compose `--no-deps --force-recreate backend cici-frontend` 替换两项无状态服务；两者 healthy/restart=0，backend health=`UP`，frontend Nginx 配置有效，`https://cici.localhost/app=200`。
+- 已登录普通租户把用户原截图以剪贴板粘贴给思思，`qwen3.7-plus` 两轮分别返回图中的 `409` 与 `VISION_MODEL_REQUIRED`；浏览器 warning/error=0，backend 近 10 分钟无能力冲突或 severe 日志。
+- PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak、Nginx、Semattice 和 DevAutopilot 容器 ID 均未变化且 restart=0。本任务未新增或切换跨项目契约；标准 `./stack version/verify` 仍受既有 Semattice `config=1.0.7 / repository=1.0.8` 漂移约束。远程、UAT、生产、ACR 和 Git tag 未修改。
 
 ## 2026-08-27 TASK-332 本地开发环境
 

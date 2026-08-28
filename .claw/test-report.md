@@ -1,22 +1,25 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-28T09:13:00Z
+updated_at: 2026-08-28T09:27:08Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-28T09:13:00Z
-last_run_status: passed_task_336_code_pending_local_runtime
+last_run_at: 2026-08-28T09:27:08Z
+last_run_status: passed_task_336_local_runtime_pending_user_review
 ---
 
 # Test Report
 
 ## 2026-08-28 TASK-336 图片识别视觉能力范围修复
 
-- 状态：`passed_task_336_code_pending_local_runtime`；根因、红/绿回归、附件/模型身份聚焦测试、backend package 和 diff 门禁通过，尚未宣称本地运行图片会话通过。
+- 状态：`passed_task_336_local_runtime_pending_user_review`；根因、红/绿回归、附件/模型身份聚焦测试、同提交制品和已登录真实图片会话通过，等待用户目视确认。
 - 运行配置只读证据：平台治理组织当前 `chat=aliyun-bailian/qwen3.7-plus`；该模型能力含 `vision` 且来源为 `operator_confirmation`，普通业务组织没有自己的模型能力配置。
 - 红/绿测试：新增普通租户调用平台受信视觉模型用例，修复前得到 `false`，将能力读取范围对齐平台治理组织后通过。测试使用独立 `agentcici_task336_test` 数据库完成 V1-V125 和 repeatable migration，结束后已删除。
 - 聚焦回归：`ChatAttachmentServiceTest,ChatOrchestratorServiceModelIdentityTest` 共 57 项通过；`mvn -q -DskipTests package`、`git diff --check` 通过。
-- 边界：完整 `ModelProviderServiceIntegrationTest` 的 6 项组合运行有 1 项既有测试顺序污染失败，前序平台配置残留 `platform-chat-model` 使“目录为空”断言失败；本次目标方法单独绿测，不把整类宣称通过。前端、业务库、UAT、生产未修改。
+- 主线与制品：实现 `036c12a0d006` 进入本地 `main`；backend/frontend 镜像分别为 `sha256:ef82f9a5648a724cce57175789d026b91fb24c6ac695d6d4faf40d8bfa4ea8e0` / `sha256:228feab79313e3e2832d81034d05a7a688c25edbcef003af9e2194934e24a1ee`，label、容器环境、版本 API 和页面资源均为 `2.8.67-dev.036c12a / 036c12a0d006`；两容器 healthy/restart=0。
+- 真实业务链路：已登录普通租户把用户原截图连续两次通过剪贴板粘贴给思思；运行模型显示 `qwen3.7-plus`，分别准确返回图中的 `409` 和 `VISION_MODEL_REQUIRED`，没有再出现 HTTP 409 能力冲突。浏览器 warning/error=0，后端近 10 分钟没有 `VISION_MODEL_REQUIRED`、ERROR、Exception 或 failed 日志。
+- 环境：`https://cici.localhost/app=200`，backend health=`UP`，frontend Nginx 配置有效；PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak、Nginx、Semattice、DevAutopilot ID 未变化且 restart=0。
+- 边界：完整 `ModelProviderServiceIntegrationTest` 的 6 项组合运行有 1 项既有测试顺序污染失败，前序平台配置残留 `platform-chat-model` 使“目录为空”断言失败；本次目标方法单独绿测，不把整类宣称通过。标准全栈治理校验仍受历史任务/规格格式债务及 Semattice 版本漂移约束；远程、UAT、生产未修改。
 
 ## 2026-08-28 TASK-335 Web 浮窗流式回复空白修复
 

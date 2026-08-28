@@ -17,7 +17,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-336 - 普通租户图片识别视觉能力误判修复
 
-- status: `in_progress`
+- status: `review`
 - priority: `critical`
 - owner_role: `backend-agent`
 - claimed_by: `codex`
@@ -26,8 +26,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - related_issues: `ISSUE-2026-08-28-vision-capability-scope`
 - scope_files: `平台模型能力事实源、聊天 vision 门禁、普通租户回归测试、本地 main 制品与图片会话验证`
-- completion_evidence: `修复前红测 false、修复后聚焦绿测；附件/模型身份 57 项、backend package、diff check 通过；运行验证待完成。`
-- next_action: `提交并合并本地 main，从该提交重建 backend/frontend，复测截图原图片会话。`
+- completion_evidence: `本地 main@036c12a0d006；红/绿目标测试、附件/模型身份 57 项、package；backend/frontend 2.8.67-dev.036c12a healthy/restart=0；普通租户用原截图真实识别出 409 与 VISION_MODEL_REQUIRED，浏览器 console 0。`
+- next_action: `由用户目视确认当前图片识别结果；远程推送、UAT 与生产另行授权。`
 
 ### TASK-335 - Web 浮窗流式回复空白修复
 
