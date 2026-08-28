@@ -15,14 +15,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
-### TASK-340 - 图片识别修复生产 2.8.67 晋级
+### TASK-342 - 图片识别修复生产 2.8.67 晋级
 
 - status: `review`
 - priority: `critical`
 - owner_role: `release-agent`
 - claimed_by: `codex`
 - spec_path: `docs/specs/FEAT-188-conversation-image-paste-attachments.md`
-- task_status_path: `.claw/tasks/TASK-340.md`
+- task_status_path: `.claw/tasks/TASK-342.md`
 - blocked_by: `none`
 - related_issues: `ISSUE-2026-08-28-vision-capability-scope`
 - scope_files: `冻结 UAT 候选、正式 tag、ACR 不可变制品、生产完整备份、backend/frontend 最小切换、技术回读与回滚证据`

@@ -5,7 +5,7 @@ title: 对话框连续粘贴图片附件
 status: verified
 primary_project: agentcici
 owner_role: fullstack-agent
-task_ids: TASK-309,TASK-336,TASK-338,TASK-340
+task_ids: TASK-309,TASK-336,TASK-338,TASK-342
 related_issues: ISSUE-2026-08-28-vision-capability-scope
 updated_at: 2026-08-28T13:12:49Z
 updated_by: codex

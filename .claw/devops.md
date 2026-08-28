@@ -8,7 +8,7 @@ status: active
 
 # DevOps
 
-## 2026-08-28 TASK-340 生产 `2.8.67`
+## 2026-08-28 TASK-342 生产 `2.8.67`
 
 - 用户确认 UAT `2.8.67-beta.1` HUMAN 图片识别验收通过。冻结 UAT tag `2.8.67-beta.1^{}`、正式 tag `2.8.67^{}` 与生产运行提交均为 `2970bea75208a05d65c00c08333bc73cc072e607`，且远程 `main` 包含该提交；本地后续功能未混入候选。
 - backend/frontend ACR index digest 分别为 `sha256:2b6be2564f0eef09f064e4ce345d585cc4bc1f3c00408d0f358ab8f82bfac615` / `sha256:6ec9501ec3cdfdf1118ab1ec9f647223ecfb843440603d83e054577c539dd6a4`，均含 linux/amd64，label 为 `2.8.67 / 2970bea75208`，未更新 `latest`。

@@ -27,4 +27,4 @@ spec_path: docs/specs/FEAT-188-conversation-image-paste-attachments.md
 
 ## HUMAN 验收
 
-- 用户已明确确认 UAT 图片识别验收通过；冻结候选随后由 TASK-340 原样晋级生产。
+- 用户已明确确认 UAT 图片识别验收通过；冻结候选随后由 TASK-342 原样晋级生产。

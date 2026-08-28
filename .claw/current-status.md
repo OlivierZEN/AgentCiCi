@@ -4,7 +4,7 @@ version: 5
 updated_at: 2026-08-28T13:12:49Z
 updated_by: codex
 phase: review
-active_task: TASK-340
+active_task: TASK-342
 next_action: "生产 2.8.67 技术发布已完成；由已登录生产用户执行图片上传与真实识别，完成生产 HUMAN 业务接受。"
 read_next:
   goals: false
@@ -22,9 +22,9 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-340 / FEAT-188` 已在用户确认 UAT HUMAN 验收通过后，将冻结候选 `2.8.67-beta.1 / 2970bea75208` 原样晋级为生产 `2.8.67`。正式 tag 与 UAT tag peeled commit 一致；backend/frontend linux/amd64 ACR index digest 为 `sha256:2b6be2564f0eef09f064e4ce345d585cc4bc1f3c00408d0f358ab8f82bfac615` / `sha256:6ec9501ec3cdfdf1118ab1ec9f647223ecfb843440603d83e054577c539dd6a4`，未更新 `latest`。完整回滚点 `/opt/cici/backups/20260828T130242Z-before-2.8.67` 共 14 项、351,001,019 bytes，校验通过，应用回滚目标 `2.8.66`。仅重建 backend/frontend，四个状态服务 ID 不变；六容器 healthy/restart=0，health UP、V125 与 repeatable migration、Nginx、公开 smoke、匿名 JSON 401、数据计数不变和累计 100 秒稳定窗口通过。生产登录态图片识别尚未代替 HUMAN 执行。
+- `TASK-342 / FEAT-188` 已在用户确认 UAT HUMAN 验收通过后，将冻结候选 `2.8.67-beta.1 / 2970bea75208` 原样晋级为生产 `2.8.67`。正式 tag 与 UAT tag peeled commit 一致；backend/frontend linux/amd64 ACR index digest 为 `sha256:2b6be2564f0eef09f064e4ce345d585cc4bc1f3c00408d0f358ab8f82bfac615` / `sha256:6ec9501ec3cdfdf1118ab1ec9f647223ecfb843440603d83e054577c539dd6a4`，未更新 `latest`。完整回滚点 `/opt/cici/backups/20260828T130242Z-before-2.8.67` 共 14 项、351,001,019 bytes，校验通过，应用回滚目标 `2.8.66`。仅重建 backend/frontend，四个状态服务 ID 不变；六容器 healthy/restart=0，health UP、V125 与 repeatable migration、Nginx、公开 smoke、匿名 JSON 401、数据计数不变和累计 100 秒稳定窗口通过。生产登录态图片识别尚未代替 HUMAN 执行。
 
-- `TASK-338 / FEAT-188` 已完成 AgentCiCi UAT `2.8.67-beta.1 / 2970bea75208` 技术发布。远程 `main`、annotated tag、backend/frontend linux/amd64 不可变 digest 与运行 commit 一致，未更新 `latest`；完整备份 `/data/apps/agentcici/backups/20260828T104754Z-before-2.8.67-beta.1` 的 12 项工件、PostgreSQL catalog、KB/Qdrant tar、Qdrant 原生 snapshot、旧应用镜像和 SHA-256 均通过，应用回滚目标为 `2.8.66-beta.3`。仅重建 backend/frontend，四个状态服务 ID 不变；六容器 healthy/restart=0，health UP、V125、Nginx、公开 smoke、匿名 JSON 401 与 30 秒稳定窗口通过。本候选未新增或切换跨项目契约；用户已确认 UAT 登录态图片识别 HUMAN 验收通过，并由 TASK-340 晋级生产。
+- `TASK-338 / FEAT-188` 已完成 AgentCiCi UAT `2.8.67-beta.1 / 2970bea75208` 技术发布。远程 `main`、annotated tag、backend/frontend linux/amd64 不可变 digest 与运行 commit 一致，未更新 `latest`；完整备份 `/data/apps/agentcici/backups/20260828T104754Z-before-2.8.67-beta.1` 的 12 项工件、PostgreSQL catalog、KB/Qdrant tar、Qdrant 原生 snapshot、旧应用镜像和 SHA-256 均通过，应用回滚目标为 `2.8.66-beta.3`。仅重建 backend/frontend，四个状态服务 ID 不变；六容器 healthy/restart=0，health UP、V125、Nginx、公开 smoke、匿名 JSON 401 与 30 秒稳定窗口通过。本候选未新增或切换跨项目契约；用户已确认 UAT 登录态图片识别 HUMAN 验收通过，并由 TASK-342 晋级生产。
 
 - `TASK-336 / FEAT-188` 已修复普通租户图片会话误报 `409 VISION_MODEL_REQUIRED`：能力门禁已与运行路由统一读取平台治理事实源，同时保留受信来源和失败关闭。实现 `036c12a0d006` 进入远程 main 和冻结 `2970bea75208`；红/绿目标测试、附件/模型身份 57 项和 package 通过，本地真实图片回归成功。修复已通过用户 UAT HUMAN 验收并随生产 `2.8.67` 发布；生产登录态业务接受仍待 HUMAN。
 

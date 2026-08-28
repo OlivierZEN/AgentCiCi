@@ -10,7 +10,7 @@ last_run_status: passed_task_340_production_technical_pending_human_image_accept
 
 # Test Report
 
-## 2026-08-28 TASK-340 生产 `2.8.67`
+## 2026-08-28 TASK-342 生产 `2.8.67`
 
 - 状态：`passed_task_340_production_technical_pending_human_image_acceptance`；用户已确认 UAT HUMAN 验收通过，冻结源码、不可变正式制品、备份、最小切换、运行指纹、迁移、健康、公开/匿名、数据守恒和累计 100 秒稳定窗口通过。
 - Source：`2.8.67-beta.1^{}`、`2.8.67^{}` 与生产运行 commit 均为 `2970bea75208`，远程 `main@2be977b09fcb` 包含该提交；本地后续 TASK-337/339 和未提交开发改动均未进入候选。

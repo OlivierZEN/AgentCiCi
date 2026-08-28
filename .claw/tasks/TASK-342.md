@@ -1,6 +1,6 @@
 ---
 kind: task-status
-task_id: TASK-340
+task_id: TASK-342
 feature_id: FEAT-188
 status: review
 updated_at: 2026-08-28T13:12:49Z
@@ -9,7 +9,7 @@ owner_role: release-agent
 spec_path: docs/specs/FEAT-188-conversation-image-paste-attachments.md
 ---
 
-# TASK-340 - 图片识别修复生产 2.8.67 晋级
+# TASK-342 - 图片识别修复生产 2.8.67 晋级
 
 ## 范围
 
