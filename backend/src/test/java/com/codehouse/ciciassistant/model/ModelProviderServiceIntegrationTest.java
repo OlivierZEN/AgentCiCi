@@ -154,6 +154,26 @@ class ModelProviderServiceIntegrationTest {
     }
 
     @Test
+    void runtimeCapabilityCheckUsesTheSamePlatformScopeAsTheRuntimeRoute() {
+        String companyId = "vision-org-" + UUID.randomUUID();
+        modelProviderService.listProviders(companyId);
+        modelProviderService.updatePlatformProvider(
+                ModelProviderService.PROVIDER_ALIYUN,
+                true,
+                "https://dashscope.aliyuncs.com/compatible-mode/v1",
+                "platform-secret");
+        configureTrustedVisionModel(ModelProviderService.PROVIDER_ALIYUN, "platform-vision-model");
+
+        assertThat(modelProviderService.supportsTrustedCapability(
+                companyId,
+                ModelProviderService.PROVIDER_ALIYUN,
+                "platform-vision-model",
+                "vision"))
+                .as("tenant runtime checks must read the platform-governed capability catalogue")
+                .isTrue();
+    }
+
+    @Test
     void exposesDomainNeutralOntologyModelingSceneRoute() {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> routes = (List<Map<String, Object>>)
@@ -186,5 +206,21 @@ class ModelProviderServiceIntegrationTest {
         provider.touch();
         providerRepository.save(provider);
         modelProviderService.updatePlatformSelectedModels(providerCode, List.of(modelNames));
+    }
+
+    private void configureTrustedVisionModel(String providerCode, String modelName) {
+        String scopeId = platformAccountProperties.getGovernanceCompanyId();
+        if (scopeId == null || scopeId.isBlank()) {
+            scopeId = PlatformAccountProperties.LEGACY_DEFAULT_GOVERNANCE_COMPANY_ID;
+        }
+        ModelProviderConfigEntity provider = providerRepository
+                .findByCompanyIdAndProviderCode(scopeId, providerCode)
+                .orElseThrow();
+        provider.setConfigJson("{\"modelCapabilities\":{\"" + modelName
+                + "\":[\"text\",\"vision\"]},\"modelCapabilityConfirmations\":{\"" + modelName
+                + "\":{\"source\":\"provider_catalog\",\"confirmedAt\":\"2026-08-13T00:00:00Z\"}}}");
+        provider.touch();
+        providerRepository.save(provider);
+        modelProviderService.updatePlatformSelectedModels(providerCode, List.of(modelName));
     }
 }

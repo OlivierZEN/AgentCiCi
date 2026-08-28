@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-08-28T08:54:54Z
+updated_at: 2026-08-28T09:13:00Z
 updated_by: codex
 status: active
 ---
@@ -35,6 +35,12 @@ status: active
 - Status: resolved in production CloudCC component; AgentCiCi production stays on `2.8.66`, backend alias awaits the normal `2.8.67` release.
 
 ## Open Issues
+
+- ISSUE-2026-08-28-vision-capability-scope:
+  - Symptom: 普通租户发送已就绪图片后，聊天返回 `409 VISION_MODEL_REQUIRED`，附件上传和草稿保留正常。
+  - Verified root cause: 模型路由与凭据读取平台治理组织；`supportsTrustedCapability` 却读取当前业务组织的 `model_provider_config`。平台当前 `chat=qwen3.7-plus` 且已确认 `vision`，业务组织没有独立能力目录，因此被错误拒绝。
+  - Resolution progress: TASK-336 已让能力门禁读取同一平台治理事实源，保留受信来源和失败关闭；修复前红测、修复后聚焦绿测、附件/模型身份 57 项和 package 通过。
+  - Status: code verified; local main/runtime image conversation verification pending.
 
 - ISSUE-2026-08-17-devautopilot-keyword-routing:
   - Symptom: UAT 产品经理收到明确项目创建请求后没有写入；固定模型本地测试中，“创建项目”被回执门禁拦截，而“帮我建一个项目”反而触发只读项目查询并生成无冒号确认草案。

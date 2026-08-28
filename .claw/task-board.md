@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-28T08:54:54Z
+updated_at: 2026-08-28T09:13:00Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,20 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-336 - 普通租户图片识别视觉能力误判修复
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `backend-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-188-conversation-image-paste-attachments.md`
+- task_status_path: `.claw/tasks/TASK-336.md`
+- blocked_by: `none`
+- related_issues: `ISSUE-2026-08-28-vision-capability-scope`
+- scope_files: `平台模型能力事实源、聊天 vision 门禁、普通租户回归测试、本地 main 制品与图片会话验证`
+- completion_evidence: `修复前红测 false、修复后聚焦绿测；附件/模型身份 57 项、backend package、diff check 通过；运行验证待完成。`
+- next_action: `提交并合并本地 main，从该提交重建 backend/frontend，复测截图原图片会话。`
 
 ### TASK-335 - Web 浮窗流式回复空白修复
 

@@ -5,9 +5,9 @@ title: 对话框连续粘贴图片附件
 status: verified
 primary_project: agentcici
 owner_role: fullstack-agent
-task_ids: TASK-309
-related_issues: none
-updated_at: 2026-08-14T11:14:23Z
+task_ids: TASK-309,TASK-336
+related_issues: ISSUE-2026-08-28-vision-capability-scope
+updated_at: 2026-08-28T09:13:00Z
 updated_by: codex
 ---
 
@@ -80,3 +80,10 @@ DevAutopilot 需求 `REQ-6F34ECF3` 的端到端任务 `019ffeb0-88a0-739f-afcb-6
 
 - 设计批准事件：`019fffb8-c211-7e87-abee-7f9b583628f2`。
 - 2026-08-14：后端附件 API、V116、消息关联和 vision 能力门禁已实现；前端连续粘贴、选择、缩略图、上传状态、删除/替换、图片-only 发送和历史鉴权预览已接通。后端 47 项定向测试、skip-tests package、前端 50 文件/278 项全量测试、production build 和 diff check 通过；共享测试库仍被既有 V81 checksum 漂移阻断。待本地 main 提交、`cici.localhost` 迁移与桌面真实浏览器验收。
+
+## 2026-08-28 普通租户视觉能力误判修复
+
+- 用户截图复现附件已上传，但 `/ai/chat/stream` 返回 `409 VISION_MODEL_REQUIRED`。
+- 运行模型路由、凭据和能力目录均由平台治理组织统一管理；旧视觉门禁却用业务组织 ID 查 `model_provider_config`，普通租户没有该行，因此即使平台 `chat` 模型已确认 `vision` 也会被误判。
+- 修复只统一能力事实源，不按模型名推断、不把未确认模型放行，也不改变附件、租户隔离或失败不落消息的既有契约。
+- 验收新增：任意普通租户使用平台已确认 `vision` 的当前聊天模型时必须通过门禁；未确认能力仍返回 `VISION_MODEL_REQUIRED`。

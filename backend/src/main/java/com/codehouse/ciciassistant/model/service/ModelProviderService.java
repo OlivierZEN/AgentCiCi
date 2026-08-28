@@ -236,7 +236,7 @@ public class ModelProviderService {
         if (normalizedProvider.isBlank() || normalizedModel.isBlank() || normalizedCapability.isBlank()) {
             return false;
         }
-        return providerRepository.findByCompanyIdAndProviderCode(companyId, normalizedProvider)
+        return providerRepository.findByCompanyIdAndProviderCode(platformScopeId(), normalizedProvider)
                 .map(this::trustedModelCapabilities)
                 .map(capabilities -> capabilities.getOrDefault(normalizedModel, List.of()).contains(normalizedCapability))
                 .orElse(false);

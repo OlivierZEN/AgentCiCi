@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-28T08:54:54Z
+updated_at: 2026-08-28T09:13:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-28T08:54:54Z
-last_run_status: passed_task_335_local_runtime_pending_user_review
+last_run_at: 2026-08-28T09:13:00Z
+last_run_status: passed_task_336_code_pending_local_runtime
 ---
 
 # Test Report
+
+## 2026-08-28 TASK-336 图片识别视觉能力范围修复
+
+- 状态：`passed_task_336_code_pending_local_runtime`；根因、红/绿回归、附件/模型身份聚焦测试、backend package 和 diff 门禁通过，尚未宣称本地运行图片会话通过。
+- 运行配置只读证据：平台治理组织当前 `chat=aliyun-bailian/qwen3.7-plus`；该模型能力含 `vision` 且来源为 `operator_confirmation`，普通业务组织没有自己的模型能力配置。
+- 红/绿测试：新增普通租户调用平台受信视觉模型用例，修复前得到 `false`，将能力读取范围对齐平台治理组织后通过。测试使用独立 `agentcici_task336_test` 数据库完成 V1-V125 和 repeatable migration，结束后已删除。
+- 聚焦回归：`ChatAttachmentServiceTest,ChatOrchestratorServiceModelIdentityTest` 共 57 项通过；`mvn -q -DskipTests package`、`git diff --check` 通过。
+- 边界：完整 `ModelProviderServiceIntegrationTest` 的 6 项组合运行有 1 项既有测试顺序污染失败，前序平台配置残留 `platform-chat-model` 使“目录为空”断言失败；本次目标方法单独绿测，不把整类宣称通过。前端、业务库、UAT、生产未修改。
 
 ## 2026-08-28 TASK-335 Web 浮窗流式回复空白修复
 
