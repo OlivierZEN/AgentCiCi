@@ -1,12 +1,21 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-08-28T10:54:15Z
+updated_at: 2026-08-28T13:12:49Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-28 TASK-340 生产 `2.8.67`
+
+- 用户确认 UAT `2.8.67-beta.1` HUMAN 图片识别验收通过。冻结 UAT tag `2.8.67-beta.1^{}`、正式 tag `2.8.67^{}` 与生产运行提交均为 `2970bea75208a05d65c00c08333bc73cc072e607`，且远程 `main` 包含该提交；本地后续功能未混入候选。
+- backend/frontend ACR index digest 分别为 `sha256:2b6be2564f0eef09f064e4ce345d585cc4bc1f3c00408d0f358ab8f82bfac615` / `sha256:6ec9501ec3cdfdf1118ab1ec9f647223ecfb843440603d83e054577c539dd6a4`，均含 linux/amd64，label 为 `2.8.67 / 2970bea75208`，未更新 `latest`。
+- 完整回滚点 `/opt/cici/backups/20260828T130242Z-before-2.8.67` 共 14 项、351,001,019 bytes，含 Compose/env、PostgreSQL custom dump、KB、Qdrant 存储与原生 snapshot、旧应用镜像、数据计数、容器基线、回滚说明和 SHA-256 清单；均非空且 `0600`，dump catalog、tar、gzip 与清单通过。应用回滚目标 `2.8.66`，数据恢复需单独批准。
+- 仅 pull/force-recreate backend/frontend；database、Redis、RabbitMQ、Qdrant ID 保持 `5b4708835b05`、`e70d00527987`、`8289db5848cc`、`be0f28441f6e`。六容器 healthy/restart=0，backend health UP，运行 version/commit/label/digest 一致，Flyway V125 和 repeatable `demo example application` success，Nginx 有效。
+- 公网首页、`/app`、`/embed/sisi`、DEMO 路由、SDK、DevAutopilot、Semattice 与 Keycloak smoke 通过；HTTP 根 301 到 HTTPS，匿名 `/auth/me`、`/ai/sessions`、`/skills` 和 Embed 附件 API 均为 JSON 401。
+- 发布前后知识库计数均为 9/35/661，Qdrant 保持 1 collection/549 points。累计两个独立 50 秒稳定窗口内状态/restart 不变，backend severe=0，frontend 5xx/upstream=0。本候选未新增、启用或切换跨项目契约；生产登录态图片识别尚待 HUMAN。
 
 ## 2026-08-28 TASK-338 UAT `2.8.67-beta.1`
 

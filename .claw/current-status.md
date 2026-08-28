@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 5
-updated_at: 2026-08-28T10:54:15Z
+updated_at: 2026-08-28T13:12:49Z
 updated_by: codex
 phase: review
-active_task: TASK-338
-next_action: "由已登录 UAT 用户粘贴图片执行真实识别并确认结果；技术发布已完成，生产保持 2.8.66。"
+active_task: TASK-340
+next_action: "生产 2.8.67 技术发布已完成；由已登录生产用户执行图片上传与真实识别，完成生产 HUMAN 业务接受。"
 read_next:
   goals: false
   decisions: false
@@ -22,9 +22,11 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-338 / FEAT-188` 已完成 AgentCiCi UAT `2.8.67-beta.1 / 2970bea75208` 技术发布。远程 `main`、annotated tag、backend/frontend linux/amd64 不可变 digest 与运行 commit 一致，未更新 `latest`；完整备份 `/data/apps/agentcici/backups/20260828T104754Z-before-2.8.67-beta.1` 的 12 项工件、PostgreSQL catalog、KB/Qdrant tar、Qdrant 原生 snapshot、旧应用镜像和 SHA-256 均通过，应用回滚目标为 `2.8.66-beta.3`。仅重建 backend/frontend，四个状态服务 ID 不变；六容器 healthy/restart=0，health UP、V125、Nginx、公开 smoke、匿名 JSON 401 与 30 秒稳定窗口通过。本候选未新增或切换跨项目契约；UAT 登录态图片识别待 HUMAN，生产未修改。
+- `TASK-340 / FEAT-188` 已在用户确认 UAT HUMAN 验收通过后，将冻结候选 `2.8.67-beta.1 / 2970bea75208` 原样晋级为生产 `2.8.67`。正式 tag 与 UAT tag peeled commit 一致；backend/frontend linux/amd64 ACR index digest 为 `sha256:2b6be2564f0eef09f064e4ce345d585cc4bc1f3c00408d0f358ab8f82bfac615` / `sha256:6ec9501ec3cdfdf1118ab1ec9f647223ecfb843440603d83e054577c539dd6a4`，未更新 `latest`。完整回滚点 `/opt/cici/backups/20260828T130242Z-before-2.8.67` 共 14 项、351,001,019 bytes，校验通过，应用回滚目标 `2.8.66`。仅重建 backend/frontend，四个状态服务 ID 不变；六容器 healthy/restart=0，health UP、V125 与 repeatable migration、Nginx、公开 smoke、匿名 JSON 401、数据计数不变和累计 100 秒稳定窗口通过。生产登录态图片识别尚未代替 HUMAN 执行。
 
-- `TASK-336 / FEAT-188` 已修复普通租户图片会话误报 `409 VISION_MODEL_REQUIRED`：能力门禁已与运行路由统一读取平台治理事实源，同时保留受信来源和失败关闭。实现 `036c12a0d006` 进入本地 main；红/绿目标测试、附件/模型身份 57 项和 package 通过。backend/frontend 同为 `2.8.67-dev.036c12a`、healthy/restart=0；普通租户用用户原截图真实回归，`qwen3.7-plus` 分别识别出 `409` 和 `VISION_MODEL_REQUIRED`，浏览器 console 0。状态服务未替换；远程、UAT、生产未修改，进入用户 review。
+- `TASK-338 / FEAT-188` 已完成 AgentCiCi UAT `2.8.67-beta.1 / 2970bea75208` 技术发布。远程 `main`、annotated tag、backend/frontend linux/amd64 不可变 digest 与运行 commit 一致，未更新 `latest`；完整备份 `/data/apps/agentcici/backups/20260828T104754Z-before-2.8.67-beta.1` 的 12 项工件、PostgreSQL catalog、KB/Qdrant tar、Qdrant 原生 snapshot、旧应用镜像和 SHA-256 均通过，应用回滚目标为 `2.8.66-beta.3`。仅重建 backend/frontend，四个状态服务 ID 不变；六容器 healthy/restart=0，health UP、V125、Nginx、公开 smoke、匿名 JSON 401 与 30 秒稳定窗口通过。本候选未新增或切换跨项目契约；用户已确认 UAT 登录态图片识别 HUMAN 验收通过，并由 TASK-340 晋级生产。
+
+- `TASK-336 / FEAT-188` 已修复普通租户图片会话误报 `409 VISION_MODEL_REQUIRED`：能力门禁已与运行路由统一读取平台治理事实源，同时保留受信来源和失败关闭。实现 `036c12a0d006` 进入远程 main 和冻结 `2970bea75208`；红/绿目标测试、附件/模型身份 57 项和 package 通过，本地真实图片回归成功。修复已通过用户 UAT HUMAN 验收并随生产 `2.8.67` 发布；生产登录态业务接受仍待 HUMAN。
 
 - `TASK-335 / FEAT-204` 已修复官网 Web 浮窗“本次未返回文字内容”：根因是后端规范 SSE `delta` 负载为 `{text}`，嵌入页只消费 `content/delta`，导致真实模型增量全部丢弃。`d47afb41c66d` 已进入本地 `main`，统一解析规范与兼容字段；聚焦 4 项、前端全量 58 文件/318 项、production build、域名和 diff 门禁通过。backend/frontend 同为 `2.8.67-dev.d47afb4`、healthy/restart=0；官网用截图原问题真实回归，页面返回 678 字完整正文，数据库消息完整，Trace `COMPLETED/model_call_count=2`，浏览器 console 0。其他服务持续运行且未替换；远程、UAT、生产未修改，进入用户 review。
 

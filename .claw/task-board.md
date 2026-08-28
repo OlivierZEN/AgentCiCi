@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-28T10:54:15Z
+updated_at: 2026-08-28T13:12:49Z
 updated_by: codex
 board_status: active
 ---
@@ -15,19 +15,19 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
-### TASK-338 - 图片识别修复 UAT 2.8.67-beta.1 技术发布
+### TASK-340 - 图片识别修复生产 2.8.67 晋级
 
 - status: `review`
 - priority: `critical`
 - owner_role: `release-agent`
 - claimed_by: `codex`
 - spec_path: `docs/specs/FEAT-188-conversation-image-paste-attachments.md`
-- task_status_path: `.claw/tasks/TASK-338.md`
+- task_status_path: `.claw/tasks/TASK-340.md`
 - blocked_by: `none`
 - related_issues: `ISSUE-2026-08-28-vision-capability-scope`
-- scope_files: `冻结提交、ACR 不可变制品、UAT 完整备份、backend/frontend 最小切换、技术回读与回滚证据`
-- completion_evidence: `2.8.67-beta.1 / 2970bea75208；backend/frontend digest 927692d9/79a2f1e0；完整备份 20260828T104754Z；六容器 healthy/restart=0；四状态服务 ID 不变；V125、公开/匿名与稳定窗口通过。`
-- next_action: `由已登录 UAT 用户粘贴图片完成真实业务识别验收；生产未修改。`
+- scope_files: `冻结 UAT 候选、正式 tag、ACR 不可变制品、生产完整备份、backend/frontend 最小切换、技术回读与回滚证据`
+- completion_evidence: `2.8.67 / 2970bea75208；backend/frontend digest 2b6be256/6ec9501e；完整备份 20260828T130242Z；六容器 healthy/restart=0；四状态服务 ID 不变；V125、公开/匿名、数据守恒与累计 100 秒稳定窗口通过。`
+- next_action: `由已登录生产用户粘贴图片完成真实识别与 HUMAN 业务接受；技术发布与回滚证据已完成。`
 
 ### TASK-336 - 普通租户图片识别视觉能力误判修复
 
@@ -41,7 +41,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - related_issues: `ISSUE-2026-08-28-vision-capability-scope`
 - scope_files: `平台模型能力事实源、聊天 vision 门禁、普通租户回归测试、本地 main 制品与图片会话验证`
 - completion_evidence: `本地图片真实识别通过；修复已包含在冻结 2970bea75208 并发布 UAT 2.8.67-beta.1；技术发布、备份、健康与匿名边界通过。`
-- next_action: `由已登录 UAT 用户粘贴图片确认真实业务结果；生产另行授权。`
+- next_action: `UAT HUMAN 已通过且修复已发布生产；等待生产登录态图片业务接受。`
 
 ### TASK-335 - Web 浮窗流式回复空白修复
 
