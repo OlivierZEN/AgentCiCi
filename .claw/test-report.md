@@ -1,14 +1,25 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-27T11:54:55Z
+updated_at: 2026-08-28T07:51:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-27T11:54:55Z
-last_run_status: passed_task_332_local_technical_pending_cloudcc_human
+last_run_at: 2026-08-28T07:51:00Z
+last_run_status: passed_task_334_local_runtime_pending_user_review
 ---
 
 # Test Report
+
+## 2026-08-28 TASK-334 Web 浮窗与官网售前智能体
+
+- 状态：`passed_task_334_local_runtime_pending_user_review`；代码、自动化、demo 发布、公开安全门禁、真实模型会话、运行制品与浏览器验收通过，用户视觉确认和非 demo 最小身份治理待完成。
+- 自动化：前端全量 58 文件/316 项、production build；后端 `PublicWebWidgetServiceTest`、两个 CORS 注册测试、`AgentOpenApiCorsConfigTest`、`TenantContextFilterTest` 与 package 通过；SDK `node --check`、环境域名扫描、`git diff --check` 通过。带数据库的旧集成测试默认连接宿主机测试端口失败，未宣称通过；部署后的 V125 与真实链路补足运行证据。
+- 主线与制品：实现 `d407a999`、公开路由 `87fcdead`、CORS/版本路由 `ee4a59a6` 均进入本地 `main`，远程未推。backend/frontend 镜像 ID 为 `sha256:5fdb6259da35af73ee8bd8fbaa48515e3a34d5317cf7f741cc3e5ead1259d1cb` / `sha256:4ed6e9e4291e9821e1de9cb335f9ceffc9c3702048d35e0b422064abc162c5cf`，label 均为 `2.8.67-dev.ee4a59a / ee4a59a62c51`。
+- demo 数据：`org3gxskla32gln3bvop / sales-agent` 通过真实 compile/bindings/publish-configs/publish API 生成 v1，readiness `blocked=false`，发布 `PUBLISHED`、Web=true；现存警告为无知识库和未配置评测集。只使用既有唯一 ACTIVE OWNER，未创建/激活账号；非 demo 前需替换为 RUN-only 成员。
+- 公开契约：V125 success；配置 200 且无 company/runAs；允许来源预检 200，错 Origin 403；正确来源签发 600 秒 Token，权限仅 `chat:read/chat:write`；该 Token 访问普通 `/agents` 为 401。`sisi@1.1.0.js` 与 `/embed/sisi` 200，Nginx 配置有效。
+- 真实业务链路：website session 回读 `sales-agent / 售前跟进智能体 / source=website`；发送“不调用工具”的售前能力问题后模型成功回答，历史 2 条消息，执行日志 `CHANNEL:SUCCESS:sales-agent`。
+- 本地环境：backend/frontend 只按最小影响重建，healthy/restart=0；`/system/version` 与前端资源为 `2.8.67-dev.ee4a59a`。浏览器启动器默认折叠、点击展开、标题/欢迎语正确，console 0 error/warn。PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak、Nginx、Semattice、DevAutopilot 容器 ID 保持不变且 restart=0。
+- 编排边界：受管 `./stack version/init/verify` 被本任务外 Semattice `config=1.0.7 / repository=1.0.8` 漂移失败关闭，未修改该产品或夹带 local-stack 现有脏改动；本轮使用 Git 忽略 runtime override 精确注入默认 widget key。UAT、生产、ACR、tag 未修改。
 
 ## 2026-08-27 TASK-332 思思嵌入式智能应用本地技术验收
 

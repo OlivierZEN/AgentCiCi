@@ -2,11 +2,11 @@
 kind: task-status
 task_id: TASK-334
 feature_id: FEAT-204
-status: in_progress
+status: review
 priority: critical
 owner_role: fullstack-agent
 claimed_by: codex
-updated_at: 2026-08-28T06:51:53Z
+updated_at: 2026-08-28T07:51:00Z
 updated_by: codex
 ---
 
@@ -39,4 +39,15 @@ updated_by: codex
 
 ## 下一步
 
-- 完成服务端公开 Web Widget 配置/Token 门禁和 Agent Builder 配置 UI，再接入官网并执行本地 demo 数据发布与全栈验收。
+- 用户目视确认 Agent Builder Web 配置页和官网浮窗；进入 UAT/生产前由管理员创建仅具 `sales-agent` RUN 权限的专用 ACTIVE 成员并替换 demo OWNER。
+
+## 完成证据
+
+- 本地 `main@ee4a59a62c51` 包含 Web 配置 UI、公开配置/Token、`sisi@1.1.0.js`、官网挂载、V125、Nginx `/public/**` 与版本路由、隔离 CORS Filter。
+- 前端全量 58 文件/316 项、production build；后端 Web Widget/CORS/租户聚焦测试与 package；域名扫描、SDK 语法和 `git diff --check` 通过。
+- `org3gxskla32gln3bvop / sales-agent` 已生成编译版本 v1、readiness `blocked=false`、发布为 `PUBLISHED` 并启用 Web 渠道；警告为无知识库和未配置评测集。
+- 公开配置 200 且不返回 company/runAs；错 Origin 403；正确 Origin 200，TTL=600、权限仅 `chat:read/chat:write`；预检 200；Embed Token 访问普通 `/agents` 为 401。
+- website 会话回读 `source=website / agent=sales-agent / product=售前跟进智能体`，真实模型返回售前团队能力说明，执行日志 `CHANNEL:SUCCESS`。
+- backend/frontend 镜像 label 均为 `2.8.67-dev.ee4a59a / ee4a59a62c51`，两容器 healthy/restart=0；V125 success，版本 API 和前端带版本资源一致。
+- 浏览器官网启动器默认 `aria-expanded=false`，点击后为 true，标题与欢迎语正确，console error/warn=0。
+- PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak、Nginx、Semattice、DevAutopilot 未替换且 restart=0；标准 `./stack verify` 被本任务外的 Semattice 版本漂移失败关闭，未越权修正。

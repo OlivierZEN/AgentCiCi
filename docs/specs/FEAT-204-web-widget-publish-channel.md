@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-204
 title: Web 浮窗发布渠道与官网售前智能体
-status: implementation
+status: verified
 owner_role: fullstack-agent
 task_ids: TASK-334
 related_decisions: FEAT-202
 related_issues: none
-updated_at: 2026-08-28T06:51:53Z
+updated_at: 2026-08-28T07:51:00Z
 updated_by: codex
 ---
 
@@ -108,6 +108,7 @@ Agent Builder 已有独立“发布渠道”页签，但 Web 浮窗仍只有占�
 ## 实现进展
 
 - 2026-08-28：完成现状扫描和安全方案；进入实现。
+- 2026-08-28：实现、自动化、本地 main、V125、demo 发布、公开安全负例、真实模型会话和浏览器验收通过；进入用户 review。demo 现用唯一 ACTIVE OWNER，非 demo 发布前必须替换为专用 RUN-only 成员。
 
 ## 交接说明
 

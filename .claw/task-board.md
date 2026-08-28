@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-28T06:51:53Z
+updated_at: 2026-08-28T07:51:00Z
 updated_by: codex
 board_status: active
 ---
@@ -17,7 +17,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-334 - Web 浮窗发布渠道与官网售前智能体
 
-- status: `in_progress`
+- status: `review`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - claimed_by: `codex`
@@ -25,8 +25,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-334.md`
 - blocked_by: `none`
 - scope_files: `Agent Builder Web 浮窗配置、短时公开访客 Token、来源与限流门禁、统一 SDK、官网挂载、目标租户发布与本地全栈验收`
-- completion_evidence: `pending`
-- next_action: `实现 Web 浮窗配置和公开访客令牌闭环，补齐测试后将 sales-agent 发布到本地 demo 租户并从本地 main 更新 cici.localhost。`
+- completion_evidence: `本地 main@ee4a59a62c51；前端 58 文件/316 项、后端 Web Widget/CORS/租户聚焦测试与 package、production build、域名/diff 门禁；V125；sales-agent v1/PUBLISHED/web=true；真实 website 会话模型回答与 CHANNEL:SUCCESS；backend/frontend 2.8.67-dev.ee4a59a healthy/restart=0；公开 API/CORS/Origin/Token/401 和浏览器门禁通过。`
+- next_action: `用户目视确认 Web 配置页和官网浮窗；非 demo 环境改用专用 RUN-only ACTIVE 成员，远程/UAT/生产另行授权。`
 
 ### TASK-333 - 创建 DEMO 单页单对象完整配置示例
 

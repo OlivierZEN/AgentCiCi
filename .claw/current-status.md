@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 5
-updated_at: 2026-08-28T06:51:53Z
+updated_at: 2026-08-28T07:51:00Z
 updated_by: codex
-phase: implementation
+phase: review
 active_task: TASK-334
-next_action: "实现 FEAT-204 的 Agent Builder Web 浮窗配置、公开访客短时 Token 和官网挂载；随后在 org3gxskla32gln3bvop 配置并发布 sales-agent，从本地 main 更新 cici.localhost。"
+next_action: "由用户在 https://cici.localhost/ 目视确认官网浮窗与 Agent Builder 配置页；进入 UAT/生产前创建仅具 sales-agent RUN 权限的专用 ACTIVE 成员，远程发布另行授权。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-334 / FEAT-204` 实施中：目标是补齐 Agent Builder 的 Web 浮窗发布配置，并在 AgentCiCi 官网挂载指定 demo 租户的“售前跟进 Agent”。现状回读 `org3gxskla32gln3bvop` 已有 `sales-agent / 售前跟进 Agent`，但尚无已发布版本，渠道只有 `dingtalk,wechat`；现有 `sisi@1.0.0.js` 已提供页面/浮窗和短时 Embed Token 基础，但官网匿名访客不能持有 API Key。方案以稳定 `widgetKey` 查找已发布 Web 渠道配置，服务端校验允许来源、最小 RUN 身份并限流后签发短时访客 Token；官网只注入 `widgetKey`，不写死租户、成员或环境地址。
+- `TASK-334 / FEAT-204` 已完成实现与本地真实链路，进入 review：Agent Builder 的 Web 浮窗可配置入口键、来源、运行成员、显示文案、TTL、限流、默认状态、预览和安装代码；官网以 backend 运行参数挂载 `sisi@1.1.0.js`。公开配置/Token 只解析已发布 Web Agent，精确校验 Origin、ACTIVE+RUN 身份并以 Redis 失败关闭，Token 仅含 `chat:read/chat:write`。实现与两轮部署缺口修复已进入本地 `main@ee4a59a62c51`；前端全量 58 文件/316 项、后端聚焦测试/package、production build、域名和 diff 门禁通过。demo 租户 `org3gxskla32gln3bvop` 的 `sales-agent` 已编译并发布 v1，Web 渠道启用；真实 website 会话完成模型回答，执行日志 `CHANNEL:SUCCESS`。backend/frontend 同为 `2.8.67-dev.ee4a59a`、healthy/restart=0，V125、公开 API/CORS 正负例、版本 API、浏览器默认折叠/展开/欢迎语和 console 0 通过。状态服务与其他应用未替换；标准 `./stack verify` 仍被无关的 Semattice `config=1.0.7 / repository=1.0.8` 漂移阻断。demo 当前仅有一个 ACTIVE OWNER，进入非 demo 环境前必须改为专用 RUN-only 成员；远程、UAT、生产未修改。
 
 - `TASK-332 / FEAT-202` 已完成实现和本地技术交付：思思固定为 AgentCiCi 内部受治理智能体的外部映射，以 CloudCC 组织 ID + CloudCC 绑定用户名 + 短时 Embed Token 接入；统一 SDK 支持页面/浮窗，覆盖流式对话、历史、附件、语音、依据、工具过程、服务端确认和可信回执。实现 `935728872674` 已进入本地 `main`；空 PostgreSQL 16.9 迁移、Embed 身份链集成 3 项、后端附件/租户 16 项、模型身份聚焦、package、最终前端全量 58 文件/314 项、production build、SDK/域名/diff 门禁通过。backend/frontend 从同一提交构建为 `2.8.67-dev.9357288`，镜像、环境、版本 API 和页面制品一致，healthy/restart=0；V124、应用目录、会话表、两个 SDK、正式页面、受管完整技术验证和稳定日志通过。正式无 Token 页面经 Chromium 目视且 console 0；真实 CloudCC 服务端换票与登录用户业务验收、远程推送、UAT 和生产仍待独立授权。
 
