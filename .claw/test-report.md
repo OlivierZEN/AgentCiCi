@@ -5,14 +5,14 @@ updated_at: 2026-08-28T13:12:49Z
 updated_by: codex
 status: active
 last_run_at: 2026-08-28T13:12:49Z
-last_run_status: passed_task_340_production_technical_pending_human_image_acceptance
+last_run_status: passed_task_342_production_technical_pending_human_image_acceptance
 ---
 
 # Test Report
 
 ## 2026-08-28 TASK-342 生产 `2.8.67`
 
-- 状态：`passed_task_340_production_technical_pending_human_image_acceptance`；用户已确认 UAT HUMAN 验收通过，冻结源码、不可变正式制品、备份、最小切换、运行指纹、迁移、健康、公开/匿名、数据守恒和累计 100 秒稳定窗口通过。
+- 状态：`passed_task_342_production_technical_pending_human_image_acceptance`；用户已确认 UAT HUMAN 验收通过，冻结源码、不可变正式制品、备份、最小切换、运行指纹、迁移、健康、公开/匿名、数据守恒和累计 100 秒稳定窗口通过。
 - Source：`2.8.67-beta.1^{}`、`2.8.67^{}` 与生产运行 commit 均为 `2970bea75208`，远程 `main@2be977b09fcb` 包含该提交；本地后续 TASK-337/339 和未提交开发改动均未进入候选。
 - Artifact：backend/frontend linux/amd64 index digest 为 `sha256:2b6be2564f0eef09f064e4ce345d585cc4bc1f3c00408d0f358ab8f82bfac615` / `sha256:6ec9501ec3cdfdf1118ab1ec9f647223ecfb843440603d83e054577c539dd6a4`；label 为 `2.8.67 / 2970bea75208`，未更新 `latest`。
 - Recovery：完整备份 `/opt/cici/backups/20260828T130242Z-before-2.8.67` 共 14 项、351,001,019 bytes；全部非空且 `0600`，PostgreSQL catalog、KB/Qdrant tar、Qdrant 原生 snapshot、旧镜像 gzip 与 SHA-256 清单通过。应用回滚目标 `2.8.66`，数据恢复另行授权。
