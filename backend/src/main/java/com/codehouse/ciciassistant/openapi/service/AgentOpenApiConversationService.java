@@ -52,6 +52,7 @@ public class AgentOpenApiConversationService {
     private final AgentApiFeedbackRepository feedbackRepository;
     private final AgentApiFileRepository fileRepository;
     private final AgentApiSessionMapRepository sessionMapRepository;
+    private final AgentOpenApiAttachmentService attachmentService;
     private final AgentOpenApiProperties properties;
     private final ObjectMapper objectMapper;
 
@@ -62,6 +63,7 @@ public class AgentOpenApiConversationService {
                                            AgentApiFeedbackRepository feedbackRepository,
                                            AgentApiFileRepository fileRepository,
                                            AgentApiSessionMapRepository sessionMapRepository,
+                                           AgentOpenApiAttachmentService attachmentService,
                                            AgentOpenApiProperties properties,
                                            ObjectMapper objectMapper) {
         this.authService = authService;
@@ -71,6 +73,7 @@ public class AgentOpenApiConversationService {
         this.feedbackRepository = feedbackRepository;
         this.fileRepository = fileRepository;
         this.sessionMapRepository = sessionMapRepository;
+        this.attachmentService = attachmentService;
         this.properties = properties;
         this.objectMapper = objectMapper;
     }
@@ -83,11 +86,15 @@ public class AgentOpenApiConversationService {
         data.put("opening_statement", text(auth.agent().getGreeting()));
         data.put("suggested_questions", List.of("请介绍一下你能提供什么帮助", "帮我分析当前问题的下一步建议"));
         data.put("suggested_questions_after_answer", Map.of("enabled", true));
-        data.put("file_upload", Map.of(
-                "enabled", auth.credentialView().scopes().contains("files") || auth.credentialView().scopes().contains("*"),
-                "number_limits", 5,
-                "file_size_limit", 15,
-                "allowed_file_types", List.of("document", "image")));
+        data.put("file_upload", Map.ofEntries(
+                Map.entry("enabled", auth.credentialView().scopes().contains("files") || auth.credentialView().scopes().contains("*")),
+                Map.entry("number_limit", 5),
+                Map.entry("file_size_limit_mb", 15),
+                Map.entry("allowed_file_types", List.of("document", "image")),
+                Map.entry("allowed_mime_types", List.of("image/jpeg", "image/png", "image/webp", "text/plain", "text/markdown", "text/csv", "application/json", "application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")),
+                Map.entry("supported_sources", List.of("upload_file_id", "url")),
+                Map.entry("remote_url", Map.of("https_only", true, "max_redirects", 3)),
+                Map.entry("model_capabilities", runService.attachmentCapabilities(auth))));
         data.put("system_parameters", Map.of(
                 "max_prompt_chars", auth.credentialView().maxPromptChars(),
                 "max_response_chars", auth.credentialView().maxResponseChars(),
@@ -107,7 +114,6 @@ public class AgentOpenApiConversationService {
         AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(request);
         authService.requireScope(auth, "chat");
         ChatMessageInput input = normalize(requestBody);
-        validateFiles(auth, input.files(), input.externalUserId(), input.conversationId());
         String normalizedIdempotency = normalizeIdempotency(idempotencyKey);
         if (!normalizedIdempotency.isBlank()) {
             AgentApiMessageEntity existing = messageRepository
@@ -120,6 +126,7 @@ public class AgentOpenApiConversationService {
                 return messagePayload(existing, Map.of("idempotentReplay", true));
             }
         }
+        input = materializeFiles(auth, input);
         String taskId = id("task");
         AgentOpenApiRunService.ChatCommand command = new AgentOpenApiRunService.ChatCommand(
                 input.conversationId(),
@@ -128,7 +135,8 @@ public class AgentOpenApiConversationService {
                 input.knowledgeBaseIds(),
                 input.activeSkillCode(),
                 input.metadata(),
-                input.cloudccContext());
+                input.cloudccContext(),
+                fileIds(input.files()));
         AgentApiTaskEntity task = taskRepository.save(new AgentApiTaskEntity(
                 taskId,
                 requestId,
@@ -179,7 +187,6 @@ public class AgentOpenApiConversationService {
             throw new AgentOpenApiException(HttpStatus.FORBIDDEN, "streaming_not_allowed", "Streaming is not enabled for this API key");
         }
         ChatMessageInput input = normalize(requestBody);
-        validateFiles(auth, input.files(), input.externalUserId(), input.conversationId());
         String normalizedIdempotency = normalizeIdempotency(idempotencyKey);
         SseEmitter emitter = new SseEmitter(600_000L);
         AgentApiMessageEntity existing = !normalizedIdempotency.isBlank()
@@ -194,6 +201,8 @@ public class AgentOpenApiConversationService {
             sendReplayStream(emitter, messagePayload(existing, Map.of("idempotentReplay", true)));
             return emitter;
         }
+
+        input = materializeFiles(auth, input);
 
         String taskId = id("task");
         String messageId = id("msg");
@@ -212,7 +221,8 @@ public class AgentOpenApiConversationService {
                 input.knowledgeBaseIds(),
                 input.activeSkillCode(),
                 input.metadata(),
-                input.cloudccContext());
+                input.cloudccContext(),
+                fileIds(input.files()));
         try {
             AgentOpenApiRunService.ChatStreamExecution execution = runService.prepareChatStreamWithAuth(
                     auth,
@@ -359,29 +369,22 @@ public class AgentOpenApiConversationService {
         requireEnabled();
         AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(request);
         authService.requireScope(auth, "files");
-        if (file == null || file.isEmpty()) {
-            throw new AgentOpenApiException(HttpStatus.BAD_REQUEST, "invalid_request", "file is required");
+        requireAttachmentRuntime();
+        return attachmentService.upload(auth, file, user, conversationId);
+    }
+
+    public Map<String, Object> importFile(ImportFileCommand command,
+                                          String idempotencyKey,
+                                          HttpServletRequest request) {
+        requireEnabled();
+        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(request);
+        authService.requireScope(auth, "files");
+        requireAttachmentRuntime();
+        if (command == null) {
+            throw new AgentOpenApiException(HttpStatus.BAD_REQUEST, "INVALID_FILE_URL", "Request body is required");
         }
-        if (file.getSize() > 15L * 1024L * 1024L) {
-            throw new AgentOpenApiException(HttpStatus.BAD_REQUEST, "file_too_large", "file must be 15MB or smaller");
-        }
-        String mimeType = normalizeMimeType(file.getContentType(), file.getOriginalFilename());
-        if (!isAllowedUploadMimeType(mimeType)) {
-            throw new AgentOpenApiException(HttpStatus.BAD_REQUEST, "file_type_not_allowed", "file must be a document or image type");
-        }
-        String fileId = id("file");
-        AgentApiFileEntity entity = fileRepository.save(new AgentApiFileEntity(
-                fileId,
-                auth.credential().getCompanyId(),
-                auth.credential().getId(),
-                auth.credential().getAgentId(),
-                text(user),
-                text(conversationId),
-                clip(file.getOriginalFilename(), 255).isBlank() ? fileId : clip(file.getOriginalFilename(), 255),
-                file.getSize(),
-                clip(mimeType, 128),
-                "agent-open-api://" + auth.credential().getId() + "/" + fileId));
-        return filePayload(entity);
+        return attachmentService.importRemote(auth, command.url(), command.name(), command.user(),
+                firstText(command.conversationId(), command.sessionId()), idempotencyKey);
     }
 
     private ChatMessageInput normalize(ChatMessageCommand requestBody) {
@@ -405,7 +408,6 @@ public class AgentOpenApiConversationService {
                 ? new LinkedHashMap<>()
                 : new LinkedHashMap<>(requestBody.metadata());
         metadata.put("inputs", requestBody.inputs() == null ? Map.of() : requestBody.inputs());
-        metadata.put("files", requestBody.files() == null ? List.of() : requestBody.files());
         return new ChatMessageInput(
                 query,
                 firstText(requestBody.conversationId(), requestBody.sessionId()),
@@ -418,41 +420,40 @@ public class AgentOpenApiConversationService {
                 requestBody.files() == null ? List.of() : requestBody.files());
     }
 
+    private ChatMessageInput materializeFiles(AgentOpenApiAuthService.AuthenticatedCredential auth,
+                                              ChatMessageInput input) {
+        if (input.files() != null && !input.files().isEmpty()) {
+            authService.requireScope(auth, "files");
+            requireAttachmentRuntime();
+        }
+        List<String> ids = attachmentService.materializeReferences(
+                auth, input.files(), input.externalUserId(), input.conversationId());
+        List<Map<String, Object>> normalizedFiles = ids.stream()
+                .map(id -> Map.<String, Object>of("upload_file_id", id))
+                .toList();
+        Map<String, Object> metadata = new LinkedHashMap<>(input.metadata());
+        metadata.put("files", normalizedFiles);
+        return new ChatMessageInput(input.query(), input.conversationId(), input.externalUserId(), input.externalUser(),
+                input.knowledgeBaseIds(), input.activeSkillCode(), metadata, input.cloudccContext(), normalizedFiles);
+    }
+
+    private List<String> fileIds(List<Map<String, Object>> files) {
+        return files == null ? List.of() : files.stream()
+                .map(item -> text(firstRaw(item, "upload_file_id", "file_id", "id")))
+                .filter(value -> !value.isBlank())
+                .toList();
+    }
+
     private void requireEnabled() {
         if (!properties.isConversationApiEnabled()) {
             throw new AgentOpenApiException(HttpStatus.FORBIDDEN, "agent_open_api_conversation_api_disabled", "Agent Open API conversation service endpoints are disabled");
         }
     }
 
-    private void validateFiles(AgentOpenApiAuthService.AuthenticatedCredential auth,
-                               List<Map<String, Object>> files,
-                               String externalUserId,
-                               String conversationId) {
-        if (files == null || files.isEmpty()) {
-            return;
-        }
-        authService.requireScope(auth, "files");
-        List<String> ids = files.stream()
-                .map(item -> text(firstRaw(item, "id", "file_id", "upload_file_id")))
-                .filter(value -> !value.isBlank())
-                .toList();
-        if (ids.isEmpty()) {
-            return;
-        }
-        Map<String, AgentApiFileEntity> found = new LinkedHashMap<>();
-        fileRepository.findByCompanyIdAndCredentialIdAndAgentIdAndFileIdIn(
-                        auth.credential().getCompanyId(),
-                        auth.credential().getId(),
-                        auth.credential().getAgentId(),
-                        ids)
-                .forEach(item -> found.put(item.getFileId(), item));
-        for (String id : ids) {
-            AgentApiFileEntity file = found.get(id);
-            if (file == null
-                    || (!text(file.getExternalUserId()).isBlank() && !text(file.getExternalUserId()).equals(text(externalUserId)))
-                    || (!text(file.getExternalSessionId()).isBlank() && !text(file.getExternalSessionId()).equals(text(conversationId)))) {
-                throw new AgentOpenApiException(HttpStatus.FORBIDDEN, "file_not_allowed", "files must belong to this API key, Agent and user");
-            }
+    private void requireAttachmentRuntime() {
+        if (!properties.isAttachmentRuntimeV2Enabled()) {
+            throw new AgentOpenApiException(HttpStatus.SERVICE_UNAVAILABLE, "ATTACHMENT_RUNTIME_UNAVAILABLE",
+                    "File attachment processing is temporarily unavailable");
         }
     }
 
@@ -715,8 +716,8 @@ public class AgentOpenApiConversationService {
             }
             if ("error".equals(eventName)) {
                 finishFailure(new AgentOpenApiException(
-                        HttpStatus.BAD_GATEWAY,
-                        "model_or_tool_failed",
+                        errorStatus(data),
+                        errorCode(data),
                         errorMessage(data)));
                 return;
             }
@@ -862,6 +863,23 @@ public class AgentOpenApiConversationService {
         return message.isBlank() ? "Agent runtime failed" : message;
     }
 
+    private String errorCode(Object data) {
+        if (data instanceof Map<?, ?> map) {
+            String code = text(map.get("code"));
+            if (Set.of("MODEL_CAPABILITY_MISMATCH", "FILE_PROCESSING_FAILED", "ATTACHMENT_BINDING_FAILED").contains(code)) {
+                return code;
+            }
+        }
+        return "model_or_tool_failed";
+    }
+
+    private HttpStatus errorStatus(Object data) {
+        return switch (errorCode(data)) {
+            case "MODEL_CAPABILITY_MISMATCH", "FILE_PROCESSING_FAILED" -> HttpStatus.UNPROCESSABLE_ENTITY;
+            default -> HttpStatus.BAD_GATEWAY;
+        };
+    }
+
     private String normalizeRating(String rating) {
         String value = text(rating).toLowerCase(Locale.ROOT);
         if (value.equals("like") || value.equals("dislike")) {
@@ -982,6 +1000,15 @@ public class AgentOpenApiConversationService {
     }
 
     public record FeedbackCommand(String rating, String content) {
+    }
+
+    public record ImportFileCommand(
+            String user,
+            String url,
+            String name,
+            @JsonAlias("conversation_id") String conversationId,
+            @JsonAlias("session_id") String sessionId
+    ) {
     }
 
     public record MessagePage(List<Map<String, Object>> data, boolean hasMore, int limit) {

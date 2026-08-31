@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-31T03:26:04Z
+updated_at: 2026-08-31T04:15:00Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,19 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-346 - OpenAPI 文件附件统一运行时
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `backend-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-206-openapi-file-attachment-runtime.md`
+- task_status_path: `.claw/tasks/TASK-346.md`
+- blocked_by: `none`
+- scope_files: `OpenAPI 文件记录/存储、HTTPS 安全导入、共享附件桥接、运行时 blocking/streaming、参数与错误契约、测试、本地环境验证`
+- completion_evidence: `真实文件私有落盘与共享附件桥接已实现；后端聚焦/package、前端 60/332/build、空库 V128 和 multipart/URL 控制器链路通过；完整 OpenAPI 类 16/17，任务外 placeholder 模型路由断言仍失败。`
+- next_action: `提交到本地 main，从该 commit 构建 backend/frontend :local，最小重建 cici.localhost 并执行真实 OpenAPI 图片识别。`
 
 ### TASK-344 - Web 浮窗 UAT 发布与站点首页嵌入
 

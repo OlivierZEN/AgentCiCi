@@ -48,6 +48,7 @@
 - `DESIGN.md`：认证后产品界面的人工可读设计摘要。
 - `DESIGN.json`：颜色、字号、组件规则、页面质量流程等结构化设计事实源。
 - `docs/specs/`：功能级需求、例外、决策和交接记录。
+- `references/`：原始设计、样例或外部输入的来源索引；只作 provenance，不作为产品实现的第二事实源。
 
 避免把细粒度 UI 规则重复写进 `AGENTS.md` 或 `README.md`；需要细则时读 `DESIGN.md` 和 `DESIGN.json`。
 

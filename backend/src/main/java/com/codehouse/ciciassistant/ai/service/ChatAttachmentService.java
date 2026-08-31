@@ -121,6 +121,13 @@ public class ChatAttachmentService {
     @Transactional(readOnly = true)
     public List<ChatAttachmentEntity> requireReadyForMessage(String companyId, String userId, String sessionId,
                                                               List<String> attachmentIds) {
+        return requireReadyForMessage(companyId, userId, sessionId, attachmentIds, false);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ChatAttachmentEntity> requireReadyForMessage(String companyId, String userId, String sessionId,
+                                                              List<String> attachmentIds,
+                                                              boolean allowAttachedReuse) {
         List<String> requested = normalizeIds(attachmentIds);
         if (requested.isEmpty()) {
             return List.of();
@@ -138,7 +145,12 @@ public class ChatAttachmentService {
         List<ChatAttachmentEntity> ordered = new ArrayList<>();
         for (String id : requested) {
             ChatAttachmentEntity item = byId.get(id);
-            if (item == null || !ChatAttachmentEntity.STATUS_READY.equals(item.getStatus()) || item.getMessageId() != null) {
+            boolean reusableAttached = allowAttachedReuse
+                    && ChatAttachmentEntity.STATUS_ATTACHED.equals(item == null ? "" : item.getStatus())
+                    && item.getMessageId() != null;
+            if (item == null
+                    || (!ChatAttachmentEntity.STATUS_READY.equals(item.getStatus()) && !reusableAttached)
+                    || (item.getMessageId() != null && !reusableAttached)) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "ATTACHMENT_NOT_READY");
             }
             ordered.add(item);
@@ -153,8 +165,13 @@ public class ChatAttachmentService {
         if (message == null || message.getId() == null) {
             throw new IllegalArgumentException("message must be persisted before attaching files");
         }
-        attachments.forEach(item -> item.attachTo(message.getId()));
-        repository.saveAll(attachments);
+        List<ChatAttachmentEntity> ready = attachments.stream()
+                .filter(item -> ChatAttachmentEntity.STATUS_READY.equals(item.getStatus()) && item.getMessageId() == null)
+                .toList();
+        ready.forEach(item -> item.attachTo(message.getId()));
+        if (!ready.isEmpty()) {
+            repository.saveAll(ready);
+        }
     }
 
     public Object buildModelContent(String text, List<ChatAttachmentEntity> attachments) {
@@ -202,6 +219,35 @@ public class ChatAttachmentService {
         }
         byte[] bytes = readBounded(file);
         String detectedType = detectAttachmentType(bytes, file.getOriginalFilename(), file.getContentType());
+        return storeNew(companyId, userId, sessionId, clientAttachmentId,
+                file.getOriginalFilename(), detectedType, bytes);
+    }
+
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    public Map<String, Object> importOpenApiFile(String companyId, String userId, String sessionId,
+                                                 String clientAttachmentId, String originalName,
+                                                 String declaredType, byte[] bytes) {
+        String safeSessionId = requireIdentifier(sessionId, 64, "sessionId");
+        String safeClientId = requireIdentifier(clientAttachmentId, 96, "clientAttachmentId");
+        return repository.findByCompanyIdAndUserIdAndSessionIdAndClientAttachmentId(
+                        companyId, userId, safeSessionId, safeClientId)
+                .map(this::view)
+                .orElseGet(() -> {
+                    if (bytes == null || bytes.length == 0) {
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ATTACHMENT_EMPTY");
+                    }
+                    if (bytes.length > MAX_ATTACHMENT_BYTES) {
+                        throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "ATTACHMENT_TOO_LARGE");
+                    }
+                    String detectedType = detectAttachmentType(bytes, originalName, declaredType);
+                    return storeNew(companyId, userId, safeSessionId, safeClientId,
+                            originalName, detectedType, bytes);
+                });
+    }
+
+    private Map<String, Object> storeNew(String companyId, String userId, String sessionId,
+                                         String clientAttachmentId, String originalName,
+                                         String detectedType, byte[] bytes) {
         List<Integer> usedSlots = repository.findUsedSlots(companyId, sessionId);
         int slot = firstFreeSlot(usedSlots);
         if (slot < 1) {
@@ -226,7 +272,7 @@ public class ChatAttachmentService {
             registerRollbackCleanup(finalPath);
             ChatAttachmentEntity saved = repository.saveAndFlush(new ChatAttachmentEntity(
                     publicId, companyId, userId, sessionId, slot, clientAttachmentId,
-                    safeFilename(file.getOriginalFilename(), publicId + "." + extension),
+                    safeFilename(originalName, publicId + "." + extension),
                     detectedType, bytes.length, sha256(bytes), finalPath.toString()));
             return view(saved);
         } catch (DataIntegrityViolationException conflict) {
@@ -285,7 +331,7 @@ public class ChatAttachmentService {
         throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "UNSUPPORTED_IMAGE_TYPE");
     }
 
-    static String detectAttachmentType(byte[] bytes, String filename, String declaredType) {
+    public static String detectAttachmentType(byte[] bytes, String filename, String declaredType) {
         try {
             String detectedImage = detectImageType(bytes);
             validateDeclaredType(declaredType, detectedImage);

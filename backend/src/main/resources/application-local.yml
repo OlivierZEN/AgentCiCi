@@ -28,6 +28,7 @@ app:
   agent-open-api:
     enabled: true
     conversation-api-enabled: true
+    attachment-runtime-v2-enabled: true
     cors-allowed-origins: ["*"]
   kb:
     storage-dir: ./data/kb-files

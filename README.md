@@ -7,6 +7,7 @@
 - `backend/`: Java 21 + Spring Boot 3 后端基础工程
 - `frontend/`: React + Vite 前端基础工程
 - `.claw/`: 按 `agentic-project-guidelines` 维护的项目状态文件
+- `references/`: 用户提供或外部原始输入的只读索引；采纳后的产品事实必须转写到 `docs/specs/`
 - `docs/project-overview.md`: 当前项目总览、模块地图与开发优先级入口
 - `AgentCiCi智能体平台实现设计方案.md`: 当前设计方案（**权限、双入口、接口与表结构**以该文档与代码为准；本 README 为快速索引）
 - 品牌域名：`agentcici.com`（当前代码、部署文件、token key、API key 前缀等技术标识仍可能沿用历史 `cici` 命名，后续如需迁移需单独设计兼容方案）

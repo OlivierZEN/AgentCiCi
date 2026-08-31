@@ -272,7 +272,7 @@ export const helpDocs: HelpDoc[] = [
     sections: [
       {
         title: "请求地址",
-        code: "GET  /openapi/v1/parameters\nPOST /openapi/v1/chat-messages\nPOST /openapi/v1/files/upload",
+        code: "GET  /openapi/v1/parameters\nPOST /openapi/v1/chat-messages\nPOST /openapi/v1/files/upload\nPOST /openapi/v1/files/import",
       },
       {
         title: "鉴权",

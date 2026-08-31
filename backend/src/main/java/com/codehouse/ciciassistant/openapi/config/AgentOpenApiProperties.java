@@ -11,6 +11,7 @@ public class AgentOpenApiProperties {
 
     private boolean enabled;
     private boolean conversationApiEnabled = true;
+    private boolean attachmentRuntimeV2Enabled = true;
     private String keyPepper = "";
     private int defaultRateLimitPerMinute = 60;
     private int defaultDailyQuota = 1000;
@@ -35,6 +36,14 @@ public class AgentOpenApiProperties {
 
     public void setConversationApiEnabled(boolean conversationApiEnabled) {
         this.conversationApiEnabled = conversationApiEnabled;
+    }
+
+    public boolean isAttachmentRuntimeV2Enabled() {
+        return attachmentRuntimeV2Enabled;
+    }
+
+    public void setAttachmentRuntimeV2Enabled(boolean attachmentRuntimeV2Enabled) {
+        this.attachmentRuntimeV2Enabled = attachmentRuntimeV2Enabled;
     }
 
     public String getKeyPepper() {

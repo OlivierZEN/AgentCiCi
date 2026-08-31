@@ -478,7 +478,7 @@ public class ChatOrchestratorService {
         }
         String safeQuestion = inputDecision.safeText();
         List<ChatAttachmentEntity> turnAttachments = chatAttachmentService.requireReadyForMessage(
-                companyId, userId, sessionId, attachmentIds);
+                companyId, userId, sessionId, attachmentIds, "openapi".equals(channel));
         Map<String, String> routedModel = modelRouterService.route(companyId, "chat", skillContext.agentModel());
         String modelName = resolveModelName(skillContext.agentModel(), routedModel.get("provider"), routedModel.get("modelName"));
         requireVisionCapability(companyId, routedModel.get("provider"), modelName, turnAttachments);
@@ -867,7 +867,7 @@ public class ChatOrchestratorService {
                 }
                 String safeQuestion = inputDecision.safeText();
                 List<ChatAttachmentEntity> turnAttachments = chatAttachmentService.requireReadyForMessage(
-                        companyId, userId, sessionId, attachmentIds);
+                        companyId, userId, sessionId, attachmentIds, "openapi".equals(channel));
                 Map<String, String> routedModel = modelRouterService.route(companyId, "chat", skillContext.agentModel());
                 String modelName = resolveModelName(skillContext.agentModel(), routedModel.get("provider"), routedModel.get("modelName"));
                 requireVisionCapability(companyId, routedModel.get("provider"), modelName, turnAttachments);
@@ -3943,6 +3943,10 @@ public class ChatOrchestratorService {
     private void requireVisionCapability(String companyId, String providerCode, String modelName,
                                          List<ChatAttachmentEntity> attachments) {
         if (attachments == null || attachments.isEmpty()) {
+            return;
+        }
+        if (attachments.stream().noneMatch(item -> item.getContentType() != null
+                && item.getContentType().startsWith("image/"))) {
             return;
         }
         if (!modelProviderService.supportsTrustedCapability(companyId, providerCode, modelName, "vision")) {

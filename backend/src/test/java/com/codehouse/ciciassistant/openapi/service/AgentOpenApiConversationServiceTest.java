@@ -74,6 +74,7 @@ class AgentOpenApiConversationServiceTest {
                 mock(AgentApiFeedbackRepository.class),
                 mock(AgentApiFileRepository.class),
                 mock(AgentApiSessionMapRepository.class),
+                mock(AgentOpenApiAttachmentService.class),
                 new AgentOpenApiProperties(),
                 objectMapper);
         CapturingEmitter clientEmitter = new CapturingEmitter();
@@ -111,6 +112,7 @@ class AgentOpenApiConversationServiceTest {
                 feedbackRepository,
                 mock(AgentApiFileRepository.class),
                 mock(AgentApiSessionMapRepository.class),
+                mock(AgentOpenApiAttachmentService.class),
                 new AgentOpenApiProperties(),
                 objectMapper);
         AgentApiCredentialEntity credential = mock(AgentApiCredentialEntity.class);
@@ -123,7 +125,7 @@ class AgentOpenApiConversationServiceTest {
                 new AgentOpenApiSessionService.SessionResolution("conversation-safe", "internal-safe", true);
         AgentOpenApiRunService.ChatStreamExecution execution =
                 new AgentOpenApiRunService.ChatStreamExecution(
-                        auth, session, "request-safe", "", "external-safe", Instant.EPOCH, null);
+                        auth, session, "request-safe", "", "external-safe", Instant.EPOCH, null, List.of());
         AgentApiTaskEntity task = new AgentApiTaskEntity(
                 "task-safe", "request-safe", "demo-org", 1L,
                 "agent-safe", "external-safe", "conversation-safe");

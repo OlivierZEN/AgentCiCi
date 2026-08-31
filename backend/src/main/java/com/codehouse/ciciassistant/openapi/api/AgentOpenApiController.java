@@ -161,6 +161,19 @@ public class AgentOpenApiController {
         }
     }
 
+    @PostMapping(value = "/files/import", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, Object>> importFile(
+            @RequestBody(required = false) AgentOpenApiConversationService.ImportFileCommand requestBody,
+            HttpServletRequest request) {
+        String requestId = requestId();
+        try {
+            return ResponseEntity.ok(conversationService.importFile(
+                    requestBody, header(request, "Idempotency-Key"), request));
+        } catch (AgentOpenApiException ex) {
+            return ResponseEntity.status(ex.getStatus()).body(error(ex, requestId));
+        }
+    }
+
 
     private Map<String, Object> success(Map<String, Object> data) {
         Map<String, Object> root = new LinkedHashMap<>();

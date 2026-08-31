@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 6
-updated_at: 2026-08-31T04:08:00Z
+updated_at: 2026-08-31T04:15:00Z
 updated_by: codex
-phase: review
-active_task: null
-next_action: "TASK-345 已完成本地技术闭环；如需最终人工接受，由正常 HUMAN 在研发产品经理新会话发起项目查询并核对可见答案。"
+phase: implementation
+active_task: TASK-346
+next_action: "提交 TASK-346 到 AgentCiCi 本地 main，从该 commit 构建 :local backend/frontend，最小重建 cici.localhost 并完成真实 OpenAPI 图片对话回归。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- `TASK-346 / FEAT-206` 已完成提交前实现与自动化：修复 OpenAPI 上传仅存 metadata 的根因，multipart 与 HTTPS URL 均按签名检测后私有落盘，并在内部会话建立后桥接既有 `ChatAttachmentService`，blocking/streaming 共享 Vision/文档解析和模型 content block。新增 Key/Agent/user/conversation 四层作用域、首次绑定、多轮复用、SHA-256/TTL、导入幂等、SSRF/逐跳 DNS/大小限制、明确错误与能力发现。后端聚焦 4 类通过，空 PostgreSQL 16.9 从零迁移到 V128 后 multipart 和 URL 两条控制器链路通过，backend package、前端 60 文件/332 项与 production build、diff check 通过。完整 OpenAPI 集成类 17 项中 16 项通过，唯一失败为既有 placeholder 模型路由期望 `aliyun-bailian`、实际保留 `mock`，不在本附件范围；本地 `main` 提交、`cici.localhost` 制品和真实模型图片回归待执行。
 
 - `TASK-345 / FEAT-205 / INT-029` 已完成本地技术闭环：`4d3cf32a + 81c74925` 将六个研发交付能力从 AgentCiCi 内置目录、治理行和本地分发中移除，统一由 `App Version → MCP Provider → Tool → Tenant MCP Server` 绑定供目录、编译和运行；缺绑定失败关闭，不进入通用 MCP 或本地 Semattice 回退。backend/frontend 运行 `2.8.68-dev.81c7492`，Flyway V127、内置 18、六项 MCP 风险标签、healthy/restart=0 通过；正式 UI 已将研发产品经理 v2 发布，v1 归档。Keycloak SERVICE → AgentCiCi OACT → DevAutopilot MCP → Semattice 真实 query 返回 `isError=false` 与 1 个项目。标准 verify 仅被既有 Semattice `1.0.7/1.0.8` 漂移失败关闭；浏览器未代 HUMAN 发送新对话消息。
 

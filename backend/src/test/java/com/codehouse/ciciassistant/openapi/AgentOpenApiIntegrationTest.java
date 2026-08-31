@@ -31,6 +31,7 @@ import com.codehouse.ciciassistant.auth.domain.UserAccountEntity;
 import com.codehouse.ciciassistant.auth.domain.UserAccountRepository;
 import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.auth.domain.UserRepository;
+import com.codehouse.ciciassistant.auth.service.OfficialAccessTokenService;
 import com.codehouse.ciciassistant.billing.domain.BillingCreditLedgerRepository;
 import com.codehouse.ciciassistant.billing.domain.UsageMeterEventRepository;
 import com.codehouse.ciciassistant.model.domain.CompanyModelConfigEntity;
@@ -43,6 +44,7 @@ import com.codehouse.ciciassistant.openapi.domain.AgentApiCredentialEntity;
 import com.codehouse.ciciassistant.openapi.domain.AgentApiCredentialRepository;
 import com.codehouse.ciciassistant.openapi.domain.AgentApiSessionMapRepository;
 import com.codehouse.ciciassistant.openapi.domain.AgentApiUsageDailyRepository;
+import com.codehouse.ciciassistant.openapi.service.SafeRemoteFileFetcher;
 import com.codehouse.ciciassistant.skill.domain.AgentSkillBindingEntity;
 import com.codehouse.ciciassistant.skill.domain.AgentSkillBindingRepository;
 import com.codehouse.ciciassistant.skill.domain.SkillBindingPolicy;
@@ -62,7 +64,9 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -79,8 +83,10 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest
@@ -159,6 +165,41 @@ class AgentOpenApiIntegrationTest {
 
     @MockBean
     private ChatOrchestratorService chatOrchestratorService;
+
+    @MockBean
+    private SafeRemoteFileFetcher safeRemoteFileFetcher;
+
+    @MockBean
+    private OfficialAccessTokenService officialAccessTokenService;
+
+    private final Map<String, OfficialAccessTokenService.EcosystemUserContext> issuedLoginTokens =
+            new ConcurrentHashMap<>();
+
+    @BeforeEach
+    void stubOfficialLoginTokenBoundary() {
+        issuedLoginTokens.clear();
+        when(officialAccessTokenService.issueEcosystemUserToken(any(UserEntity.class), any(), any()))
+                .thenAnswer(invocation -> {
+                    UserEntity member = invocation.getArgument(0);
+                    @SuppressWarnings("unchecked")
+                    List<String> roles = invocation.getArgument(1);
+                    String token = "test-ecosystem-" + member.getId() + "-" + UUID.randomUUID();
+                    issuedLoginTokens.put(token, new OfficialAccessTokenService.EcosystemUserContext(
+                            member.getCompany().getId(), member.getId(), member.getAccountId(), roles));
+                    return new OfficialAccessTokenService.IssuedToken(
+                            token, Instant.now().plusSeconds(300), "", member.getCompany().getId(), List.of());
+                });
+        when(officialAccessTokenService.verifyEcosystemUserContext(
+                anyString(), eq(OfficialAccessTokenService.AGENTCICI_AUDIENCE)))
+                .thenAnswer(invocation -> {
+                    OfficialAccessTokenService.EcosystemUserContext context =
+                            issuedLoginTokens.get(invocation.getArgument(0));
+                    if (context == null) {
+                        throw new IllegalArgumentException("unknown test ecosystem token");
+                    }
+                    return context;
+                });
+    }
 
     @Test
     void shouldAllowWildcardCorsPreflightForOpenApiStream() throws Exception {
@@ -597,8 +638,8 @@ class AgentOpenApiIntegrationTest {
                         .file(rejectedFile)
                         .param("user", "customer-conversation")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error.code").value("file_type_not_allowed"));
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.error.code").value("UNSUPPORTED_FILE_TYPE"));
 
         MockMultipartFile file = new MockMultipartFile(
                 "file",
@@ -650,6 +691,9 @@ class AgentOpenApiIntegrationTest {
         JsonNode chat = objectMapper.readTree(chatResult.getResponse().getContentAsString(StandardCharsets.UTF_8));
         String taskId = chat.path("task_id").asText();
         String messageId = chat.path("message_id").asText();
+        verify(chatOrchestratorService).chat(
+                eq("demo-org"), eq(runAsUserId), anyString(), eq("请分析附件"), any(), eq(agentId), any(),
+                any(), argThat(ids -> ids != null && ids.size() == 1), eq("openapi"));
 
         mockMvc.perform(post("/openapi/v1/chat-messages")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey)
@@ -772,6 +816,60 @@ class AgentOpenApiIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result").value("deleted"));
+    }
+
+    @Test
+    void shouldImportHttpsFileIdempotentlyAndUseInlineUrlThroughAttachmentRuntime() throws Exception {
+        String token = loginToken("13800138111");
+        String runAsUserId = userRepository.findByCompanyIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
+        String agentId = "openapi-url-file-agent";
+        preparePublishedApiAgent(agentId);
+        String plainKey = createPlainKey(token, agentId, runAsUserId);
+        stubChatRuntime(agentId, runAsUserId, "已读取 URL 图片");
+        byte[] png = new byte[]{(byte) 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3};
+        when(safeRemoteFileFetcher.fetch(eq("https://files.example.com/purchase.png"), eq("purchase.png")))
+                .thenReturn(new SafeRemoteFileFetcher.FetchedFile(png, "purchase.png", "image/png", "files.example.com"));
+
+        String importBody = """
+                {"user":"customer-url","conversation_id":"conversation-url","url":"https://files.example.com/purchase.png","name":"purchase.png"}
+                """;
+        MvcResult firstImport = mockMvc.perform(post("/openapi/v1/files/import")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey)
+                        .header("Idempotency-Key", "url-import-001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(importBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ready"))
+                .andExpect(jsonPath("$.mime_type").value("image/png"))
+                .andReturn();
+        String importedId = objectMapper.readTree(firstImport.getResponse().getContentAsString()).path("id").asText();
+
+        mockMvc.perform(post("/openapi/v1/files/import")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey)
+                        .header("Idempotency-Key", "url-import-001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(importBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(importedId));
+
+        mockMvc.perform(post("/openapi/v1/chat-messages")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "query":"识别图片",
+                                  "user":"customer-url",
+                                  "conversationId":"conversation-url",
+                                  "files":[{"upload_file_id":"%s"}]
+                                }
+                                """.formatted(importedId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.answer").value("已读取 URL 图片"));
+
+        verify(safeRemoteFileFetcher).fetch("https://files.example.com/purchase.png", "purchase.png");
+        verify(chatOrchestratorService).chat(
+                eq("demo-org"), eq(runAsUserId), anyString(), eq("识别图片"), any(), eq(agentId), any(),
+                any(), argThat(ids -> ids != null && ids.size() == 1), eq("openapi"));
     }
 
     @Test
@@ -1093,7 +1191,10 @@ class AgentOpenApiIntegrationTest {
                 anyString(),
                 any(),
                 eq(agentId),
-                any()))
+                any(),
+                any(),
+                any(),
+                eq("openapi")))
                 .thenAnswer(invocation -> {
                     String sessionId = invocation.getArgument(2);
                     String question = invocation.getArgument(3);
@@ -1137,7 +1238,7 @@ class AgentOpenApiIntegrationTest {
         doAnswer(invocation -> {
             String sessionId = invocation.getArgument(2);
             String question = invocation.getArgument(3);
-            SseEmitter emitter = invocation.getArgument(7);
+            SseEmitter emitter = invocation.getArgument(10);
             String first = answer.length() <= 1 ? answer : answer.substring(0, answer.length() / 2);
             String second = answer.length() <= 1 ? "" : answer.substring(answer.length() / 2);
             emitter.send(SseEmitter.event().name("delta").data(Map.of("text", first)));
@@ -1180,6 +1281,9 @@ class AgentOpenApiIntegrationTest {
                 any(),
                 eq(agentId),
                 any(),
+                any(),
+                any(),
+                eq("openapi"),
                 any(SseEmitter.class));
     }
 
@@ -1194,7 +1298,10 @@ class AgentOpenApiIntegrationTest {
                 anyString(),
                 any(),
                 eq(agentId),
-                any()))
+                any(),
+                any(),
+                any(),
+                eq("openapi")))
                 .thenAnswer(invocation -> {
                     observedContext.set(cloudccAccessTokenService.getSessionContext("demo-org", runAsUserId).orElse(null));
                     String sessionId = invocation.getArgument(2);

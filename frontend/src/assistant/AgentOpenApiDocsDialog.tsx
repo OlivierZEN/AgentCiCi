@@ -67,6 +67,7 @@ export default function AgentOpenApiDocsDialog({
   const chatMessagesPath = "/chat-messages";
   const stopTaskPath = "/chat-messages/{taskId}/stop";
   const filesPath = "/files/upload";
+  const fileImportPath = "/files/import";
   const feedbacksPath = "/messages/{messageId}/feedbacks";
   const suggestedPath = "/messages/{messageId}/suggested";
   const messagesPath = "/messages";
@@ -201,7 +202,23 @@ curl -X POST "${normalizedBaseUrl}${filesPath}" \\
   -F "file=@case-note.txt"
 \`\`\`
 
-文件上传后返回 \`id\`，再通过 \`chat-messages.files[].upload_file_id\` 引用。文件按 API Key、Agent、终端用户和会话隔离。
+文件上传后返回 \`id\`，再通过 \`chat-messages.files[].upload_file_id\` 引用。图片和文档会先由服务端检测、私有保存，再进入与控制台相同的附件运行时；解析或模型能力不满足时请求会明确失败，不会静默忽略附件。
+
+也可以先显式导入公网 HTTPS 文件：
+
+\`\`\`text
+${methodLine("POST", fileImportPath)}
+\`\`\`
+
+\`\`\`bash
+curl -X POST "${normalizedBaseUrl}${fileImportPath}" \\
+  -H "Authorization: Bearer {API_KEY}" \\
+  -H "Content-Type: application/json" \\
+  -H "Idempotency-Key: import-file-001" \\
+  -d '{"user":"customer-001","conversation_id":"crm-customer-001","url":"https://files.example.com/case-note.png"}'
+\`\`\`
+
+单次消息也可在 \`files[]\` 中使用互斥的 \`url\` 字段。服务端只接受公网 HTTPS，不透传 Cookie/Header，并会逐跳校验重定向与目标地址；不会把原始 URL 直接交给模型。
 
 ## 消息反馈
 
@@ -496,7 +513,7 @@ X-Cici-Api-Key: {API_KEY}`)}
 
           <section id="file-upload" className="cici-openapi-docs__section">
             <h3>文件上传</h3>
-            <p>上传文件后会返回 `id`，后续在 `chat-messages.files[].upload_file_id` 中引用。文件按 API Key、Agent、终端用户和会话隔离。</p>
+            <p>上传文件后会返回 `id`，后续在 `chat-messages.files[].upload_file_id` 中引用。服务端会检测内容、私有保存并接入与控制台相同的附件运行时；附件无法进入模型时会明确失败。</p>
             <div className="cici-openapi-docs__method">{methodLine("POST", filesPath)}</div>
             {renderCodeBlock("fileCurl", `curl -X POST "${normalizedBaseUrl}${filesPath}" \\
   -H "Authorization: Bearer {API_KEY}" \\
@@ -510,6 +527,13 @@ X-Cici-Api-Key: {API_KEY}`)}
                 <tr><th>file</th><td>multipart 文件字段，支持文档和图片类型。</td></tr>
               </tbody>
             </table>
+            <div className="cici-openapi-docs__method">{methodLine("POST", fileImportPath)}</div>
+            {renderCodeBlock("fileImportCurl", `curl -X POST "${normalizedBaseUrl}${fileImportPath}" \\
+  -H "Authorization: Bearer {API_KEY}" \\
+  -H "Content-Type: application/json" \\
+  -H "Idempotency-Key: import-file-001" \\
+  -d '{"user":"customer-001","conversation_id":"crm-customer-001","url":"https://files.example.com/case-note.png"}'`)}
+            <p>也可在单次消息的 `files[]` 中使用互斥的 `url` 字段。只允许公网 HTTPS；服务端不会透传 Cookie/Header，也不会把原始 URL 直接交给模型。</p>
           </section>
 
           <section id="message-feedbacks" className="cici-openapi-docs__section">
@@ -602,7 +626,12 @@ X-Cici-Api-Key: {API_KEY}`)}
                 <tr><th>agent_api_scope_denied</th><td>API Key scope 不允许当前操作。</td></tr>
                 <tr><th>knowledge_base_not_allowed</th><td>请求知识库不是当前 Agent 绑定子集。</td></tr>
                 <tr><th>skill_not_allowed</th><td>请求 Skill 未绑定到当前 Agent。</td></tr>
-                <tr><th>file_not_allowed</th><td>文件不属于当前 Key、Agent、用户或会话。</td></tr>
+                <tr><th>FILE_NOT_FOUND</th><td>文件不存在，或不属于当前 Key、Agent、用户或会话；响应不暴露文件是否真实存在。</td></tr>
+                <tr><th>INVALID_FILE_REFERENCE</th><td>文件引用为空、重复或同时提供 `upload_file_id` 与 `url`。</td></tr>
+                <tr><th>INVALID_FILE_URL / REMOTE_URL_FORBIDDEN</th><td>URL 不是公网 HTTPS，或指向内网、保留地址和禁止目标。</td></tr>
+                <tr><th>FILE_TOO_LARGE / UNSUPPORTED_FILE_TYPE</th><td>文件超出 15MB 或内容签名不受支持。</td></tr>
+                <tr><th>MODEL_CAPABILITY_MISMATCH</th><td>当前 Agent 模型不能处理图片附件。</td></tr>
+                <tr><th>FILE_PROCESSING_FAILED / ATTACHMENT_BINDING_FAILED</th><td>文件解析失败，或未能绑定到模型请求。</td></tr>
               </tbody>
             </table>
           </section>

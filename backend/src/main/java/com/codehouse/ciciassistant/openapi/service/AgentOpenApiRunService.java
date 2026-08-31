@@ -38,6 +38,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class AgentOpenApiRunService {
@@ -50,6 +51,7 @@ public class AgentOpenApiRunService {
     private final AgentOpenApiCallLogService callLogService;
     private final ChatOrchestratorService chatOrchestratorService;
     private final AgentOpenApiMemoryContextService memoryContextService;
+    private final AgentOpenApiAttachmentService attachmentService;
     private final BillingUsageMeteringService billingUsageMeteringService;
     private final AgentRunTraceRepository traceRepository;
     private final AgentKnowledgeBindingRepository knowledgeBindingRepository;
@@ -69,6 +71,7 @@ public class AgentOpenApiRunService {
                                   AgentOpenApiCallLogService callLogService,
                                   ChatOrchestratorService chatOrchestratorService,
                                   AgentOpenApiMemoryContextService memoryContextService,
+                                  AgentOpenApiAttachmentService attachmentService,
                                   BillingUsageMeteringService billingUsageMeteringService,
                                   AgentRunTraceRepository traceRepository,
                                   AgentKnowledgeBindingRepository knowledgeBindingRepository,
@@ -87,6 +90,7 @@ public class AgentOpenApiRunService {
         this.callLogService = callLogService;
         this.chatOrchestratorService = chatOrchestratorService;
         this.memoryContextService = memoryContextService;
+        this.attachmentService = attachmentService;
         this.billingUsageMeteringService = billingUsageMeteringService;
         this.traceRepository = traceRepository;
         this.knowledgeBindingRepository = knowledgeBindingRepository;
@@ -116,10 +120,12 @@ public class AgentOpenApiRunService {
                 command.sessionId(),
                 externalUserId,
                 requestId);
+        List<String> attachmentIds = attachmentService.bridgeToRuntime(
+                auth, externalUserId, session.externalSessionId(), session.internalSessionId(), command.fileIds());
         rateLimitService.reserve(auth);
         callLogService.start(auth, session, requestId, externalUserId, idempotencyKey, command.message());
         try {
-            Map<String, Object> chatPayload = invokeChatWithTimeout(auth, session, command, cloudccOverride);
+            Map<String, Object> chatPayload = invokeChatWithTimeout(auth, session, command, cloudccOverride, attachmentIds);
             String answer = stringValue(chatPayload.get("answer"));
             validateResponseSize(auth, answer);
             AgentRunTraceEntity trace = annotateLatestTrace(auth, session, requestId, externalUserId);
@@ -142,15 +148,17 @@ public class AgentOpenApiRunService {
             rateLimitService.markFailure(auth, elapsedMs);
             throw ex;
         } catch (RuntimeException ex) {
+            AgentOpenApiException mapped = mapAttachmentRuntimeFailure(ex);
             int elapsedMs = elapsedMs(startedAt, Instant.now());
             callLogService.completeFailure(
                     auth.credential().getId(),
                     requestId,
-                    HttpStatus.BAD_GATEWAY.value(),
-                    "model_or_tool_failed",
+                    mapped == null ? HttpStatus.BAD_GATEWAY.value() : mapped.getStatus().value(),
+                    mapped == null ? "model_or_tool_failed" : mapped.getCode(),
                     elapsedMs,
                     sanitizeFailureMessage(ex.getMessage(), cloudccOverride));
             rateLimitService.markFailure(auth, elapsedMs);
+            if (mapped != null) throw mapped;
             throw new AgentOpenApiException(
                     HttpStatus.BAD_GATEWAY,
                     "model_or_tool_failed",
@@ -172,9 +180,12 @@ public class AgentOpenApiRunService {
                 command.sessionId(),
                 externalUserId,
                 requestId);
+        List<String> attachmentIds = attachmentService.bridgeToRuntime(
+                auth, externalUserId, session.externalSessionId(), session.internalSessionId(), command.fileIds());
         rateLimitService.reserve(auth);
         callLogService.start(auth, session, requestId, externalUserId, idempotencyKey, command.message());
-        return new ChatStreamExecution(auth, session, requestId, idempotencyKey, externalUserId, startedAt, cloudccOverride);
+        return new ChatStreamExecution(auth, session, requestId, idempotencyKey, externalUserId,
+                startedAt, cloudccOverride, attachmentIds);
     }
 
     public void runChatStream(ChatStreamExecution execution,
@@ -195,12 +206,15 @@ public class AgentOpenApiRunService {
                             return null;
                         });
             } catch (RuntimeException ex) {
+                AgentOpenApiException mapped = mapAttachmentRuntimeFailure(ex);
                 try {
                     emitter.send(SseEmitter.event().name("error").data(Map.of(
-                            "message", sanitizeFailureMessage(ex.getMessage(), execution.cloudccOverride()))));
+                            "code", mapped == null ? "model_or_tool_failed" : mapped.getCode(),
+                            "request_id", execution.requestId(),
+                            "message", mapped == null ? "Agent runtime failed" : mapped.getMessage())));
                 } catch (Exception ignored) {
                 }
-                emitter.completeWithError(ex);
+                emitter.completeWithError(mapped == null ? ex : mapped);
             }
         }, agentRuntimeExecutor);
     }
@@ -258,7 +272,8 @@ public class AgentOpenApiRunService {
             chatOrchestratorService.chatStreamBlocking(
                     execution.auth().credential().getCompanyId(), execution.auth().credential().getRunAsUserId(),
                     execution.session().internalSessionId(), command.message().trim(), command.knowledgeBaseIds(),
-                    execution.auth().credential().getAgentId(), command.activeSkillCode(), Map.of(), "openapi", emitter);
+                    execution.auth().credential().getAgentId(), command.activeSkillCode(), Map.of(),
+                    execution.attachmentIds(), "openapi", emitter);
             return null;
         });
     }
@@ -289,16 +304,17 @@ public class AgentOpenApiRunService {
     private Map<String, Object> invokeChatWithTimeout(AgentOpenApiAuthService.AuthenticatedCredential auth,
                                                       AgentOpenApiSessionService.SessionResolution session,
                                                       ChatCommand command,
-                                                      CloudccAccessTokenService.CloudccSessionContext cloudccOverride) {
+                                                      CloudccAccessTokenService.CloudccSessionContext cloudccOverride,
+                                                      List<String> attachmentIds) {
         CompletableFuture<Map<String, Object>> future = CompletableFuture.supplyAsync(() -> {
             if (cloudccOverride == null) {
-                return invokeChat(auth, session, command);
+                return invokeChat(auth, session, command, attachmentIds);
             }
             return cloudccAccessTokenService.withSessionContextOverride(
                     auth.credential().getCompanyId(),
                     auth.credential().getRunAsUserId(),
                     cloudccOverride,
-                    () -> invokeChat(auth, session, command));
+                    () -> invokeChat(auth, session, command, attachmentIds));
         }, agentRuntimeExecutor);
         try {
             return future.get(normalizedTimeoutMs(), TimeUnit.MILLISECONDS);
@@ -322,12 +338,13 @@ public class AgentOpenApiRunService {
 
     private Map<String, Object> invokeChat(AgentOpenApiAuthService.AuthenticatedCredential auth,
                                            AgentOpenApiSessionService.SessionResolution session,
-                                           ChatCommand command) {
+                                           ChatCommand command,
+                                           List<String> attachmentIds) {
         return memoryContextService.withTrustedContext(auth, externalUserId(command.externalUser()), session.internalSessionId(), () ->
                 chatOrchestratorService.chat(
                         auth.credential().getCompanyId(), auth.credential().getRunAsUserId(), session.internalSessionId(),
                         command.message().trim(), command.knowledgeBaseIds(), auth.credential().getAgentId(), command.activeSkillCode(),
-                        Map.of(), "openapi"));
+                        Map.of(), attachmentIds, "openapi"));
     }
 
     private long normalizedTimeoutMs() {
@@ -599,6 +616,35 @@ public class AgentOpenApiRunService {
         orgModelConfigRepository.save(target);
     }
 
+    public Map<String, Object> attachmentCapabilities(AgentOpenApiAuthService.AuthenticatedCredential auth) {
+        String companyId = auth.credential().getCompanyId();
+        CompanyModelConfigEntity current = orgModelConfigRepository.findByCompanyIdAndSceneCode(companyId, "chat").orElse(null);
+        ModelChoice choice = current != null && !isPlaceholderModelRoute(current)
+                ? new ModelChoice(current.getProvider(), current.getModelName())
+                : resolveOpenApiModelChoice(companyId, auth.credential().getAgentId());
+        boolean vision = choice != null && modelProviderService.supportsTrustedCapability(
+                companyId, choice.providerCode(), choice.modelName(), "vision");
+        return Map.of("vision", vision, "document_text", true, "native_pdf", false);
+    }
+
+    private AgentOpenApiException mapAttachmentRuntimeFailure(RuntimeException exception) {
+        if (!(exception instanceof ResponseStatusException statusException)) return null;
+        String reason = statusException.getReason() == null ? "" : statusException.getReason();
+        if (reason.contains("VISION_MODEL_REQUIRED")) {
+            return new AgentOpenApiException(HttpStatus.UNPROCESSABLE_ENTITY, "MODEL_CAPABILITY_MISMATCH",
+                    "The current Agent model cannot process image attachments");
+        }
+        if (reason.contains("TEXT_EXTRACTION")) {
+            return new AgentOpenApiException(HttpStatus.UNPROCESSABLE_ENTITY, "FILE_PROCESSING_FAILED",
+                    "File processing failed");
+        }
+        if (reason.contains("ATTACHMENT")) {
+            return new AgentOpenApiException(HttpStatus.BAD_GATEWAY, "ATTACHMENT_BINDING_FAILED",
+                    "File could not be bound to the Agent runtime");
+        }
+        return null;
+    }
+
     private ModelChoice resolveOpenApiModelChoice(String companyId, String agentId) {
         String agentModel = agentDefinitionRepository.findByCompanyIdAndAgentId(companyId, agentId)
                 .map(agent -> trimToNull(agent.getModel()))
@@ -752,7 +798,8 @@ public class AgentOpenApiRunService {
             List<String> knowledgeBaseIds,
             String activeSkillCode,
             Map<String, Object> metadata,
-            CloudccContext cloudccContext
+            CloudccContext cloudccContext,
+            List<String> fileIds
     ) {
     }
 
@@ -777,7 +824,8 @@ public class AgentOpenApiRunService {
             String idempotencyKey,
             String externalUserId,
             Instant startedAt,
-            CloudccAccessTokenService.CloudccSessionContext cloudccOverride
+            CloudccAccessTokenService.CloudccSessionContext cloudccOverride,
+            List<String> attachmentIds
     ) {
     }
 
