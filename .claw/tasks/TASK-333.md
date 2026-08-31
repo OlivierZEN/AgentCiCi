@@ -2,11 +2,11 @@
 kind: task-status
 task_id: TASK-333
 feature_id: FEAT-203
-status: in_progress
+status: review
 priority: high
 owner_role: fullstack-agent
 claimed_by: codex
-updated_at: 2026-08-31T04:15:09Z
+updated_at: 2026-08-31T04:28:01Z
 updated_by: codex
 ---
 
@@ -31,14 +31,14 @@ updated_by: codex
 
 ## 当前证据
 
-- UAT 只读检查确认总计 5 个应用，其中 `BimoApp1`、`测试应用1` 均为草稿且 0 个版本；`BimoApp1` 详情显示 0 个运行连接。
-- 本地 `main@5f6ce44a` 已包含目录 seed、通用平台基础投影、服务端安全相对路由、详情入口、租户 `OPEN` 动作和单页单对象示例页；远程 `main` 未推送。
-- 后端聚焦测试 2 项、前端聚焦 3 文件/15 项、前端全量 57 文件/312 项、后端 package、production build 和 `git diff --check` 通过；production build 仅保留既有大 chunk 警告。
-- repeatable migration `demo example application` 已在本地 PostgreSQL 成功执行；数据库回读为 `demo-example / DEMO示例应用 / PUBLISHED / 1.0.0 / NONE`，并有唯一可选依赖 `semattice >=1.0.0 / OPTIONAL / AUTO_PROVISION_ALLOWED`。
-- 本地 backend/frontend 运行 `2.8.67-dev.5f6ce44 / 5f6ce44a`，镜像 ID 分别为 `sha256:34c05e8f04e6a6f524f3d287115db168fd5910f737eeff0acce6139954bfbbf1` 和 `sha256:c97c5ec31c447473b86d2185484a9a3c9e2cfadd9cce1e022595164fcccce186`；两容器 healthy/restart=0，15 分钟 backend severe、frontend HTTP 5xx/nginx severe 均为 0。
-- `https://cici.localhost/platform/internal-applications/demo-example/example=200`，运行 bundle 包含 `DEMO示例应用`；匿名目录 API 为 JSON 401，浏览器访问受保护示例路由回到运营平台安全登录。
-- 当前本地浏览器没有平台登录态；应用中心列表、详情和示例页的登录态视觉/交互待 HUMAN 登录后确认。UAT 与生产未修改。
+- 实现提交 `40a27a2b2983` 已进入本地 `main`，远程 `main` 未推送；最终运行代码制品对应同一提交。
+- 后端连接/目录聚焦测试与 package、前端聚焦 2 文件/7 项、全量 60 文件/332 项、production build、域名门禁和 `git diff --check` 通过；build 仅保留既有大 chunk 警告。
+- PostgreSQL 16.9 空库成功校验并执行 125 个迁移至 V128；专用迁移测试回读唯一 `demo-example.lifecycle / DRAFT / activeRevisionId=null / r1 / NOT_TESTED` 连接。
+- 本地 repeatable migration 成功重跑 1 次；真实数据库回读为 `demo-example / PUBLISHED / 1.0.0 / NONE / providerBindingKey=null`，连接 Base URL 为保留测试域名，Secret 仅为引用名。
+- backend/frontend 运行 `2.8.68-dev.40a27a2 / 40a27a2b2983`，镜像分别为 `sha256:d55b923c4c56c7d21585595b89f88d304605b5d0c7a8b755d0d84bd6085081e4` 与 `sha256:1c56768632094ad37978e9bcfffb8fadf5a88828ae634954aff794f25cd89ef1`；两容器 healthy/restart=0，其他八个容器 ID 未变化。
+- `https://cici.localhost/platform/internal-applications/demo-example/example=200`；运行 bundle 包含连接实际配置字段，匿名连接 API 返回 JSON 401，最近 Nginx 5xx 为 0。
+- 应用内浏览器和 Chrome 均没有本地平台登录态，受保护页面停在“运营平台登录”；登录后详情计数 1 和示例页视觉待 HUMAN 确认。UAT 与生产未修改。
 
 ## 下一步
 
-- 扩展 repeatable seed 和示例页回读，运行迁移与前后端门禁，从最终本地 `main` 更新 `https://cici.localhost/`，再由 HUMAN 确认详情运行连接计数为 1、参数完整且状态诚实。UAT/生产发布需另行授权。
+- 由 HUMAN 登录本地运营平台，确认详情“运行连接”计数为 1，并打开示例页核对 20 项连接参数及 `草稿 / 未测试 / 未启用` 状态。UAT/生产发布需另行授权。

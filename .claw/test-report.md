@@ -22,6 +22,16 @@ last_run_status: passed_task_346_local_technical_pending_authenticated_openapi_i
 - 环境边界：仅最小重建 backend/frontend；PostgreSQL、Redis、RabbitMQ、Qdrant ID 保持 `fe24af69`、`2a889418`、`78a141ae`、`000ccca4` 且 restart=0。未执行受既有 Semattice 版本漂移影响的完整 stack verify；本任务无新增跨项目契约。
 - HUMAN 边界：当前没有可读取的明文 OpenAPI Key。浏览器已有登录态，但创建临时 Key 是凭据写操作，未在无明确授权时执行；因此没有生成真实模型 trace，也不把 mocked/runtime content-block 自动化记为真实模型业务验收。
 
+## 2026-08-31 TASK-333 DEMO 真实运行连接本地技术验收
+
+- 状态：`passed_task_333_local_runtime_pending_human_visual`；真实连接持久化、迁移、自动化、构建、同提交制品、数据库与匿名鉴权边界通过，登录态视觉待 HUMAN。
+- 自动化：`InternalApplicationProviderConnectionServiceTest,TenantApplicationCatalogServiceTest` 与 backend package 通过；前端聚焦 2 文件/7 项、全量 60 文件/332 项、production build、域名扫描和 diff check 通过，build 仅保留既有大 chunk warning。
+- 空库迁移：一次性 PostgreSQL 16.9 成功校验/执行 125 个迁移至 V128；`DemoExampleApplicationFlywayMigrationTest` 回读唯一连接为 `demo-example.lifecycle / DRAFT / activeRevisionId=null / r1 / https://service.example.test / HMAC_SHA256_SECRET_REF / NOT_TESTED`，并确认已发布版本仍为 `NONE / providerBindingKey=null`。
+- 本地主线与制品：代码提交 `40a27a2b2983` 已进入本地 `main`；backend/frontend 均运行 `2.8.68-dev.40a27a2 / 40a27a2b2983`，镜像为 `sha256:d55b923c4c56c7d21585595b89f88d304605b5d0c7a8b755d0d84bd6085081e4` / `sha256:1c56768632094ad37978e9bcfffb8fadf5a88828ae634954aff794f25cd89ef1`，healthy/restart=0。
+- 运行回读：本地 Flyway 成功重跑 repeatable migration；数据库回读连接及 r1 与断言一致。目标 HTTPS 路由 200，部署 JS 含 `运行连接实际配置 / demo-example.lifecycle / NOT_TESTED`，匿名连接 API 为 JSON 401，最近 Nginx 5xx 为 0。
+- 最小影响：只替换 backend/frontend；PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak、Nginx、Semattice、DevAutopilot 容器 ID 与部署前一致。标准 `./stack verify` 仍会被既有 Semattice `config=1.0.7 / repository=1.0.8` 漂移失败关闭，本任务未修改该产品。
+- 浏览器边界：应用内浏览器与 Chrome 均到达本地“运营平台登录”页；未读取浏览器存储、未代填凭据。详情计数 1 和示例页 20 项字段仍待 HUMAN 登录后目视确认。远程、UAT、生产未修改。
+
 ## 2026-08-31 TASK-345 DevAutopilot MCP-only 解耦回归
 
 - 状态：`passed_task_345_local_technical_human_dialogue_not_replayed`；目录、精确绑定运行、发布、身份和真实业务数据技术闭环通过。浏览器未代 HUMAN 发送新对话消息，该步骤不是技术证据的替代品。

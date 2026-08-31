@@ -169,7 +169,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-333 - 创建 DEMO 单页单对象完整配置示例
 
-- status: `in_progress`
+- status: `review`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - claimed_by: `codex`
@@ -177,8 +177,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-333.md`
 - blocked_by: `none`
 - scope_files: `demo-example 目录 seed、真实 DRAFT 运行连接、平台基础投影、安全相对路由、单页单对象配置回读和本地全栈验证`
-- completion_evidence: `本地 main@5f6ce44a；后端 2 项与 package；前端 3 文件/15 项、全量 57 文件/312 项和 production build；repeatable migration 与数据库 readback；backend/frontend 2.8.67-dev.5f6ce44 healthy/restart=0；HTTPS 路由 200、匿名 API 401。`
-- next_action: `补齐 demo-example.lifecycle 连接修订和页面真实回读，更新本地全栈并验证运行连接计数、参数和状态。`
+- completion_evidence: `本地 main 代码提交 40a27a2b；后端聚焦/package、前端 7 项与全量 60/332、build、域名/diff 门禁；空库 V128 与专用迁移回归；真实数据库为 DRAFT/r1/NOT_TESTED；backend/frontend 2.8.68-dev.40a27a2 healthy/restart=0；路由 200、匿名连接 API 401、其他容器未替换。`
+- next_action: `由 HUMAN 登录本地运营平台，确认详情连接计数为 1，并目视核对示例页 20 项参数及草稿/未测试/未启用状态；UAT/生产另行授权。`
 
 ### TASK-325 - 产品经理项目改名确定性执行与可信回执
 
