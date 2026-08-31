@@ -2458,9 +2458,9 @@ export default function AgentBuilderShell({
   }, [loadRuntimeExecutions, selectedAgentId, token]);
 
   useEffect(() => {
-    if (!token || !selectedAgentId) return;
+    if (!token || !selectedAgentId || isLoadingLibrary || isAgentSelectionLoading) return;
     void loadPublishedVersionNo();
-  }, [loadPublishedVersionNo, selectedAgentId, token]);
+  }, [isAgentSelectionLoading, isLoadingLibrary, loadPublishedVersionNo, selectedAgentId, token]);
 
   useEffect(() => {
     skillDagRequestIdRef.current += 1;

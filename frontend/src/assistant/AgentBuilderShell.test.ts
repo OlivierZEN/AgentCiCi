@@ -187,6 +187,13 @@ describe("Agent Builder publish gate", () => {
       { versionNo: 1, publishStatus: "ARCHIVED" },
     ])).toBeNull();
   });
+
+  it("does not restore an older draft over a newer published version", () => {
+    expect(resolvePublishableDraftVersionNo([
+      { versionNo: 3, publishStatus: "PUBLISHED" },
+      { versionNo: 2, publishStatus: "DRAFT" },
+    ])).toBeNull();
+  });
 });
 
 describe("Agent Builder avatar editing", () => {
