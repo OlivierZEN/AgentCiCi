@@ -15,21 +15,6 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
-### TASK-345 - DevAutopilot MCP-only 解耦回归修复
-
-- status: `in_progress`
-- priority: `critical`
-- owner_role: `integration-agent`
-- claimed_by: `codex`
-- integration_id: `INT-029`
-- spec_path: `docs/specs/FEAT-205-application-version-mcp-binding.md`
-- task_status_path: `.claw/tasks/TASK-345.md`
-- blocked_by: `none`
-- related_issues: `ISSUE-2026-08-31-devautopilot-mcp-decoupling-regression`
-- scope_files: `内置目录清理、应用 MCP 统一工具目录、MCP-only 失败关闭、智能体编译发布门禁、本地 Provider Secret 可读性与真实查询`
-- completion_evidence: `已回读旧六工具 builtin 来源、内部 Semattice 回退、目标租户 ACTIVE 绑定、v2 DRAFT、错误 Web 浮窗发布门禁，以及 DevAutopilot 非 root Secret 不可读重启日志。`
-- next_action: `完成实现和聚焦测试，再从本地 main 重建 backend/frontend，恢复 DevAutopilot 并执行真实 MCP 查询与智能体发布回归。`
-
 ### TASK-344 - Web 浮窗 UAT 发布与站点首页嵌入
 
 - status: `blocked`
@@ -1932,6 +1917,21 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-345 - DevAutopilot MCP-only 解耦回归修复
+
+- status: `done`
+- priority: `critical`
+- owner_role: `integration-agent`
+- claimed_by: `codex`
+- integration_id: `INT-029`
+- spec_path: `docs/specs/FEAT-205-application-version-mcp-binding.md`
+- task_status_path: `.claw/tasks/TASK-345.md`
+- blocked_by: `none`
+- related_issues: `ISSUE-2026-08-31-devautopilot-mcp-decoupling-regression`
+- scope_files: `内置目录清理、应用 MCP 统一工具目录、MCP-only 失败关闭、智能体编译发布门禁、本地 Provider Secret 可读性与真实查询`
+- completion_evidence: `实现 4d3cf32a + 81c74925；本地内置 24→18、六工具 MCP-only、真实 SERVICE query、v2 正式 UI 发布和运行版本 2.8.68-dev.81c7492 通过。`
+- next_action: `技术闭环完成；如需最终人工接受，由正常 HUMAN 在研发产品经理新会话复测可见答案。`
 
 ### TASK-329 - 修复管理后台技能导出
 
