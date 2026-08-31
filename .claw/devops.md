@@ -1,12 +1,21 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-08-28T14:11:32Z
+updated_at: 2026-08-31T03:50:00Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-31 TASK-344 UAT `2.8.68-beta.2` 与首页浮窗
+
+- 候选冻结时本地/远程 `main`、annotated tag `2.8.68-beta.2^{}` 与运行提交均为 `b9a0dfb7007c42a9e9ad168aa19f95a9e6660ead`；后续治理证据提交只记录发布事实、不改变制品。backend/frontend ACR index digest 为 `sha256:d8b978396038941e145c06e82c590d82c9ba8d69942e78e6f3870d13709c9208` / `sha256:a24f134031892457af8b360e5fb986924be51ca4208ebd2ceb21337c6d7b4a57`，linux/amd64，未更新 `latest`。
+- 完整备份 `/data/apps/agentcici/backups/20260831T031524Z-before-2.8.68-beta.1` 含 15 项、317,049,542 bytes 的 Compose/env、PostgreSQL、KB、Qdrant 存储与原生 snapshot、旧镜像、容器基线、回滚说明和 SHA-256 清单；dump catalog、tar、gzip、权限与清单通过。应用回滚目标 `2.8.67-beta.1`；数据恢复需单独授权。
+- `beta.1` 已最小替换 backend/frontend；发现 UAT override 未把 root-only `APP_WEBSITE_WIDGET_DEFAULT_KEY` 透传 backend 后，在版本化配置补齐并冻结 `beta.2`，目标主机 Compose 渲染通过。更新首页入口前把旧 env 和 override 追加保存至上述备份目录；入口键不写源码、制品或文档。
+- 目标租户 `orgickjr6icm6l2zitpn` 已通过官方 Agent Builder 发布 `sales-agent v1` 和 Web 渠道；入口配置写入 `uat.secrets.env` 后只 `--no-deps --force-recreate backend`。backend/frontend 均为 `2.8.68-beta.2 / b9a0dfb7007c`、healthy/restart=0；database、Redis、RabbitMQ、Qdrant ID 与发布前基线一致。
+- backend `/actuator/health=UP`、`/system/version=2.8.68-beta.2 / b9a0dfb7007c`；frontend 与系统 Nginx 配置有效。公开 smoke、匿名 `/auth/me=401`、正确 Origin Token、错误 Origin 403、真实首页会话和浏览器 console 通过；backend 最近 10 分钟 ERROR/Exception 行数为 0。
+- 首页真实浮窗已启用且默认折叠；公开访客 Token 仅含 `chat:read/chat:write`。当前 Agent Definition 未保存图片头像，标题/消息显示名称回退“售”，折叠启动器仍显示 SDK 默认 `Ci`；图片上传须由 HUMAN 在官方 UI 完成后重新编译发布。生产及其他产品未修改。
 
 ## 2026-08-28 TASK-343 本地开发环境
 

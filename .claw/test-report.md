@@ -1,14 +1,25 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-28T14:11:32Z
+updated_at: 2026-08-31T03:50:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-28T14:11:32Z
-last_run_status: passed_task_343_local_runtime_pending_user_review
+last_run_at: 2026-08-31T03:50:00Z
+last_run_status: passed_task_344_uat_widget_pending_avatar_upload
 ---
 
 # Test Report
+
+## 2026-08-31 TASK-344 UAT 首页 Web 浮窗
+
+- 状态：`passed_task_344_uat_widget_pending_avatar_upload`；不可变 UAT 候选、完整备份、最小部署、目标租户官方发布链路、首页默认入口、Token 正负例和真实非空模型回复通过。系统图片头像尚未上传，当前使用 Agent Definition 名称派生的“售”回退，不能把该边界记为图片头像验收通过。
+- Source/Artifact：候选冻结时本地/远程 `main`、annotated tag `2.8.68-beta.2^{}` 与运行提交均为 `b9a0dfb7007c`；后续治理证据提交只记录发布事实、不改变制品。backend/frontend ACR index digest 为 `sha256:d8b978396038941e145c06e82c590d82c9ba8d69942e78e6f3870d13709c9208` / `sha256:a24f134031892457af8b360e5fb986924be51ca4208ebd2ceb21337c6d7b4a57`，未更新 `latest`。
+- Recovery：完整备份 `/data/apps/agentcici/backups/20260831T031524Z-before-2.8.68-beta.1` 的 PostgreSQL、KB、Qdrant、旧镜像、Compose/env 和 SHA-256 已验证；追加保留 `uat.secrets.env.pre-homepage-widget` 与 `docker-compose.uat-acr.override.pre-beta2.yml`。应用回滚目标 `2.8.67-beta.1`，数据恢复需单独授权。
+- 租户发布：已登录页面回读 `CloudCC Agentic Test / orgickjr6icm6l2zitpn`；通过官方 Agent Builder 把既有 `sales-agent` 命名为“售前跟进智能体”，精确允许 `https://uat.agentcici.com`，选择唯一 ACTIVE Owner 作为 demo 运行成员，保存、编译并发布 `v1`。非 demo 环境仍应替换为专用 RUN-only 成员。
+- 公开安全：默认公开配置返回“售前跟进智能体 / 咨询售前”；正确 Origin Token 为 200，JWT 仅有 `chat:read/chat:write`，并绑定 website、租户、Agent、运行成员、上下文和过期时间；保留测试域错误 Origin 返回 403。公开配置不含图片头像正文时返回空头像，由客户端使用名称回退。
+- 浏览器：UAT 首页默认折叠启动器可见；展开后为 CRM 蓝，附件按钮为 0，话筒背景透明、发送按钮位置正常。真实问题“50 人销售团队统一管理客户跟进并自动生成售前建议”返回完整实施方案；console error/warn 为 0。
+- 头像边界：展开态标题、欢迎消息和回复均显示 Agent Definition 名称回退“售”，不再显示固定思思身份；折叠启动器在无图片时仍使用 SDK 默认 `Ci`。两次受控文件选择均被 Chrome 扩展拒绝，系统 UI 捕获也不可用；未读取浏览器 Token、Cookie 或绕过权限，图片头像留待 HUMAN 在官方上传入口完成。
+- Runtime：只重建 backend/frontend 完成 `beta.2`，启用首页键时只重建 backend；六容器 healthy/restart=0，四状态容器 ID 与发布前逐项一致，health UP、version/commit、Nginx、公开 smoke、匿名 401 和最近错误计数 0 通过。生产未修改。
 
 ## 2026-08-28 TASK-343 Web 浮窗系统智能体头像
 
