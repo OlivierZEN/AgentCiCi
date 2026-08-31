@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 6
-updated_at: 2026-08-31T04:28:00Z
+updated_at: 2026-08-31T05:04:00Z
 updated_by: codex
 phase: review
 active_task: TASK-346
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-346 / FEAT-206` 实现和本地技术闭环已完成，进入 HUMAN review：功能提交 `3b34e3198938` 已进入本地 `main`；multipart 与 HTTPS URL 均按签名检测后私有落盘并桥接既有 `ChatAttachmentService`，blocking/streaming 共享 Vision/文档解析和模型 content block，具备四层作用域、首次绑定、多轮复用、幂等、安全 URL 抓取、明确错误和能力发现。后端聚焦、空库 V128、两条控制器链路、backend package、前端 60 文件/332 项与 production build 通过；完整 OpenAPI 集成类 16/17，唯一失败为任务外既有 placeholder 模型路由断言。并行主线推进后，backend/frontend 从包含功能提交的最新代码主线 `40a27a2b2983` 运行 `2.8.68-dev.40a27a2`，healthy/restart=0、health UP、V128 success、首页 200、匿名 OpenAPI JSON 401、severe=0，状态服务 ID 不变。当前没有可读取的明文 OpenAPI Key，未擅自创建凭据，真实模型图片对话仍待 HUMAN 授权验收。
+- `TASK-346 / FEAT-206` 实现、本地技术闭环和 UAT 技术发布已完成，进入 HUMAN review：功能提交 `3b34e3198938` 已进入并推送远程 `main`。冻结候选 `2.8.68-beta.3 / a5bbb1140864` 的 backend/frontend digest 为 `sha256:b81e8c5a...` / `sha256:2412ab89...`，完整回滚点为 `/data/apps/agentcici/backups/20260831T045841Z-before-2.8.68-beta.3`；UAT 仅替换 backend/frontend，V127/V128 与 repeatable migration success，六容器 healthy/restart=0，health UP、Nginx、首页/HTTP 跳转、匿名 OpenAPI JSON 401、OIDC/Semattice/DevAutopilot 和 30 秒稳定窗口通过，四个状态服务 ID 不变。UAT 有效 MCP 应用绑定数为 0，本候选没有启用跨项目契约。当前没有可读取的明文 OpenAPI Key，未擅自创建凭据，真实文件上传和视觉模型图片对话仍待 HUMAN 授权验收；生产未修改。
 
 - `TASK-345 / FEAT-205 / INT-029` 已完成本地技术闭环：`4d3cf32a + 81c74925` 将六个研发交付能力从 AgentCiCi 内置目录、治理行和本地分发中移除，统一由 `App Version → MCP Provider → Tool → Tenant MCP Server` 绑定供目录、编译和运行；缺绑定失败关闭，不进入通用 MCP 或本地 Semattice 回退。backend/frontend 运行 `2.8.68-dev.81c7492`，Flyway V127、内置 18、六项 MCP 风险标签、healthy/restart=0 通过；正式 UI 已将研发产品经理 v2 发布，v1 归档。Keycloak SERVICE → AgentCiCi OACT → DevAutopilot MCP → Semattice 真实 query 返回 `isError=false` 与 1 个项目。标准 verify 仅被既有 Semattice `1.0.7/1.0.8` 漂移失败关闭；浏览器未代 HUMAN 发送新对话消息。
 

@@ -1,18 +1,18 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-31T04:28:00Z
+updated_at: 2026-08-31T05:04:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-31T04:28:00Z
-last_run_status: passed_task_346_local_technical_pending_authenticated_openapi_image_acceptance
+last_run_at: 2026-08-31T05:04:00Z
+last_run_status: passed_task_346_uat_technical_pending_authenticated_openapi_image_acceptance
 ---
 
 # Test Report
 
 ## 2026-08-31 TASK-346 OpenAPI 文件附件统一运行时
 
-- 状态：`passed_task_346_local_technical_pending_authenticated_openapi_image_acceptance`；真实二进制存储、共享附件桥接、URL 导入、失败关闭和本地运行门禁通过，真实 OpenAPI Key 下的真实模型图片识别待 HUMAN 授权验收。
+- 状态：`passed_task_346_uat_technical_pending_authenticated_openapi_image_acceptance`；真实二进制存储、共享附件桥接、URL 导入、失败关闭、本地运行和 UAT 技术门禁通过，真实 OpenAPI Key 下的真实模型图片识别待 HUMAN 授权验收。
 - 后端聚焦：`SafeRemoteFileFetcherTest,AgentOpenApiAttachmentServiceTest,AgentOpenApiConversationServiceTest,ChatAttachmentServiceTest` 通过；覆盖 HTTPS/私网拒绝、PNG 实际字节落盘与 SHA 路径、四层作用域、共享附件 ID、图片 data URL content block 和对话编排。
 - 控制器/迁移：隔离 `postgres:16.9-alpine` 从空库成功执行 125 个迁移到 Flyway V128；`shouldExposeConversationApiChatMessagesHistoryFeedbackAndFiles` 与 `shouldImportHttpsFileIdempotentlyAndUseInlineUrlThroughAttachmentRuntime` 通过，证明 multipart/URL 幂等记录都能在创建内部会话后写入有外键约束的共享附件并传给 OpenAPI runtime。
 - 构建：`mvn -q -DskipTests package`、前端 `npm test -- --run`（60 files / 332 tests）、`npm run build` 和 `git diff --check` 通过；前端 build 仅保留既有大 chunk warning。
@@ -21,6 +21,10 @@ last_run_status: passed_task_346_local_technical_pending_authenticated_openapi_i
 - 本地主线与运行：功能提交 `3b34e3198938` 已进入本地 `main`；并行主线推进后从包含该提交的最新代码主线 `40a27a2b2983` 构建 backend/frontend，运行 `2.8.68-dev.40a27a2`。两容器 healthy/restart=0，backend health=`UP`，Flyway `128:openapi attachment runtime:true`，首页 200，匿名 `/openapi/v1/parameters` 返回 `401 agent_api_key_missing`，近 5 分钟 backend/frontend severe=0。
 - 环境边界：仅最小重建 backend/frontend；PostgreSQL、Redis、RabbitMQ、Qdrant ID 保持 `fe24af69`、`2a889418`、`78a141ae`、`000ccca4` 且 restart=0。未执行受既有 Semattice 版本漂移影响的完整 stack verify；本任务无新增跨项目契约。
 - HUMAN 边界：当前没有可读取的明文 OpenAPI Key。浏览器已有登录态，但创建临时 Key 是凭据写操作，未在无明确授权时执行；因此没有生成真实模型 trace，也不把 mocked/runtime content-block 自动化记为真实模型业务验收。
+- 发布前重跑：MCP/附件/DEMO migration 聚焦测试、隔离 PostgreSQL 16.9 的两条 OpenAPI 控制器链路与 125 个迁移、backend package、前端 60 文件/332 项、production build、Compose 渲染和 diff check 通过。默认全量 backend suite 因本机没有默认 `localhost:5432/agentcici_test` 而持续重连，已中止且不记为通过；已有完整 OpenAPI 类仍保持 16/17 的如实边界。
+- UAT：`2.8.68-beta.3 / a5bbb1140864` 的 tag、远程 main、镜像 label/revision 与运行版本一致；backend/frontend digest 为 `sha256:b81e8c5aeb96d4710fa15349d5bceeb1c88aef2b7a2e65bdab3c49acdbc2c4d9` / `sha256:2412ab89ad5c6717db544aca05d2c8fe7483b3292c25c5cb792c32ed4846ae26`。V127/V128 与 repeatable migration success，六容器 healthy/restart=0，四状态服务 ID 不变。
+- UAT 公开与稳定性：首页 HTTPS 200、HTTP 301、匿名 `/auth/me` 和 `/openapi/v1/parameters` 为 JSON 401，Keycloak discovery、Semattice 和 DevAutopilot integrated health 通过；30 秒窗口 backend severe=0、Nginx error=0、真实 5xx=0。宽松正则初始命中的 5 行经 Nginx 状态列复核仅为 200/401，不记为 5xx。
+- 契约边界：发布前后 UAT `tenant_application_mcp_binding` 有效绑定数均为 0；本候选包含 MCP-only 源码变化但没有在 UAT 启用或切换该跨项目契约，不宣称 DevAutopilot MCP UAT 功能已交付。生产未修改。
 
 ## 2026-08-31 TASK-333 DEMO 真实运行连接本地技术验收
 

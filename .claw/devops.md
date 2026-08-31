@@ -1,12 +1,21 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-08-31T04:28:00Z
+updated_at: 2026-08-31T05:04:00Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-31 TASK-346 UAT `2.8.68-beta.3`
+
+- 冻结时本地/远程 `main`、annotated tag `2.8.68-beta.3^{}` 与运行提交均为 `a5bbb114086433312ef8b366a1a1cb0bc3f693f0`，并包含 OpenAPI 附件实现 `3b34e3198938`。backend/frontend linux/amd64 不可变 digest 为 `sha256:b81e8c5aeb96d4710fa15349d5bceeb1c88aef2b7a2e65bdab3c49acdbc2c4d9` / `sha256:2412ab89ad5c6717db544aca05d2c8fe7483b3292c25c5cb792c32ed4846ae26`，未更新 `latest`。
+- 完整回滚点 `/data/apps/agentcici/backups/20260831T045841Z-before-2.8.68-beta.3` 共 10 项、317,119,013 bytes，包含受管 Compose/env、PostgreSQL custom dump、KB、Qdrant 存储、beta.2 旧应用镜像、容器基线、回滚说明和 SHA-256 清单；均非空且 `0600`，dump catalog、tar、gzip 与清单验证通过。即时应用回滚目标为 `2.8.68-beta.2`，数据恢复需单独授权。
+- UAT override 与仓库 checksum 一致，`uat.secrets.env` 不保存版本字段，HUMAN/SERVICE Semattice scopes 渲染符合门禁。仅 `--no-deps --force-recreate backend frontend`；database、Redis、RabbitMQ、Qdrant ID 保持 `d14ef639f035`、`db0945fd318c`、`4166b9909101`、`26aec0ef3a29` 且 restart=0。
+- backend/frontend 均运行 `2.8.68-beta.3 / a5bbb1140864`、healthy/restart=0，镜像 RepoDigest 与冻结 digest 一致；backend health=`UP`，Flyway V127、V128 和 repeatable `demo example application` success，frontend Nginx 配置有效，页面资源包含同一版本。
+- HTTPS 首页 200、HTTP 301，匿名 `/auth/me` 与 `/openapi/v1/parameters` 为 JSON 401；Keycloak discovery、Semattice `1.0.8-beta.7` 和 DevAutopilot integrated health 通过。30 秒稳定窗口 backend severe=0、Nginx error=0、真实 5xx=0。
+- 发布前后有效应用 MCP 绑定数均为 0；候选虽包含 MCP-only 源码变化，但本次没有在 UAT 新增、启用或切换跨项目契约。真实 OpenAPI Key 文件上传和视觉模型回答待 HUMAN 授权验收；生产及其他产品未修改。
 
 ## 2026-08-31 TASK-346 本地开发环境
 

@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-31T04:28:00Z
+updated_at: 2026-08-31T05:04:00Z
 updated_by: codex
 board_status: active
 ---
@@ -25,7 +25,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-346.md`
 - blocked_by: `none`
 - scope_files: `OpenAPI 文件记录/存储、HTTPS 安全导入、共享附件桥接、运行时 blocking/streaming、参数与错误契约、测试、本地环境验证`
-- completion_evidence: `功能提交 3b34e319 已进入本地 main；后端聚焦/package、前端 60/332/build、空库 V128 和 multipart/URL 控制器链路通过；包含该提交的 main@40a27a2 运行 2.8.68-dev.40a27a2，backend/frontend healthy/restart=0、health UP、V128/首页/匿名 401/severe 门禁通过；完整 OpenAPI 类 16/17，任务外 placeholder 模型路由断言仍失败。`
+- completion_evidence: `功能提交 3b34e319 已进入本地/远程 main；聚焦/package、前端 60/332/build、空库 V128 和 multipart/URL 控制器链路通过。UAT 2.8.68-beta.3 / a5bbb1140864 已冻结并最小发布；不可变 digest、完整备份、V127/V128、六容器健康、状态服务不变、公开/匿名/依赖/稳定窗口门禁通过。`
 - next_action: `HUMAN 授权创建临时本地 OpenAPI Key 或提供现有 Key，执行固定图片真实视觉模型对话并在记录 trace 后撤销临时 Key。`
 
 ### TASK-344 - Web 浮窗 UAT 发布与站点首页嵌入
