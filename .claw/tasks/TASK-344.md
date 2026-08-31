@@ -2,16 +2,18 @@
 kind: task-status
 task_id: TASK-344
 feature_id: FEAT-204
-status: in_progress
+status: blocked
 priority: critical
 owner_role: release-agent
 claimed_by: codex
 spec_path: docs/specs/FEAT-204-web-widget-publish-channel.md
-updated_at: 2026-08-31T04:12:00Z
+updated_at: 2026-08-31T03:26:04Z
 updated_by: codex
 ---
 
 # TASK-344 - Web 浮窗 UAT 发布与站点首页嵌入
+
+> 2026-08-31：被 `TASK-345` 阻塞。DevAutopilot 六工具仍以旧内置工具暴露、运行时保留本地 Semattice 回退，且智能体发布门禁错误耦合 Web 浮窗配置；在修复和本地真实 MCP 回归前不得继续冻结新的 UAT 候选。
 
 ## 范围
 

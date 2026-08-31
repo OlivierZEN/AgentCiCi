@@ -5,8 +5,11 @@ import com.codehouse.ciciassistant.common.error.ResourceNotFoundException;
 import com.codehouse.ciciassistant.mcp.domain.McpServerEntity;
 import com.codehouse.ciciassistant.mcp.domain.McpServerRepository;
 import com.codehouse.ciciassistant.mcp.service.McpClient.McpTool;
+import com.fasterxml.jackson.databind.JsonNode;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -104,15 +107,95 @@ public class ApplicationMcpBindingService {
 
     @Transactional(readOnly = true)
     public List<McpServerService.ResolvedTool> tools(String companyId, String appCode) {
-        return bindingsFor(companyId, appCode).stream().flatMap(binding -> mcp.getTools(companyId, binding.serverId()).stream()
-                .filter(tool -> binding.allowedTools().contains(tool.name()))
-                .map(tool -> new McpServerService.ResolvedTool(binding.serverId(), binding.serverName(), tool.name(), tool.description(), tool.inputSchema())))
+        String normalizedAppCode = normalize(appCode);
+        return boundTools(companyId).stream()
+                .filter(tool -> normalizedAppCode.equals(tool.appCode()))
+                .map(BoundTool::resolvedTool)
                 .toList();
+    }
+
+    /**
+     * Returns all tools made available by ACTIVE application-version bindings for one tenant.
+     * The application declaration remains authoritative for risk and confirmation policy while
+     * the bound MCP server cache supplies the executable schema and description.
+     */
+    @Transactional(readOnly = true)
+    public List<BoundTool> boundTools(String companyId) {
+        List<DeclaredBoundTool> declared = jdbc.query("""
+                SELECT binding.app_code,app.display_name,binding.provider_key,binding.mcp_server_id,
+                       server.name AS server_name,tool.tool_name,tool.risk_level,tool.confirmation_required
+                FROM tenant_application_mcp_binding binding
+                JOIN internal_application app ON app.app_code=binding.app_code
+                JOIN application_version_mcp_provider provider
+                  ON provider.application_version_id=binding.application_version_id
+                 AND provider.provider_key=binding.provider_key
+                JOIN application_version_mcp_tool tool ON tool.provider_id=provider.id
+                JOIN mcp_server server ON server.id=binding.mcp_server_id
+                WHERE binding.company_id=? AND binding.status='ACTIVE' AND server.enabled=TRUE
+                ORDER BY binding.app_code,binding.provider_key,tool.tool_name
+                """, (rs, rowNum) -> new DeclaredBoundTool(
+                rs.getString("app_code"), rs.getString("display_name"), rs.getString("provider_key"),
+                rs.getLong("mcp_server_id"), rs.getString("server_name"), rs.getString("tool_name"),
+                rs.getString("risk_level"), rs.getBoolean("confirmation_required")), companyId);
+        Map<Long, Map<String, McpTool>> discoveredByServer = new LinkedHashMap<>();
+        return declared.stream().map(item -> {
+            Map<String, McpTool> discovered = discoveredByServer.computeIfAbsent(item.serverId(), serverId -> {
+                Map<String, McpTool> indexed = new LinkedHashMap<>();
+                mcp.getTools(companyId, serverId).forEach(tool -> indexed.put(tool.name(), tool));
+                return indexed;
+            });
+            McpTool executable = discovered.get(item.toolName());
+            if (executable == null) {
+                return null;
+            }
+            return new BoundTool(
+                    item.appCode(), item.appDisplayName(), item.providerKey(), item.serverId(), item.serverName(),
+                    item.toolName(), executable.description(), executable.inputSchema(), item.riskLevel(),
+                    item.confirmationRequired());
+        }).filter(java.util.Objects::nonNull).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<BoundTool> findBoundTool(String companyId, String toolName) {
+        List<BoundTool> matches = boundTools(companyId).stream()
+                .filter(item -> item.toolName().equals(toolName))
+                .toList();
+        if (matches.size() > 1) {
+            throw new ConflictException("Application MCP tool name is ambiguous across active bindings: " + toolName);
+        }
+        return matches.stream().findFirst();
+    }
+
+    @Transactional(readOnly = true)
+    public boolean hasTool(String companyId, String toolName) {
+        return findBoundTool(companyId, toolName).isPresent();
+    }
+
+    /** Application-declared names are reserved even before a tenant binds a provider. */
+    @Transactional(readOnly = true)
+    public boolean isApplicationManagedTool(String toolName) {
+        if (toolName == null || toolName.isBlank()) {
+            return false;
+        }
+        Integer count = jdbc.queryForObject("""
+                SELECT COUNT(*)
+                FROM application_version_mcp_tool tool
+                JOIN application_version_mcp_provider provider ON provider.id=tool.provider_id
+                JOIN internal_application_version version ON version.id=provider.application_version_id
+                WHERE tool.tool_name=? AND version.version_status IN ('VALIDATED','PUBLISHED')
+                """, Integer.class, toolName);
+        return count != null && count > 0;
     }
 
     public String execute(String companyId, String userId, String appCode, String toolName, String argumentsJson) {
         RuntimeBinding binding = bindingsFor(companyId, appCode).stream()
                 .filter(item -> item.allowedTools().contains(toolName)).findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Application MCP tool is not bound"));
+        return mcp.executeToolOnServer(companyId, userId, binding.serverId(), toolName, argumentsJson);
+    }
+
+    public String execute(String companyId, String userId, String toolName, String argumentsJson) {
+        BoundTool binding = findBoundTool(companyId, toolName)
                 .orElseThrow(() -> new ResourceNotFoundException("Application MCP tool is not bound"));
         return mcp.executeToolOnServer(companyId, userId, binding.serverId(), toolName, argumentsJson);
     }
@@ -174,6 +257,16 @@ public class ApplicationMcpBindingService {
     private record Provider(String id, String versionId, String providerKey, String authType,
                             String audience, String requiredScope, List<String> tools) {}
     private record RuntimeBinding(Long serverId, String serverName, Set<String> allowedTools) {}
+    private record DeclaredBoundTool(String appCode, String appDisplayName, String providerKey,
+                                     Long serverId, String serverName, String toolName,
+                                     String riskLevel, boolean confirmationRequired) {}
+    public record BoundTool(String appCode, String appDisplayName, String providerKey,
+                            Long serverId, String serverName, String toolName, String description,
+                            JsonNode inputSchema, String riskLevel, boolean confirmationRequired) {
+        public McpServerService.ResolvedTool resolvedTool() {
+            return new McpServerService.ResolvedTool(serverId, serverName, toolName, description, inputSchema);
+        }
+    }
     public record BindingView(String id, String companyId, String appCode, String version, String providerKey,
                               Long serverId, String serverName, String status,
                               java.time.Instant createdAt, java.time.Instant updatedAt) {}

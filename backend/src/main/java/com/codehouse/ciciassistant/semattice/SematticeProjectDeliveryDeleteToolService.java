@@ -14,7 +14,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.server.ResponseStatusException;
@@ -26,7 +25,6 @@ import org.springframework.web.server.ResponseStatusException;
  * The record can be restored within 30 days. No backup/approval/dual-phase
  * prerequisites are required — just user confirmation and RBAC.</p>
  */
-@Service
 public class SematticeProjectDeliveryDeleteToolService {
 
     public static final String TOOL_NAME = "semattice_project_delivery_delete";

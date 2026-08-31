@@ -3,12 +3,6 @@ package com.codehouse.ciciassistant.tool.service;
 import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService;
 import com.codehouse.ciciassistant.crmanalysis.service.CrmProductSalesAnalysisToolService;
 import com.codehouse.ciciassistant.email.service.EmailToolService;
-import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryDeleteToolService;
-import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryToolService;
-import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryUpdateToolService;
-import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryTransferToolService;
-import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryReviewToolService;
-import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryWriteToolService;
 import com.codehouse.ciciassistant.tool.codeinterpreter.SandboxCodeInterpreterService;
 import com.codehouse.ciciassistant.tool.managedweb.ManagedWebToolService;
 import com.codehouse.ciciassistant.tool.tavily.TavilyToolService;
@@ -32,18 +26,6 @@ public final class BuiltinToolCatalog {
                     CloudccOpenApiService.toolDescriptionGetObjectFields(), "低风险", "crm"),
             new ToolCatalogItem(CrmProductSalesAnalysisToolService.TOOL_NAME, "CRM 产品销售排行",
                     CrmProductSalesAnalysisToolService.toolDescription(), "低风险", "crm"),
-            new ToolCatalogItem(SematticeProjectDeliveryToolService.TOOL_NAME, "研发交付数据查询",
-                    SematticeProjectDeliveryToolService.toolDescription(), "低风险", "project_delivery"),
-            new ToolCatalogItem(SematticeProjectDeliveryWriteToolService.TOOL_NAME, "研发交付记录创建",
-                    "由研发交付产品经理主动识别并专业整理用户描述，经用户确认后创建同租户项目、需求、缺陷或变更，并保留完整受理记录。", "中风险", "project_delivery"),
-            new ToolCatalogItem(SematticeProjectDeliveryDeleteToolService.TOOL_NAME, "研发交付记录删除",
-                    "仅由研发交付产品经理在用户明确确认后调用，将记录移入回收站（30天可恢复）。", "中风险", "project_delivery"),
-            new ToolCatalogItem(SematticeProjectDeliveryUpdateToolService.TOOL_NAME, "研发交付记录修改",
-                    "仅由研发交付产品经理在用户明确确认后调用，修改项目/需求/任务的负责人、状态、优先级、工时、描述等业务字段。", "中风险", "project_delivery"),
-            new ToolCatalogItem(SematticeProjectDeliveryTransferToolService.TOOL_NAME, "开发任务转派",
-                    "自动按 Developer Profile 花名识别转出和转入主体；只在用户确认后转派排队任务，并同步真实记录所有权。", "中风险", "project_delivery"),
-            new ToolCatalogItem(SematticeProjectDeliveryReviewToolService.TOOL_NAME, "研发交付设计与验收评审",
-                    SematticeProjectDeliveryReviewToolService.toolDescription(), "高风险", "project_delivery"),
             new ToolCatalogItem("get_pending_approvals", "审批待办拉取", "读取 CloudCC / OA 当前待审批项目。", "中风险", "approval"),
             new ToolCatalogItem(EmailToolService.TOOL_LIST_INBOX, "邮件收件箱",
                     "读取当前用户邮箱最近邮件摘要。", "低风险", "email"),

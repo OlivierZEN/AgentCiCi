@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.codehouse.ciciassistant.kb.domain.KnowledgeBaseEntity;
 import com.codehouse.ciciassistant.kb.domain.KnowledgeBaseRepository;
+import com.codehouse.ciciassistant.mcp.service.ApplicationMcpBindingService;
 import com.codehouse.ciciassistant.skill.domain.AgentSkillBindingEntity;
 import com.codehouse.ciciassistant.skill.domain.AgentSkillBindingRepository;
 import com.codehouse.ciciassistant.skill.domain.SkillDefinitionEntity;
@@ -43,6 +44,7 @@ public class AgentCompileService {
 
     private final KnowledgeBaseRepository knowledgeBaseRepository;
     private final ToolDefinitionRepository toolDefinitionRepository;
+    private final ApplicationMcpBindingService applicationMcpBindings;
     private final AgentDefinitionService agentDefinitionService;
     private final AgentCapabilityResolverService agentCapabilityResolverService;
     private final AgentDefinitionRepository agentDefinitionRepository;
@@ -56,6 +58,7 @@ public class AgentCompileService {
 
     public AgentCompileService(KnowledgeBaseRepository knowledgeBaseRepository,
                                ToolDefinitionRepository toolDefinitionRepository,
+                               ApplicationMcpBindingService applicationMcpBindings,
                                AgentDefinitionService agentDefinitionService,
                                AgentCapabilityResolverService agentCapabilityResolverService,
                                AgentDefinitionRepository agentDefinitionRepository,
@@ -68,6 +71,7 @@ public class AgentCompileService {
                                ObjectMapper objectMapper) {
         this.knowledgeBaseRepository = knowledgeBaseRepository;
         this.toolDefinitionRepository = toolDefinitionRepository;
+        this.applicationMcpBindings = applicationMcpBindings;
         this.agentDefinitionService = agentDefinitionService;
         this.agentCapabilityResolverService = agentCapabilityResolverService;
         this.agentDefinitionRepository = agentDefinitionRepository;
@@ -486,7 +490,19 @@ public class AgentCompileService {
             ToolDefinitionEntity entity = customTool.get();
             return new ToolProfile(entity.getToolName(), entity.getToolName(), entity.getDescription(), entity.getRiskLevel());
         }
+        Optional<ApplicationMcpBindingService.BoundTool> applicationTool =
+                applicationMcpBindings.findBoundTool(companyId, toolId);
+        if (applicationTool.isPresent()) {
+            ApplicationMcpBindingService.BoundTool tool = applicationTool.get();
+            return new ToolProfile(tool.toolName(), tool.toolName(), tool.description(), riskLabel(tool.riskLevel()));
+        }
         return new ToolProfile(toolId, toolId, "未注册工具", "未知");
+    }
+
+    private String riskLabel(String value) {
+        if ("LOW".equalsIgnoreCase(value)) return "低风险";
+        if ("HIGH".equalsIgnoreCase(value)) return "高风险";
+        return "中风险";
     }
 
     private String listLiteral(List<?> values) {

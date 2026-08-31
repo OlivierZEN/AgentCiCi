@@ -420,6 +420,7 @@ public class PlatformGovernanceService {
         List<PlatformToolDefinitionEntity> tools = platformToolDefinitionRepository.findByCompanyIdOrderByCategoryAscDisplayNameAsc(companyId);
         List<SkillDefinitionEntity> allSkills = skillDefinitionRepository.findByCompanyIdOrderByBuiltinDescNameAsc(companyId);
         return tools.stream()
+                .filter(tool -> isBuiltinTool(ToolNameNormalizer.canonicalize(tool.getToolName())))
                 .map(tool -> toToolView(companyId, tool, allSkills))
                 .toList();
     }
@@ -449,6 +450,7 @@ public class PlatformGovernanceService {
         ensurePlatformAssets(companyId);
         return platformToolDefinitionRepository.findByCompanyIdOrderByCategoryAscDisplayNameAsc(companyId).stream()
                 .filter(PlatformToolDefinitionEntity::isEnabled)
+                .filter(item -> isBuiltinTool(ToolNameNormalizer.canonicalize(item.getToolName())))
                 .map(item -> new ToolCatalogItem(
                         item.getToolName(),
                         item.getDisplayName(),

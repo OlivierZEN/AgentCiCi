@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-31T03:07:48Z
+updated_at: 2026-08-31T03:26:04Z
 updated_by: codex
 board_status: active
 ---
@@ -15,15 +15,30 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
-### TASK-344 - Web 浮窗 UAT 发布与站点首页嵌入
+### TASK-345 - DevAutopilot MCP-only 解耦回归修复
 
 - status: `in_progress`
+- priority: `critical`
+- owner_role: `integration-agent`
+- claimed_by: `codex`
+- integration_id: `INT-029`
+- spec_path: `docs/specs/FEAT-205-application-version-mcp-binding.md`
+- task_status_path: `.claw/tasks/TASK-345.md`
+- blocked_by: `none`
+- related_issues: `ISSUE-2026-08-31-devautopilot-mcp-decoupling-regression`
+- scope_files: `内置目录清理、应用 MCP 统一工具目录、MCP-only 失败关闭、智能体编译发布门禁、本地 Provider Secret 可读性与真实查询`
+- completion_evidence: `已回读旧六工具 builtin 来源、内部 Semattice 回退、目标租户 ACTIVE 绑定、v2 DRAFT、错误 Web 浮窗发布门禁，以及 DevAutopilot 非 root Secret 不可读重启日志。`
+- next_action: `完成实现和聚焦测试，再从本地 main 重建 backend/frontend，恢复 DevAutopilot 并执行真实 MCP 查询与智能体发布回归。`
+
+### TASK-344 - Web 浮窗 UAT 发布与站点首页嵌入
+
+- status: `blocked`
 - priority: `critical`
 - owner_role: `release-agent`
 - claimed_by: `codex`
 - spec_path: `docs/specs/FEAT-204-web-widget-publish-channel.md`
 - task_status_path: `.claw/tasks/TASK-344.md`
-- blocked_by: `none`
+- blocked_by: `TASK-345`
 - related_issues: `none`
 - scope_files: `2.8.68-beta.1 候选、ACR 制品、UAT 备份/最小切换、目标租户智能体与 Web 渠道、UAT 首页运行配置、技术与业务验收`
 - completion_evidence: `发布前只读巡检通过；UAT 当前 2.8.67-beta.1 healthy/restart=0；目标租户 ACTIVE 但当前无智能体；本地 main 领先远程 13 提交。`

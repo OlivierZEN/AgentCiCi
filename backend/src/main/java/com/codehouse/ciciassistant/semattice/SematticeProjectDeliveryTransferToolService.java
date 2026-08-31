@@ -16,13 +16,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 
 /** Deterministic product-manager hand-off for queued DevAutopilot tasks. */
-@Service
 public class SematticeProjectDeliveryTransferToolService {
     public static final String TOOL_NAME = "semattice_project_delivery_transfer";
     private static final Pattern CONFIRM = Pattern.compile("^\\s*(?:请)?(?:确认|确定)将?(.+?)(?:的)?任务(?:都|全部)?转交给(.+?)\\s*$");

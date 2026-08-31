@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
@@ -18,7 +17,6 @@ import org.springframework.web.client.RestClientException;
  * Product-manager review bridge for DEV Autopilot delivery gates.
  * The HUMAN supplies delegation context; the bound product-manager SERVICE is the actor.
  */
-@Service
 public class SematticeProjectDeliveryReviewToolService {
 
     public static final String TOOL_NAME = "semattice_project_delivery_review";

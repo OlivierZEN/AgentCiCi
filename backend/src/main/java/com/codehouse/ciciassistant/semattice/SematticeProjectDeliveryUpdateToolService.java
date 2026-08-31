@@ -17,7 +17,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.server.ResponseStatusException;
@@ -31,7 +30,6 @@ import org.springframework.web.server.ResponseStatusException;
  * fields (code, record_id, project_id, requirement_id, created_by, etc.) are rejected.
  * User confirmation is required before execution.</p>
  */
-@Service
 public class SematticeProjectDeliveryUpdateToolService {
 
     public static final String TOOL_NAME = "semattice_project_delivery_update";

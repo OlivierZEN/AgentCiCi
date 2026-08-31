@@ -215,6 +215,18 @@ type VersionHistoryItem = {
   changeLog?: string[];
 };
 
+export function resolvePublishableDraftVersionNo(
+  versions: Array<Pick<VersionHistoryItem, "versionNo" | "publishStatus">>,
+): number | null {
+  const publishedVersionNo = versions
+    .filter((item) => (item.publishStatus ?? "").toUpperCase() === "PUBLISHED")
+    .reduce((latest, item) => Math.max(latest, item.versionNo), 0);
+  const draftVersionNo = versions
+    .filter((item) => (item.publishStatus ?? "").toUpperCase() === "DRAFT")
+    .reduce((latest, item) => Math.max(latest, item.versionNo), 0);
+  return draftVersionNo > publishedVersionNo ? draftVersionNo : null;
+}
+
 type ReadinessCheck = {
   code: string;
   status: string;
@@ -300,6 +312,9 @@ type ToolCatalogItem = {
   name: string;
   description: string;
   level: string;
+  riskLevel?: string;
+  sourceType?: "BUILTIN" | "CUSTOM" | "APPLICATION_MCP";
+  sourceLabel?: string;
 };
 
 type McpServerSummary = {
@@ -655,6 +670,20 @@ export function webWidgetInstallSnippet(config: WebPublishConfig): string {
   });
   })();
 </script>`;
+}
+
+export function canPublishCompiledWorkflow(state: {
+  agentWriteBlocked: boolean;
+  isPublishing: boolean;
+  isCompiling: boolean;
+  compileStale: boolean;
+  publishReadyFromCompile: boolean;
+}): boolean {
+  return !state.agentWriteBlocked
+    && !state.isPublishing
+    && !state.isCompiling
+    && !state.compileStale
+    && state.publishReadyFromCompile;
 }
 
 function escapeMermaidLabel(value: string): string {
@@ -1960,17 +1989,28 @@ export default function AgentBuilderShell({
           displayName?: string;
           description?: string;
           riskLevel?: string;
+          sourceType?: "BUILTIN" | "CUSTOM" | "APPLICATION_MCP";
+          appDisplayName?: string;
+          providerKey?: string;
         }>>(res);
         if (!res.ok || !body?.success || !Array.isArray(body.data)) {
           return;
         }
         const next = body.data
-          .map((item) => ({
-            id: item.toolName,
-            name: item.displayName || item.toolName,
-            description: item.description || "",
-            level: item.riskLevel || "未知风险",
-          }))
+          .map((item) => {
+            const applicationMcp = item.sourceType === "APPLICATION_MCP";
+            return {
+              id: item.toolName,
+              name: item.displayName || item.toolName,
+              description: item.description || "",
+              level: applicationMcp ? "MCP" : (item.riskLevel || "未知风险"),
+              riskLevel: item.riskLevel || "未知风险",
+              sourceType: item.sourceType,
+              sourceLabel: applicationMcp
+                ? `${item.appDisplayName || "外部应用"} · ${item.providerKey || "MCP"}`
+                : undefined,
+            };
+          })
           .filter((item) => item.id);
         if (!cancelled) {
           setToolCatalog(next);
@@ -2226,14 +2266,17 @@ export default function AgentBuilderShell({
       if (!versionsRes.ok || !versionsBody?.success || !Array.isArray(versionsBody.data)) {
         setPublishedVersionNo(null);
         setLatestCompiledVersionNo(null);
+        setPublishReadyFromCompile(false);
         return;
       }
       setLatestCompiledVersionNo(versionsBody.data[0]?.versionNo ?? null);
       const published = versionsBody.data.find((item) => (item.publishStatus ?? "").toUpperCase() === "PUBLISHED");
       setPublishedVersionNo(published?.versionNo ?? null);
+      setPublishReadyFromCompile(resolvePublishableDraftVersionNo(versionsBody.data) != null);
     } catch {
       setPublishedVersionNo(null);
       setLatestCompiledVersionNo(null);
+      setPublishReadyFromCompile(false);
     }
   }, [selectedAgentId, token]);
 
@@ -2251,9 +2294,11 @@ export default function AgentBuilderShell({
         throw new Error(versionsBody?.message ?? `HTTP ${versionsRes.status}`);
       }
       setLatestCompiledVersionNo(versionsBody.data[0]?.versionNo ?? null);
+      setPublishReadyFromCompile(resolvePublishableDraftVersionNo(versionsBody.data) != null);
       setVersionHistory(keepRecentVersionHistory(versionsBody.data, 10));
     } catch (error) {
       setVersionHistory([]);
+      setPublishReadyFromCompile(false);
       setVersionHistoryError(error instanceof Error ? error.message : String(error));
     } finally {
       setVersionHistoryLoading(false);
@@ -2653,8 +2698,8 @@ export default function AgentBuilderShell({
         ? toolCatalog.map((tool) => ({
             key: tool.id,
             title: tool.name,
-            subtitle: tool.description,
-            tag: tool.level,
+            subtitle: [tool.sourceLabel, tool.description].filter(Boolean).join(" · "),
+            tag: tool.sourceType === "APPLICATION_MCP" ? `MCP · ${tool.riskLevel ?? "未知风险"}` : tool.level,
           }))
         : [];
 
@@ -3269,25 +3314,16 @@ export default function AgentBuilderShell({
     return persistPayloadDigest(draft, publishConfig, companyId) !== persistedDraftDigest;
   }, [draft, companyId, persistedDraftDigest, publishConfig]);
   const publishBlockedByCompileGate = !publishReadyFromCompile;
-  const webPublishConfigBlocked = draft.channels.includes("web") && (
-    !publishConfig.web.widgetKey
-    || !publishConfig.web.runAsUserId
-    || publishConfig.web.allowedOrigins.length === 0
-    || publishConfig.web.allowedOrigins.some((origin) => {
-      try {
-        const parsed = new URL(origin);
-        return parsed.origin !== origin || !["http:", "https:"].includes(parsed.protocol);
-      } catch {
-        return true;
-      }
-    })
-  );
-  const publishBlocked = agentWriteBlocked || isPublishing || isCompiling || compileStaleBlocksPublish || publishBlockedByCompileGate || webPublishConfigBlocked;
+  const publishBlocked = !canPublishCompiledWorkflow({
+    agentWriteBlocked,
+    isPublishing,
+    isCompiling,
+    compileStale: compileStaleBlocksPublish,
+    publishReadyFromCompile,
+  });
   const publishBlockedTitle = agentWriteBlocked
     ? "正在加载选中的智能体。"
-    : (webPublishConfigBlocked
-      ? "Web 浮窗发布配置不完整：请生成入口键、选择 ACTIVE 运行成员并填写有效 Origin。"
-      : publishBlockedByCompileGate
+    : (publishBlockedByCompileGate
       ? "请先执行「智能体编译」，且编译结果检测到变化并生成新版本后，才可发布。"
       : (compileStaleBlocksPublish
         ? "请先完成「智能体编译」，使编译产物与当前草稿一致后再发布。"
@@ -4703,7 +4739,7 @@ export default function AgentBuilderShell({
                     const title = tool?.name ?? id;
                     const description = tool?.description ?? "MCP 工具（待同步到工具目录）";
                     const level = tool?.level ?? "MCP";
-                    const isMcpTool = level.toUpperCase() === "MCP";
+                    const isMcpTool = tool?.sourceType === "APPLICATION_MCP" || level.toUpperCase() === "MCP";
                     return (
                       <div
                         key={id}
@@ -4741,7 +4777,9 @@ export default function AgentBuilderShell({
                           </div>
                         </div>
                         <div className="cici-builder-resource__row-actions">
-                          <span className="cici-builder-badge">{level}</span>
+                          <span className="cici-builder-badge">
+                            {isMcpTool ? `MCP · ${tool?.riskLevel ?? "未知风险"}` : level}
+                          </span>
                           <button
                             type="button"
                             className="cici-product-icon-button cici-builder-resource__icon-btn"

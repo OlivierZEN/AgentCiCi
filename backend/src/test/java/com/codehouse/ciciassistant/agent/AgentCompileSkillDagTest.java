@@ -14,6 +14,7 @@ import com.codehouse.ciciassistant.agent.service.AgentCompileService;
 import com.codehouse.ciciassistant.agent.service.AgentDefinitionService;
 import com.codehouse.ciciassistant.agent.service.AgentWorkflowSkillRefService;
 import com.codehouse.ciciassistant.kb.domain.KnowledgeBaseRepository;
+import com.codehouse.ciciassistant.mcp.service.ApplicationMcpBindingService;
 import com.codehouse.ciciassistant.skill.domain.AgentSkillBindingRepository;
 import com.codehouse.ciciassistant.skill.domain.SkillDefinitionEntity;
 import com.codehouse.ciciassistant.skill.domain.SkillDefinitionRepository;
@@ -44,6 +45,8 @@ class AgentCompileSkillDagTest {
     @Mock
     private ToolDefinitionRepository toolDefinitionRepository;
     @Mock
+    private ApplicationMcpBindingService applicationMcpBindings;
+    @Mock
     private AgentDefinitionService agentDefinitionService;
     @Mock
     private AgentCapabilityResolverService capabilityResolverService;
@@ -67,6 +70,7 @@ class AgentCompileSkillDagTest {
         service = new AgentCompileService(
                 knowledgeBaseRepository,
                 toolDefinitionRepository,
+                applicationMcpBindings,
                 agentDefinitionService,
                 capabilityResolverService,
                 agentDefinitionRepository,

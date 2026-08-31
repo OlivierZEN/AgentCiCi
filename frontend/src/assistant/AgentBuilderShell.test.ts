@@ -10,6 +10,8 @@ import {
   applyAgentDetailToList,
   buildAgentSkillDagUrl,
   buildDebugSkillResolutionChain,
+  canPublishCompiledWorkflow,
+  resolvePublishableDraftVersionNo,
   canSelectAgentDuringOperation,
   canStartAgentWriteOperation,
   isCurrentAgentOperation,
@@ -144,6 +146,46 @@ describe("Agent Builder information architecture", () => {
   it("keeps the right editor column dedicated to the system prompt", () => {
     expect(AGENT_BUILDER_EDITOR_LAYOUT.rightColumn).toEqual(["systemPrompt"]);
     expect(AGENT_BUILDER_EDITOR_LAYOUT.showModelGovernanceNotice).toBe(false);
+  });
+});
+
+describe("Agent Builder publish gate", () => {
+  it("allows a newly compiled workflow to publish without external Web widget configuration", () => {
+    expect(canPublishCompiledWorkflow({
+      agentWriteBlocked: false,
+      isPublishing: false,
+      isCompiling: false,
+      compileStale: false,
+      publishReadyFromCompile: true,
+    })).toBe(true);
+  });
+
+  it("still blocks stale or unchanged compile state", () => {
+    expect(canPublishCompiledWorkflow({
+      agentWriteBlocked: false,
+      isPublishing: false,
+      isCompiling: false,
+      compileStale: true,
+      publishReadyFromCompile: true,
+    })).toBe(false);
+    expect(canPublishCompiledWorkflow({
+      agentWriteBlocked: false,
+      isPublishing: false,
+      isCompiling: false,
+      compileStale: false,
+      publishReadyFromCompile: false,
+    })).toBe(false);
+  });
+
+  it("restores publish readiness for a newer draft after the page reloads", () => {
+    expect(resolvePublishableDraftVersionNo([
+      { versionNo: 2, publishStatus: "DRAFT" },
+      { versionNo: 1, publishStatus: "PUBLISHED" },
+    ])).toBe(2);
+    expect(resolvePublishableDraftVersionNo([
+      { versionNo: 2, publishStatus: "PUBLISHED" },
+      { versionNo: 1, publishStatus: "ARCHIVED" },
+    ])).toBeNull();
   });
 });
 

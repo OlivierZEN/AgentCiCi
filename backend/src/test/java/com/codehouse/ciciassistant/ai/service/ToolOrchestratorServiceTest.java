@@ -3,21 +3,18 @@ package com.codehouse.ciciassistant.ai.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService;
 import com.codehouse.ciciassistant.crmanalysis.service.CrmProductSalesAnalysisToolService;
 import com.codehouse.ciciassistant.email.service.EmailToolService;
+import com.codehouse.ciciassistant.mcp.service.ApplicationMcpBindingService;
 import com.codehouse.ciciassistant.mcp.service.McpServerService;
 import com.codehouse.ciciassistant.memory.service.UserMemoryService;
 import com.codehouse.ciciassistant.platform.service.PlatformGovernanceService;
 import com.codehouse.ciciassistant.security.service.SafetyGatewayService;
-import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryDeleteToolService;
-import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryToolService;
-import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryUpdateToolService;
-import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryReviewToolService;
-import com.codehouse.ciciassistant.semattice.SematticeProjectDeliveryWriteToolService;
 import com.codehouse.ciciassistant.skill.service.SkillApiToolService;
 import com.codehouse.ciciassistant.tool.codeinterpreter.SandboxCodeInterpreterService;
 import com.codehouse.ciciassistant.tool.managedweb.ManagedWebToolService;
@@ -51,8 +48,7 @@ class ToolOrchestratorServiceTest {
         ToolOrchestratorService orchestrator = new ToolOrchestratorService(
                 mcp, mock(CloudccOpenApiService.class), mock(CrmProductSalesAnalysisToolService.class),
                 mock(EmailToolService.class), mock(UserMemoryService.class), mock(TavilyToolService.class),
-                governance, skillApi, mock(SematticeProjectDeliveryToolService.class),
-                mock(SematticeProjectDeliveryWriteToolService.class), mock(SematticeProjectDeliveryReviewToolService.class),
+                governance, skillApi, mock(ApplicationMcpBindingService.class),
                 allowSafetyGateway(), new ObjectMapper().findAndRegisterModules());
         orchestrator.setManagedWebToolService(managedWeb);
 
@@ -82,8 +78,7 @@ class ToolOrchestratorServiceTest {
         ToolOrchestratorService orchestrator = new ToolOrchestratorService(
                 mcp, mock(CloudccOpenApiService.class), mock(CrmProductSalesAnalysisToolService.class),
                 mock(EmailToolService.class), mock(UserMemoryService.class), mock(TavilyToolService.class),
-                governance, skillApi, mock(SematticeProjectDeliveryToolService.class),
-                mock(SematticeProjectDeliveryWriteToolService.class), mock(SematticeProjectDeliveryReviewToolService.class),
+                governance, skillApi, mock(ApplicationMcpBindingService.class),
                 allowSafetyGateway(), new ObjectMapper().findAndRegisterModules());
         orchestrator.setSandboxCodeInterpreterService(codeInterpreter);
 
@@ -122,9 +117,7 @@ class ToolOrchestratorServiceTest {
                 tavily,
                 governance,
                 skillApi,
-                mock(SematticeProjectDeliveryToolService.class),
-                mock(SematticeProjectDeliveryWriteToolService.class),
-                mock(SematticeProjectDeliveryReviewToolService.class),
+                mock(ApplicationMcpBindingService.class),
                 allowSafetyGateway(),
                 objectMapper
         );
@@ -166,8 +159,7 @@ class ToolOrchestratorServiceTest {
         ToolOrchestratorService orchestrator = new ToolOrchestratorService(
                 mcp, mock(CloudccOpenApiService.class), mock(CrmProductSalesAnalysisToolService.class),
                 mock(EmailToolService.class), mock(UserMemoryService.class), mock(TavilyToolService.class),
-                governance, skillApi, mock(SematticeProjectDeliveryToolService.class),
-                mock(SematticeProjectDeliveryWriteToolService.class), mock(SematticeProjectDeliveryReviewToolService.class),
+                governance, skillApi, mock(ApplicationMcpBindingService.class),
                 allowSafetyGateway(), new ObjectMapper().findAndRegisterModules());
         orchestrator.setAssistantScheduleToolService(schedules);
 
@@ -181,126 +173,70 @@ class ToolOrchestratorServiceTest {
     }
 
     @Test
-    void dispatchesSematticeQueryWithTheResolvedAgentExecutionContext() {
+    void exposesAndDispatchesApplicationBoundMcpToolOnlyThroughItsBinding() {
         McpServerService mcp = mock(McpServerService.class);
         PlatformGovernanceService governance = mock(PlatformGovernanceService.class);
         SkillApiToolService skillApi = mock(SkillApiToolService.class);
-        SematticeProjectDeliveryToolService query = mock(SematticeProjectDeliveryToolService.class);
-        when(governance.isRuntimeToolEnabled("org-1", SematticeProjectDeliveryToolService.TOOL_NAME)).thenReturn(true);
-        when(query.dispatch("org-1", "user-1", "dev-autopilot-pm", "{\"focus\":\"overview\"}"))
+        ApplicationMcpBindingService bindings = mock(ApplicationMcpBindingService.class);
+        ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+        String toolName = "semattice_project_delivery_query";
+        ApplicationMcpBindingService.BoundTool boundTool = new ApplicationMcpBindingService.BoundTool(
+                "devautopilot", "DevAutopilot 研发交付系统", "devautopilot.mcp", 7L, "DevAutopilot MCP",
+                toolName, "查询研发交付项目", objectMapper.createObjectNode(), "LOW", false);
+        when(mcp.getAllToolsForOrg("org-1")).thenReturn(List.of());
+        when(skillApi.getRuntimeToolDefinitions(List.of())).thenReturn(List.of());
+        when(governance.isRuntimeToolEnabled("org-1", toolName)).thenReturn(true);
+        when(bindings.boundTools("org-1")).thenReturn(List.of(boundTool));
+        when(bindings.hasTool("org-1", toolName)).thenReturn(true);
+        when(bindings.execute("org-1", "user-1", toolName, "{\"focus\":\"overview\"}"))
                 .thenReturn("{\"status\":\"SUCCESS\",\"execution_principal_type\":\"SERVICE\"}");
 
         ToolOrchestratorService orchestrator = new ToolOrchestratorService(
                 mcp, mock(CloudccOpenApiService.class), mock(CrmProductSalesAnalysisToolService.class),
                 mock(EmailToolService.class), mock(UserMemoryService.class), mock(TavilyToolService.class),
-                governance, skillApi, query, mock(SematticeProjectDeliveryWriteToolService.class),
-                mock(SematticeProjectDeliveryReviewToolService.class), allowSafetyGateway(), new ObjectMapper().findAndRegisterModules());
+                governance, skillApi, bindings, allowSafetyGateway(), objectMapper);
 
+        assertThat(orchestrator.getToolDefinitions("org-1", List.of(toolName), List.of()))
+                .extracting(item -> String.valueOf(((Map<?, ?>) item.get("function")).get("name")))
+                .contains(toolName);
         String result = orchestrator.executeTool(
-                "org-1", "user-1", SematticeProjectDeliveryToolService.TOOL_NAME,
-                "{\"focus\":\"overview\"}", List.of(SematticeProjectDeliveryToolService.TOOL_NAME),
-                List.of(SematticeProjectDeliveryToolService.TOOL_NAME), "dev-autopilot-pm");
+                "org-1", "user-1", toolName, "{\"focus\":\"overview\"}", List.of(toolName),
+                List.of(toolName), "dev-autopilot-pm");
 
         assertThat(result).contains("SERVICE");
-        verify(query).dispatch("org-1", "user-1", "dev-autopilot-pm", "{\"focus\":\"overview\"}");
+        verify(bindings).execute("org-1", "user-1", toolName, "{\"focus\":\"overview\"}");
+        verify(mcp, never()).executeTool("org-1", "user-1", toolName, "{\"focus\":\"overview\"}");
     }
 
     @Test
-    void exposesAndDispatchesDeliveryReviewWithTheResolvedAgentExecutionContext() {
+    void applicationManagedToolWithoutTenantBindingFailsClosed() {
         McpServerService mcp = mock(McpServerService.class);
         PlatformGovernanceService governance = mock(PlatformGovernanceService.class);
         SkillApiToolService skillApi = mock(SkillApiToolService.class);
-        SematticeProjectDeliveryReviewToolService review = mock(SematticeProjectDeliveryReviewToolService.class);
-        when(mcp.getAllToolsForOrg("org-1")).thenReturn(List.of());
-        when(skillApi.getRuntimeToolDefinitions(List.of())).thenReturn(List.of());
-        when(governance.isRuntimeToolEnabled("org-1", SematticeProjectDeliveryReviewToolService.TOOL_NAME)).thenReturn(true);
-        when(review.dispatch("org-1", "user-1", "dev-autopilot-pm", "{\"gate\":\"design\"}"))
-                .thenReturn("{\"status\":\"SUCCESS\",\"execution_principal_type\":\"SERVICE\"}");
+        ApplicationMcpBindingService bindings = mock(ApplicationMcpBindingService.class);
+        String toolName = "semattice_project_delivery_query";
+        when(governance.isRuntimeToolEnabled("org-1", toolName)).thenReturn(true);
+        when(bindings.hasTool("org-1", toolName)).thenReturn(false);
+        when(bindings.isApplicationManagedTool(toolName)).thenReturn(true);
 
         ToolOrchestratorService orchestrator = new ToolOrchestratorService(
                 mcp, mock(CloudccOpenApiService.class), mock(CrmProductSalesAnalysisToolService.class),
                 mock(EmailToolService.class), mock(UserMemoryService.class), mock(TavilyToolService.class),
-                governance, skillApi, mock(SematticeProjectDeliveryToolService.class),
-                mock(SematticeProjectDeliveryWriteToolService.class), review,
-                allowSafetyGateway(), new ObjectMapper().findAndRegisterModules());
+                governance, skillApi, bindings, allowSafetyGateway(), new ObjectMapper().findAndRegisterModules());
 
-        assertThat(orchestrator.getToolDefinitions("org-1", List.of(SematticeProjectDeliveryReviewToolService.TOOL_NAME), List.of()))
-                .anySatisfy(item -> assertThat(((Map<?, ?>) item.get("function")).get("name"))
-                        .isEqualTo(SematticeProjectDeliveryReviewToolService.TOOL_NAME));
         assertThat(orchestrator.executeTool(
-                "org-1", "user-1", SematticeProjectDeliveryReviewToolService.TOOL_NAME,
-                "{\"gate\":\"design\"}", List.of(SematticeProjectDeliveryReviewToolService.TOOL_NAME),
-                List.of(SematticeProjectDeliveryReviewToolService.TOOL_NAME), "dev-autopilot-pm"))
-                .contains("SERVICE");
-        verify(review).dispatch("org-1", "user-1", "dev-autopilot-pm", "{\"gate\":\"design\"}");
+                "org-1", "user-1", toolName, "{\"focus\":\"overview\"}", List.of(toolName),
+                List.of(toolName), "dev-autopilot-pm"))
+                .contains("APPLICATION_MCP_BINDING_REQUIRED");
+        verify(bindings, never()).execute("org-1", "user-1", toolName, "{\"focus\":\"overview\"}");
+        verify(mcp, never()).executeTool("org-1", "user-1", toolName, "{\"focus\":\"overview\"}");
     }
 
     @Test
-    void dispatchesConfirmedDeliveryDeleteWithTheResolvedAgentExecutionContext() {
-        McpServerService mcp = mock(McpServerService.class);
-        PlatformGovernanceService governance = mock(PlatformGovernanceService.class);
-        SkillApiToolService skillApi = mock(SkillApiToolService.class);
-        SematticeProjectDeliveryDeleteToolService delete = mock(SematticeProjectDeliveryDeleteToolService.class);
-        when(governance.isRuntimeToolEnabled("org-1", SematticeProjectDeliveryDeleteToolService.TOOL_NAME))
-                .thenReturn(true);
-        when(delete.dispatch("org-1", "user-1", "dev-autopilot-pm",
-                "{\"entity_type\":\"task\",\"reference\":\"task-1\"}"))
-                .thenReturn("{\"status\":\"SUCCESS\",\"source\":\"SEMATTICE_LIVE\"}");
-
-        ToolOrchestratorService orchestrator = new ToolOrchestratorService(
-                mcp, mock(CloudccOpenApiService.class), mock(CrmProductSalesAnalysisToolService.class),
-                mock(EmailToolService.class), mock(UserMemoryService.class), mock(TavilyToolService.class),
-                governance, skillApi, mock(SematticeProjectDeliveryToolService.class),
-                mock(SematticeProjectDeliveryWriteToolService.class),
-                mock(SematticeProjectDeliveryReviewToolService.class), allowSafetyGateway(),
-                new ObjectMapper().findAndRegisterModules());
-        orchestrator.setSematticeProjectDeliveryDeleteToolService(delete);
-
-        String result = orchestrator.executeTool(
-                "org-1", "user-1", SematticeProjectDeliveryDeleteToolService.TOOL_NAME,
-                "{\"entity_type\":\"task\",\"reference\":\"task-1\"}",
-                List.of(SematticeProjectDeliveryDeleteToolService.TOOL_NAME),
-                List.of(SematticeProjectDeliveryDeleteToolService.TOOL_NAME), "dev-autopilot-pm");
-
-        assertThat(result).contains("SEMATTICE_LIVE");
-        verify(delete).dispatch("org-1", "user-1", "dev-autopilot-pm",
-                "{\"entity_type\":\"task\",\"reference\":\"task-1\"}");
-    }
-
-    @Test
-    void dispatchesConfirmedDeliveryUpdateButKeepsItOutOfFreeFormModelTools() {
-        McpServerService mcp = mock(McpServerService.class);
-        PlatformGovernanceService governance = mock(PlatformGovernanceService.class);
-        SkillApiToolService skillApi = mock(SkillApiToolService.class);
-        SematticeProjectDeliveryUpdateToolService update = mock(SematticeProjectDeliveryUpdateToolService.class);
-        when(mcp.getAllToolsForOrg("org-1")).thenReturn(List.of());
-        when(skillApi.getRuntimeToolDefinitions(List.of())).thenReturn(List.of());
-        when(governance.isRuntimeToolEnabled("org-1", SematticeProjectDeliveryUpdateToolService.TOOL_NAME))
-                .thenReturn(true);
-        when(update.dispatch("org-1", "user-1", "dev-autopilot-pm",
-                "{\"entity_type\":\"project\",\"reference\":\"DAS-4F5ED86B\",\"updates\":{\"name\":\"AgentCiCi企业级智能体平台\"}}"))
-                .thenReturn("{\"status\":\"SUCCESS\",\"source\":\"SEMATTICE_LIVE\"}");
-
-        ToolOrchestratorService orchestrator = new ToolOrchestratorService(
-                mcp, mock(CloudccOpenApiService.class), mock(CrmProductSalesAnalysisToolService.class),
-                mock(EmailToolService.class), mock(UserMemoryService.class), mock(TavilyToolService.class),
-                governance, skillApi, mock(SematticeProjectDeliveryToolService.class),
-                mock(SematticeProjectDeliveryWriteToolService.class),
-                mock(SematticeProjectDeliveryReviewToolService.class), allowSafetyGateway(),
-                new ObjectMapper().findAndRegisterModules());
-        orchestrator.setSematticeProjectDeliveryUpdateToolService(update);
-
-        assertThat(orchestrator.getToolDefinitions(
-                "org-1", List.of(SematticeProjectDeliveryUpdateToolService.TOOL_NAME), List.of()))
-                .extracting(item -> String.valueOf(((Map<?, ?>) item.get("function")).get("name")))
-                .doesNotContain(SematticeProjectDeliveryUpdateToolService.TOOL_NAME);
-        String arguments = "{\"entity_type\":\"project\",\"reference\":\"DAS-4F5ED86B\",\"updates\":{\"name\":\"AgentCiCi企业级智能体平台\"}}";
-        assertThat(orchestrator.executeTool(
-                "org-1", "user-1", SematticeProjectDeliveryUpdateToolService.TOOL_NAME,
-                arguments, List.of(SematticeProjectDeliveryUpdateToolService.TOOL_NAME),
-                List.of(), "dev-autopilot-pm"))
-                .contains("SEMATTICE_LIVE");
-        verify(update).dispatch("org-1", "user-1", "dev-autopilot-pm", arguments);
+    void legacyDeliveryToolsAreNotNativeBuiltins() {
+        assertThat(BuiltinToolCatalog.list())
+                .extracting(BuiltinToolCatalog.ToolCatalogItem::toolName)
+                .noneMatch(name -> name.startsWith("semattice_project_delivery_"));
     }
 
     private SafetyGatewayService allowSafetyGateway() {

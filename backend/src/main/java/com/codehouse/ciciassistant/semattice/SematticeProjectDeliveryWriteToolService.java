@@ -20,7 +20,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.server.ResponseStatusException;
@@ -32,7 +31,6 @@ import org.springframework.web.server.ResponseStatusException;
  * only after an exact user confirmation, and Semattice derives actor and tenant from the current
  * Agent's governed SERVICE OACT. The logged-in human only supplies delegation and confirmation context.</p>
  */
-@Service
 public class SematticeProjectDeliveryWriteToolService {
 
     public static final String TOOL_NAME = "semattice_project_delivery_create";
