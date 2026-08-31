@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-206
 title: OpenAPI 文件附件统一运行时
-status: in_implementation
+status: implemented
 owner_role: backend-agent
 task_ids: TASK-346
 related_decisions: FEAT-021, FEAT-036, FEAT-188
 related_issues: none
-updated_at: 2026-08-31T04:15:00Z
+updated_at: 2026-08-31T04:28:00Z
 updated_by: codex
 ---
 

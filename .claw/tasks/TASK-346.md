@@ -2,13 +2,13 @@
 kind: task-status
 task_id: TASK-346
 feature_id: FEAT-206
-status: in_progress
+status: review
 priority: critical
 primary_project: agentcici
 owner_role: backend-agent
 claimed_by: codex
 spec_path: docs/specs/FEAT-206-openapi-file-attachment-runtime.md
-updated_at: 2026-08-31T04:15:00Z
+updated_at: 2026-08-31T04:28:00Z
 updated_by: codex
 ---
 
@@ -23,19 +23,22 @@ updated_by: codex
 
 ## 完成条件
 
-- [x] multipart 与 HTTPS URL 图片都形成 READY 私有文件记录并进入共享模型视觉 content block；真实模型运行态待部署回归。
+- [x] multipart 与 HTTPS URL 图片都形成 READY 私有文件记录并进入共享模型视觉 content block。
 - [x] 文档复用现有受控文本提取；不支持类型和模型能力明确失败，模型调用为零。
 - [x] API Key、Agent、external user、conversation 任一越权均不可枚举。
 - [x] blocking、streaming、幂等与同会话多轮复用使用同一路径。
 - [x] 聚焦测试、backend package、迁移验证和 `git diff --check` 通过。
-- [ ] 变更提交并合并本地 `main`；`cici.localhost` 从该 commit 构建、健康并完成真实图片回归。
+- [x] 变更提交并合并本地 `main`；`cici.localhost` 从包含该 commit 的最新本地 `main` 构建并完成技术运行门禁。
+- [ ] 使用真实 OpenAPI Key 和真实视觉模型完成固定图片对话 HUMAN 验收；当前没有可读取的明文 Key，未擅自新建凭据。
 
 ## 当前证据
 
 - 后端聚焦测试、package、前端 60 文件/332 项与 production build 通过。
 - 空 PostgreSQL 16.9 成功迁移至 V128；multipart 与 URL 导入两条控制器附件链路通过。
 - 完整 OpenAPI 集成类为 16/17，唯一失败是任务外既有 placeholder 模型路由断言；未误报全类通过。
-- 下一步只从本地 `main` 明确提交构建和替换 AgentCiCi backend/frontend，不修改远程、UAT 或生产。
+- 功能提交 `3b34e3198938` 已进入本地 `main`；并行主线推进后，backend/frontend 从包含该提交的最新代码主线 `40a27a2b2983` 构建并运行 `2.8.68-dev.40a27a2`。
+- backend/frontend healthy/restart=0，backend health=`UP`，Flyway V128 success，首页 200，匿名 `/openapi/v1/parameters` 为 JSON 401；近 5 分钟 severe=0，四个状态服务 ID 未变化。
+- 真实 OpenAPI Key 下的真实模型图片识别尚未执行：浏览器已有登录态，但新建临时 Key 属凭据写操作，未在无明确授权时执行；因此任务进入 `review`，不把技术门禁替代 HUMAN 验收。
 
 ## 回滚
 

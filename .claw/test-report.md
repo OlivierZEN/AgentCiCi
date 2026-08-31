@@ -1,23 +1,26 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-31T04:15:00Z
+updated_at: 2026-08-31T04:28:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-31T04:15:00Z
-last_run_status: passed_task_346_implementation_pending_local_runtime
+last_run_at: 2026-08-31T04:28:00Z
+last_run_status: passed_task_346_local_technical_pending_authenticated_openapi_image_acceptance
 ---
 
 # Test Report
 
-## 2026-08-31 TASK-346 OpenAPI 文件附件统一运行时（提交前）
+## 2026-08-31 TASK-346 OpenAPI 文件附件统一运行时
 
-- 状态：`passed_task_346_implementation_pending_local_runtime`；真实二进制存储、共享附件桥接、URL 导入和失败关闭自动化通过，尚未从本地 main 构建 `cici.localhost` 制品或完成真实模型图片识别。
+- 状态：`passed_task_346_local_technical_pending_authenticated_openapi_image_acceptance`；真实二进制存储、共享附件桥接、URL 导入、失败关闭和本地运行门禁通过，真实 OpenAPI Key 下的真实模型图片识别待 HUMAN 授权验收。
 - 后端聚焦：`SafeRemoteFileFetcherTest,AgentOpenApiAttachmentServiceTest,AgentOpenApiConversationServiceTest,ChatAttachmentServiceTest` 通过；覆盖 HTTPS/私网拒绝、PNG 实际字节落盘与 SHA 路径、四层作用域、共享附件 ID、图片 data URL content block 和对话编排。
 - 控制器/迁移：隔离 `postgres:16.9-alpine` 从空库成功执行 125 个迁移到 Flyway V128；`shouldExposeConversationApiChatMessagesHistoryFeedbackAndFiles` 与 `shouldImportHttpsFileIdempotentlyAndUseInlineUrlThroughAttachmentRuntime` 通过，证明 multipart/URL 幂等记录都能在创建内部会话后写入有外键约束的共享附件并传给 OpenAPI runtime。
 - 构建：`mvn -q -DskipTests package`、前端 `npm test -- --run`（60 files / 332 tests）、`npm run build` 和 `git diff --check` 通过；前端 build 仅保留既有大 chunk warning。
 - 全类边界：`AgentOpenApiIntegrationTest` 17 项中 16 项通过；唯一失败 `shouldReplacePlaceholderChatRouteWithConfiguredBaseModelForOpenApiChatMessages` 期望 `aliyun-bailian`、实际为 `mock`，与附件新增断言无关。未把完整类记为通过，也未在本任务中修改该既有模型路由行为。
 - 安全边界：远端 URL 仅 HTTPS，不透传调用方 Header/Cookie，初始地址和每次重定向逐跳解析并拒绝本机、私网、link-local、CGNAT、metadata、保留/文档地址；下载和读取均限制 15 MiB。实现仍运行在应用进程内，不把 DNS 预检描述为独立网络沙箱。
+- 本地主线与运行：功能提交 `3b34e3198938` 已进入本地 `main`；并行主线推进后从包含该提交的最新代码主线 `40a27a2b2983` 构建 backend/frontend，运行 `2.8.68-dev.40a27a2`。两容器 healthy/restart=0，backend health=`UP`，Flyway `128:openapi attachment runtime:true`，首页 200，匿名 `/openapi/v1/parameters` 返回 `401 agent_api_key_missing`，近 5 分钟 backend/frontend severe=0。
+- 环境边界：仅最小重建 backend/frontend；PostgreSQL、Redis、RabbitMQ、Qdrant ID 保持 `fe24af69`、`2a889418`、`78a141ae`、`000ccca4` 且 restart=0。未执行受既有 Semattice 版本漂移影响的完整 stack verify；本任务无新增跨项目契约。
+- HUMAN 边界：当前没有可读取的明文 OpenAPI Key。浏览器已有登录态，但创建临时 Key 是凭据写操作，未在无明确授权时执行；因此没有生成真实模型 trace，也不把 mocked/runtime content-block 自动化记为真实模型业务验收。
 
 ## 2026-08-31 TASK-345 DevAutopilot MCP-only 解耦回归
 

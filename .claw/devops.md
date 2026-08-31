@@ -1,12 +1,20 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-08-31T03:50:00Z
+updated_at: 2026-08-31T04:28:00Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-31 TASK-346 本地开发环境
+
+- OpenAPI 附件功能提交 `3b34e31989388020e9536b25d4fd0ac6830db454` 已进入本地 `main`。并行任务随后推进主线；最终代码制品从包含该提交的 `main@40a27a2b2983fdf9f832fe4cb3d73e1937ca5159` 构建，backend/frontend 均标记并运行 `2.8.68-dev.40a27a2`。
+- 前端由受管 release Dockerfile 构建；backend clean release builder 在 Maven 依赖下载阶段长时间无进展且尚未替换容器时终止，随后使用同一 main 的宿主机 Maven package，将 JAR 覆入既有已验证 JRE 运行镜像并重写 OCI version/revision。最终镜像 ID 为 `sha256:d55b923c4c56c7d21585595b89f88d304605b5d0c7a8b755d0d84bd6085081e4` / `sha256:1c56768632094ad37978e9bcfffb8fadf5a88828ae634954aff794f25cd89ef1`。
+- 仅以现有受管 Compose `--no-deps --force-recreate backend cici-frontend` 替换两项无状态服务。两容器 healthy/restart=0，backend health=`UP`，Flyway V128 `openapi attachment runtime` success；`https://cici.localhost/` 为 200，匿名 `/openapi/v1/parameters` 为 JSON `401 agent_api_key_missing`，浏览器角标为 `2.8.68-dev.40a27a2`，近 5 分钟 backend/frontend severe=0。
+- PostgreSQL、Redis、RabbitMQ、Qdrant 容器 ID 保持 `fe24af69b75c`、`2a889418cd68`、`78a141ae3084`、`000ccca4c964` 且 restart=0。本任务不新增或切换跨项目契约，未执行受既有 Semattice `config=1.0.7 / repository=1.0.8` 漂移影响的完整 stack verify。
+- 当前没有可读取的明文 OpenAPI Key；未在没有 HUMAN 明确授权时通过登录态新建临时凭据，因此未执行真实视觉模型图片对话。远程、UAT、生产、ACR 和 Git tag 未修改。
 
 ## 2026-08-31 TASK-344 UAT `2.8.68-beta.2` 与首页浮窗
 
