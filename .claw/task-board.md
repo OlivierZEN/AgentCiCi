@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-31T04:15:00Z
+updated_at: 2026-08-31T04:15:09Z
 updated_by: codex
 board_status: active
 ---
@@ -169,16 +169,16 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-333 - 创建 DEMO 单页单对象完整配置示例
 
-- status: `review`
+- status: `in_progress`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - claimed_by: `codex`
 - spec_path: `docs/specs/FEAT-203-demo-example-application.md`
 - task_status_path: `.claw/tasks/TASK-333.md`
 - blocked_by: `none`
-- scope_files: `demo-example 目录 seed、平台基础投影、安全相对路由、单页单对象配置回读、全参数参考和本地全栈验证`
+- scope_files: `demo-example 目录 seed、真实 DRAFT 运行连接、平台基础投影、安全相对路由、单页单对象配置回读和本地全栈验证`
 - completion_evidence: `本地 main@5f6ce44a；后端 2 项与 package；前端 3 文件/15 项、全量 57 文件/312 项和 production build；repeatable migration 与数据库 readback；backend/frontend 2.8.67-dev.5f6ce44 healthy/restart=0；HTTPS 路由 200、匿名 API 401。`
-- next_action: `HUMAN 登录本地运营平台，确认列表、详情入口和单对象示例页；UAT/生产发布另行授权。`
+- next_action: `补齐 demo-example.lifecycle 连接修订和页面真实回读，更新本地全栈并验证运行连接计数、参数和状态。`
 
 ### TASK-325 - 产品经理项目改名确定性执行与可信回执
 

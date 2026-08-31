@@ -2,11 +2,11 @@
 kind: task-status
 task_id: TASK-333
 feature_id: FEAT-203
-status: review
+status: in_progress
 priority: high
 owner_role: fullstack-agent
 claimed_by: codex
-updated_at: 2026-08-27T11:21:49Z
+updated_at: 2026-08-31T04:15:09Z
 updated_by: codex
 ---
 
@@ -16,14 +16,16 @@ updated_by: codex
 
 - seed 已发布 `demo-example / 1.0.0` 目录、版本和可选依赖。
 - 将平台基础应用的租户投影和受控 `OPEN` 动作从硬编码改为目录驱动。
-- 新增只读单页单对象示例页，展示实际配置和未写入的 Provider 全参数参考。
+- 新增只读单页单对象示例页，展示实际配置和真实登记的 Provider 连接修订。
+- seed 一条属于 `demo-example` 的 `DRAFT / NOT_TESTED` 运行连接；使用保留测试域名和 Secret 引用名，不外呼、不伪造测试或启用状态。
 - 补齐后端、前端、迁移、浏览器和本地全栈验证。
 
 ## 完成条件
 
 - `DEMO示例应用` 在本地应用中心已发布并可进入示例页。
 - 示例页只有一个 `ApplicationConfiguration` 对象，实际值全部来自目录 API。
-- Provider 参考值不进入运行连接，不伪造测试或启用状态。
+- 应用详情显示 1 条运行连接；示例页从连接 API 回读全部参数，并明确显示草稿、未测试、未启用。
+- 已发布零初始化版本不引用未测试连接，不伪造测试或启用状态。
 - 代码提交并合并到 AgentCiCi 本地 `main`；本地 backend/frontend 从同一 `main` 提交构建和回读。
 - UAT/生产未修改；后续发布必须另行授权。
 
@@ -39,4 +41,4 @@ updated_by: codex
 
 ## 下一步
 
-- HUMAN 使用本地平台账号登录 `https://cici.localhost/platform/login`，确认应用中心显示已发布样例、详情可打开示例页，且页面只有一个 `ApplicationConfiguration` 对象；通过后可将任务从 `review` 转为 `done`。UAT/生产发布需另行授权。
+- 扩展 repeatable seed 和示例页回读，运行迁移与前后端门禁，从最终本地 `main` 更新 `https://cici.localhost/`，再由 HUMAN 确认详情运行连接计数为 1、参数完整且状态诚实。UAT/生产发布需另行授权。

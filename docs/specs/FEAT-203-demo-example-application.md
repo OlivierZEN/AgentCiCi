@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-203
 title: 应用中心 DEMO 单页单对象完整配置示例
-status: implemented
+status: in_implementation
 owner_role: fullstack-agent
 task_ids: TASK-333
 related_decisions: FEAT-191, FEAT-193
 related_issues: none
-updated_at: 2026-08-27T11:21:49Z
+updated_at: 2026-08-31T04:15:09Z
 updated_by: codex
 ---
 
@@ -17,7 +17,7 @@ updated_by: codex
 
 运营平台应用中心已有应用、运行连接、不可变版本、依赖与发布控制面，但真实使用中出现两个草稿均停在 `0 个版本 / 0 个运行连接` 的状态。现有空态要求先接入 Provider，导致只需要一个平台页面、无需租户初始化的简单应用也被迫理解服务地址、鉴权、生命周期接口和重试策略。
 
-本功能交付一个名称固定为 `DEMO示例应用`、代码固定为 `demo-example` 的已发布参考应用。它只有一个页面和一个“应用配置”对象，通过读取自身受治理目录记录展示所有实际生效参数；Provider 专属参数作为明确标注的非生效参考值展示，不写入运行连接，也不伪造连接测试成功。
+本功能交付一个名称固定为 `DEMO示例应用`、代码固定为 `demo-example` 的已发布参考应用。它只有一个页面和一个“应用配置”对象，通过读取自身受治理目录及运行连接记录展示全部参数。示例登记一条真实连接修订，但保持 `DRAFT / NOT_TESTED`，不外呼保留测试域名，也不伪造连接测试成功或启用状态。
 
 ## 用户与使用场景
 
@@ -34,14 +34,15 @@ updated_by: codex
 - 示例版本声明一个 Semattice 可选依赖，展示版本约束、依赖类型和开通策略，但不构成开通阻断。
 - 平台基础应用统一投影为当前租户已启用、初始化完成；有受控入口的应用返回 `OPEN` 动作。
 - 新增一个认证后的平台示例页，只读取 `demo-example` 目录详情并渲染一个“应用配置”对象。
-- 示例页分开显示实际生效参数和 Provider 连接参考参数；示例 URL 使用保留测试域名，Secret 仅展示引用名。
+- seed `demo-example.lifecycle` 运行连接及 r1 修订；连接归属 Demo 应用，使用保留测试域名，Secret 仅保存引用名，状态固定为草稿和未测试。
+- 示例页分开显示应用/版本实际生效参数和运行连接实际回读参数。
 - 应用详情提供明确的“打开示例页”入口，租户应用卡也可按服务端返回的安全相对路由打开。
 
 ### Out Of Scope
 
-- 不创建真实 Provider 运行连接，不测试或启用外部回调。
+- 不对示例连接执行网络测试，不启用连接，不调用任何生命周期回调。
 - 不创建 OAuth Client、Client Secret、Token、私钥或生产域名配置。
-- 不把示例 URL 写入业务源码的运行配置、应用版本或数据库连接表。
+- 不把示例连接绑定到已发布零初始化版本；`providerBindingKey` 继续为 `null`。
 - 不修改 Semattice、DevAutopilot 或父工作区源码。
 - 不删除现有 `BimoApp1`、`测试应用1` 草稿。
 - 不自动发布 UAT 或生产；本地验证完成后另行冻结候选并取得明确授权。
@@ -71,12 +72,12 @@ updated_by: codex
 ### 页面与对象
 
 - 页面：`DEMO配置总览`，固定认证路由 `/platform/internal-applications/demo-example/example`。
-- 对象：`ApplicationConfiguration`，唯一记录由 `GET /platform/internal-applications/demo-example` 的应用、版本和依赖事实组合而成。
-- 页面不维护第二份配置事实；字段说明和 Provider 参考值是展示常量，目录实际值始终来自后端回读。
+- 对象：`ApplicationConfiguration`，唯一记录由应用详情和 `GET /platform/internal-applications/demo-example/connections` 的连接事实组合而成。
+- 页面不维护第二份配置事实；应用、版本、依赖、连接和修订值均来自后端回读。
 
-### Provider 参考值
+### Provider 连接示例
 
-参考区覆盖连接名称、逻辑连接键、环境标识、网络范围、Base URL、契约版本、五类生命周期路径、三类鉴权方式、Secret 引用、超时和最大尝试次数。该区域必须显示“未写入本应用”的状态，不允许使用成功徽标或暗示连接已测试。
+连接 `demo-example.lifecycle` 的 r1 修订覆盖连接名称、逻辑连接键、环境标识、网络范围、Base URL、契约版本、六类生命周期路径、HMAC 鉴权方式、Secret 引用、超时和最大尝试次数。Base URL 为保留测试域名 `https://service.example.test`；记录必须显示 `DRAFT / NOT_TESTED / activeRevisionId=null`，不允许使用成功徽标或暗示连接已测试。
 
 ## 安全与契约
 
@@ -88,9 +89,9 @@ updated_by: codex
 ## 验收标准
 
 1. 本地应用中心显示 `DEMO示例应用`，状态为已发布，默认版本为 `1.0.0`。
-2. 详情回读应用、版本、清单摘要、可选依赖与 digest；不存在运行连接。
+2. 详情回读应用、版本、清单摘要、可选依赖与 digest；“运行连接”计数为 1，显示 `demo-example.lifecycle` 的 r1 修订。
 3. “打开示例页”进入一个页面，页面只展示一个 `ApplicationConfiguration` 对象。
-4. 实际生效参数与后端回读一致；Provider 参数明确标为参考、未写入、未测试。
+4. 实际生效参数与后端回读一致；连接参数来自连接 API，并明确标为草稿、未测试、未启用。
 5. 任一平台基础应用按通用规则投影为已启用；有受控相对入口时返回 `OPEN`，前端不再只允许 `agentcici` 显示打开动作。
 6. 匿名访问示例页或目录 API仍进入平台登录/返回 JSON 401；不能绕过平台管理员边界。
 7. 后端聚焦测试、前端聚焦测试与全量测试、production build、域名扫描和 `git diff --check` 通过。

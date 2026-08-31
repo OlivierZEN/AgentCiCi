@@ -7,6 +7,33 @@ VALUES (
     'demo-example.page', '1.0.0', 'platform-seed')
 ON CONFLICT (app_code) DO NOTHING;
 
+INSERT INTO internal_application_provider_connection(
+    binding_key, app_code, display_name, environment_key, network_scope,
+    status, active_revision_id, created_by)
+VALUES (
+    'demo-example.lifecycle', 'demo-example', 'DEMO 生命周期服务', 'default',
+    'PUBLIC_HTTPS', 'DRAFT', NULL, 'platform-seed')
+ON CONFLICT (binding_key) DO NOTHING;
+
+INSERT INTO internal_application_provider_connection_revision(
+    id, binding_key, revision_number, base_url, contract_version, auth_type, secret_ref,
+    health_path, activate_path, reconcile_path, suspend_path, resume_path, upgrade_path,
+    timeout_ms, max_attempts, test_status, created_by)
+SELECT
+    'catalog-demo-example-lifecycle-r1', 'demo-example.lifecycle', 1,
+    'https://service.example.test', 'v1', 'HMAC_SHA256_SECRET_REF',
+    'demo-example.lifecycle-key', '/internal/tenant-lifecycle/v1/health',
+    '/internal/tenant-lifecycle/v1/activations',
+    '/internal/tenant-lifecycle/v1/reconciliations',
+    '/internal/tenant-lifecycle/v1/suspensions',
+    '/internal/tenant-lifecycle/v1/resumptions',
+    '/internal/tenant-lifecycle/v1/upgrades',
+    10000, 2, 'NOT_TESTED', 'platform-seed'
+WHERE EXISTS (
+    SELECT 1 FROM internal_application_provider_connection
+    WHERE binding_key='demo-example.lifecycle' AND app_code='demo-example')
+ON CONFLICT (binding_key, revision_number) DO NOTHING;
+
 INSERT INTO internal_application_version(
     id, app_code, version, manifest_schema_version, provider_binding_key,
     initialization_engine, manifest_json, manifest_digest, version_status,
