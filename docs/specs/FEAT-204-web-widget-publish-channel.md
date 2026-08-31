@@ -4,10 +4,10 @@ feature_id: FEAT-204
 title: Web 浮窗发布渠道与官网售前智能体
 status: verified
 owner_role: fullstack-agent
-task_ids: TASK-334,TASK-335,TASK-337,TASK-339,TASK-343
+task_ids: TASK-334,TASK-335,TASK-337,TASK-339,TASK-343,TASK-344
 related_decisions: FEAT-202
 related_issues: ISSUE-2026-08-28-web-widget-empty-stream
-updated_at: 2026-08-28T14:11:32Z
+updated_at: 2026-08-31T03:07:48Z
 updated_by: codex
 ---
 
@@ -40,13 +40,14 @@ Agent Builder 已有独立“发布渠道”页签，但 Web 浮窗仍只有占�
 - 短时 Token 仅含 `chat:read/chat:write`，来源为 `website`，访客 ID 使用浏览器生成并受长度/格式约束；不授予附件、语音或外部写权限。
 - 官网通过后端运行参数 `app.website-widget.default-key` 解析默认浮窗；未配置或公开配置不可用时静默不挂载。入口键是公开定位符，不包含租户、成员或长期凭证。
 - 本地 demo 租户配置、编译、评测/发布门禁、发布和真实一轮对话回读。
+- 经用户明确授权的 UAT `2.8.68-beta.1` 发布，以及租户 `orgickjr6icm6l2zitpn` 的售前智能体、Web 渠道和站点首页默认入口配置。
 
 ### Out Of Scope
 
 - 不把 API Key、JWT、租户 ID、成员 ID或环境域名写入官网源码或前端制品模板。
 - 不允许访客自选公司、Agent、运行成员、权限或 Token TTL。
 - 不为公开访客开放附件、语音、高风险写工具或 AgentCiCi 登录态能力。
-- 不修改 Semattice、DevAutopilot 产品仓；不发布 UAT 或生产。
+- 不修改 Semattice、DevAutopilot 产品仓；不发布生产。
 - 不新增移动端专属布局或移动端自动化验收。
 
 ## 设计与交互
@@ -130,6 +131,7 @@ Base64 头像不得写入短时 JWT。website 会话以已验证 Token 中的 `c
 - 2026-08-28：TASK-337 已完成官网浮窗 CRM 标准蓝、发送按钮布局、公开附件入口和标题栏 hover 修正；实现进入本地 main，同提交前后端制品、自动化、视觉对照和真实非空回复通过，进入用户 review。
 - 2026-08-28：TASK-339 根据后续截图定位话筒浅蓝框来自 `sisi-composer` 的主题 hover 背景，同时发现公共裸图标原语仍允许浅色背景；现改为跨页面透明背景、图标变色反馈，并增加静态契约门禁。
 - 2026-08-28：TASK-343 已补齐 Web 浮窗身份素材链路；公开配置、website 会话、SDK、Embed 和 Agent Builder 预览均从服务端权威 Agent Definition 读取头像，JWT 不携带 Base64。实现 `9191e5a3eacf` 进入本地 main，自动化、同提交双制品、公开配置和官网浏览器三处头像回读通过，进入用户 review。
+- 2026-08-31：TASK-344 获得用户明确 UAT 发布授权；目标租户 `orgickjr6icm6l2zitpn` 已只读确认 ACTIVE 但当前无智能体。发布按 `2.8.68-beta.1` 不可变候选、完整备份、backend/frontend 最小切换执行；租户智能体与 Web 渠道必须走官方产品链路，首页只通过受管运行配置引用公开 widget key。
 
 ## 交接说明
 

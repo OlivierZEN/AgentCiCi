@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-28T14:11:32Z
+updated_at: 2026-08-31T03:07:48Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,20 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-344 - Web 浮窗 UAT 发布与站点首页嵌入
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `release-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-204-web-widget-publish-channel.md`
+- task_status_path: `.claw/tasks/TASK-344.md`
+- blocked_by: `none`
+- related_issues: `none`
+- scope_files: `2.8.68-beta.1 候选、ACR 制品、UAT 备份/最小切换、目标租户智能体与 Web 渠道、UAT 首页运行配置、技术与业务验收`
+- completion_evidence: `发布前只读巡检通过；UAT 当前 2.8.67-beta.1 healthy/restart=0；目标租户 ACTIVE 但当前无智能体；本地 main 领先远程 13 提交。`
+- next_action: `完成全量质量门禁、同步远程 main、冻结 2.8.68-beta.1；备份后最小发布，再通过官方产品链路创建目标租户智能体并启用首页浮窗。`
 
 ### TASK-343 - Web 浮窗使用系统智能体头像
 

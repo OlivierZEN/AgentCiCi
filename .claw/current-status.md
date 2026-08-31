@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 6
-updated_at: 2026-08-28T14:11:32Z
+updated_at: 2026-08-31T03:07:48Z
 updated_by: codex
 phase: implementation
-active_task: TASK-343
-next_action: "等待用户目视确认 TASK-343；远程 push、UAT 与生产发布均需另行授权。"
+active_task: TASK-344
+next_action: "完成 2.8.68-beta.1 全量门禁与远程主线同步，建立 UAT 完整回滚点后只发布 backend/frontend；再通过官方产品链路为指定租户创建售前智能体并启用首页 Web 浮窗。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- `TASK-344 / FEAT-204` 进行中：用户授权把当前 AgentCiCi `2.8.68` 发布线发布到 UAT，并以 `orgickjr6icm6l2zitpn` 为站点首页 Web 浮窗演示租户。公开只读巡检通过；UAT 当前 `2.8.67-beta.1 / 2970bea75208`，backend/frontend healthy/restart=0，Semattice、DevAutopilot、Keycloak 与 Nginx 正常。目标租户 ACTIVE 但当前没有智能体，必须在候选发布后通过官方 API/UI 创建、编译、发布并配置 Web 渠道，禁止数据库直写。当前本地 `main@fc9ac373362c` 领先远程 13 提交；先完成全量门禁、远程同步、不可变候选、完整备份与最小发布，生产保持不变。
 
 - `TASK-343 / FEAT-204` 已完成本地技术闭环，进入用户 review：根因是公开配置和 website 会话未投影 Agent Definition 的 `avatar_base64`，SDK/Embed 固定渲染 `Ci/思`。实现 `9191e5a3eacf` 已进入本地 main，服务端以已发布智能体为权威来源且 JWT 不承载 Base64；启动器、标题、欢迎态、消息和 Builder 预览统一消费，受信 `page` 嵌入固定思思身份不变。后端聚焦/package、前端 60 文件/328 项/build、SDK/域名/diff 门禁通过；demo 公开配置返回 11,707 字符 WebP 且不泄露内部身份。本地双制品为 `2.8.68-dev.9191e5a`、healthy/restart=0；浏览器确认启动器 1 张、浮窗内 4 张头像均加载同一 256×256 系统 WebP。远程、UAT、生产未修改。
 
