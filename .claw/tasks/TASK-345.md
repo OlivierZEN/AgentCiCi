@@ -3,13 +3,13 @@ kind: task-status
 task_id: TASK-345
 integration_id: INT-029
 feature_id: FEAT-205
-status: in_progress
+status: done
 priority: critical
 primary_project: agentcici
 owner_role: integration-agent
 claimed_by: codex
 spec_path: docs/specs/FEAT-205-application-version-mcp-binding.md
-updated_at: 2026-08-31T03:26:04Z
+updated_at: 2026-08-31T04:08:00Z
 updated_by: codex
 ---
 
@@ -33,11 +33,20 @@ updated_by: codex
 
 ## 完成条件
 
-- [ ] 六工具不再以“内置”出现在工具目录或平台内置工具治理中。
-- [ ] 有绑定时工具定义和执行只命中绑定 Server；无绑定时返回应用绑定缺失错误，内部 Semattice Service 调用次数为零。
-- [ ] Agent Builder 能选择并显示应用 MCP 工具，白名单变更编译后可发布新工作流版本。
-- [ ] 内部 Web 渠道智能体不需要配置外部浮窗即可发布；未完整配置的浮窗仍不能签发公开 Token。
-- [ ] 后端、前端聚焦测试与构建通过；本地 `cici.localhost` 完成目录、编译/发布和真实 DevAutopilot MCP 查询验证。
+- [x] 六工具不再以“内置”出现在工具目录或平台内置工具治理中。
+- [x] 有绑定时工具定义和执行只命中绑定 Server；无绑定时返回应用绑定缺失错误，内部 Semattice Service 调用次数为零。
+- [x] Agent Builder 能选择并显示应用 MCP 工具，白名单变更编译后可发布新工作流版本。
+- [x] 内部 Web 渠道智能体不需要配置外部浮窗即可发布；未完整配置的浮窗仍不能签发公开 Token。
+- [x] 后端、前端聚焦测试与构建通过；本地 `cici.localhost` 完成目录、编译/发布和真实 DevAutopilot MCP 查询验证。
+
+## 完成证据
+
+- 实现提交 `4d3cf32a` 移除六个旧内置目录/Bean 分发和数据库治理行，应用绑定 MCP 成为 `/tools`、编译和运行时的权威来源；`81c74925` 修复页面初始加载竞态，使既有未发布 DRAFT 自动恢复发布资格。
+- 后端聚焦测试通过；前端全量 `60 files / 331 tests`、最终发布门禁聚焦 `31/31` 与 production build 通过。完整质量脚本受环境 PostgreSQL 覆盖而持续重连，已中止且未冒充通过。
+- 本地 backend/frontend 从干净 `main@81c749253528` 构建并运行 `2.8.68-dev.81c7492`；两容器和 DevAutopilot 均 `healthy/restart=0`，Flyway V127 成功，六条旧治理记录计数为 0。
+- 登录态页面回读内置原生工具由 24 降为 18；研发产品经理六项工具均显示 `MCP` 与声明风险。页面刷新后未点击版本历史即恢复发布按钮，并通过正式 UI 将 v2 从 DRAFT 发布为 PUBLISHED，v1 归档。
+- Keycloak 动态 SERVICE Client 经 AgentCiCi 短时 OACT 交换调用 DevAutopilot MCP，`semattice_project_delivery_query` 返回 `isError=false`，读取 Semattice 实时 1 个项目、1 个活动任务和 1 个未关闭缺陷；匿名 MCP 返回 JSON 401。
+- 标准 `./stack verify` 仍按既有 Semattice `config=1.0.7 / repository=1.0.8` 漂移失败关闭；定向契约门禁通过。浏览器未代 HUMAN 发送新对话消息，页面对话重放属于可选人工接受，不作为本任务技术成功的替代证据。
 
 ## 回滚
 

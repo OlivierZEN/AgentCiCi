@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 6
-updated_at: 2026-08-31T03:26:04Z
+updated_at: 2026-08-31T04:08:00Z
 updated_by: codex
-phase: implementation
-active_task: TASK-345
-next_action: "移除 DevAutopilot 六个旧内置工具及本地回退，补齐应用 MCP 统一工具目录和智能体编译发布链路，恢复本地 Provider 后完成真实查询；TASK-344 在此之前保持阻塞。"
+phase: review
+active_task: null
+next_action: "TASK-345 已完成本地技术闭环；如需最终人工接受，由正常 HUMAN 在研发产品经理新会话发起项目查询并核对可见答案。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-345 / FEAT-205 / INT-029` 进行中：用户截图暴露三项回归。代码回读确认六个研发交付工具仍由 `BuiltinToolCatalog` 和持久化平台工具治理标记为内置，`ToolOrchestratorService` 在无应用绑定时仍回退到 AgentCiCi 内部 Semattice Service；Agent Builder `/tools` 未合并应用 MCP 工具。目标租户 `org3gxskla32gln3bvop` 的绑定为 ACTIVE、六工具白名单已生成 `v2 DRAFT`，但页面错误要求内部 `web` 渠道同时配置外部浮窗 `widgetKey / Origin / runAsUser`，导致发布按钮禁用。11:13 的真实查询已进入绑定 Server，随后因本地 DevAutopilot 非 root 进程无法读取 `0600 root:root` 签名密钥而失败。TASK-344 暂停，未继续发布 UAT/生产。
+- `TASK-345 / FEAT-205 / INT-029` 已完成本地技术闭环：`4d3cf32a + 81c74925` 将六个研发交付能力从 AgentCiCi 内置目录、治理行和本地分发中移除，统一由 `App Version → MCP Provider → Tool → Tenant MCP Server` 绑定供目录、编译和运行；缺绑定失败关闭，不进入通用 MCP 或本地 Semattice 回退。backend/frontend 运行 `2.8.68-dev.81c7492`，Flyway V127、内置 18、六项 MCP 风险标签、healthy/restart=0 通过；正式 UI 已将研发产品经理 v2 发布，v1 归档。Keycloak SERVICE → AgentCiCi OACT → DevAutopilot MCP → Semattice 真实 query 返回 `isError=false` 与 1 个项目。标准 verify 仅被既有 Semattice `1.0.7/1.0.8` 漂移失败关闭；浏览器未代 HUMAN 发送新对话消息。
 
 - `TASK-344 / FEAT-204` 进行中：用户授权把当前 AgentCiCi `2.8.68` 发布线发布到 UAT，并以 `orgickjr6icm6l2zitpn` 为站点首页 Web 浮窗演示租户。公开只读巡检通过；UAT 当前 `2.8.67-beta.1 / 2970bea75208`，backend/frontend healthy/restart=0，Semattice、DevAutopilot、Keycloak 与 Nginx 正常。目标租户 ACTIVE 但当前没有智能体，必须在候选发布后通过官方 API/UI 创建、编译、发布并配置 Web 渠道，禁止数据库直写。当前本地 `main@fc9ac373362c` 领先远程 13 提交；先完成全量门禁、远程同步、不可变候选、完整备份与最小发布，生产保持不变。
 

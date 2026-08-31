@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-08-31T03:42:00Z
+updated_at: 2026-08-31T04:08:00Z
 updated_by: codex
 status: active
 ---
@@ -9,6 +9,14 @@ status: active
 # Issue List
 
 ## Resolved Issues
+
+## ISSUE-2026-08-31-devautopilot-mcp-decoupling-regression
+
+- Symptom: DevAutopilot 六个研发交付工具仍显示为 AgentCiCi 内置工具；产品经理工具调用未取得项目数据；白名单生成 v2 DRAFT 后页面刷新仍不能发布。
+- Verified root cause: 六个目录/治理/本地分发入口并存，应用 MCP 未成为统一工具目录；发布资格依赖前端会话临时状态且错误耦合外部 Web 浮窗配置；本地 DevAutopilot 非 root 进程又无法读取 root-only 签名密钥。
+- Resolution: TASK-345 / INT-029 以应用绑定 MCP 为目录、编译和运行权威，移除旧内置入口并失败关闭；发布资格从服务端版本历史恢复，内部渠道与外部浮窗配置分离；cc-local-stack TASK-019 提供最小组读权限。
+- Verification: 本地内置工具 24→18、六项白名单显示 MCP 风险；v2 经正式 UI 发布，v1 归档；V127 与容器指纹通过；Keycloak SERVICE 经 AgentCiCi OACT 调用 MCP 返回 `isError=false` 和 Semattice 真实项目数据。
+- Status: resolved locally; optional HUMAN dialogue replay pending; UAT/production not modified by TASK-345.
 
 ## ISSUE-2026-08-28-vision-capability-scope
 
@@ -43,12 +51,6 @@ status: active
 - Status: resolved in production CloudCC component; AgentCiCi production stays on `2.8.66`, backend alias awaits the normal `2.8.67` release.
 
 ## Open Issues
-
-- ISSUE-2026-08-31-devautopilot-mcp-decoupling-regression:
-  - Symptom: DevAutopilot 六个研发交付工具仍显示为 AgentCiCi 内置工具；产品经理对话触发工具后未取得项目数据；调整工具白名单并生成 v2 DRAFT 后，刷新页面仍无法发布。
-  - Verified root cause: AgentCiCi 同时保留六个内置目录项、租户平台治理记录和无绑定时的 Semattice 本地分发回退；工具目录未合并应用绑定的 MCP 工具；发布按钮依赖当前前端会话内的 `changed=true`，且错误地把内部 Web 渠道等同于外部网页浮窗配置。真实运行日志确认请求已进入绑定 MCP Server 1，但本地 DevAutopilot 容器因 root-only Secret 对 uid 1000 不可读而重启。
-  - Resolution progress: TASK-345 / INT-029 移除六个运行时内置入口及治理记录、把应用绑定 MCP 工具作为正式目录与编译事实源、对应用专属工具执行精确绑定且缺失时失败关闭、恢复未发布 DRAFT 的发布资格，并将内部渠道发布与外部网页浮窗配置解耦；本地 Provider 权限修复由 cc-local-stack TASK-019 独立交付。
-  - Status: implementation and focused tests complete; local main deployment and authenticated business acceptance pending.
 
 - ISSUE-2026-08-17-devautopilot-keyword-routing:
   - Symptom: UAT 产品经理收到明确项目创建请求后没有写入；固定模型本地测试中，“创建项目”被回执门禁拦截，而“帮我建一个项目”反而触发只读项目查询并生成无冒号确认草案。

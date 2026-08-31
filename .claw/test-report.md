@@ -1,14 +1,24 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-31T03:50:00Z
+updated_at: 2026-08-31T04:08:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-31T03:50:00Z
-last_run_status: passed_task_344_uat_widget_pending_avatar_upload
+last_run_at: 2026-08-31T04:08:00Z
+last_run_status: passed_task_345_local_technical_human_dialogue_not_replayed
 ---
 
 # Test Report
+
+## 2026-08-31 TASK-345 DevAutopilot MCP-only 解耦回归
+
+- 状态：`passed_task_345_local_technical_human_dialogue_not_replayed`；目录、精确绑定运行、发布、身份和真实业务数据技术闭环通过。浏览器未代 HUMAN 发送新对话消息，该步骤不是技术证据的替代品。
+- 自动化：`ToolOrchestratorServiceTest,ToolControllerTest,AgentCompileSkillDagTest` 通过；前端全量 `60 files / 331 tests`、最终发布门禁聚焦 `31/31` 和 production build 通过，仅有既有大 chunk warning。质量脚本受环境变量覆盖而尝试连接外部 PostgreSQL，持续重连后人工中止，未记为通过。
+- Source/Runtime：实现 `4d3cf32a`、加载竞态修复 `81c74925` 均进入本地 main；backend/frontend 从干净 `main@81c749253528` 构建为 `2.8.68-dev.81c7492`，镜像 label/revision 一致，两个容器和 DevAutopilot 均 healthy/restart=0。
+- 数据与目录：Flyway V127 success；`platform_tool_definition` 六个旧工具计数 0；登录态工具页内置原生工具为 18（原 24）；Agent Builder 六项研发工具均显示 MCP 和声明风险，租户应用绑定 ACTIVE、缓存 ready/6。
+- 发布：刷新研发产品经理详情且不点击版本历史时，“发布版本”自动可用；正式 UI 发布 v2 成功，数据库回读 v1 ARCHIVED、v2 PUBLISHED，六项白名单仍启用。
+- 身份与业务：匿名 MCP JSON 401；Keycloak `pm-autopilot-daqiao` SERVICE 经 AgentCiCi 短时 OACT 交换调用 `semattice_project_delivery_query`，返回 `isError=false`，Semattice 实时汇总为 1 个项目、1 个活动任务、1 个未关闭缺陷，项目 `DAS-A2AFD106 / 企业级智能体平台CCAgent / 规划中`。
+- 全栈门禁：`./stack verify` 按既有 Semattice 发布线漂移 `config=1.0.7 / repository=1.0.8` 失败关闭；没有修改该任务外配置，不把定向验证写成完整门禁通过。本任务未修改 UAT、生产、ACR 或远程分支。
 
 ## 2026-08-31 TASK-344 UAT 首页 Web 浮窗
 
