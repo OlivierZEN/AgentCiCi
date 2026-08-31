@@ -656,6 +656,15 @@ public class AgentRunTraceService {
         payload.put("outputChars", Math.max(0, modelCall.outputChars()));
         payload.put("inputTokens", Math.max(0, modelCall.inputTokens()));
         payload.put("outputTokens", Math.max(0, modelCall.outputTokens()));
+        if (modelCall.firstProviderDeltaMs() >= 0) {
+            payload.put("firstProviderDeltaMs", modelCall.firstProviderDeltaMs());
+        }
+        if (modelCall.firstClientDeltaMs() >= 0) {
+            payload.put("firstClientDeltaMs", modelCall.firstClientDeltaMs());
+        }
+        if (modelCall.outputMode() != null && !modelCall.outputMode().isBlank()) {
+            payload.put("outputMode", modelCall.outputMode());
+        }
         payload.put("summary", emptyToBlank(modelCall.summary()));
         return payload;
     }
@@ -1255,6 +1264,9 @@ public class AgentRunTraceService {
             int outputChars,
             int inputTokens,
             int outputTokens,
+            int firstProviderDeltaMs,
+            int firstClientDeltaMs,
+            String outputMode,
             String summary) {
         public ModelCallTraceInput(String phase,
                                    String modelName,
@@ -1264,8 +1276,24 @@ public class AgentRunTraceService {
                                    int elapsedMs,
                                    int toolCallCount,
                                    int outputChars,
+                                   int inputTokens,
+                                   int outputTokens,
                                    String summary) {
-            this(phase, modelName, status, startedAt, endedAt, elapsedMs, toolCallCount, outputChars, 0, 0, summary);
+            this(phase, modelName, status, startedAt, endedAt, elapsedMs, toolCallCount, outputChars,
+                    inputTokens, outputTokens, -1, -1, "", summary);
+        }
+
+        public ModelCallTraceInput(String phase,
+                                   String modelName,
+                                   String status,
+                                   Instant startedAt,
+                                   Instant endedAt,
+                                   int elapsedMs,
+                                   int toolCallCount,
+                                   int outputChars,
+                                   String summary) {
+            this(phase, modelName, status, startedAt, endedAt, elapsedMs, toolCallCount, outputChars,
+                    0, 0, -1, -1, "", summary);
         }
     }
 

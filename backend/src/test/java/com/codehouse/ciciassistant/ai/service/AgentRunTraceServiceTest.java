@@ -81,6 +81,36 @@ class AgentRunTraceServiceTest {
     }
 
     @Test
+    void recordsProviderAndClientFirstDeltaLatencyAndOutputMode() throws Exception {
+        AgentRunTraceRepository traces = mock(AgentRunTraceRepository.class);
+        AgentRunTraceService service = new AgentRunTraceService(
+                traces,
+                mock(ChatSessionRepository.class),
+                mock(ChatMessageRepository.class),
+                mock(AgentDefinitionRepository.class),
+                mock(AgentTaskRuntimeService.class));
+        Instant startedAt = Instant.parse("2026-08-31T00:00:00Z");
+        AgentRunTraceService.ModelCallTraceInput modelCall = new AgentRunTraceService.ModelCallTraceInput(
+                "final_stream", "qwen", "SUCCESS", startedAt, startedAt.plusSeconds(1),
+                1000, 0, 120, 30, 40, 180, 240, "streaming", "真实流式回复生成。");
+
+        service.recordChatRun(new AgentRunTraceService.ChatRunTraceInput(
+                "org-1", "user-1", "web:session-1", "agent-1", "给我建议", "这是建议",
+                "qwen", "", "", List.of(), List.of(), null, List.of(), List.of(), List.of(),
+                List.of(), List.of(), List.of(modelCall), List.of(), null, 0,
+                startedAt, startedAt.plusSeconds(1)));
+
+        ArgumentCaptor<AgentRunTraceEntity> saved = ArgumentCaptor.forClass(AgentRunTraceEntity.class);
+        verify(traces).save(saved.capture());
+        JsonNode call = new ObjectMapper().readTree(saved.getValue().getDetailJson())
+                .path("modelCalls").path(0);
+
+        assertThat(call.path("firstProviderDeltaMs").asInt()).isEqualTo(180);
+        assertThat(call.path("firstClientDeltaMs").asInt()).isEqualTo(240);
+        assertThat(call.path("outputMode").asText()).isEqualTo("streaming");
+    }
+
+    @Test
     void projectsOnlyTheSameCompanyRuntimeFactsForAnExactlyLinkedTrace() {
         AgentRunTraceRepository traces = mock(AgentRunTraceRepository.class);
         AgentTaskRuntimeService runtime = mock(AgentTaskRuntimeService.class);

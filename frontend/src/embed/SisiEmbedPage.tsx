@@ -23,6 +23,7 @@ import ChatMarkdown from "../components/ChatMarkdown";
 import { useAsrVoiceInput } from "../shared/useAsrVoiceInput";
 import { exactConfirmation } from "./sisiEmbedContract";
 import { streamDeltaText } from "./sisiEmbedStream";
+import { sisiPhaseLabel } from "./sisiEmbedPhase";
 import { resolveSisiTheme } from "./sisiEmbedTheme";
 import "./sisi-embed.css";
 
@@ -50,6 +51,7 @@ type ChatMessage = {
   createdAt?: string;
   attachments?: Attachment[];
   busy?: boolean;
+  busyLabel?: string;
   confirmation?: string;
 };
 
@@ -278,7 +280,9 @@ export default function SisiEmbedPage() {
         try { payload = JSON.parse(raw); } catch { /* delta can be plain text */ }
         if (eventName === "delta") {
           const delta = streamDeltaText(payload);
-          setMessages((current) => current.map((item) => item.id === assistantId ? { ...item, content: item.content + delta } : item));
+          setMessages((current) => current.map((item) => item.id === assistantId
+            ? { ...item, content: item.content + delta, busyLabel: undefined }
+            : item));
         } else if (eventName === "tool_call" || eventName === "tool_result") {
           const details = payload as Record<string, unknown>;
           appendEvidence({
@@ -287,8 +291,14 @@ export default function SisiEmbedPage() {
             title: text(details.displayName || details.name || details.toolName || "智能工具"),
             detail: eventName === "tool_call" ? "正在安全执行" : "执行完成并已回读",
           });
+          setMessages((current) => current.map((item) => item.id === assistantId && !item.content
+            ? { ...item, busyLabel: eventName === "tool_call" ? "正在安全执行工具" : "正在整理工具结果" }
+            : item));
         } else if (eventName === "phase") {
           const phase = payload as Record<string, unknown>;
+          setMessages((current) => current.map((item) => item.id === assistantId && !item.content
+            ? { ...item, busyLabel: sisiPhaseLabel(phase) }
+            : item));
           const sourceItems = ((phase.sources ?? (phase.payload as Record<string, unknown>)?.sources) as Array<Record<string, unknown>> | undefined) ?? [];
           sourceItems.forEach((source, index) => appendEvidence({
             id: `source-${text(source.id || source.url || index)}`,
@@ -311,7 +321,13 @@ export default function SisiEmbedPage() {
     const selected = attachments.map((item) => item.id);
     const userMessage: ChatMessage = { id: crypto.randomUUID(), role: "user", content: question, attachments, createdAt: new Date().toISOString() };
     const assistantId = crypto.randomUUID();
-    setMessages((current) => [...current, userMessage, { id: assistantId, role: "assistant", content: "", busy: true }]);
+    setMessages((current) => [...current, userMessage, {
+      id: assistantId,
+      role: "assistant",
+      content: "",
+      busy: true,
+      busyLabel: "正在理解问题",
+    }]);
     setDraft("");
     setAttachments([]);
     setSending(true);
@@ -322,6 +338,7 @@ export default function SisiEmbedPage() {
         setMessages((current) => current.map((item) => item.id === assistantId ? {
           ...item,
           busy: false,
+          busyLabel: undefined,
           content: "这是交互原型预览。接入 Embed Token 后，我会在当前业务记录的权限边界内调用真实智能体、知识与工具。",
         } : item));
         return;
@@ -340,12 +357,12 @@ export default function SisiEmbedPage() {
       setMessages((current) => current.map((item) => {
         if (item.id !== assistantId) return item;
         const confirmation = exactConfirmation(item.content);
-        return { ...item, busy: false, confirmation };
+        return { ...item, busy: false, busyLabel: undefined, confirmation };
       }));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       setMessages((current) => current.map((item) => item.id === assistantId
-        ? { ...item, busy: false, content: `本次请求未完成：${message}` }
+        ? { ...item, busy: false, busyLabel: undefined, content: `本次请求未完成：${message}` }
         : item));
       postHost("embed:error", { message });
     } finally {
@@ -458,7 +475,7 @@ export default function SisiEmbedPage() {
               <div className="sisi-message__body">
                 {message.role === "assistant" && <span className="sisi-message__name">{assistantDisplayName}</span>}
                 {message.attachments?.length ? <div className="sisi-message__attachments">{message.attachments.map((item) => <span key={item.id}>{item.contentType.startsWith("image/") ? <ImageIcon size={13} /> : <FileText size={13} />}{item.name}</span>)}</div> : null}
-                <div className="sisi-bubble"><ChatMarkdown content={message.content} busy={message.busy} /></div>
+                <div className="sisi-bubble"><ChatMarkdown content={message.content} busy={message.busy} busyLabel={message.busyLabel} /></div>
                 {message.confirmation && <button className="sisi-confirm" onClick={() => { postHost("embed:action-confirmed", { phrase: message.confirmation }); void send(message.confirmation); }}><ShieldCheck size={15} />确认并回复“{message.confirmation}”</button>}
               </div>
             </article>)}

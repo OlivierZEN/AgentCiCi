@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-31T05:04:00Z
+updated_at: 2026-08-31T07:03:47Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,20 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-347 - Web 浮窗真实流式与首字延迟修复
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-204-web-widget-publish-channel.md`
+- task_status_path: `.claw/tasks/TASK-347.md`
+- blocked_by: `none`
+- related_issues: `ISSUE-2026-08-31-web-widget-buffered-stream`
+- scope_files: `工具意图直答路由、模型增量安全输出、SSE/Trace 首字时延、Embed 阶段提示、本地正式环境回归`
+- completion_evidence: `UAT 只读诊断：60.328s 中工具规划 26.980s、最终模型 31.498s；模型增量被完整缓存后才按 18 字/18ms 模拟分片。`
+- next_action: `补失败测试并实现 DIRECT 单模型调用、安全真实流式和明确 buffered 降级。`
 
 ### TASK-346 - OpenAPI 文件附件统一运行时
 

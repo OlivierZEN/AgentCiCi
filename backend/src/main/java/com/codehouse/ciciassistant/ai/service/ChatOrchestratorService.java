@@ -857,7 +857,7 @@ public class ChatOrchestratorService {
                     String blockedAnswer = blockedBySecurityMessage();
                     persistUserTurnCommitted(companyId, userId, sessionId, "[BLOCKED_BY_SECURITY_GATEWAY]", skillContext.agentId(), List.of());
                     persistAssistantTurnCommitted(companyId, userId, sessionId, blockedAnswer, "AI_CHAT_STREAM_BLOCKED", "safety-gateway");
-                    safeSendDeltaInChunks(emitter, blockedAnswer);
+                    safeSendDelta(emitter, blockedAnswer);
                     emitter.send(SseEmitter.event().name("done").data(Map.of(
                             "ok", true,
                             "runId", runId,
@@ -1013,8 +1013,24 @@ public class ChatOrchestratorService {
                 List<Map<String, Object>> semanticSafeTools = deliveryDecision.isPresent()
                         ? withoutTool(tools, SematticeProjectDeliveryToolService.TOOL_NAME)
                         : tools;
+                ToolPlanningIntentRouter.Decision toolPlanningDecision = ToolPlanningIntentRouter.decide(
+                        safeQuestion,
+                        semanticSafeTools.isEmpty() ? List.of() : skillContext.allowedToolNames(),
+                        false);
+                stageTraces.add(stageTrace("TOOL_ROUTING", "工具规划路由", "SUCCESS", Instant.now(), Instant.now(),
+                        toolPlanningDecision.shouldPlan() ? "当前请求需要模型进行工具规划。" : "当前请求直接进入回复生成。",
+                        Map.of(
+                                "shouldPlan", toolPlanningDecision.shouldPlan(),
+                                "reason", toolPlanningDecision.reason(),
+                                "availableToolCount", semanticSafeTools.size(),
+                                "runId", runId)));
+                safeSendPhase(emitter, "tool_routing", modelName, Map.of(
+                        "shouldPlan", toolPlanningDecision.shouldPlan(),
+                        "reason", toolPlanningDecision.reason()));
                 boolean pendingApprovalsUsed = forcedProjectDeliveryWriteAnswer.isEmpty()
                         && fixedDeliveryAnswer.isEmpty() && forcedCrmProductSalesAnswer.isEmpty() && scheduleCadenceClarification.isEmpty()
+                        && !forcedProjectDeliveryQuery
+                        && toolPlanningDecision.shouldPlan()
                         && resolveToolCalls(
                         modelName, messages, forcedProjectDeliveryQuery ? List.of() : semanticSafeTools, companyId, userId, sessionId,
                         showThinking, skillContext, emitter, maxToolRounds, modelCredentials, modelCallTraces,
@@ -1034,8 +1050,26 @@ public class ChatOrchestratorService {
                     ));
                 }
 
-                safeSendPhase(emitter, "generating", modelName);
+                SafetyGatewayService.PreparedOutputPolicy outputPolicy =
+                        safetyGatewayService.prepareOutputPolicy(companyId, userId, "MODEL_STREAM_OUTPUT");
+                boolean bufferedForCustomSafety = outputPolicy == null || !outputPolicy.incrementalSafe();
+                boolean bufferedForWriteReceipts = DeliveryWriteReceiptGuard.requiresBufferedOutput(
+                        skillContext.allowedToolNames());
+                boolean bufferedForToolResultGuard = hasToolMessages(messages);
+                boolean incrementalOutput = !bufferedForCustomSafety
+                        && !bufferedForWriteReceipts
+                        && !bufferedForToolResultGuard;
+                String outputMode = incrementalOutput ? "streaming" : "buffered";
+                String bufferedReason = incrementalOutput ? ""
+                        : bufferedForCustomSafety ? "CUSTOM_OUTPUT_POLICY"
+                        : bufferedForWriteReceipts ? "DELIVERY_WRITE_RECEIPT"
+                        : "TOOL_RESULT_GUARD";
+                safeSendPhase(emitter, "generating", modelName, Map.of(
+                        "outputMode", outputMode,
+                        "bufferedReason", bufferedReason));
                 String finalText;
+                boolean responseGuarded = false;
+                boolean responseDelivered = false;
                 if (forcedProjectDeliveryWriteAnswer.isPresent()) {
                     finalText = forcedProjectDeliveryWriteAnswer.get();
                 } else if (fixedDeliveryAnswer.isPresent()) {
@@ -1046,6 +1080,12 @@ public class ChatOrchestratorService {
                     finalText = scheduleCadenceClarification.get();
                 } else {
                     StringBuilder acc = new StringBuilder();
+                    GuardedAssistantStream guardedStream = new GuardedAssistantStream(
+                            incrementalOutput ? GuardedAssistantStream.Mode.STREAMING : GuardedAssistantStream.Mode.BUFFERED,
+                            !showThinking,
+                            text -> guardOutputFrame(
+                                    companyId, userId, safeQuestion, text, outputPolicy, messages, toolCallTraces),
+                            text -> safeSendDelta(emitter, text));
                     log.info("chatStream start LLM stream: session={} model={} msgCount={} toolCount={}",
                             sessionId, modelName, messages.size(), 0);
                     long streamStart = System.currentTimeMillis();
@@ -1060,6 +1100,7 @@ public class ChatOrchestratorService {
                                 showThinking,
                                 piece -> {
                                     acc.append(piece);
+                                    guardedStream.accept(piece);
                                 },
                                 modelCredentials.apiBaseUrl(),
                                 modelCredentials.apiKey());
@@ -1071,36 +1112,41 @@ public class ChatOrchestratorService {
                                 sessionId, System.currentTimeMillis() - streamStart, ex.getMessage());
                         String fallback = "（生成回复时发生错误，请重试。详情：" + ex.getMessage() + "）";
                         acc.append(fallback);
-                    } finally {
-                        Instant finalModelEndedAt = Instant.now();
-                        modelCallTraces.add(new AgentRunTraceService.ModelCallTraceInput(
-                                "final_stream",
-                                modelName,
-                                finalModelStatus,
-                                finalModelStartedAt,
-                                finalModelEndedAt,
-                                elapsedMs(finalModelStartedAt, finalModelEndedAt),
-                                0,
-                                acc.length(),
-                                streamResult.promptTokens(),
-                                streamResult.completionTokens(),
-                                "最终流式回复生成。"));
+                        guardedStream.accept(fallback);
                     }
-
-                    finalText = showThinking
-                            ? acc.toString()
-                            : AssistantContentSanitizer.stripThinkingSections(acc.toString());
+                    GuardedAssistantStream.Result guardedResult = guardedStream.finish();
+                    Instant finalModelEndedAt = Instant.now();
+                    modelCallTraces.add(new AgentRunTraceService.ModelCallTraceInput(
+                            "final_stream",
+                            modelName,
+                            finalModelStatus,
+                            finalModelStartedAt,
+                            finalModelEndedAt,
+                            elapsedMs(finalModelStartedAt, finalModelEndedAt),
+                            0,
+                            acc.length(),
+                            streamResult.promptTokens(),
+                            streamResult.completionTokens(),
+                            guardedResult.firstProviderDeltaMs(),
+                            guardedResult.firstClientDeltaMs(),
+                            guardedResult.outputMode(),
+                            "最终回复生成（" + guardedResult.outputMode() + "）。"));
+                    finalText = guardedResult.text();
+                    responseGuarded = true;
+                    responseDelivered = finalText != null && !finalText.isEmpty();
                     if (finalText == null || finalText.trim().isEmpty()) {
                         finalText = buildToolResultFallbackMessage(messages);
-                    } else {
-                        String guardedFinalText = appendToolResultFallbackIfDeferred(finalText, messages);
-                        if (!guardedFinalText.equals(finalText)) {
-                            finalText = guardedFinalText;
-                        }
+                        responseGuarded = false;
                     }
                 }
-                finalText = DeliveryWriteReceiptGuard.enforce(safeQuestion, finalText, toolCallTraces);
-                finalText = applyOutputGateway(companyId, userId, "MODEL_STREAM_OUTPUT", finalText);
+                if (!responseGuarded) {
+                    finalText = DeliveryWriteReceiptGuard.enforce(safeQuestion, finalText, toolCallTraces);
+                    finalText = applyOutputGateway(companyId, userId, "MODEL_STREAM_OUTPUT", finalText);
+                }
+                if (!responseDelivered) {
+                    safeSendDelta(emitter, finalText);
+                    responseDelivered = true;
+                }
                 try {
                     agentPlanExecCanaryService.completeSynthesis(planExec, clipForTrace(finalText, 1024));
                     if (planExec.selected()) safeSendPhase(emitter, "runtime_completed", null, agentPlanExecCanaryService.payload(planExec));
@@ -1110,7 +1156,6 @@ public class ChatOrchestratorService {
                 AgentTaskReflectService.ReflectResult reflectResult = reflectSafely(
                         companyId, skillContext.agentId(), planExec, modeDecision, finalText);
                 if (reflectResult.selected()) safeSendPhase(emitter, "review_completed", null, reflectPayload(reflectResult));
-                safeSendDeltaInChunks(emitter, finalText);
                 Instant wfStartedAt = Instant.now();
                 AgentWorkflowRuntimeService.RuntimeExecutionResult executionResult = agentWorkflowRuntimeService.evaluateForChat(
                         companyId, skillContext.agentId(), question, skillContext.allowedToolNames());
@@ -2673,6 +2718,27 @@ public class ChatOrchestratorService {
         return decision.safeText();
     }
 
+    private GuardedAssistantStream.GuardDecision guardOutputFrame(
+            String companyId,
+            String userId,
+            String question,
+            String answer,
+            SafetyGatewayService.PreparedOutputPolicy outputPolicy,
+            List<Map<String, Object>> messages,
+            List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces) {
+        String toolGroundedAnswer = appendToolResultFallbackIfDeferred(answer, messages);
+        String receiptGuardedAnswer = DeliveryWriteReceiptGuard.enforce(
+                question, toolGroundedAnswer, toolCallTraces);
+        SafetyGatewayService.SafetyDecision decision = outputPolicy == null
+                ? safetyGatewayService.checkOutput(companyId, userId, "MODEL_STREAM_OUTPUT", receiptGuardedAnswer)
+                : safetyGatewayService.checkOutput(outputPolicy, receiptGuardedAnswer);
+        String safeAnswer = decision.blocked() ? blockedBySecurityMessage() : decision.safeText();
+        boolean terminal = decision.blocked() || !Objects.equals(toolGroundedAnswer, receiptGuardedAnswer);
+        return terminal
+                ? GuardedAssistantStream.GuardDecision.stop(safeAnswer)
+                : GuardedAssistantStream.GuardDecision.allow(safeAnswer);
+    }
+
     private static String blockedBySecurityMessage() {
         return "该内容触发安全规则，已停止处理。请调整输入或联系管理员复核。";
     }
@@ -3194,26 +3260,6 @@ public class ChatOrchestratorService {
             emitter.send(SseEmitter.event().name("delta").data(Map.of("text", text)));
         } catch (IOException e) {
             throw new RuntimeException(e);
-        }
-    }
-
-    private static void safeSendDeltaInChunks(SseEmitter emitter, String text) {
-        if (text == null || text.isEmpty()) {
-            return;
-        }
-        final int chunkSize = 18;
-        final long pauseMs = 18L;
-        for (int i = 0; i < text.length(); i += chunkSize) {
-            String chunk = text.substring(i, Math.min(i + chunkSize, text.length()));
-            safeSendDelta(emitter, chunk);
-            if (i + chunkSize < text.length()) {
-                try {
-                    Thread.sleep(pauseMs);
-                } catch (InterruptedException ignored) {
-                    Thread.currentThread().interrupt();
-                    return;
-                }
-            }
         }
     }
 

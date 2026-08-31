@@ -2,14 +2,15 @@ import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 
-type Props = { content: string; busy?: boolean };
+type Props = { content: string; busy?: boolean; busyLabel?: string };
 
-export default function ChatMarkdown({ content, busy }: Props) {
+export default function ChatMarkdown({ content, busy, busyLabel }: Props) {
   const trimmed = content.trim();
   if (!trimmed) {
     if (busy) {
       return (
-        <span className="bubble-thinking" role="status" aria-label="正在生成回复">
+        <span className="bubble-thinking" role="status" aria-label={busyLabel || "正在生成回复"}>
+          {busyLabel ? <span className="bubble-thinking__label">{busyLabel}</span> : null}
           <span className="bubble-thinking__dot" aria-hidden="true" />
           <span className="bubble-thinking__dot" aria-hidden="true" />
           <span className="bubble-thinking__dot" aria-hidden="true" />

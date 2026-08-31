@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-204
 title: Web 浮窗发布渠道与官网售前智能体
-status: verified
+status: in_progress
 owner_role: fullstack-agent
-task_ids: TASK-334,TASK-335,TASK-337,TASK-339,TASK-343,TASK-344
+task_ids: TASK-334,TASK-335,TASK-337,TASK-339,TASK-343,TASK-344,TASK-347
 related_decisions: FEAT-202
-related_issues: ISSUE-2026-08-28-web-widget-empty-stream
-updated_at: 2026-08-31T03:07:48Z
+related_issues: ISSUE-2026-08-28-web-widget-empty-stream,ISSUE-2026-08-31-web-widget-buffered-stream
+updated_at: 2026-08-31T04:34:00Z
 updated_by: codex
 ---
 
@@ -123,6 +123,16 @@ Base64 头像不得写入短时 JWT。website 会话以已验证 Token 中的 `c
 - 流结束后若真实增量存在，assistant 气泡必须展示完整正文；“本次未返回文字内容。”只用于服务端确实未产生任何文本的场景。
 - 回归必须包含解析单测、本地正式制品和官网真实模型问答，不能只以 curl 收到 SSE 作为前端成功证据。
 
+## 真实流式与时延预算
+
+- 普通咨询没有外部事实需求或明确工具意图时必须进入 DIRECT，只允许一次最终模型调用；Agent 拥有工具不等于本轮必须先调用模型判断工具。
+- 工具规划、知识检索或确认流程确有必要时可以先于最终生成执行，但 phase 必须准确说明当前阶段，不能以空白气泡等待。
+- 最终模型的供应商增量必须在模型完成前进入 SSE；禁止先完整累积再用固定字数和 sleep 模拟 streaming。
+- 增量输出以完整行或安全句段为最小门禁单元，先完成思维段过滤、敏感信息遮蔽和内置内容安全检查，再下发并加入权威正文。
+- 租户启用任意自定义整段安全规则，或当前 Agent 具备受研发交付回执约束的写工具时，允许明确降级为 `buffered`：完成整段门禁后用单个 delta 返回，不得模拟打字。
+- Trace 至少记录模型调用次数、供应商首增量耗时、首 SSE delta 耗时、输出模式和总耗时；真实浏览器回归必须证明首 delta 早于模型完成。
+- 目标体验预算：普通咨询模型调用数为 1；平台编排开销不超过 2 秒；首可见正文由供应商 TTFT 主导，而不是等待完整回答。
+
 ## 实现进展
 
 - 2026-08-28：完成现状扫描和安全方案；进入实现。
@@ -132,6 +142,7 @@ Base64 头像不得写入短时 JWT。website 会话以已验证 Token 中的 `c
 - 2026-08-28：TASK-339 根据后续截图定位话筒浅蓝框来自 `sisi-composer` 的主题 hover 背景，同时发现公共裸图标原语仍允许浅色背景；现改为跨页面透明背景、图标变色反馈，并增加静态契约门禁。
 - 2026-08-28：TASK-343 已补齐 Web 浮窗身份素材链路；公开配置、website 会话、SDK、Embed 和 Agent Builder 预览均从服务端权威 Agent Definition 读取头像，JWT 不携带 Base64。实现 `9191e5a3eacf` 进入本地 main，自动化、同提交双制品、公开配置和官网浏览器三处头像回读通过，进入用户 review。
 - 2026-08-31：TASK-344 获得用户明确 UAT 发布授权；目标租户 `orgickjr6icm6l2zitpn` 已只读确认 ACTIVE 但当前无智能体。发布按 `2.8.68-beta.1` 不可变候选、完整备份、backend/frontend 最小切换执行；租户智能体与 Web 渠道必须走官方产品链路，首页只通过受管运行配置引用公开 widget key。
+- 2026-08-31：TASK-347 只读确认 UAT 普通咨询存在两次模型调用和完整缓存后的模拟分片；进入 DIRECT 单调用、流式安全门禁、首字时延和 Embed 阶段提示修复。
 
 ## 交接说明
 

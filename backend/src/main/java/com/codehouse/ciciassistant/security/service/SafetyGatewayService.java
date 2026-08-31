@@ -63,6 +63,24 @@ public class SafetyGatewayService {
         return check(companyId, userId, surface, text, ruleRepository.findByCompanyIdAndEnabledTrueOrderByUpdatedAtDescIdDesc(companyId));
     }
 
+    /**
+     * Freezes the tenant output-rule set for one model response. Arbitrary tenant regex rules need
+     * the whole answer, so only the built-in policy is eligible for incremental frame validation.
+     */
+    public PreparedOutputPolicy prepareOutputPolicy(String companyId, String userId, String surface) {
+        List<SecurityRuleEntity> rules = ruleRepository
+                .findByCompanyIdAndEnabledTrueOrderByUpdatedAtDescIdDesc(companyId);
+        List<SecurityRuleEntity> snapshot = rules == null ? List.of() : List.copyOf(rules);
+        return new PreparedOutputPolicy(companyId, userId, safeSurface(surface), snapshot, snapshot.isEmpty());
+    }
+
+    public SafetyDecision checkOutput(PreparedOutputPolicy policy, String text) {
+        if (policy == null) {
+            throw new IllegalArgumentException("Prepared output policy is required");
+        }
+        return check(policy.companyId(), policy.userId(), policy.surface(), text, policy.enabledRules());
+    }
+
     public SafetyDecision checkToolCall(String companyId, String userId, String toolName, String argumentsJson) {
         return checkInput(companyId, userId, "TOOL_CALL:" + safeSurface(toolName), argumentsJson);
     }
@@ -266,5 +284,15 @@ public class SafetyGatewayService {
                                   String matchedSummary,
                                   String ruleName,
                                   double confidence) {
+    }
+
+    public record PreparedOutputPolicy(String companyId,
+                                       String userId,
+                                       String surface,
+                                       List<SecurityRuleEntity> enabledRules,
+                                       boolean incrementalSafe) {
+        public PreparedOutputPolicy {
+            enabledRules = enabledRules == null ? List.of() : List.copyOf(enabledRules);
+        }
     }
 }

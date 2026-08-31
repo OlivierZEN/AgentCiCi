@@ -1,5 +1,6 @@
 package com.codehouse.ciciassistant.ai.service;
 
+import com.codehouse.ciciassistant.tool.service.ToolNameNormalizer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
@@ -34,6 +35,16 @@ final class DeliveryWriteReceiptGuard {
             Pattern.CASE_INSENSITIVE);
 
     private DeliveryWriteReceiptGuard() {
+    }
+
+    static boolean requiresBufferedOutput(List<String> allowedToolNames) {
+        for (String toolName : allowedToolNames == null ? List.<String>of() : allowedToolNames) {
+            String canonical = ToolNameNormalizer.canonicalize(toolName);
+            if (canonical != null && SEMATTICE_WRITE_TOOLS.contains(canonical)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     static String enforce(String ignoredQuestion,

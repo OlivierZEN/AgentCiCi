@@ -9,6 +9,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionRepository;
@@ -25,6 +26,7 @@ import com.codehouse.ciciassistant.ai.domain.ChatMessageRepository;
 import com.codehouse.ciciassistant.ai.domain.ChatSessionEntity;
 import com.codehouse.ciciassistant.ai.domain.ChatSessionRepository;
 import com.codehouse.ciciassistant.ai.domain.ChatSessionStateRepository;
+import com.codehouse.ciciassistant.ai.service.AliyunBailianClient.ChatStreamResult;
 import com.codehouse.ciciassistant.ai.service.AliyunBailianClient.ToolCallInfo;
 import com.codehouse.ciciassistant.billing.service.BillingUsageMeteringService;
 import com.codehouse.ciciassistant.crmanalysis.service.CrmProductSalesAnalysisToolService;
@@ -48,6 +50,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -800,13 +804,7 @@ class ChatOrchestratorServiceModelIdentityTest {
 
         List<String> deltaChunks = emitter.deltaChunks();
 
-        assertThat(deltaChunks).hasSizeGreaterThan(1);
-        assertThat(deltaChunks).allSatisfy(chunk -> {
-            assertThat(chunk).isNotBlank();
-            assertThat(chunk.length()).isLessThanOrEqualTo(18);
-        });
-        assertThat(deltaChunks.getFirst()).isNotEqualTo(expected);
-        assertThat(String.join("", deltaChunks)).isEqualTo(expected);
+        assertThat(deltaChunks).containsExactly(expected);
         assertThat(emitter.eventNames().stream().filter("done"::equals).count()).isEqualTo(1L);
         assertThat(emitter.lastIndexOf("delta")).isLessThan(emitter.firstIndexOf("done"));
         assertThat(blocking.get("answer")).isEqualTo(expected);
@@ -830,6 +828,43 @@ class ChatOrchestratorServiceModelIdentityTest {
                 .map(ChatMessageEntity::getContent)
                 .toList())
                 .containsExactly(expected, expected);
+    }
+
+    @Test
+    void shouldSkipToolPlanningAndExposeProviderDeltaBeforeAdvisoryModelCompletes() throws Exception {
+        CrmRouteFixture fixture = new CrmRouteFixture("{}");
+        CapturingEmitter emitter = new CapturingEmitter();
+        SafetyGatewayService.PreparedOutputPolicy policy = new SafetyGatewayService.PreparedOutputPolicy(
+                "demo-org", "sales-a", "MODEL_STREAM_OUTPUT", List.of(), true);
+        when(fixture.toolOrchestratorService.getToolDefinitions(anyString(), anyList(), anyList()))
+                .thenReturn(List.of(Map.of(
+                        "type", "function",
+                        "function", Map.of("name", CrmProductSalesAnalysisToolService.TOOL_NAME))));
+        when(fixture.safetyGatewayService.prepareOutputPolicy(
+                "demo-org", "sales-a", "MODEL_STREAM_OUTPUT")).thenReturn(policy);
+        when(fixture.safetyGatewayService.checkOutput(eq(policy), anyString()))
+                .thenAnswer(invocation -> new SafetyGatewayService.SafetyDecision(
+                        "ALLOW", invocation.getArgument(1), List.of(), false, "test"));
+        AtomicBoolean firstDeltaBeforeProviderFinished = new AtomicBoolean(false);
+        when(fixture.aliyunBailianClient.chatStreamWithCredentials(
+                anyString(), anyList(), any(), eq(false), any(), anyString(), anyString()))
+                .thenAnswer(invocation -> {
+                    Consumer<String> onDelta = invocation.getArgument(4);
+                    onDelta.accept("第一段已经生成。\n");
+                    firstDeltaBeforeProviderFinished.set(!emitter.deltaChunks().isEmpty());
+                    onDelta.accept("第二段继续生成。\n");
+                    return new ChatStreamResult(20, 12);
+                });
+
+        fixture.service.chatStreamBlocking(
+                "demo-org", "sales-a", "advisory-session", "我们是卖办公用品的",
+                List.of(), "agent-cici", "crm-business-analysis", emitter);
+
+        assertThat(firstDeltaBeforeProviderFinished).isTrue();
+        assertThat(emitter.deltaChunks()).containsExactly("第一段已经生成。\n", "第二段继续生成。\n");
+        verify(fixture.aliyunBailianClient).chatStreamWithCredentials(
+                anyString(), anyList(), any(), eq(false), any(), anyString(), anyString());
+        verifyNoMoreInteractions(fixture.aliyunBailianClient);
     }
 
     private static final class CrmRouteFixture {

@@ -10,6 +10,14 @@ import org.junit.jupiter.api.Test;
 class DeliveryWriteReceiptGuardTest {
 
     @Test
+    void shouldRequireWholeResponseGuardOnlyWhenAgentCanUseGovernedDeliveryWrites() {
+        assertThat(DeliveryWriteReceiptGuard.requiresBufferedOutput(
+                List.of("rag-search", "cloudcc_pageQuery", "quote-generator"))).isFalse();
+        assertThat(DeliveryWriteReceiptGuard.requiresBufferedOutput(
+                List.of("semattice_project_delivery_create"))).isTrue();
+    }
+
+    @Test
     void replacesDeliverySuccessClaimWithoutAnyToolReceipt() {
         String guarded = DeliveryWriteReceiptGuard.enforce(
                 "帮我记录一个 Bug：确认按钮没有作用",

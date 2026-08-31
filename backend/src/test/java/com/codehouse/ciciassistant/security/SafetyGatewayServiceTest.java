@@ -81,4 +81,21 @@ class SafetyGatewayServiceTest {
                 .extracting(SafetyGatewayService.SecurityFinding::category)
                 .contains("FRAUD");
     }
+
+    @Test
+    void preparesOneStablePolicyAndDisablesIncrementalOutputForCustomRules() {
+        SecurityRuleEntity rule = new SecurityRuleEntity(
+                "org-a", "整段规则", "CONTENT_MODERATION", "CUSTOM", "REGEX", "前文[\\s\\S]*后文",
+                "HIGH", "BLOCK", true, "需要整段匹配");
+        when(ruleRepository.findByCompanyIdAndEnabledTrueOrderByUpdatedAtDescIdDesc("org-a"))
+                .thenReturn(List.of(rule));
+
+        SafetyGatewayService.PreparedOutputPolicy policy = gateway.prepareOutputPolicy(
+                "org-a", "user-a", "MODEL_STREAM_OUTPUT");
+        SafetyGatewayService.SafetyDecision decision = gateway.checkOutput(policy, "前文\n后文");
+
+        assertThat(policy.incrementalSafe()).isFalse();
+        assertThat(decision.blocked()).isTrue();
+        verify(ruleRepository).findByCompanyIdAndEnabledTrueOrderByUpdatedAtDescIdDesc("org-a");
+    }
 }
