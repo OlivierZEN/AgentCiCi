@@ -7,7 +7,7 @@ owner_role: fullstack-agent
 task_ids: TASK-334,TASK-335,TASK-337,TASK-339,TASK-343,TASK-344,TASK-347
 related_decisions: FEAT-202
 related_issues: ISSUE-2026-08-28-web-widget-empty-stream,ISSUE-2026-08-31-web-widget-buffered-stream
-updated_at: 2026-08-31T04:34:00Z
+updated_at: 2026-08-31T07:31:00Z
 updated_by: codex
 ---
 
@@ -143,6 +143,7 @@ Base64 头像不得写入短时 JWT。website 会话以已验证 Token 中的 `c
 - 2026-08-28：TASK-343 已补齐 Web 浮窗身份素材链路；公开配置、website 会话、SDK、Embed 和 Agent Builder 预览均从服务端权威 Agent Definition 读取头像，JWT 不携带 Base64。实现 `9191e5a3eacf` 进入本地 main，自动化、同提交双制品、公开配置和官网浏览器三处头像回读通过，进入用户 review。
 - 2026-08-31：TASK-344 获得用户明确 UAT 发布授权；目标租户 `orgickjr6icm6l2zitpn` 已只读确认 ACTIVE 但当前无智能体。发布按 `2.8.68-beta.1` 不可变候选、完整备份、backend/frontend 最小切换执行；租户智能体与 Web 渠道必须走官方产品链路，首页只通过受管运行配置引用公开 widget key。
 - 2026-08-31：TASK-347 只读确认 UAT 普通咨询存在两次模型调用和完整缓存后的模拟分片；进入 DIRECT 单调用、流式安全门禁、首字时延和 Embed 阶段提示修复。
+- 2026-08-31：TASK-347 实现 `19080005` 已进入本地 main；自动化、双制品与真实 website Trace 证明普通咨询单模型/零工具、首 delta 早于完成，浏览器显示阶段提示并在完成前连续增长。自定义整段规则与研发写回执明确使用单 delta buffered；UAT 仍为 beta.3，修复尚未发布。
 
 ## 交接说明
 

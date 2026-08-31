@@ -2,12 +2,12 @@
 kind: task-status
 task_id: TASK-347
 feature_id: FEAT-204
-status: in_progress
+status: review
 priority: critical
 owner_role: fullstack-agent
 claimed_by: codex
 spec_path: docs/specs/FEAT-204-web-widget-publish-channel.md
-updated_at: 2026-08-31T04:34:00Z
+updated_at: 2026-08-31T07:31:00Z
 updated_by: codex
 ---
 
@@ -28,12 +28,19 @@ updated_by: codex
 
 ## 完成条件
 
-- [ ] 普通售前咨询只调用一次模型，供应商首增量在模型完成前进入 SSE。
-- [ ] 真实增量拼接、持久化正文和安全处理后的最终正文一致，`done` 仅在全部 delta 之后发送一次。
-- [ ] 自定义整段规则和研发交付写回执路径保持失败关闭，使用 `buffered` phase 且不使用延时模拟分片。
-- [ ] 后端/前端聚焦测试、全量前端测试、production build、backend package 和本地正式入口通过。
-- [ ] 任务提交独立进入本地 `main`；UAT 只在新候选、备份和回滚门禁完整后发布。
+- [x] 普通售前咨询只调用一次模型，供应商首增量在模型完成前进入 SSE。
+- [x] 真实增量拼接、持久化正文和安全处理后的最终正文一致，`done` 仅在全部 delta 之后发送一次。
+- [x] 自定义整段规则和研发交付写回执路径保持失败关闭，使用 `buffered` phase 且不使用延时模拟分片。
+- [x] 后端/前端聚焦测试、全量前端测试、production build、backend package 和本地正式入口通过。
+- [x] 任务提交独立进入本地 `main`；UAT 只在新候选、备份和回滚门禁完整后发布。
+
+## 完成证据
+
+- 实现 `19080005f847` 已进入本地 `main`：普通咨询确定性跳过无结果工具规划；最终模型 delta 经安全句段门禁直接进入 SSE；整段规则与研发写回执显式降级为单 delta `buffered`；删除固定字数和 sleep 模拟分片。
+- 后端 7 个聚焦测试类、backend package、前端 60 文件/333 项、production build 和 `git diff --check` 通过；默认数据库不可用的 `AdminBillingIntegrationTest` 未记为通过。
+- 本地 backend/frontend 运行 `2.8.68-dev.1908000 / 19080005f847`，两容器 healthy/restart=0；真实 website Trace 为单模型、零工具、`outputMode=streaming`，供应商/客户端首 delta 为 `8.246s / 8.320s`，总耗时 `10.385s`。
+- 浏览器真实浮窗在发送后约 `285ms` 显示“正在理解问题”；本轮首段 `14.749s`、完成 `18.616s`，中间约 `3.867s` 多次增长，console error/warning=0。
 
 ## 下一步
 
-- 先补失败测试，再实现确定性直答路由、安全增量输出和 Embed 阶段提示。
+- 等待用户本地目视确认；若另行确认发布 UAT，基于远程 `main` 冻结下一候选 `2.8.68-beta.4`，完成不可变制品、备份、回滚与最小替换后再做 UAT 真实浮窗复测。

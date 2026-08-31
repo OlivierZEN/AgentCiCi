@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-08-31T04:34:00Z
+updated_at: 2026-08-31T07:31:00Z
 updated_by: codex
 status: active
 ---
@@ -56,8 +56,9 @@ status: active
   - Symptom: UAT 官网售前浮窗普通咨询约等待 45-59 秒后才出现正文，随后短时间内呈现打字效果。
   - Verified root cause: 工具能力存在时先执行一次非流式模型规划，即使最终工具调用为 0；供应商最终增量只写入服务端 `StringBuilder`，完整回答通过整段门禁后再按 `18 字 / 18ms` 模拟分片。
   - Evidence: 两轮真实 Trace 分别为 `46.569s = 15.354s 规划 + 28.666s 最终生成 + 收尾`、`60.328s = 26.980s 规划 + 31.498s 最终生成 + 收尾`；Nginx buffering 已关闭，前端逐 delta 更新。
-  - Resolution progress: TASK-347 实现无工具意图 DIRECT、安全增量输出、明确 buffered 降级和 TTFT/首 delta 观测。
-  - Status: in progress; UAT 继续运行 `2.8.68-beta.2 / b9a0dfb7`，生产未修改。
+  - Resolution: TASK-347 `19080005` 实现无工具意图 DIRECT、安全增量输出、明确 buffered 降级、阶段提示和 TTFT/首 delta 观测，并删除固定字数/sleep 模拟分片。
+  - Verification: 本地 website Trace 为单模型、零工具、`streaming`，供应商/客户端首 delta `8.246s / 8.320s`、总耗时 `10.385s`；浏览器首段早于完成约 `3.867s`，期间多次可见增长。
+  - Status: resolved locally; UAT 仍为 `2.8.68-beta.3 / a5bbb114` 且未包含修复，生产未修改。
 
 - ISSUE-2026-08-17-devautopilot-keyword-routing:
   - Symptom: UAT 产品经理收到明确项目创建请求后没有写入；固定模型本地测试中，“创建项目”被回执门禁拦截，而“帮我建一个项目”反而触发只读项目查询并生成无冒号确认草案。

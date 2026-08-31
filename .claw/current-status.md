@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 6
-updated_at: 2026-08-31T05:04:00Z
+updated_at: 2026-08-31T07:31:00Z
 updated_by: codex
 phase: review
-active_task: TASK-346
-next_action: "HUMAN 明确授权创建临时本地 OpenAPI Key 或提供现有 Key 后，执行固定图片真实模型对话，记录 trace 后撤销临时 Key。"
+active_task: null
+next_action: "HUMAN 目视确认本地 Web 浮窗真实流式；如需发布 UAT，另行确认后冻结 2.8.68-beta.4 并执行备份、回滚和最小发布门禁。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- `TASK-347 / FEAT-204` 已完成本地技术闭环，进入用户 review：`19080005f847` 将无外部事实/工具意图的普通咨询确定性直达最终模型，模型 delta 经安全句段门禁实时进入 SSE；自定义整段规则和研发交付写回执显式使用单 delta `buffered`，固定 `18 字 / 18ms` 模拟分片已删除。后端 7 个聚焦测试类与 package、前端 60 文件/333 项与 production build 通过。backend/frontend 运行 `2.8.68-dev.1908000 / 19080005f847`、healthy/restart=0；真实 website Trace 为单模型/零工具/streaming，供应商/客户端首 delta `8.246s / 8.320s`、总耗时 `10.385s`。浏览器在发送后约 285ms 显示阶段提示，首段 `14.749s`、完成 `18.616s`，中间持续多次增长且 console 0。UAT 仍为 `2.8.68-beta.3 / a5bbb114`，生产未修改。
 
 - `TASK-346 / FEAT-206` 实现、本地技术闭环和 UAT 技术发布已完成，进入 HUMAN review：功能提交 `3b34e3198938` 已进入并推送远程 `main`。冻结候选 `2.8.68-beta.3 / a5bbb1140864` 的 backend/frontend digest 为 `sha256:b81e8c5a...` / `sha256:2412ab89...`，完整回滚点为 `/data/apps/agentcici/backups/20260831T045841Z-before-2.8.68-beta.3`；UAT 仅替换 backend/frontend，V127/V128 与 repeatable migration success，六容器 healthy/restart=0，health UP、Nginx、首页/HTTP 跳转、匿名 OpenAPI JSON 401、OIDC/Semattice/DevAutopilot 和 30 秒稳定窗口通过，四个状态服务 ID 不变。UAT 有效 MCP 应用绑定数为 0，本候选没有启用跨项目契约。当前没有可读取的明文 OpenAPI Key，未擅自创建凭据，真实文件上传和视觉模型图片对话仍待 HUMAN 授权验收；生产未修改。
 

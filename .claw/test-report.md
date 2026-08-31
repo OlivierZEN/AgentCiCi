@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-31T05:04:00Z
+updated_at: 2026-08-31T07:31:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-31T05:04:00Z
-last_run_status: passed_task_346_uat_technical_pending_authenticated_openapi_image_acceptance
+last_run_at: 2026-08-31T07:31:00Z
+last_run_status: passed_task_347_local_streaming_pending_user_review
 ---
 
 # Test Report
+
+## 2026-08-31 TASK-347 Web 浮窗真实流式
+
+- 状态：`passed_task_347_local_streaming_pending_user_review`；确定性直答、流式安全门禁、显式 buffered 降级、阶段提示、自动化、构建、同提交本地制品和真实浏览器增量均通过，UAT/生产未修改。
+- 后端：`ToolPlanningIntentRouterTest,GuardedAssistantStreamTest,SafetyGatewayServiceTest,DeliveryWriteReceiptGuardTest,ChatOrchestratorServiceModelIdentityTest,ChatOrchestratorSseErrorTest,AgentRunTraceServiceTest` 通过；其中编排集成断言供应商首 delta 在 provider 返回前已进入 emitter，且普通咨询只有一次模型调用。
+- 构建：backend `mvn -q -DskipTests package`、前端 60 files / 333 tests、production build 与 `git diff --check` 通过。依赖默认数据库的 `AdminBillingIntegrationTest` 因本机无可用数据库持续等待后中止，未记为通过。
+- 真实 Trace：demo `org3gxskla32gln3bvop / sales-agent` 通过公开 widget/token/SSE 链路完成；`total=10.385s, model_call_count=1, tool_call_count=0, firstProviderDelta=8.246s, firstClientDelta=8.320s, outputMode=streaming`，共 9 个 delta、172 字且首 delta 早于 done。
+- 浏览器：正式 `https://cici.localhost/` 浮窗发送后约 285ms 显示“正在理解问题”；本次模型首段 14.749s、完成 18.616s，中间约 3.867s 多次增长，最终 424 字、输入恢复、console error/warning=0。
+- 环境边界：backend/frontend 为 `2.8.68-dev.1908000 / 19080005f847` 且 healthy/restart=0。完整 `./stack verify` 仍被任务外 Semattice `config=1.0.7 / repository=1.0.8` 漂移失败关闭，不将定向产品验证扩大为全栈门禁通过。
 
 ## 2026-08-31 TASK-346 OpenAPI 文件附件统一运行时
 

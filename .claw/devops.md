@@ -1,12 +1,20 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-08-31T05:04:00Z
+updated_at: 2026-08-31T07:31:00Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-31 TASK-347 本地开发环境
+
+- 代码制品提交 `19080005f84786efefd674516a515d49cbc05d13` 已进入本地 `main`；backend/frontend 以 `2.8.68-dev.1908000 / 19080005f847` 构建，镜像 ID 分别为 `sha256:475dbe31db90c4b2150701df1b5bb77297e7a64810264cd35f486d366652410c` / `sha256:6fdab94ddaf007a63d7effa175c7576e58d62836f738df537f950772205e80c7`，OCI version/revision、容器环境、version API 与页面制品一致。
+- 仅使用现有 Compose 和 Git 忽略的 website widget override，`--no-deps --force-recreate backend cici-frontend` 最小替换两个无状态服务；两容器 healthy/restart=0，backend health UP，首页 200，frontend 资源带相同版本，近期 severe 日志为 0。
+- demo `org3gxskla32gln3bvop / sales-agent` 公开 widget/token/SSE 真实会话为单模型、零工具、streaming；客户端首 delta `8.320s`、总耗时 `10.385s`。浏览器确认发送后阶段提示、完成前多次正文增长和最终输入恢复，console error/warning=0。
+- PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak、Nginx、Semattice 和 DevAutopilot 未重建。本任务不新增或切换跨项目契约；标准 `./stack verify` 仍被既有 Semattice `config=1.0.7 / repository=1.0.8` 漂移失败关闭。
+- 远程 `main`、ACR、Git tag、UAT 和生产均未修改；UAT 仍运行 `2.8.68-beta.3 / a5bbb1140864`，后续若获明确发布确认应冻结 `2.8.68-beta.4` 并重新执行不可变制品、完整备份、回滚和最小切换门禁。
 
 ## 2026-08-31 TASK-346 UAT `2.8.68-beta.3`
 
