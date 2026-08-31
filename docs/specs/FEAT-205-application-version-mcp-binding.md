@@ -2,11 +2,11 @@
 kind: feature-spec
 feature_id: FEAT-205
 title: 应用版本与外部 MCP Provider 工具绑定
-status: implementation
+status: implemented
 owner_role: integration-agent
 task_ids: [TASK-341, TASK-345]
 related_decisions: INT-029
-updated_at: 2026-08-31T03:26:04Z
+updated_at: 2026-08-31T04:12:00Z
 updated_by: codex
 ---
 
