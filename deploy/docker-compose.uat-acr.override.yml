@@ -12,6 +12,9 @@ services:
     environment:
       CICI_APP_VERSION: ${CICI_APP_VERSION:?set CICI_APP_VERSION}
       APP_SEMATTICE_CONSOLE_BASE_URL: ${APP_SEMATTICE_CONSOLE_BASE_URL:-https://uat.agentcici.com}
+      # Keep the public homepage widget disabled unless UAT operations explicitly
+      # selects a published widget key in the root-only environment file.
+      APP_WEBSITE_WIDGET_DEFAULT_KEY: ${APP_WEBSITE_WIDGET_DEFAULT_KEY:-}
       # Tenant HUMAN access must cover the AI table metadata catalog and governed
       # record operations. Principal projection uses its dedicated server-only token.
       APP_AUTH_OFFICIAL_ACCESS_SEMATTICE_SCOPES: ${APP_AUTH_OFFICIAL_ACCESS_SEMATTICE_SCOPES:-metadata.read,runtime.record.read,runtime.record.create,runtime.record.update}

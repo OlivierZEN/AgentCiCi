@@ -7,7 +7,7 @@ priority: critical
 owner_role: release-agent
 claimed_by: codex
 spec_path: docs/specs/FEAT-204-web-widget-publish-channel.md
-updated_at: 2026-08-31T03:07:48Z
+updated_at: 2026-08-31T04:12:00Z
 updated_by: codex
 ---
 
@@ -33,7 +33,8 @@ updated_by: codex
 ## 当前证据
 
 - UAT 发布前只读巡检通过：首页 200、匿名 `/auth/me` 401、Keycloak discovery、Semattice health/version 和 DevAutopilot integrated health 均为 200/正常。
-- 当前 UAT 为 `2.8.67-beta.1 / 2970bea75208`，backend/frontend healthy/restart=0，四状态服务哈希已记录，最新完整备份为 `20260828T104754Z-before-2.8.67-beta.1`。
+- `2.8.68-beta.1 / 653a0a3ca93b` 已不可变构建并只替换 UAT backend/frontend；六容器 healthy/restart=0，四状态服务发布前后哈希一致，Flyway V125/V126 成功。
+- 发布前完整备份位于受限目录 `20260831T031524Z-before-2.8.68-beta.1`，PostgreSQL、知识库、Qdrant、旧镜像、编排和校验清单均已验证，回滚目标为 `2.8.67-beta.1`。
 - 目标租户 `orgickjr6icm6l2zitpn / CloudCC Agentic Test` 为 ACTIVE，但当前 `agent_definition` 为 0；必须走官方产品链路创建，不能直接写数据库。
-- 当前本地 `main@fc9ac373362c` 比远程 `main@6424ae2bc65c` 领先 13 个提交；发布前需完成全量门禁、推送远程并冻结候选。
-
+- 已确认 UAT 受管 Compose 未透传 `APP_WEBSITE_WIDGET_DEFAULT_KEY`，导致仅写 root-only 配置也无法启用首页浮窗；补齐透传并经目标主机 `docker compose config` 验证后，须冻结新的 `2.8.68-beta.2`，不得修改既有 `beta.1`。
+- 本地/远程 `main` 已在 `653a0a3ca93b` 对齐；前端 328 项测试及生产构建通过，后端目标测试与打包通过，后端全量测试受本地 PostgreSQL 连接重试阻塞且未出现断言失败。
