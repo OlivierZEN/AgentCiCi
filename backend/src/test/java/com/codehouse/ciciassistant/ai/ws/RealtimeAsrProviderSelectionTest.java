@@ -8,24 +8,20 @@ import org.junit.jupiter.api.Test;
 class RealtimeAsrProviderSelectionTest {
 
     @Test
-    void selectsIflytekForAutoDiarizationWhenConfigured() {
-        assertThat(AliyunRealtimeAsrWebSocketHandler.selectRealtimeProvider("auto", true, true))
-                .isEqualTo("iflytek");
-    }
-
-    @Test
-    void fallsBackToAliyunWhenAutoDiarizationIsUnavailable() {
-        assertThat(AliyunRealtimeAsrWebSocketHandler.selectRealtimeProvider("auto", true, false))
+    void keepsAutoOnAliyunSoSpeakerDiarizationCannotRerouteChat() {
+        assertThat(AliyunRealtimeAsrWebSocketHandler.selectRealtimeProvider("auto"))
                 .isEqualTo("aliyun");
     }
 
     @Test
     void preservesExplicitProviderSelection() {
-        assertThat(AliyunRealtimeAsrWebSocketHandler.selectRealtimeProvider("iflytek", false, false))
+        assertThat(AliyunRealtimeAsrWebSocketHandler.selectRealtimeProvider("iflytek"))
                 .isEqualTo("iflytek");
-        assertThat(AliyunRealtimeAsrWebSocketHandler.selectRealtimeProvider("aliyun", true, true))
+        assertThat(AliyunRealtimeAsrWebSocketHandler.selectRealtimeProvider("xunfei"))
+                .isEqualTo("iflytek");
+        assertThat(AliyunRealtimeAsrWebSocketHandler.selectRealtimeProvider("aliyun"))
                 .isEqualTo("aliyun");
-        assertThat(AliyunRealtimeAsrWebSocketHandler.selectRealtimeProvider("", true, true))
+        assertThat(AliyunRealtimeAsrWebSocketHandler.selectRealtimeProvider(""))
                 .isEqualTo("aliyun");
     }
 

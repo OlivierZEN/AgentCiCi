@@ -278,7 +278,7 @@ class PlatformModelProviderIntegrationTest {
     }
 
     @Test
-    void configuredIflytekAdapterCanBeSelectedForRealtimeAsrRoute() throws Exception {
+    void configuredIflytekAdapterCanBeSelectedForMeetingRealtimeAsrRoute() throws Exception {
         String platformToken = platformToken();
 
         mockMvc.perform(put("/platform/models/providers/{providerCode}", "iflytek_asr")
@@ -303,17 +303,17 @@ class PlatformModelProviderIntegrationTest {
         mockMvc.perform(get("/platform/models/routes")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.routes[?(@.sceneCode == 'voice-asr')].candidateCount")
+                .andExpect(jsonPath("$.data.routes[?(@.sceneCode == 'meeting-realtime-asr')].candidateCount")
                         .value(org.hamcrest.Matchers.contains(1)))
-                .andExpect(jsonPath("$.data.routes[?(@.sceneCode == 'voice-asr')].candidates[0].providerCode")
+                .andExpect(jsonPath("$.data.routes[?(@.sceneCode == 'meeting-realtime-asr')].candidates[0].providerCode")
                         .value(org.hamcrest.Matchers.contains("iflytek_asr")))
-                .andExpect(jsonPath("$.data.routes[?(@.sceneCode == 'voice-asr')].candidates[0].modelName")
+                .andExpect(jsonPath("$.data.routes[?(@.sceneCode == 'meeting-realtime-asr')].candidates[0].modelName")
                         .value(org.hamcrest.Matchers.contains(ModelProviderService.IFLYTEK_REALTIME_ASR_MODEL)))
-                .andExpect(jsonPath("$.data.routes[?(@.sceneCode == 'voice-asr')].candidates[0].displayLabel")
+                .andExpect(jsonPath("$.data.routes[?(@.sceneCode == 'meeting-realtime-asr')].candidates[0].displayLabel")
                         .value(org.hamcrest.Matchers.contains("实时语音转写 · 科大讯飞")))
                 .andExpect(jsonPath("$.data.modelCandidates[?(@.providerCode == 'iflytek_asr')]").doesNotExist());
 
-        mockMvc.perform(put("/platform/models/routes/{sceneCode}", "voice-asr")
+        mockMvc.perform(put("/platform/models/routes/{sceneCode}", "meeting-realtime-asr")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -326,11 +326,11 @@ class PlatformModelProviderIntegrationTest {
                 .andExpect(jsonPath("$.data.available").value(true))
                 .andExpect(jsonPath("$.data.providerName").value("科大讯飞"));
 
-        assertThat(modelProviderService.resolveRuntimeModelRoute("demo-org", "voice-asr", null))
+        assertThat(modelProviderService.resolveRuntimeModelRoute("demo-org", "meeting-realtime-asr", null))
                 .containsEntry("provider", "iflytek_asr")
                 .containsEntry("modelName", ModelProviderService.IFLYTEK_REALTIME_ASR_MODEL);
 
-        mockMvc.perform(delete("/platform/models/routes/{sceneCode}", "voice-asr")
+        mockMvc.perform(delete("/platform/models/routes/{sceneCode}", "meeting-realtime-asr")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.configured").value(false));

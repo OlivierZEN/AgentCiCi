@@ -1730,7 +1730,7 @@ function InteractionEditor({ token, accountId, accountName, onClose, onConfirmed
     voicePrefixRef.current = narrationText;
     await startVoiceCapture({
       token,
-      provider: "auto",
+      provider: "aliyun",
       speakerDiarization: false,
       getPrefix: () => voicePrefixRef.current,
       onLiveText: setNarrationText,

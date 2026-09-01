@@ -210,7 +210,7 @@ export default function EmbedMeetingMinutesPage() {
     setTranscript([]);
     await start({
       token,
-      provider: "auto",
+      provider: "iflytek",
       speakerDiarization: true,
       getPrefix: () => "",
       onLiveText: () => {},

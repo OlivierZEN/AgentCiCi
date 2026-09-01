@@ -134,10 +134,11 @@ updated_by: codex
 - 模型厂商列表新增“科大讯飞”，能力类型固定为 `realtime-asr`，配置字段沿用既有 App ID、Access Key ID、Access Key Secret、Realtime URL、语言和领域。
 - 保存动作继续写入平台治理作用域的 `integration_app(iflytek_asr)`；Access Key Secret 继续加密存储且只返回掩码。
 - `/platform/integrations` 不再重复列出讯飞实时转写，避免两个运营入口维护同一记录；Tavily、代码解释器、联网搜索和网页抓取保持不变。
-- `voice-asr` 场景路由可选择一个固定的 `iflytek-realtime-asr` 适配器候选；该候选只代表已实现的讯飞流式协议，不进入通用模型目录，也不复制凭据。
-- `/ws/asr` 以平台 `voice-asr` 场景路由为唯一厂商选择来源；选中讯飞时从原有 `integration_app(iflytek_asr)` 读取凭据并调用既有讯飞 WebSocket 客户端，客户端参数不得覆盖平台路由。
+- `meeting-realtime-asr` 场景路由可选择一个固定的 `iflytek-realtime-asr` 适配器候选；该候选只代表已实现的讯飞流式协议，不进入通用模型目录，也不复制凭据。
+- `/ws/asr` 保留两条明确的产品路径：对话框实时听写继续调用既有阿里云 `paraformer-realtime-v2` 协议；AI 听记显式请求 `iflytek` 并以 `meeting-realtime-asr` 路由为权威配置。
+- AI 听记选中讯飞时，从原有 `integration_app(iflytek_asr)` 读取凭据并携带 `role_type=2` 启用发言人区分；对话框的 `speakerDiarization` 参数不能将请求隐式切到讯飞。
 - 配置检测只验证启用状态、必填凭据与 `wss` 地址结构，不声称已完成真实讯飞网络调用。真实能力验收必须发起一次实时语音识别并收到转写结果。
-- 不把讯飞伪装成 OpenAI-compatible 模型目录，不提供“全部模型”、人工能力确认或其他通用模型场景操作；仅在专用 `voice-asr` 场景暴露固定受管适配器候选。
+- 不把讯飞伪装成 OpenAI-compatible 模型目录，不提供“全部模型”、人工能力确认或其他通用模型场景操作；仅在专用 `meeting-realtime-asr` 场景暴露固定受管适配器候选。
 
 ### 验收标准
 
@@ -146,7 +147,8 @@ updated_by: codex
 - 平台 token 可通过模型厂商入口执行配置校验，缺少凭据或非 `wss` 地址时失败关闭；通过时返回 `runtimeProbeRequired=true`。
 - `GET /platform/integrations` 不再返回 `iflytek_asr`，组织侧仍不可见、不可写。
 - `/platform/models` 显示“科大讯飞 / 实时语音转写”，提供专用凭据表单，不显示“全部模型”和通用模型目录操作。
-- 启用且凭据完整时，`voice-asr` 场景显示“实时语音转写 · 科大讯飞”，平台管理员可选中并保存；运行时路由必须实际进入讯飞 WebSocket 适配器。
+- 启用且凭据完整时，`meeting-realtime-asr` 场景显示“实时语音转写 · 科大讯飞”，平台管理员可选中并保存；运行时路由必须实际进入讯飞 WebSocket 适配器。
+- 历史上已保存为 `voice-asr=iflytek_asr` 的平台路由自动迁移到 `meeting-realtime-asr`，并删除错误的对话场景讯飞选择；不修改或复制 Secret。
 - 后端聚焦测试、前端聚焦测试、前端 production build 与 `git diff --check` 通过。
 
 ## TASK-352 补充：实时听写运行协议与结束状态收敛
@@ -165,5 +167,6 @@ updated_by: codex
 - 浏览器必须收到后端转发的上游 `started` 后才申请麦克风、发送音频和显示听写中；错误、关闭或 8 秒无 `started` 时退出启动流程并展示明确失败信息。
 - 识别 `payload.ls=true`、兼容嵌套 `data.ls` / `status=2`，最后帧无文字也必须发送一次 `finished`。
 - 停止时先停止音频、按序发送 end；收到 `finished` 立即收敛，未收到时 1.5 秒关闭兜底也必须且只执行一次完成回调。
-- AI 听记与对话框共用同一 `useAsrVoiceInput` 修复；错误、最终帧和异常关闭均不得永久停在 recording/stopping。
+- AI 听记与对话框共用同一 `useAsrVoiceInput` 录音生命周期，但不共用厂商路由：AI 听记显式走讯飞并启用发言人区分，普通对话听写显式或默认走阿里云。
+- 错误、最终帧和异常关闭均不得永久停在 recording/stopping。
 - 技术验收覆盖 URL 规范化、官方最后帧、上游 ready/error、全量前端测试、production build、backend package 和本地正式环境指纹；真实麦克风转写仍由 HUMAN 最终接受。

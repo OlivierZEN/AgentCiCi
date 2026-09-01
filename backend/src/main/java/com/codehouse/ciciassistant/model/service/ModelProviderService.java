@@ -63,7 +63,8 @@ public class ModelProviderService {
             new SceneRouteDef("knowledge-embedding", "知识库向量化", "文档切片与检索查询的 embedding 模型。", List.of("embedding"), List.of(), "仅显示已确认 embedding 能力的模型；变更后需要重建已有向量索引。"),
             new SceneRouteDef("memory-embedding", "记忆向量化", "长期记忆索引和检索查询的 embedding 模型。", List.of("embedding"), List.of(), "仅显示已确认 embedding 能力的模型；优先选择与记忆向量维度兼容的模型。"),
             new SceneRouteDef("image-ocr", "图片 OCR", "客户互动截图及其他图片文字提取模型。", List.of("vision"), List.of(), "仅显示已确认视觉输入能力的模型；纯文本模型不会出现。"),
-            new SceneRouteDef("voice-asr", "实时语音转写", "实时流式语音识别能力。", List.of("realtime-asr"), List.of(PROVIDER_ALIYUN, IntegrationAppService.APP_CODE_IFLYTEK_ASR), "仅显示已启用、凭据完整且与当前流式协议兼容的实时 ASR 能力。"),
+            new SceneRouteDef("voice-asr", "对话实时听写", "对话框麦克风的阿里云实时流式语音识别能力。", List.of("realtime-asr"), List.of(PROVIDER_ALIYUN), "对话听写固定使用阿里云实时 ASR 协议。"),
+            new SceneRouteDef("meeting-realtime-asr", "AI 听记实时转写", "AI 听记专用的讯飞实时语音识别与发言人区分能力。", List.of("realtime-asr"), List.of(IntegrationAppService.APP_CODE_IFLYTEK_ASR), "仅显示已启用且凭据完整的讯飞实时 ASR 适配器。"),
             new SceneRouteDef("file-asr", "文件语音转写", "音视频文件转写模型。", List.of("file-asr"), List.of(PROVIDER_ALIYUN), "仅显示已确认文件 ASR 且与当前协议兼容的模型。"),
             new SceneRouteDef("code-interpreter", "代码解释器", "受管代码解释器执行模型。", List.of("code-interpreter"), List.of(PROVIDER_ALIYUN), "仅显示已确认代码解释器能力且与受管 Responses 协议兼容的模型。"),
             new SceneRouteDef("managed-web-search", "联网搜索", "受管联网搜索执行模型。", List.of("web-search"), List.of(PROVIDER_ALIYUN), "仅显示已确认联网搜索能力且与受管协议兼容的模型。"),
@@ -1153,7 +1154,7 @@ public class ModelProviderService {
     }
 
     private List<Map<String, Object>> routeCandidatesForScene(SceneRouteDef scene) {
-        return "voice-asr".equals(scene.sceneCode())
+        return "meeting-realtime-asr".equals(scene.sceneCode())
                 ? platformRouteCandidates()
                 : agentBaseModels(platformScopeId());
     }

@@ -3472,7 +3472,7 @@ export default function AssistantApp() {
 
     await startAsrSession({
       token: auth.token,
-      provider: "auto",
+      provider: "iflytek",
       speakerDiarization: true,
       getPrefix: () => "",
       onLiveText: () => {},
