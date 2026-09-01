@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-09-01T14:31:00Z
+updated_at: 2026-09-01T14:46:51Z
 updated_by: codex
 board_status: active
 ---
@@ -17,7 +17,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-351 - OneKeyToken 自动路由视觉能力同步
 
-- status: `in_progress`
+- status: `review`
 - priority: `critical`
 - owner_role: `backend-agent`
 - claimed_by: `codex`
@@ -26,8 +26,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - related_issues: `ISSUE-2026-09-01-onekeytoken-auto-vision-capability`
 - scope_files: `OneKeyToken 平台校验、远端模型能力目录、可信 vision 能力持久化、聚焦测试、本地 backend 验证`
-- completion_evidence: `目标回归 2/2、相邻单元测试 3 类、backend package 与 diff check 已通过；待本地主线提交和运行时回读。`
-- next_action: `提交本地 main，从该提交重建 backend，正式校验 OneKeyToken 后回读 text+vision 并完成图片回归。`
+- completion_evidence: `实现 653e5e1d 进入本地 main；目标回归 2/2、相邻单元测试 3 类、package/diff 通过；backend 2.8.68-dev.653e5e1 healthy/restart=0，仅 backend 替换。`
+- next_action: `用户即时确认后点击 OneKeyToken 检测，回读 text+vision，再完成真实图片回归。`
 
 ### TASK-349 - 讯飞实时语音转写纳入模型厂商治理
 

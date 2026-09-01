@@ -1,23 +1,25 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-09-01T14:31:00Z
+updated_at: 2026-09-01T14:46:51Z
 updated_by: codex
 status: active
-last_run_at: 2026-09-01T14:31:00Z
-last_run_status: passed_task_351_code_pending_local_runtime
+last_run_at: 2026-09-01T14:46:51Z
+last_run_status: passed_task_351_local_runtime_pending_provider_refresh
 ---
 
 # Test Report
 
 ## 2026-09-01 TASK-351 OneKeyToken 自动路由视觉能力同步
 
-- 状态：`passed_task_351_code_pending_local_runtime`。OneKeyToken `onekeytoken/auto` 同图直调已成功，网关回读 `request_type=vision`、`model_used=qwen3.7-plus`；AgentCiCi 409 根因是平台校验把 auto 的可信能力硬编码为仅 `text`。
+- 状态：`passed_task_351_local_runtime_pending_provider_refresh`。OneKeyToken `onekeytoken/auto` 同图直调已成功，网关回读 `request_type=vision`、`model_used=qwen3.7-plus`；AgentCiCi 409 根因是平台校验把 auto 的可信能力硬编码为仅 `text`。
 - 实现：OneKeyToken Chat Completions 活性校验成功后，使用同一组有效草稿/已存配置读取 `/models`，复用既有 `capabilities` / `input_modalities` 解析器并以 `provider_catalog` 保存能力；不按下游实际模型名猜测能力，目录失败继续失败关闭。
 - 聚焦集成：隔离 PostgreSQL 16 上，`PlatformModelProviderIntegrationTest` 的 OneKey 草稿凭据能力同步与场景候选两个目标方法 `2/2` 通过；断言 `/chat/completions` 与 `/models` 均使用草稿 key、已存 key 未被覆盖、`onekeytoken/auto=[text,vision]` 且 vision 门禁为 true。
 - 相邻回归：`ModelProviderServiceTest,ChatAttachmentServiceTest,ChatOrchestratorServiceModelIdentityTest` 通过；`mvn -q -DskipTests package` 和 `git diff --check` 通过。
 - 测试边界：默认测试库不可达；完整 `PlatformModelProviderIntegrationTest` 在显式关闭既有 OACT 配置漂移后有 4 项通过，唯一失败是无关组织登录用例因 OACT 被关闭返回 403，因此仅声明本任务目标方法通过，不声明整类通过。
-- 待完成：提交本地 `main`，从该提交最小重建 backend，通过正式平台校验回读运行数据库 `text + vision`，再执行真实图片对话或记录 HUMAN 待验收边界。远程、UAT、生产未修改。
+- 本地主线与制品：实现提交 `653e5e1d7993` 已进入本地 `main`；宿主机同提交 package 的 JAR SHA-256 为 `ee35da41dafb12b9f8be4e153871ba3cf5890431547825b688de3ba48b2f21ec`，运行镜像为 `sha256:6dc27f9b6183`，OCI/容器/version API 均回读 `2.8.68-dev.653e5e1 / 653e5e1d7993`。
+- 运行门禁：backend health=`UP`、container healthy/restart=0，`https://cici.localhost/=200`；只有 backend ID 从 `4eefc48f4891` 变为 `646053c55528`，frontend 与 PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak、Nginx、Semattice、DevAutopilot 均未替换。
+- 刷新前证据与边界：数据库仍为 `onekeytoken/auto=[text]`、证据来源 `provider_catalog`；已登录平台页已停在“检测”按钮前。该点击会把已存 API Key 发送到已配置的 OneKeyToken 端点，待用户即时确认后执行并回读 `text + vision`，随后再做真实图片对话。远程、UAT、生产未修改。
 
 ## 2026-09-01 TASK-348 对外售前智能体与 Mary 演示
 

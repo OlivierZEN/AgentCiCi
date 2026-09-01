@@ -7,7 +7,7 @@ primary_project: agentcici
 owner_role: fullstack-agent
 task_ids: TASK-309,TASK-336,TASK-338,TASK-342,TASK-351
 related_issues: ISSUE-2026-08-28-vision-capability-scope,ISSUE-2026-09-01-onekeytoken-auto-vision-capability
-updated_at: 2026-09-01T14:31:00Z
+updated_at: 2026-09-01T14:46:51Z
 updated_by: codex
 ---
 
@@ -107,3 +107,4 @@ DevAutopilot 需求 `REQ-6F34ECF3` 的端到端任务 `019ffeb0-88a0-739f-afcb-6
 - OneKeyToken 平台校验继续先用 `model=onekeytoken/auto` 执行 Chat Completions 活性探测；成功后必须用同一组有效配置读取 `/models`，以远端 `capabilities` 和 `input_modalities` 保存受信能力，来源为 `provider_catalog`。
 - 不根据自动路由实际选中的下游模型反推或固定能力；远端目录不可用、未声明视觉能力或校验失败时继续失败关闭，图片聊天仍返回 `VISION_MODEL_REQUIRED`。
 - 本轮仅修改 AgentCiCi 后端校验与能力同步，不改变 OneKeyToken 自动路由协议、附件数据、路由模型名或其他产品。
+- 实现 `653e5e1d7993` 已进入本地 main；backend 运行 `2.8.68-dev.653e5e1`、healthy/restart=0，仅 backend 被替换。运行数据库的能力刷新与真实图片对话仍待即时确认，不把代码/健康证据写成业务验收完成。

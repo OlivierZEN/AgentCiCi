@@ -1,12 +1,20 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-09-01T13:50:30Z
+updated_at: 2026-09-01T14:46:51Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-09-01 TASK-351 本地 OneKeyToken 自动视觉能力修复
+
+- 修复 `653e5e1d7993` 已进入本地 `main`；backend 构建为 `2.8.68-dev.653e5e1`，运行镜像 `sha256:6dc27f9b6183` 的 OCI version/revision 与提交一致，镜像内 JAR SHA-256 与宿主机同提交 package 均为 `ee35da41dafb12b9f8be4e153871ba3cf5890431547825b688de3ba48b2f21ec`。
+- 受管 `./stack init` 被既有 Semattice `config=1.0.7 / repository=1.0.8` 漂移失败关闭，未构建或替换容器；未修改 Semattice。随后只更新 Git 忽略的 AgentCiCi 运行版本两项，release Docker Maven 层超过既有静默阈值后在切换前中止，改用同一 main 的宿主机 package 覆入相同 JRE 运行基线。
+- 仅通过现有 Compose `--no-deps --force-recreate backend` 替换 backend；容器 `healthy/restart=0`，内部 health=`UP`，`/system/version` 回读 `2.8.68-dev.653e5e1 / 653e5e1d7993`，`https://cici.localhost/` 为 200。
+- 容器 ID 对比只有 backend 从 `4eefc48f4891` 变为 `646053c55528`；frontend、PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak、Nginx、Semattice、DevAutopilot 未替换。
+- 刷新前数据库仍为 `onekeytoken/auto=[text]`；平台授权态已停在 OneKeyToken“检测”按钮前。因检测会将已存 API Key 发送到已配置的聚合服务，待用户即时确认后继续，远程、ACR、Git tag、UAT 和生产均未修改。
 
 ## 2026-09-01 TASK-349 本地讯飞场景路由修复
 

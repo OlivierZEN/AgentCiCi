@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-09-01T14:31:00Z
+updated_at: 2026-09-01T14:46:51Z
 updated_by: codex
 status: active
 ---
@@ -15,8 +15,8 @@ status: active
 - Symptom: 聊天场景选择 `onekeytoken/auto` 后发送已就绪图片，AgentCiCi 返回 `409 VISION_MODEL_REQUIRED`。
 - Verified root cause: OneKeyToken `/models` 已声明 `onekeytoken/auto` 支持 `vision` 和 `image`，同图直调 `auto` 也实际路由到视觉模型成功；AgentCiCi 的平台校验路径却硬编码保存 `["text"]`，导致本地可信能力门禁错误拒绝。
 - Resolution: TASK-351 在 Chat Completions 活性校验成功后，用同一组有效配置读取 OneKeyToken `/models`，按既有解析器保存 `text + vision` 与 `provider_catalog` 证据；保留失败关闭和自动路由模型名。
-- Verification: 目标方法级集成回归 2/2、相邻附件/模型身份单元测试和 backend package 通过；本地运行态与真实图片会话待完成。
-- Status: implementation verified; local runtime verification in progress; remote/UAT/production unchanged.
+- Verification: 目标方法级集成回归 2/2、相邻附件/模型身份单元测试和 backend package 通过；本地 backend 已运行 `2.8.68-dev.653e5e1 / 653e5e1d7993`、healthy/restart=0，仅 backend 容器替换。
+- Status: resolved in code and deployed locally; provider capability refresh and real image dialogue await action-time confirmation; remote/UAT/production unchanged.
 
 ## ISSUE-2026-08-31-devautopilot-mcp-decoupling-regression
 
