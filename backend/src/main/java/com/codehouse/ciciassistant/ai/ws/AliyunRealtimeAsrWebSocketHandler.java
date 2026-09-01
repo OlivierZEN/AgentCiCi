@@ -57,6 +57,7 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
     private final String iflytekLang;
     private final String iflytekDomain;
     private final HttpClient httpClient = HttpClient.newBuilder()
+            .version(HttpClient.Version.HTTP_1_1)
             .connectTimeout(Duration.ofSeconds(10))
             .build();
     private final ConcurrentHashMap<String, SessionCtx> sessions = new ConcurrentHashMap<>();
