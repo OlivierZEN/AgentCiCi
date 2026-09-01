@@ -18,5 +18,12 @@ public interface SisiEmbedSessionRepository extends JpaRepository<SisiEmbedSessi
 
     Optional<SisiEmbedSessionEntity> findByChatSessionIdAndCompanyId(String chatSessionId, String companyId);
 
+    Optional<SisiEmbedSessionEntity> findFirstByCompanyIdAndAgentIdAndExternalTenantIdAndExternalUserIdAndSourceOrderByUpdatedAtDesc(
+            String companyId,
+            String agentId,
+            String externalTenantId,
+            String externalUserId,
+            String source);
+
     List<SisiEmbedSessionEntity> findByCompanyIdOrderByUpdatedAtDesc(String companyId, Pageable pageable);
 }

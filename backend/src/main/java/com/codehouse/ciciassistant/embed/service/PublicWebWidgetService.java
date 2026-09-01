@@ -103,6 +103,7 @@ public class PublicWebWidgetService {
         }
 
         String visitorId = requireVisitorId(command == null ? null : command.visitorId());
+        String visitId = optionalVisitId(command == null ? null : command.visitId());
         reserve(widget, request);
         String pagePath = normalizePagePath(command == null ? null : command.pagePath());
         String locale = clip(command == null ? null : command.locale(), 16);
@@ -110,6 +111,7 @@ public class PublicWebWidgetService {
         Instant expiresAt = Instant.now().plusSeconds(widget.config().tokenTtlSeconds());
         Map<String, Object> context = new LinkedHashMap<>();
         context.put("widgetKey", widget.config().widgetKey());
+        context.put("visitId", visitId);
         context.put("pagePath", pagePath);
         context.put("locale", locale);
         context.put("assistantName", widget.config().assistantName());
@@ -263,6 +265,15 @@ public class PublicWebWidgetService {
         return value;
     }
 
+    private String optionalVisitId(String raw) {
+        String value = raw == null ? "" : raw.trim().toLowerCase(Locale.ROOT);
+        if (value.isBlank()) return "";
+        if (!value.matches("^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "visitId must be a UUID v4");
+        }
+        return value;
+    }
+
     private String normalizePagePath(String raw) {
         String value = raw == null ? "/" : raw.trim();
         if (!value.startsWith("/") || value.startsWith("//")) {
@@ -330,7 +341,11 @@ public class PublicWebWidgetService {
         }
     }
 
-    public record TokenCommand(String visitorId, String parentOrigin, String pagePath, String locale) { }
+    public record TokenCommand(String visitorId, String visitId, String parentOrigin, String pagePath, String locale) {
+        public TokenCommand(String visitorId, String parentOrigin, String pagePath, String locale) {
+            this(visitorId, "", parentOrigin, pagePath, locale);
+        }
+    }
 
     public record TokenView(String embedToken,
                             Instant expiresAt,

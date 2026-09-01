@@ -64,6 +64,7 @@ export default function WebsiteSalesWidget() {
         const sdk = await loadSdk(config.sdkUrl);
         if (cancelled) return;
         const id = visitorId();
+        const visitId = crypto.randomUUID();
         instance = sdk.create({
           mode: "float",
           open: config.defaultOpen,
@@ -76,6 +77,7 @@ export default function WebsiteSalesWidget() {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 visitorId: id,
+                visitId,
                 parentOrigin: window.location.origin,
                 pagePath: window.location.pathname,
                 locale: document.documentElement.lang || "zh-CN",

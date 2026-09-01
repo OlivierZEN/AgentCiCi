@@ -34,11 +34,12 @@ public class PublicWebWidgetController {
                                                                @Valid @RequestBody TokenRequest request,
                                                                HttpServletRequest servletRequest) {
         return ApiResponse.ok(service.issueToken(widgetKey, new PublicWebWidgetService.TokenCommand(
-                request.visitorId(), request.parentOrigin(), request.pagePath(), request.locale()), servletRequest));
+                request.visitorId(), request.visitId(), request.parentOrigin(), request.pagePath(), request.locale()), servletRequest));
     }
 
     public record TokenRequest(
             @NotBlank @Size(max = 64) String visitorId,
+            @Size(max = 64) String visitId,
             @NotBlank @Size(max = 256) String parentOrigin,
             @NotBlank @Size(max = 160) String pagePath,
             @Size(max = 16) String locale) { }

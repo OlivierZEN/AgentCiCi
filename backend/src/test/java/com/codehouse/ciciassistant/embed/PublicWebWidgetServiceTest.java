@@ -100,7 +100,8 @@ class PublicWebWidgetServiceTest {
 
         PublicWebWidgetService.TokenView token = service.issueToken(WIDGET_KEY,
                 new PublicWebWidgetService.TokenCommand(
-                        "11111111-1111-4111-8111-111111111111", ORIGIN, "/global/solutions", "zh-CN"),
+                        "11111111-1111-4111-8111-111111111111",
+                        "22222222-2222-4222-8222-222222222222", ORIGIN, "/global/solutions", "zh-CN"),
                 request);
 
         assertThat(token.embedToken()).isEqualTo("signed-widget-token");
@@ -110,7 +111,9 @@ class PublicWebWidgetServiceTest {
         ArgumentCaptor<Map<String, Object>> claims = ArgumentCaptor.forClass(Map.class);
         verify(jwt).issueToken(any(String.class), claims.capture(), eq(600L));
         assertThat(claims.getValue()).doesNotContainKey("agentAvatarBase64");
-        assertThat((Map<String, Object>) claims.getValue().get("context")).doesNotContainKey("agentAvatarBase64");
+        assertThat((Map<String, Object>) claims.getValue().get("context"))
+                .containsEntry("visitId", "22222222-2222-4222-8222-222222222222")
+                .doesNotContainKey("agentAvatarBase64");
     }
 
     @Test

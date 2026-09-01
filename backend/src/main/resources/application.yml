@@ -44,6 +44,11 @@ info:
     git-commit: ${GIT_COMMIT:unknown}
 
 app:
+  website-presales:
+    enabled: ${APP_WEBSITE_PRESALES_ENABLED:true}
+    idle-minutes: ${APP_WEBSITE_PRESALES_IDLE_MINUTES:30}
+    # Optional deployment-owned CloudCC login/ticket entry. Business and frontend sources never own this address.
+    cloudcc-ticket-entry-url: ${APP_WEBSITE_PRESALES_CLOUDCC_TICKET_URL:}
   wecom-kf:
     # Mobile OAuth/JS-SDK callbacks use the deployment-owned public origin. Keep it out of product code.
     public-base-url: ${APP_WECOM_KF_PUBLIC_BASE_URL:${APP_AUTH_OFFICIAL_ACCESS_ISSUER:}}

@@ -47,6 +47,19 @@ public class SisiEmbedController {
         return emitter;
     }
 
+    @PostMapping("/website/visit-choice")
+    public ApiResponse<Map<String, Object>> chooseVisit(
+            @PathVariable String sessionId,
+            @RequestBody SisiEmbedRuntimeService.VisitChoiceCommand command,
+            HttpServletRequest request) {
+        return ApiResponse.ok(runtimeService.chooseVisit(token(request), sessionId, command));
+    }
+
+    @GetMapping("/website/ticket-entry")
+    public ApiResponse<Map<String, Object>> ticketEntry(@PathVariable String sessionId, HttpServletRequest request) {
+        return ApiResponse.ok(runtimeService.ticketEntry(token(request), sessionId));
+    }
+
     @PostMapping(value = "/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<Map<String, Object>> upload(@PathVariable String sessionId,
                                                    @RequestParam String clientAttachmentId,

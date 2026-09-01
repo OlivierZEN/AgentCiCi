@@ -639,6 +639,7 @@ export function webWidgetInstallSnippet(config: WebPublishConfig): string {
     visitorId = crypto.randomUUID();
     localStorage.setItem(visitorStorageKey, visitorId);
   }
+  const visitId = crypto.randomUUID();
   const configResponse = await fetch(serviceOrigin + "/public/web-widgets/" + widgetKey);
   const configBody = await configResponse.json();
   if (!configResponse.ok || !configBody.success) throw new Error(configBody.message || "Web widget config failed");
@@ -657,6 +658,7 @@ export function webWidgetInstallSnippet(config: WebPublishConfig): string {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             visitorId,
+            visitId,
             parentOrigin: location.origin,
             pagePath: location.pathname,
             locale: document.documentElement.lang || "zh-CN"

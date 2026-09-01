@@ -29,6 +29,16 @@ import "./sisi-embed.css";
 
 type Envelope<T> = { success?: boolean; data?: T; message?: string };
 type HostMessage = { source?: string; type?: string; token?: string; payload?: Record<string, unknown> };
+type WebsiteLifecycle = {
+  status: "AWAITING_CHOICE" | "ACTIVE" | "CONTACT_REQUESTED" | "COMPLETED" | "SERVICE_REDIRECTED";
+  returningVisitor: boolean;
+  resumeChoiceRequired: boolean;
+  priorSummary: string;
+  contactCaptured: boolean;
+  turnCount: number;
+  canSend: boolean;
+  ticketEntryAvailable: boolean;
+};
 type SessionView = {
   sessionId: string;
   productName: string;
@@ -41,6 +51,7 @@ type SessionView = {
   recordName?: string;
   customerName?: string;
   themeCode?: string;
+  websiteLifecycle?: WebsiteLifecycle;
 };
 type Attachment = { id: string; name: string; contentType: string; sizeBytes: number; status: string };
 type Evidence = { id: string; title: string; detail: string; kind: "source" | "tool" | "security"; href?: string };
@@ -59,6 +70,7 @@ const APP_CODE = "sisi";
 const SDK_SOURCE = "agentcici-sisi-embed";
 const ACCEPT = ".png,.jpg,.jpeg,.webp,.txt,.md,.csv,.json,.pdf,.docx";
 const SUGGESTIONS = ["总结当前客户进展", "查找最近一次沟通", "生成下一步跟进建议"];
+const WEBSITE_SUGGESTIONS = ["介绍一下 CloudCC", "你们适合哪些企业？", "我想了解产品方案"];
 
 function SisiAgentAvatar({ session, variant }: { session: SessionView | null; variant: "brand" | "hero" | "message" }) {
   const websiteAgent = session?.source === "website";
@@ -307,6 +319,9 @@ export default function SisiEmbedPage() {
             detail: text(source.knowledgeBaseName || source.snippet || "已引用可信知识"),
             href: text(source.url) || undefined,
           }));
+        } else if (eventName === "website_state") {
+          const lifecycle = payload as WebsiteLifecycle;
+          setSession((current) => current ? { ...current, websiteLifecycle: lifecycle } : current);
         } else if (eventName === "error") {
           throw new Error(text((payload as Record<string, unknown>)?.message || payload));
         }
@@ -317,7 +332,7 @@ export default function SisiEmbedPage() {
 
   const send = async (override?: string) => {
     const question = (override ?? draft).trim();
-    if (!question || sending || !session) return;
+    if (!question || sending || !session || session.websiteLifecycle?.canSend === false) return;
     const selected = attachments.map((item) => item.id);
     const userMessage: ChatMessage = { id: crypto.randomUUID(), role: "user", content: question, attachments, createdAt: new Date().toISOString() };
     const assistantId = crypto.randomUUID();
@@ -367,6 +382,40 @@ export default function SisiEmbedPage() {
       postHost("embed:error", { message });
     } finally {
       setSending(false);
+    }
+  };
+
+  const chooseVisit = async (choice: "CONTINUE" | "START_NEW") => {
+    if (!session || sending) return;
+    setSending(true);
+    try {
+      const lifecycle = isDevPreview
+        ? { ...session.websiteLifecycle!, status: "ACTIVE" as const, resumeChoiceRequired: false, canSend: true, priorSummary: choice === "START_NEW" ? "" : session.websiteLifecycle?.priorSummary ?? "" }
+        : await api<WebsiteLifecycle>(`/embed/v1/apps/${APP_CODE}/sessions/${encodeURIComponent(session.sessionId)}/website/visit-choice`, {
+          method: "POST",
+          body: JSON.stringify({ choice }),
+        });
+      setSession((current) => current ? { ...current, websiteLifecycle: lifecycle } : current);
+      setNotice(choice === "CONTINUE" ? "已带入上次咨询摘要" : "已开始新的售前咨询");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const openTicketEntry = async () => {
+    if (!session || isDevPreview) return;
+    try {
+      const entry = await api<{ available: boolean; url?: string }>(
+        `/embed/v1/apps/${APP_CODE}/sessions/${encodeURIComponent(session.sessionId)}/website/ticket-entry`);
+      if (!entry.available || !entry.url) {
+        setNotice("请登录 CloudCC 系统后，在系统内提交在线工单");
+        return;
+      }
+      window.open(entry.url, "_blank", "noopener,noreferrer");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error));
     }
   };
 
@@ -424,6 +473,9 @@ export default function SisiEmbedPage() {
   const assistantDisplayName = session?.source === "website"
     ? session.productName || "智能体"
     : "思思";
+  const websiteLifecycle = session?.source === "website" ? session.websiteLifecycle : undefined;
+  const composerEnabled = Boolean(session) && !sending && websiteLifecycle?.canSend !== false;
+  const suggestions = session?.source === "website" ? WEBSITE_SUGGESTIONS : SUGGESTIONS;
 
   return (
     <main className={`sisi-shell sisi-shell--${mode} ${leftOpen ? "" : "sisi-shell--left-closed"} ${rightOpen ? "" : "sisi-shell--right-closed"}`} data-theme={resolveSisiTheme(mode, session)}>
@@ -464,11 +516,23 @@ export default function SisiEmbedPage() {
         <section className="sisi-conversation" aria-label={`${assistantDisplayName}对话`}>
           <div className="sisi-messages" ref={listRef} aria-live="polite">
             {loading && <div className="sisi-loading"><LoaderCircle className="spin" /><span>正在建立安全会话…</span></div>}
+            {!loading && websiteLifecycle?.resumeChoiceRequired && <section className="sisi-visit-choice" aria-label="再次来访选择">
+              <span className="sisi-eyebrow">欢迎再次来访</span>
+              <h2>要继续上次的产品咨询吗？</h2>
+              <p>{websiteLifecycle.priorSummary || "我们只会带入精简的咨询摘要，不会自动加载完整历史对话。"}</p>
+              <div>
+                <button className="sisi-visit-choice__primary" onClick={() => void chooseVisit("CONTINUE")} disabled={sending}>继续上次需求</button>
+                <button onClick={() => void chooseVisit("START_NEW")} disabled={sending}>开始新咨询</button>
+              </div>
+              <small>无论选择哪一种，都会创建新的访问会话；原始记录按组织保留策略保存。</small>
+            </section>}
             {!loading && messages.length === 0 && <div className="sisi-welcome">
               <SisiAgentAvatar session={session} variant="hero" />
               <h1>你好，我是{assistantDisplayName}</h1>
-              <p>我已进入当前业务场景，可以基于你有权访问的数据进行分析、检索和执行。</p>
-              <div className="sisi-suggestions">{SUGGESTIONS.map((item) => <button key={item} onClick={() => void send(item)}><Sparkles size={14} />{item}</button>)}</div>
+              <p>{session?.source === "website"
+                ? "我负责产品售前咨询，可以介绍产品、了解您的需求并协助安排顾问跟进。售中或售后问题请登录 CloudCC 后提交在线工单。"
+                : "我已进入当前业务场景，可以基于你有权访问的数据进行分析、检索和执行。"}</p>
+              {!websiteLifecycle?.resumeChoiceRequired && <div className="sisi-suggestions">{suggestions.map((item) => <button key={item} onClick={() => void send(item)}><Sparkles size={14} />{item}</button>)}</div>}
             </div>}
             {messages.map((message) => <article key={message.id} className={`sisi-message sisi-message--${message.role}`}>
               {message.role === "assistant" && <SisiAgentAvatar session={session} variant="message" />}
@@ -479,23 +543,37 @@ export default function SisiEmbedPage() {
                 {message.confirmation && <button className="sisi-confirm" onClick={() => { postHost("embed:action-confirmed", { phrase: message.confirmation }); void send(message.confirmation); }}><ShieldCheck size={15} />确认并回复“{message.confirmation}”</button>}
               </div>
             </article>)}
+            {!loading && websiteLifecycle && !websiteLifecycle.canSend && <section className="sisi-visit-closed" aria-label="本次咨询已结束">
+              <ShieldCheck size={18} />
+              <div>
+                <strong>{websiteLifecycle.status === "SERVICE_REDIRECTED" ? "请转到 CloudCC 在线工单" : "本次售前咨询已结束"}</strong>
+                <p>{websiteLifecycle.status === "SERVICE_REDIRECTED"
+                  ? "公开页面不会查询或处理您的账号和业务数据。"
+                  : websiteLifecycle.contactCaptured ? "联系方式已记录，无需重复提交。" : "如有新的售前需求，稍后可重新发起咨询。"}</p>
+              </div>
+              {websiteLifecycle.status === "SERVICE_REDIRECTED" && websiteLifecycle.ticketEntryAvailable
+                ? <button onClick={() => void openTicketEntry()}>登录并提交工单</button>
+                : null}
+            </section>}
           </div>
 
           <div className="sisi-composer-wrap">
             {attachments.length > 0 && <div className="sisi-attachment-strip">{attachments.map((item) => <span key={item.id}>{item.contentType.startsWith("image/") ? <ImageIcon size={13} /> : <FileText size={13} />}{item.name}<button onClick={() => setAttachments((current) => current.filter((entry) => entry.id !== item.id))}><X size={12} /></button></span>)}</div>}
             <div className={`sisi-composer ${listening ? "sisi-composer--listening" : ""}`}>
-              <textarea className="sisi-composer__input" value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onKeyDown} placeholder={listening ? "正在聆听…" : `问${assistantDisplayName}，或交代一个任务…`} rows={1} disabled={!session || sending} />
+              <textarea className="sisi-composer__input" value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onKeyDown} placeholder={websiteLifecycle?.canSend === false ? "本次咨询已结束" : listening ? "正在聆听…" : session?.source === "website" ? `向${assistantDisplayName}咨询产品…` : `问${assistantDisplayName}，或交代一个任务…`} rows={1} disabled={!composerEnabled} />
               <div className="sisi-composer__tools">
-                {mode === "page" && <>
+                {mode === "page" && session?.source !== "website" && <>
                   <input ref={fileRef} type="file" accept={ACCEPT} multiple hidden onChange={upload} />
-                  <button className="cici-product-icon-button" onClick={() => fileRef.current?.click()} disabled={!session || sending} title="上传附件"><Paperclip size={18} /></button>
+                  <button className="cici-product-icon-button" onClick={() => fileRef.current?.click()} disabled={!composerEnabled} title="上传附件"><Paperclip size={18} /></button>
                 </>}
-                <button onClick={() => void toggleVoice()} disabled={!session || sending} className={`cici-product-icon-button${listening ? " is-active" : ""}`} title="语音输入">{listening ? <CircleStop size={18} /> : <Mic size={18} />}</button>
+                <button onClick={() => void toggleVoice()} disabled={!composerEnabled} className={`cici-product-icon-button${listening ? " is-active" : ""}`} title="语音输入">{listening ? <CircleStop size={18} /> : <Mic size={18} />}</button>
                 <span className="sisi-composer__hint">Enter 发送 · Shift+Enter 换行</span>
-                <button className="sisi-send" onClick={() => void send()} disabled={!draft.trim() || !session || sending} title="发送">{sending ? <LoaderCircle className="spin" size={18} /> : <ArrowUp size={18} />}</button>
+                <button className="sisi-send" onClick={() => void send()} disabled={!draft.trim() || !composerEnabled} title="发送">{sending ? <LoaderCircle className="spin" size={18} /> : <ArrowUp size={18} />}</button>
               </div>
             </div>
-            <p className="sisi-disclaimer">思思可能会出错。涉及写入与高风险操作时，请确认回读结果。</p>
+            <p className="sisi-disclaimer">{session?.source === "website"
+              ? "请勿提交密码、验证码等敏感信息。留下联系方式即同意仅用于本次售前咨询跟进。"
+              : "思思可能会出错。涉及写入与高风险操作时，请确认回读结果。"}</p>
           </div>
         </section>
 

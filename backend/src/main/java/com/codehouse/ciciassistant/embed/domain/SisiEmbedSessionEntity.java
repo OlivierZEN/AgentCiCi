@@ -58,6 +58,9 @@ public class SisiEmbedSessionEntity {
     @Column(name = "context_json", nullable = false, columnDefinition = "TEXT")
     private String contextJson;
 
+    @Column(name = "routing_key", length = 160)
+    private String routingKey;
+
     @Column(name = "status", nullable = false, length = 32)
     private String status;
 
@@ -84,6 +87,25 @@ public class SisiEmbedSessionEntity {
                                   String customerName,
                                   String parentOrigin,
                                   String contextJson) {
+        this(id, companyId, chatSessionId, internalUserId, agentId, externalTenantId, externalUserId,
+                source, objectType, objectId, recordName, customerName, parentOrigin, contextJson, null);
+    }
+
+    public SisiEmbedSessionEntity(String id,
+                                  String companyId,
+                                  String chatSessionId,
+                                  String internalUserId,
+                                  String agentId,
+                                  String externalTenantId,
+                                  String externalUserId,
+                                  String source,
+                                  String objectType,
+                                  String objectId,
+                                  String recordName,
+                                  String customerName,
+                                  String parentOrigin,
+                                  String contextJson,
+                                  String routingKey) {
         this.id = id;
         this.companyId = companyId;
         this.appCode = "sisi";
@@ -99,6 +121,7 @@ public class SisiEmbedSessionEntity {
         this.customerName = customerName;
         this.parentOrigin = parentOrigin;
         this.contextJson = contextJson;
+        this.routingKey = routingKey;
         this.status = STATUS_ACTIVE;
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
@@ -119,6 +142,7 @@ public class SisiEmbedSessionEntity {
     public String getCustomerName() { return customerName; }
     public String getParentOrigin() { return parentOrigin; }
     public String getContextJson() { return contextJson; }
+    public String getRoutingKey() { return routingKey; }
     public String getStatus() { return status; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
@@ -128,6 +152,23 @@ public class SisiEmbedSessionEntity {
         this.contextJson = contextJson;
         this.recordName = recordName;
         this.customerName = customerName;
+        this.updatedAt = Instant.now();
+    }
+
+    public void retarget(String objectType,
+                         String objectId,
+                         String parentOrigin,
+                         String contextJson,
+                         String recordName,
+                         String customerName) {
+        this.objectType = objectType;
+        this.objectId = objectId;
+        touch(parentOrigin, contextJson, recordName, customerName);
+    }
+
+    public void replaceChatSession(String chatSessionId, String routingKey) {
+        this.chatSessionId = chatSessionId;
+        this.routingKey = routingKey;
         this.updatedAt = Instant.now();
     }
 }
