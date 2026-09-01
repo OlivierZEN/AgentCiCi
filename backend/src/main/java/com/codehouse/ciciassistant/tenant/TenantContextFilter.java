@@ -197,6 +197,7 @@ public class TenantContextFilter extends OncePerRequestFilter {
                 || "/auth/password/login".equals(path)
                 || "/auth/oidc/login".equals(path)
                 || "/auth/oidc/password".equals(path)
+                || "/auth/oidc/logout".equals(path)
                 || "/auth/oidc/callback".equals(path)
                 || "/auth/oidc/complete".equals(path)
                 || "/.well-known/agentcici-oact-jwks.json".equals(path)

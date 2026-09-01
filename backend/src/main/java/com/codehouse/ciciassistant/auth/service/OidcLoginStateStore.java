@@ -10,7 +10,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
-/** Stores short-lived OIDC state and encrypted server-side refresh tokens. */
+/** Stores short-lived OIDC state and encrypted server-side login tokens. */
 @Component
 public class OidcLoginStateStore {
 
@@ -56,10 +56,29 @@ public class OidcLoginStateStore {
         return consume(DEVAUTOPILOT_HANDOFF_PREFIX + ticket, DevAutopilotHandoff.class);
     }
 
-    public void saveRefreshSession(String sessionId, String refreshToken, Duration ttl) {
-        SecretCipherService.EncryptedSecret encrypted = secretCipherService.encryptUtf8(refreshToken);
+    public void saveLoginSession(String sessionId, String idToken, String refreshToken, Duration ttl) {
+        SecretCipherService.EncryptedSecret encryptedIdToken = secretCipherService.encryptUtf8(idToken);
+        SecretCipherService.EncryptedSecret encryptedRefreshToken = secretCipherService.encryptUtf8(refreshToken);
         save(SESSION_PREFIX + sessionId,
-                new RefreshSession(encrypted.cipherBase64(), encrypted.ivBase64(), Instant.now().plus(ttl)), ttl);
+                new EncryptedLoginSession(
+                        encryptedIdToken.cipherBase64(),
+                        encryptedIdToken.ivBase64(),
+                        encryptedRefreshToken.cipherBase64(),
+                        encryptedRefreshToken.ivBase64(),
+                        Instant.now().plus(ttl)), ttl);
+    }
+
+    public LoginSession consumeLoginSession(String sessionId) {
+        if (sessionId == null || sessionId.isBlank()) {
+            return null;
+        }
+        EncryptedLoginSession encrypted = consume(SESSION_PREFIX + sessionId, EncryptedLoginSession.class);
+        if (encrypted == null) {
+            return null;
+        }
+        return new LoginSession(
+                secretCipherService.decryptUtf8(encrypted.idTokenCipher(), encrypted.idTokenIv()),
+                secretCipherService.decryptUtf8(encrypted.refreshTokenCipher(), encrypted.refreshTokenIv()));
     }
 
     private void save(String key, Object value, Duration ttl) {
@@ -100,7 +119,14 @@ public class OidcLoginStateStore {
     public record DevAutopilotHandoff(String companyId, String memberId) {
     }
 
-    private record RefreshSession(String cipher, String iv, Instant expiresAt) {
+    private record EncryptedLoginSession(String idTokenCipher,
+                                         String idTokenIv,
+                                         String refreshTokenCipher,
+                                         String refreshTokenIv,
+                                         Instant expiresAt) {
+    }
+
+    public record LoginSession(String idToken, String refreshToken) {
     }
 
     private record TimedValue(String payload, Instant expiresAt) {

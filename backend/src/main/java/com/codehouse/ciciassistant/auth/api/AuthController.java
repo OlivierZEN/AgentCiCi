@@ -117,7 +117,8 @@ public class AuthController {
     public ResponseEntity<Void> oidcCallback(@RequestParam String code,
                                              @RequestParam String state,
                                              @CookieValue(name = KeycloakOidcLoginService.STATE_COOKIE, required = false) String stateCookie) {
-        URI location = keycloakOidcLoginService.complete(code, state, stateCookie);
+        KeycloakOidcLoginService.LoginCompletionRedirect completion =
+                keycloakOidcLoginService.complete(code, state, stateCookie);
         ResponseCookie clearCookie = ResponseCookie.from(KeycloakOidcLoginService.STATE_COOKIE, "")
                 .httpOnly(true)
                 .secure(true)
@@ -125,9 +126,45 @@ public class AuthController {
                 .path("/auth/oidc")
                 .maxAge(0)
                 .build();
+        ResponseCookie sessionCookie = ResponseCookie.from(
+                        KeycloakOidcLoginService.SESSION_COOKIE, completion.sessionId())
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Lax")
+                .path("/auth/oidc")
+                .maxAge(completion.sessionMaxAgeSeconds())
+                .build();
         return ResponseEntity.status(302)
-                .header(HttpHeaders.LOCATION, location.toString())
-                .header(HttpHeaders.SET_COOKIE, clearCookie.toString())
+                .header(HttpHeaders.LOCATION, completion.location().toString())
+                .header(HttpHeaders.SET_COOKIE, clearCookie.toString(), sessionCookie.toString())
+                .build();
+    }
+
+    @GetMapping("/oidc/logout")
+    public ResponseEntity<Void> oidcLogout(
+            @CookieValue(name = KeycloakOidcLoginService.SESSION_COOKIE, required = false) String sessionId,
+            HttpServletRequest request) {
+        ResponseCookie clearSessionCookie = ResponseCookie.from(KeycloakOidcLoginService.SESSION_COOKIE, "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Lax")
+                .path("/auth/oidc")
+                .maxAge(0)
+                .build();
+        if (!keycloakOidcLoginService.isEnabled()) {
+            return ResponseEntity.status(302)
+                    .header(HttpHeaders.LOCATION, "/app")
+                    .header(HttpHeaders.SET_COOKIE, clearSessionCookie.toString())
+                    .build();
+        }
+        if (!keycloakOidcLoginService.isCanonicalStartHost(request.getHeader(HttpHeaders.HOST))) {
+            return ResponseEntity.status(302)
+                    .header(HttpHeaders.LOCATION, keycloakOidcLoginService.canonicalLogoutUri().toString())
+                    .build();
+        }
+        return ResponseEntity.status(302)
+                .header(HttpHeaders.LOCATION, keycloakOidcLoginService.logout(sessionId).toString())
+                .header(HttpHeaders.SET_COOKIE, clearSessionCookie.toString())
                 .build();
     }
 

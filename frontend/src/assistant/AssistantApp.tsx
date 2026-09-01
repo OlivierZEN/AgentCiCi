@@ -48,6 +48,7 @@ import {
 import { isMeetingMinutesStartCommand } from "./meetingMinutesCommand";
 import { appendMeetingTranscriptSegment, speakerDisplayName } from "./meetingTranscript";
 import { shouldAutoStartOidcLogin } from "./oidcAutoRedirect";
+import { startOidcLogout } from "./oidcLogout";
 import {
   composerCanSubmit,
   createClientAttachmentId,
@@ -4199,6 +4200,7 @@ export default function AssistantApp() {
 
   const logout = () => {
     abortAsrSession();
+    oidcAutoRedirectAttemptedRef.current = true;
     persistAuth(null);
     setMe(null);
     setKbs([]);
@@ -4249,6 +4251,7 @@ export default function AssistantApp() {
     setCompanyMenuOpen(false);
     setRegisterMode(false);
     setNotice("已退出。");
+    startOidcLogout();
   };
 
   useEffect(() => {
