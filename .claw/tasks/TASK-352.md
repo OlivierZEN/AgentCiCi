@@ -3,7 +3,7 @@ kind: task-status
 task_id: TASK-352
 assignee: codex
 owner_role: fullstack-agent
-status: in_progress
+status: review
 branch: main
 pr_url: n/a
 spec_path: docs/specs/FEAT-062-platform-model-provider-governance.md
