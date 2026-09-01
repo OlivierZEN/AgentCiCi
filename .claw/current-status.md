@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 6
-updated_at: 2026-09-01T11:46:20Z
+updated_at: 2026-09-01T13:50:30Z
 updated_by: codex
 phase: review
 active_task: null
-next_action: "TASK-348 本地技术交付完成；如需推广到 UAT/生产，先建立专用最小权限运行身份、配置环境侧工单 URL，并单独授权发布和 HUMAN 业务验收。"
+next_action: "TASK-349 已恢复讯飞 voice-asr 候选与运行路由；平台管理员选择保存后，用真实麦克风完成一次讯飞 WebSocket 转写 HUMAN 验收。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- `TASK-349 / FEAT-062` 已修复用户截图中的讯飞实时语音候选为 0：`4c057b6e2cc8` 让启用且凭据完整的 `integration_app(iflytek_asr)` 投影为专用 `iflytek-realtime-asr` 场景候选，并恢复 `/ws/asr` 到既有讯飞 WebSocket 客户端的音频、停止、关闭和完成态；不进入通用模型目录且不复制凭据。聚焦 `1 + 4 + 1`、package/diff 通过；本地 backend 为 `2.8.68-dev.4c057b6`、health UP、restart=0，仅 backend 容器替换。Chrome 授权态回读 `voice-asr` 候选 1、下拉含“实时语音转写 · 科大讯飞”、console 0；未代用户保存路由，真实麦克风转写仍待 HUMAN。
 
 - `TASK-348 / FEAT-207` 本地技术交付完成：公开 Website 智能体只处理售前；售中售后由服务端确定性拦截并引导登录 CloudCC 提交在线工单；第 6/8 轮、联系方式完成态和公开零工具/零用户记忆/零附件均为服务端强制策略。再次来访创建新聊天会话，先选择继续上次需求或开始新咨询，仅继续时注入脱敏结构化摘要。目标租户 `org3gxskla32gln3bvop` 的“客服-Mary”已通过正式 API 发布 v4，Website-only、零工具、零知识库、零可选技能；真实本地链路验证售后 Trace 模型/工具调用均为 0，联系方式加密且消息不含明文，再访会话隔离有效。实现 `1ffc9092 + c5726b28 + 6fa12d73` 已进入本地 `main@6fa12d731b84`；backend/frontend 运行 `2.8.68-dev.6fa12d7`，同 revision 镜像 healthy/restart=0，Flyway V129 成功，门户浏览器回读通过。演示仍使用既有 ACTIVE Owner 运行映射，生产需专用最小权限身份；本次未修改 UAT/生产。
 

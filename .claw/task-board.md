@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-09-01T13:34:35Z
+updated_at: 2026-09-01T13:50:30Z
 updated_by: codex
 board_status: active
 ---
@@ -17,7 +17,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-349 - 讯飞实时语音转写纳入模型厂商治理
 
-- status: `in_progress`
+- status: `review`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - claimed_by: `codex`
@@ -26,8 +26,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - related_issues: `none`
 - scope_files: `模型厂商 API 适配、讯飞平台托管配置单一事实源、voice-asr 固定候选与 WebSocket 运行路由、聚焦测试和桌面端验证`
-- completion_evidence: `用户授权态截图确认原实现 voice-asr 候选为 0；已定位白名单、候选来源和运行时硬拒绝三处断点，聚焦路由与选择测试通过，待提交及更新本地环境。`
-- next_action: `完成差异复核、提交本地 main、从该提交重建 backend 并在 https://cici.localhost/ 回读候选与运行指纹；真实讯飞转写仍需 HUMAN 语音验收。`
+- completion_evidence: `修复 4c057b6e 进入本地 main；聚焦 1+4+1、package/diff 通过。backend 2.8.68-dev.4c057b6 healthy/restart=0；Chrome 授权态回读 voice-asr 候选 1、下拉含“实时语音转写 · 科大讯飞”、console 0。`
+- next_action: `平台管理员选择并保存讯飞路由后，用真实麦克风完成一次讯飞 WebSocket 转写 HUMAN 验收；本轮未代用户改变场景路由。`
 
 ### TASK-347 - Web 浮窗真实流式与首字延迟修复
 

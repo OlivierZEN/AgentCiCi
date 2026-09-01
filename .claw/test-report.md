@@ -1,11 +1,11 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-09-01T12:22:39Z
+updated_at: 2026-09-01T13:50:30Z
 updated_by: codex
 status: active
-last_run_at: 2026-09-01T12:22:39Z
-last_run_status: passed_task_350_local_technical_pending_human_logout
+last_run_at: 2026-09-01T13:50:30Z
+last_run_status: passed_task_349_iflytek_route_candidate_pending_live_asr
 ---
 
 # Test Report
@@ -37,13 +37,13 @@ last_run_status: passed_task_350_local_technical_pending_human_logout
 
 ## 2026-09-01 TASK-349 讯飞实时语音转写模型厂商治理
 
-- 状态：`passed_task_349_local_technical_pending_platform_login_and_live_asr`。模型厂商 API 复用平台级 `integration_app(iflytek_asr)`，保存后 Secret 仅返回掩码；通用平台集成列表不再重复展示讯飞。
-- 后端：编译通过；`RealtimeAsrProviderSelectionTest` 为 `3/3`，空库 PostgreSQL 16.9 上 `PlatformIntegrationGovernanceIntegrationTest` 为 `1/1`，`PlatformModelProviderIntegrationTest#platformCanGovernModelProvidersWhileCompanyProviderWritesAreForbidden` 为 `1/1`。覆盖保存、掩码、运行时解密、配置完整性、非 `wss` 失败关闭和租户隔离。
-- 前端：模型厂商页聚焦 `7/7`、全量 `61 files / 338 tests`、production build 与 `git diff --check` 通过；build 仅保留既有大 chunk warning。
-- 本地主线与制品：实现 `944898f8b956` 已进入本地 `main`；backend/frontend 运行 `2.8.68-dev.944898f / 944898f8b956`，镜像分别为 `sha256:08b15a8507c5` / `sha256:41bbf130ac65`，healthy/restart=0。backend 镜像 JAR 与干净构建产物 SHA-256 均为 `8c735f976f147b0215331424df45a3d64bffa6eb7e8ac7eb9292282bce2fba57`。
-- 路由与稳定性：`https://cici.localhost/`、`/platform/models/providers` 和带版本 JS 资源均为 200；Nginx 配置通过，bundle 含实时语音转写与真实识别边界文案。切换期出现 1 次预期 502，后续 30 秒窗口 backend severe=0、frontend 结构化 5xx=0。
-- 最小影响：只替换 backend/frontend；PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak、Nginx、Semattice、DevAutopilot 容器 ID 均未变化。未执行受既有 Semattice `config=1.0.7 / repository=1.0.8` 漂移影响的完整 stack verify。
-- 浏览器与验收边界：应用内浏览器和 Chrome 均进入正式平台登录边界，未读取存储或代填凭据，授权态桌面视觉待 HUMAN。当前“校验配置”只验证启用状态、凭据完整性与 `wss` 地址，不发起真实音频识别；真实讯飞凭据、网络握手和语音结果仍需一次实时业务探测。
+- 状态：`passed_task_349_iflytek_route_candidate_pending_live_asr`。用户授权态截图证明厂商已配置但 `voice-asr` 候选为 0；根因是场景只允许阿里云、候选只读通用模型表，且 WebSocket 运行时硬拒绝非阿里云路由。
+- 实现：`4c057b6e2cc8` 将启用且凭据完整的原 `integration_app(iflytek_asr)` 投影为固定 `iflytek-realtime-asr` 候选，只用于 `voice-asr`；通用模型目录不包含讯飞，Secret 事实源不变。`/ws/asr` 按平台路由选择讯飞，并恢复音频发送、停止、关闭和完成态。
+- 自动化：`PlatformModelProviderIntegrationTest#configuredIflytekAdapterCanBeSelectedForRealtimeAsrRoute` 为 `1/1`，`RealtimeAsrProviderSelectionTest` 为 `4/4`，`ModelProviderServiceTest` 为 `1/1`；backend package 与 `git diff --check` 通过。聚焦 Spring 用例使用隔离 PostgreSQL 16，因既有 OACT 测试配置漂移显式关闭该无关能力；默认完整类不记为通过。
+- 本地主线与制品：修复进入本地 `main`；backend 运行 `2.8.68-dev.4c057b6 / 4c057b6e2cc8`，镜像 `sha256:52ee9e301d`、OCI label、容器环境与版本 API 一致，health UP、restart=0、近 10 分钟 severe=0。
+- 最小影响：只替换 backend，其他容器 ID 均未变化；frontend 保持既有制品，因为本轮没有前端源码变化。`https://cici.localhost/` 与 `/platform/models/providers` 为 200。
+- 浏览器：Chrome 既有平台登录态回读实时语音行“已验证候选：1 个”，下拉 enabled 且包含“实时语音转写 · 科大讯飞”；桌面布局正常，console error/warning=0。未代平台管理员保存路由，也未请求麦克风权限或发送音频；真实讯飞网络握手和转写结果仍待 HUMAN。
+- 全栈边界：未执行受既有 Semattice `config=1.0.7 / repository=1.0.8` 漂移阻断的完整 `./stack verify`；不把定向产品验证写成完整全栈门禁通过。UAT、生产、远程、ACR 与 tag 未修改。
 
 ## 2026-09-01 TASK-347 Web 浮窗内部状态过滤自动化
 

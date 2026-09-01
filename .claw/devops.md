@@ -1,12 +1,20 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-09-01T11:26:39Z
+updated_at: 2026-09-01T13:50:30Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-09-01 TASK-349 本地讯飞场景路由修复
+
+- 修复 `4c057b6e2cc8` 已进入本地 `main`，backend 由受管 release Dockerfile 构建为 `2.8.68-dev.4c057b6`，镜像 `sha256:52ee9e301d` 的 OCI version/revision 与提交一致。
+- 仅通过现有 Compose `--no-deps --force-recreate backend` 替换 backend；容器 `healthy/restart=0`，`/system/version` 回读 `2.8.68-dev.4c057b6 / 4c057b6e2cc8`，内部 health=`UP`，近 10 分钟 severe=0。
+- 容器 ID 对比只有 backend 从 `897d6130d71c` 变为 `4eefc48f4891`；frontend 和 PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak、Nginx、Semattice、DevAutopilot 均未替换。
+- `https://cici.localhost/` 与 `/platform/models/providers` 为 200；Chrome 既有平台登录态确认 `voice-asr` 候选 1、下拉含“实时语音转写 · 科大讯飞”，console 0。未保存路由或发送音频，真实讯飞转写待 HUMAN。
+- 本任务不新增跨项目契约。完整 `./stack verify` 继续受既有 Semattice `config=1.0.7 / repository=1.0.8` 漂移阻断；本轮未修改 local-stack、远程、UAT、生产、ACR 或 Git tag。
 
 ## 2026-09-01 TASK-349 本地讯飞模型厂商治理
 

@@ -3,11 +3,11 @@ kind: task-status
 task_id: TASK-349
 assignee: codex
 owner_role: fullstack-agent
-status: in_progress
+status: review
 branch: main
 pr_url: n/a
 spec_path: docs/specs/FEAT-062-platform-model-provider-governance.md
-updated_at: 2026-09-01T13:34:35Z
+updated_at: 2026-09-01T13:50:30Z
 updated_by: codex
 ---
 
@@ -33,10 +33,15 @@ updated_by: codex
 - [x] 配置校验失败关闭并声明真实实时语音探测边界。
 - [x] 启用且凭据完整的讯飞配置可作为 `voice-asr` 候选保存，运行时解析并进入讯飞 WebSocket 适配器。
 - [x] 聚焦测试、构建、差异检查、本地正式路由和制品指纹回读完成。
-- [ ] 平台管理员重新登录后完成授权态桌面视觉确认，并使用真实讯飞凭据完成一次实时语音识别。
+- [x] 平台管理员授权态桌面确认 `voice-asr` 有 1 个讯飞候选且下拉可用。
+- [ ] 使用真实讯飞凭据完成一次实时语音识别并收到转写结果。
 
 ## Handoff
 
+- 修复提交 `4c057b6e2cc8` 已进入本地 `main`；启用且凭据完整的讯飞配置现在投影为专用 `iflytek-realtime-asr` 候选，通用模型目录仍不包含讯飞。
+- `/ws/asr` 以平台 `voice-asr` 路由为权威来源；讯飞分支恢复音频发送、停止、关闭和完成态，凭据仍只从原 `integration_app(iflytek_asr)` 解密读取。
+- 聚焦测试 `1 + 4 + 1`、backend package 与 diff check 通过；backend 运行 `2.8.68-dev.4c057b6 / 4c057b6e2cc8`、health UP、restart=0，只有 backend 容器被替换。
+- Chrome 既有平台登录态回读“已验证候选：1 个”和“实时语音转写 · 科大讯飞”，下拉 enabled、console error/warning=0；没有代运营人员保存路由。真实讯飞音频仍待 HUMAN 验收。
 - 2026-09-01 用户授权态截图确认：讯飞厂商配置已存在，但 `voice-asr` 仍显示候选 0。根因是场景白名单只允许 `aliyun-bailian`、候选只读取 `model_provider_config`，且 `/ws/asr` 硬性拒绝非阿里云路由；本轮已重新打开任务修复。
 
 - 实现提交 `944898f8` 已进入本地 `main`，其父提交 `1ffc9092` 为已独立提交的 TASK-348；本任务没有清理、回退或重复提交 TASK-348 文件。
