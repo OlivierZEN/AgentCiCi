@@ -16,6 +16,7 @@ last_run_status: passed_task_350_local_technical_pending_human_logout
 - 实现：OIDC callback 以加密服务端会话保留 ID/Refresh Token，浏览器只持有 HttpOnly/Secure/SameSite=Lax 随机会话 Cookie；同源 `/auth/oidc/logout` 一次性消费会话并生成含 `id_token_hint`、`client_id`、固定同源 `/app` 回跳的 RP-Initiated Logout，前端退出先清业务状态再硬跳转该入口。
 - 后端：`KeycloakOidcLoginServiceTest,OidcLoginStateStoreTest,AuthControllerTest` 共 12 项通过；`mvn -q -DskipTests package` 通过。默认全量 suite 在既有 `KnowledgeBaseLifecycleIntegrationTest` 初始化时连接 `localhost:5432` 被拒，17 项环境错误后中止，不记为全量通过。
 - 前端：聚焦 6 项、全量 `62 files / 339 tests`、production build 通过；build 仅保留既有大 chunk warning。`git diff --check` 与业务/前端源码真实环境域名扫描通过。
+- 远程主线隔离验证：从 `origin/main@e4aee4f1` 只移植本任务实现后，后端聚焦 12 项与 package 再次通过；该基线前端全量 `61 files / 334 tests` 与 production build 通过，仅保留既有大 chunk warning。未包含本地其他 ahead 任务提交。
 - 本地配置与运行：父仓 `e8f8705 / INT-031` 已精确登记 `post.logout.redirect.uris=https://cici.localhost/app`；本地 backend/frontend 运行 `2.8.68-dev.6d0f952`，healthy/restart=0，无登录态 logout 302、Cookie 清除、版本和日志门禁通过。
 - HUMAN 边界：真实登录后点击退出并确认停留统一登录页尚未执行，不能用无登录态 302 替代。
 

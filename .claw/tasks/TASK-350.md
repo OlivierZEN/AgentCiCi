@@ -1,13 +1,14 @@
 ---
 kind: task-status
 task_id: TASK-350
+integration_id: INT-031
 assignee: codex
 owner_role: fullstack-agent
-status: in_progress
-branch: codex/task-350-oidc-logout
+status: review
+branch: codex/task-350-remote-main
 pr_url: n/a
 spec_path: docs/specs/FEAT-208-oidc-rp-initiated-logout.md
-updated_at: 2026-09-01T11:32:06Z
+updated_at: 2026-09-01T12:22:39Z
 updated_by: codex
 ---
 
@@ -28,12 +29,13 @@ updated_by: codex
 - [x] 根因和安全边界写入 FEAT-208。
 - [x] 前后端完整注销链及聚焦测试通过。
 - [x] 聚焦后端 12 项、前端全量 62 文件/339 项、backend package、frontend build、差异与域名门禁通过。
-- [ ] 提交归并本地 main 并从该 commit 更新本地 backend/frontend。
+- [x] 提交归并本地 main 并从该 commit 更新本地 backend/frontend。
 - [ ] `cici.localhost` 真实登录后退出不再静默重登。
 
 ## Handoff
 
-- 当前主工作树的 `.claw/current-status.md`、`.claw/task-board.md` 有其他任务未提交改动；本任务在隔离 worktree 实现，不回退或夹带这些改动。
+- 注销实现已进入本地 `main`；远程同步使用基于 `origin/main` 的隔离集成分支，只移植本任务提交，不夹带本地其他 ahead 提交。
 - 默认后端全量测试在既有 `KnowledgeBaseLifecycleIntegrationTest` 尝试连接 `localhost:5432` 时失败；聚焦测试和 `mvn -q -DskipTests package` 均通过，不把该环境失败记为代码通过。
-- 本地 Keycloak `agentcici-bff` 的 `post.logout.redirect.uris` 当前为空；完整浏览器回归前需要父仓 `cc-local-stack` 持久登记对应 `/app`，本任务未越权修改父仓。
+- 父仓 `e8f8705 / INT-031` 已将本地 Keycloak `agentcici-bff` 的 `post.logout.redirect.uris` 精确登记为同源 `/app`；本地 backend/frontend 已更新为 `2.8.68-dev.6d0f952`、healthy/restart=0。
+- 真实浏览器回归仍待用户在已打开的本地 Keycloak 页面登录并确认点击退出。
 - UAT、生产和它们的 Keycloak Client 配置不在本次授权范围。

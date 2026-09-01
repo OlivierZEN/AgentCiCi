@@ -15,6 +15,20 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-350 - 门户统一身份完整注销
+
+- status: `review`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- claimed_by: `codex`
+- integration_id: `INT-031`
+- spec_path: `docs/specs/FEAT-208-oidc-rp-initiated-logout.md`
+- task_status_path: `.claw/tasks/TASK-350.md`
+- blocked_by: `none`
+- scope_files: `OIDC 回调安全会话、RP-Initiated Logout、门户退出时序、自动化与本地真实回归`
+- completion_evidence: `后端聚焦 12 项/package、前端 62/339/build 通过；父仓 e8f8705 登记精确注销回跳；本地双镜像 2.8.68-dev.6d0f952、healthy/restart=0。`
+- next_action: `用户登录本地门户并确认后，点击左下角退出并验证停留统一登录页。`
+
 ### TASK-347 - Web 浮窗真实流式与首字延迟修复
 
 - status: `review`
