@@ -1,12 +1,20 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-09-01T23:35:16Z
+updated_at: 2026-09-01T23:44:39Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-09-02 TASK-352 本地 OACT 实时语音鉴权修复
+
+- 代码提交 `e9478ad633eccd3400b00ad0fe37fd70be4ffc11` 已进入本地 main；backend/frontend 以 `2.8.68-dev.e9478ad` 构建，镜像 ID 为 `sha256:1d3472ad53d8` / `sha256:c334a0c1d909`，OCI version/revision、容器环境、版本 API 和页面角标一致。后续本地 main 仅增加并行 TASK-354 的运行证据文档，不改变上述代码制品。
+- 受管 frontend release 构建成功；backend release Docker 内 Maven 连续静默约 4 分钟且尚未替换容器时安全中止，改用同一 main 已通过 package 的 JAR 覆入既有 JRE 基线。宿主机 JAR SHA-256 为 `7852de88580b567b3faaec2dc39bd2d9301cea0012578e481c98b1db703d000b`。
+- 只以现有 Compose `--no-deps --force-recreate backend cici-frontend` 替换无状态服务；两者 healthy/restart=0，backend health=`UP`，`https://cici.localhost/` 为 200。部署 bundle 含 WebSocket 认证帧且不含 `/ws/asr?token=`。
+- Chrome 既有授权态回读页面版本 `2.8.68-dev.e9478ad`、AI 听记“开始听记”入口和 console error/warning=0。未点击麦克风，因为该动作可能立即把现场声音发送至所选厂商；真实 OACT WebSocket、上游文字和结束状态待用户即时授权后验证。
+- 本次未修改 cc-local-stack 受管文件、远程 main、ACR、tag、UAT 或生产；Semattice `config=1.0.7 / repository=1.0.8` 既有漂移使 `./stack init/verify` 失败关闭，未更改其版本线。
 
 ## 2026-09-02 TASK-354 本地当前用户头像修复
 

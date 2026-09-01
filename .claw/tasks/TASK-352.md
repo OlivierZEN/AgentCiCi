@@ -7,7 +7,7 @@ status: in_progress
 branch: main
 pr_url: n/a
 spec_path: docs/specs/FEAT-062-platform-model-provider-governance.md
-updated_at: 2026-09-01T23:32:53Z
+updated_at: 2026-09-01T23:44:39Z
 updated_by: codex
 ---
 
@@ -52,3 +52,5 @@ updated_by: codex
 - 对话听写的阿里云凭据从模型厂商治理的 `aliyun-bailian` 记录读取，固定适配器路由不复制 Secret。
 - 实现提交 `d32a710fe518 + 80f720730cd3 + 7ced552aa661 + 6f3f5def7ca3` 已进入本地 `main`；backend/frontend 均运行 `2.8.68-dev.6f3f5de / 6f3f5def7ca3`、healthy/restart=0，V130/V131 success。
 - 2026-09-02 HUMAN 真实登录截图驳回了此前合成探测：页面 OACT 为 RS256 `ecosystem_user`，而 `/ws/asr` 只调用旧 HS256 `JwtService.parse()`，在厂商路由前即以 `invalid token` 关闭，因此阿里云和讯飞同时失败。任务恢复 `in_progress`，合成探测不再作为浏览器身份链路证据。
+- 修复提交 `e9478ad633ec` 已进入本地 `main`：WebSocket 使用与普通 API 相同的 OACT 校验器，并把 Bearer 从 URL 移到建连后的认证帧；未认证会话不能启动厂商。backend/frontend 运行 `2.8.68-dev.e9478ad`、healthy/restart=0，授权态 Chrome 版本与入口回读正常且 console 0；部署 bundle 含认证帧且不再含 `/ws/asr?token=`。
+- 尚未代 HUMAN 点击麦克风：该动作可能立即把现场声音发送至所选厂商，需用户即时授权或自行完成。收到确认后分别验证阿里云对话听写与讯飞 AI 听记，随后回读不含 Token 的访问日志、上游 `started/text/finished` 与结束收敛。
