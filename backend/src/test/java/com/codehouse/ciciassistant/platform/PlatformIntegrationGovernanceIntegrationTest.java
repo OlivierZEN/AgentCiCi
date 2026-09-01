@@ -12,6 +12,7 @@ import com.codehouse.ciciassistant.integration.service.IntegrationAppService;
 import com.codehouse.ciciassistant.tool.tavily.TavilyToolService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -37,6 +38,9 @@ class PlatformIntegrationGovernanceIntegrationTest {
     @Autowired
     private TavilyToolService tavilyToolService;
 
+    @Autowired
+    private IntegrationAppService integrationAppService;
+
     @Test
     void platformManagesTavilyAndIflytekWhileOrgAdminCannotSeeOrWriteThem() throws Exception {
         String platformToken = platformToken();
@@ -46,7 +50,7 @@ class PlatformIntegrationGovernanceIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[?(@.appCode == 'tavily')]").exists())
-                .andExpect(jsonPath("$.data[?(@.appCode == 'iflytek_asr')]").exists())
+                .andExpect(jsonPath("$.data[?(@.appCode == 'iflytek_asr')]").doesNotExist())
                 .andExpect(jsonPath("$.data[?(@.appCode == 'code_interpreter')]").exists())
                 .andExpect(jsonPath("$.data[?(@.appCode == 'managed_web_search')]").exists())
                 .andExpect(jsonPath("$.data[?(@.appCode == 'managed_web_extractor')]").exists())
@@ -69,23 +73,62 @@ class PlatformIntegrationGovernanceIntegrationTest {
                 .andExpect(jsonPath("$.data.appCode").value("tavily"))
                 .andExpect(jsonPath("$.data.config.apiKey").value(IntegrationAppService.API_KEY_MASK));
 
-        mockMvc.perform(put("/platform/integrations/{appCode}", "iflytek_asr")
+        mockMvc.perform(put("/platform/models/providers/{providerCode}", "iflytek_asr")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                   "enabled": true,
-                                  "description": "平台讯飞",
                                   "config": {
                                     "appId": "platform-iflytek-app",
                                     "accessKeyId": "platform-iflytek-key",
-                                    "accessKeySecret": "platform-iflytek-secret"
+                                    "accessKeySecret": "platform-iflytek-secret",
+                                    "realtimeUrl": "wss://speech.example.test/realtime",
+                                    "lang": "autodialect",
+                                    "domain": "com"
                                   }
                                 }
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.appCode").value("iflytek_asr"))
+                .andExpect(jsonPath("$.data.providerCode").value("iflytek_asr"))
+                .andExpect(jsonPath("$.data.providerKind").value("realtime-asr"))
                 .andExpect(jsonPath("$.data.config.accessKeySecret").value(IntegrationAppService.IFLYTEK_SECRET_MASK));
+
+        mockMvc.perform(post("/platform/models/providers/{providerCode}/check", "iflytek_asr")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "enabled": true,
+                                  "config": {
+                                    "appId": "platform-iflytek-app",
+                                    "accessKeyId": "platform-iflytek-key",
+                                    "accessKeySecret": "iflytek-****",
+                                    "realtimeUrl": "wss://speech.example.test/realtime"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.checkMode").value("configuration"))
+                .andExpect(jsonPath("$.data.validatedCapability").value("realtime-asr"))
+                .andExpect(jsonPath("$.data.runtimeProbeRequired").value(true));
+
+        mockMvc.perform(post("/platform/models/providers/{providerCode}/check", "iflytek_asr")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "enabled": true,
+                                  "config": {
+                                    "appId": "platform-iflytek-app",
+                                    "accessKeyId": "platform-iflytek-key",
+                                    "accessKeySecret": "iflytek-****",
+                                    "realtimeUrl": "http://speech.example.test/realtime"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Realtime URL 必须是有效的 wss 地址。"));
 
         mockMvc.perform(put("/platform/integrations/{appCode}", "code_interpreter")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
@@ -105,7 +148,7 @@ class PlatformIntegrationGovernanceIntegrationTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.appCode").value("code_interpreter"))
-                .andExpect(jsonPath("$.data.config.apiKey").value(IntegrationAppService.CODE_INTERPRETER_SECRET_MASK));
+                .andExpect(jsonPath("$.data.config.apiKey").doesNotExist());
 
         MvcResult orgList = mockMvc.perform(get("/integrations")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + orgToken))
@@ -137,6 +180,11 @@ class PlatformIntegrationGovernanceIntegrationTest {
                 .andExpect(jsonPath("$.message").value(IntegrationAppService.PLATFORM_MANAGED_MESSAGE));
 
         assertThat(tavilyToolService.resolveApiKey("other-org")).isEqualTo("tvly-platform-key");
+        Map<String, Object> iflytekConfig = integrationAppService.findRawConfig("other-org", IntegrationAppService.APP_CODE_IFLYTEK_ASR)
+                .orElseThrow();
+        assertThat(iflytekConfig.get("appId")).isEqualTo("platform-iflytek-app");
+        assertThat(integrationAppService.decryptIflytekAccessKeySecret(iflytekConfig))
+                .contains("platform-iflytek-secret");
         String platformConfigJson = integrationAppRepository.findByCompanyIdAndAppCode("demo-org", "tavily")
                 .orElseThrow()
                 .getConfigJson();

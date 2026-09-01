@@ -3,9 +3,13 @@ import { LS_PLATFORM_TOKEN, PLATFORM_API_BASE } from "../../constants";
 import { safeFetchJson } from "../../utils/http";
 
 type ProviderConfig = {
-  id: number;
+  id: number | string;
   providerCode: string;
   providerName: string;
+  providerKind?: "model-catalog" | "realtime-asr";
+  capabilityLabel?: string;
+  capabilities?: string[];
+  description?: string;
   enabled: boolean;
   apiBaseUrl: string;
   apiKeyMasked: string;
@@ -13,6 +17,18 @@ type ProviderConfig = {
   apiKeyRequired?: boolean;
   defaultBaseUrl: string;
   docUrl: string;
+  config?: Record<string, unknown>;
+  accessKeySecretSet?: boolean;
+  credentialsSet?: boolean;
+};
+
+type RealtimeAsrConfig = {
+  appId: string;
+  accessKeyId: string;
+  accessKeySecret: string;
+  realtimeUrl: string;
+  lang: string;
+  domain: string;
 };
 
 type ProviderModelsPayload = {
@@ -82,7 +98,7 @@ type CatalogSource = "remote" | "unavailable";
 type CapabilityKey = "text" | "tool" | "reasoning" | "vision" | "embedding" | "realtime-asr" | "file-asr" | "code-interpreter" | "web-search" | "web-extractor";
 type ModelConfigTab = "providers" | "routes";
 
-const PROVIDER_ORDER = ["aliyun-bailian", "deepseek", "ollama-local", "lmstudio-local", "onekeytoken", "anthropic", "openai"];
+const PROVIDER_ORDER = ["aliyun-bailian", "iflytek_asr", "deepseek", "ollama-local", "lmstudio-local", "onekeytoken", "anthropic", "openai"];
 const providerRank = new Map(PROVIDER_ORDER.map((code, idx) => [code, idx]));
 
 const PROVIDER_ICON_URLS: Record<string, string> = {
@@ -96,6 +112,14 @@ const PROVIDER_ICON_URLS: Record<string, string> = {
 };
 
 const DEFAULT_PROVIDER_ICON_URL = "/provider-logos/aliyun-bailian.svg";
+const EMPTY_REALTIME_ASR_CONFIG: RealtimeAsrConfig = {
+  appId: "",
+  accessKeyId: "",
+  accessKeySecret: "",
+  realtimeUrl: "",
+  lang: "autodialect",
+  domain: "com",
+};
 
 const CAPABILITY_META: Record<CapabilityKey, { label: string; icon: string; tone: string }> = {
   text: { label: "文本", icon: "T", tone: "text" },
@@ -153,6 +177,15 @@ export function buildProviderCheckRequest(enabled: boolean, apiBaseUrl: string, 
   };
 }
 
+export function buildRealtimeAsrProviderRequest(enabled: boolean, config: RealtimeAsrConfig) {
+  return {
+    enabled,
+    config: Object.fromEntries(
+      Object.entries(config).map(([key, value]) => [key, value.trim()]),
+    ),
+  };
+}
+
 export function readValidatedModel(data: unknown): string {
   if (!data || typeof data !== "object") return "";
   const value = (data as { validatedModel?: unknown }).validatedModel;
@@ -191,6 +224,7 @@ export default function PlatformModelsPage() {
   const [apiBaseUrl, setApiBaseUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [providerEnabled, setProviderEnabled] = useState(true);
+  const [realtimeAsrConfig, setRealtimeAsrConfig] = useState<RealtimeAsrConfig>(EMPTY_REALTIME_ASR_CONFIG);
   const [showApiKey, setShowApiKey] = useState(false);
   const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set());
   const [providerModels, setProviderModels] = useState<string[]>([]);
@@ -344,9 +378,12 @@ export default function PlatformModelsPage() {
     setNotice("");
     setError("");
     try {
-      const payload: { enabled: boolean; apiBaseUrl?: string; apiKey?: string } = { enabled: finalEnabled };
-      if (apiBaseUrl.trim()) payload.apiBaseUrl = apiBaseUrl.trim();
-      if (apiKey.trim()) payload.apiKey = apiKey.trim();
+      const payload: { enabled: boolean; apiBaseUrl?: string; apiKey?: string; config?: Record<string, string> } =
+        selected.providerKind === "realtime-asr"
+          ? buildRealtimeAsrProviderRequest(finalEnabled, realtimeAsrConfig)
+          : { enabled: finalEnabled };
+      if (selected.providerKind !== "realtime-asr" && apiBaseUrl.trim()) payload.apiBaseUrl = apiBaseUrl.trim();
+      if (selected.providerKind !== "realtime-asr" && apiKey.trim()) payload.apiKey = apiKey.trim();
       const res = await fetch(`${PLATFORM_API_BASE}/models/providers/${encodeURIComponent(selected.providerCode)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", ...authHeaders },
@@ -358,7 +395,9 @@ export default function PlatformModelsPage() {
       setProviderEnabled(finalEnabled);
       setNotice("模型厂商配置已保存。");
       await loadProviders();
-      await loadProviderModels(selected.providerCode);
+      if (selected.providerKind !== "realtime-asr") {
+        await loadProviderModels(selected.providerCode);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "保存模型厂商失败");
     } finally {
@@ -372,13 +411,20 @@ export default function PlatformModelsPage() {
     setNotice("");
     setError("");
     try {
+      const requestBody = selected.providerKind === "realtime-asr"
+        ? buildRealtimeAsrProviderRequest(providerEnabled, realtimeAsrConfig)
+        : buildProviderCheckRequest(providerEnabled, apiBaseUrl, apiKey);
       const res = await fetch(`${PLATFORM_API_BASE}/models/providers/${encodeURIComponent(selected.providerCode)}/check`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders },
-        body: JSON.stringify(buildProviderCheckRequest(providerEnabled, apiBaseUrl, apiKey)),
+        body: JSON.stringify(requestBody),
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "检测失败");
+      if (selected.providerKind === "realtime-asr") {
+        setNotice(String(json.data?.message || "配置完整性校验通过；真实可用性需发起一次实时语音识别。"));
+        return;
+      }
       const checkedModel = readValidatedModel(json.data);
       const checkedResolvedModel = readResolvedModel(json.data);
       setValidatedModel(checkedModel);
@@ -597,7 +643,20 @@ export default function PlatformModelsPage() {
     setProviderEnabled(Boolean(selected.enabled));
     setValidatedModel("");
     setResolvedModel("");
-    void loadProviderModels(selected.providerCode);
+    if (selected.providerKind === "realtime-asr") {
+      const config = selected.config ?? {};
+      setRealtimeAsrConfig({
+        appId: String(config.appId ?? ""),
+        accessKeyId: String(config.accessKeyId ?? ""),
+        accessKeySecret: String(config.accessKeySecret ?? ""),
+        realtimeUrl: String(config.realtimeUrl ?? ""),
+        lang: String(config.lang ?? "autodialect"),
+        domain: String(config.domain ?? "com"),
+      });
+      setProviderModels([]);
+    } else {
+      void loadProviderModels(selected.providerCode);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.providerCode, selected?.enabled]);
 
@@ -606,7 +665,7 @@ export default function PlatformModelsPage() {
       <header className="skills-catalog__header">
         <div className="platform-page-head__main">
           <h1 className="skills-catalog__title">模型配置</h1>
-          <p className="subtle skills-catalog__subtitle">统一控制模型厂商、凭据、可用模型、运行时模型目录和场景路由。</p>
+          <p className="subtle skills-catalog__subtitle">统一控制模型厂商、实时语音能力、凭据、运行时模型目录和场景路由。</p>
         </div>
         <div className="platform-page-head__aside">
           <span className="platform-inline-stat">厂商 {providers.length}</span>
@@ -653,11 +712,15 @@ export default function PlatformModelsPage() {
                   onClick={() => setSelectedProvider(provider.providerCode)}
                 >
                   <span className="model-provider-item__icon">
-                    <img
-                      src={PROVIDER_ICON_URLS[provider.providerCode] || DEFAULT_PROVIDER_ICON_URL}
-                      alt={provider.providerName}
-                      className="model-provider-item__img"
-                    />
+                    {provider.providerKind === "realtime-asr" ? (
+                      <span className="model-provider-item__monogram" aria-hidden>讯</span>
+                    ) : (
+                      <img
+                        src={PROVIDER_ICON_URLS[provider.providerCode] || DEFAULT_PROVIDER_ICON_URL}
+                        alt={provider.providerName}
+                        className="model-provider-item__img"
+                      />
+                    )}
                   </span>
                   <span className="model-provider-item__name">{provider.providerName}</span>
                   <span className={`model-provider-item__status ${provider.enabled ? "on" : "off"}`}>
@@ -672,12 +735,140 @@ export default function PlatformModelsPage() {
                 <>
                   <div className="model-provider-main__head">
                     <h3>{selected.providerName}</h3>
-                    <a href={selected.docUrl} target="_blank" rel="noreferrer" className="text-link">
-                      文档
-                    </a>
+                    {selected.docUrl ? (
+                      <a href={selected.docUrl} target="_blank" rel="noreferrer" className="text-link">
+                        文档
+                      </a>
+                    ) : null}
                   </div>
 
-                  <div className="model-form-grid">
+                  {selected.providerKind === "realtime-asr" ? (
+                    <>
+                      <div className="model-form-grid">
+                        <label className="cici-field">
+                          <span className="cici-field__label">App ID</span>
+                          <input
+                            className="cici-field__input"
+                            value={realtimeAsrConfig.appId}
+                            onChange={(event) => setRealtimeAsrConfig((current) => ({ ...current, appId: event.target.value }))}
+                            placeholder="请输入讯飞实时语音转写 App ID"
+                          />
+                        </label>
+                        <label className="cici-field">
+                          <span className="cici-field__label">Access Key ID</span>
+                          <input
+                            className="cici-field__input"
+                            value={realtimeAsrConfig.accessKeyId}
+                            onChange={(event) => setRealtimeAsrConfig((current) => ({ ...current, accessKeyId: event.target.value }))}
+                            placeholder="请输入 Access Key ID"
+                          />
+                        </label>
+                        <label className="cici-field">
+                          <span className="cici-field__label">Access Key Secret</span>
+                          <div className="model-key-row">
+                            <input
+                              className="cici-field__input"
+                              type={showApiKey ? "text" : "password"}
+                              value={realtimeAsrConfig.accessKeySecret}
+                              onChange={(event) => setRealtimeAsrConfig((current) => ({ ...current, accessKeySecret: event.target.value }))}
+                              placeholder={selected.accessKeySecretSet ? "已安全配置；留空或保留掩码继续使用" : "请输入 Access Key Secret"}
+                            />
+                            <button type="button" className="cici-btn cici-btn--ghost" onClick={() => setShowApiKey((value) => !value)}>
+                              {showApiKey ? "隐藏" : "显示"}
+                            </button>
+                            <button type="button" className="cici-btn cici-btn--ghost" onClick={() => setRealtimeAsrConfig((current) => ({ ...current, accessKeySecret: "" }))}>
+                              重置
+                            </button>
+                          </div>
+                        </label>
+                        <label className="cici-field">
+                          <span className="cici-field__label">Realtime URL</span>
+                          <input
+                            className="cici-field__input"
+                            value={realtimeAsrConfig.realtimeUrl}
+                            onChange={(event) => setRealtimeAsrConfig((current) => ({ ...current, realtimeUrl: event.target.value }))}
+                            placeholder="wss://..."
+                          />
+                        </label>
+                        <label className="cici-field">
+                          <span className="cici-field__label">语言</span>
+                          <input
+                            className="cici-field__input"
+                            value={realtimeAsrConfig.lang}
+                            onChange={(event) => setRealtimeAsrConfig((current) => ({ ...current, lang: event.target.value }))}
+                            placeholder="autodialect"
+                          />
+                        </label>
+                        <label className="cici-field">
+                          <span className="cici-field__label">领域</span>
+                          <input
+                            className="cici-field__input"
+                            value={realtimeAsrConfig.domain}
+                            onChange={(event) => setRealtimeAsrConfig((current) => ({ ...current, domain: event.target.value }))}
+                            placeholder="com"
+                          />
+                        </label>
+                        <div className="model-actions-row">
+                          <label className="kb-check">
+                            <input
+                              type="checkbox"
+                              checked={providerEnabled}
+                              onChange={(event) => {
+                                const nextEnabled = event.target.checked;
+                                setProviderEnabled(nextEnabled);
+                                void saveProvider(nextEnabled);
+                              }}
+                            />
+                            <span>启用厂商</span>
+                          </label>
+                          <div className="row">
+                            <button type="button" className="platform-button platform-button--secondary" onClick={() => void checkProvider()} disabled={busy}>
+                              校验配置
+                            </button>
+                            <button type="button" className="platform-button platform-button--primary" onClick={() => void saveProvider()} disabled={busy}>
+                              保存
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="model-section model-section--target">
+                        <div className="model-section__head">
+                          <div>
+                            <h4>实时语音转写</h4>
+                            <p className="model-capability-guidance">
+                              既有工作台、嵌入页和 AI 听记共用此平台托管能力；运行时继续读取同一份加密配置。
+                            </p>
+                          </div>
+                          <span className="model-count-badge">模型能力 1 项</span>
+                        </div>
+                        <div className="provider-model-board">
+                          <div className="provider-model-row">
+                            <div className="provider-model-row__left">
+                              <span className="provider-model-row__logo"><span className="model-provider-item__monogram" aria-hidden>讯</span></span>
+                              <div className="provider-model-row__name-wrap">
+                                <div className="provider-model-row__name">实时语音转写</div>
+                                <div className="provider-model-row__hint">配置校验不替代一次真实实时语音识别</div>
+                              </div>
+                            </div>
+                            <div className="provider-model-row__right">
+                              <div className="provider-model-row__caps">
+                                <span className="model-cap-pill model-cap-pill--asr">
+                                  <span className="model-cap-pill__icon">A</span>
+                                  <span>实时 ASR</span>
+                                </span>
+                              </div>
+                              <span className={selected.credentialsSet ? "model-capability-confirmation" : "model-capability-unknown"}>
+                                {selected.credentialsSet ? "凭据已配置" : "凭据待补齐"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="model-form-grid">
                     <label className="cici-field">
                       <span className="cici-field__label">API Key</span>
                       <div className="model-key-row">
@@ -738,9 +929,9 @@ export default function PlatformModelsPage() {
                         </button>
                       </div>
                     </div>
-                  </div>
+                      </div>
 
-                  {selected.providerCode === "onekeytoken" && validatedModel ? (
+                      {selected.providerCode === "onekeytoken" && validatedModel ? (
                     <div className="platform-console__banner platform-console__banner--success">
                       <span>
                         本次检测已确认可用路由别名：{validatedModel}
@@ -755,9 +946,9 @@ export default function PlatformModelsPage() {
                         {selectedModels.has(selectedModelKey(selected.providerCode, validatedModel)) ? "已加入路由目录" : "加入路由目录"}
                       </button>
                     </div>
-                  ) : null}
+                      ) : null}
 
-                  <div className="model-section model-section--target">
+                      <div className="model-section model-section--target">
                     <div className="model-section__head">
                       <div>
                         <h4>平台已选模型</h4>
@@ -835,7 +1026,9 @@ export default function PlatformModelsPage() {
                         })}
                       </div>
                     )}
-                  </div>
+                      </div>
+                    </>
+                  )}
                 </>
               ) : (
                 <p className="subtle">暂无可用模型厂商。</p>

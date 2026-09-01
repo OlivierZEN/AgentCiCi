@@ -8,6 +8,7 @@ import com.codehouse.ciciassistant.integration.domain.IntegrationAppEntity;
 import com.codehouse.ciciassistant.integration.domain.IntegrationAppRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.net.URI;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -36,6 +37,7 @@ public class IntegrationAppService {
     public static final String MANAGED_WEB_SECRET_MASK = "bailian-****";
     public static final String CLOUDCC_SECRET_MASK = "cloudcc-****";
     public static final String PLATFORM_MANAGED_MESSAGE = "Tavily 搜索、讯飞实时转写、代码解释器、联网搜索和网页抓取由运营平台统一配置，组织后台不可修改。";
+    public static final String PROVIDER_KIND_REALTIME_ASR = "realtime-asr";
 
     private static final String DEFAULT_IFLYTEK_REALTIME_URL = "wss://office-api-ast-dx.iflyaisol.com/ast/communicate/v1";
     private static final Map<String, BuiltinAppDef> BUILTIN_APPS = builtinApps();
@@ -79,8 +81,80 @@ public class IntegrationAppService {
         ensurePlatformManagedRows(scopeId);
         return repository.findByCompanyIdOrderByIdAsc(scopeId).stream()
                 .filter(entity -> isPlatformManagedApp(entity.getAppCode()))
+                .filter(entity -> !APP_CODE_IFLYTEK_ASR.equals(entity.getAppCode()))
                 .map(this::toView)
                 .toList();
+    }
+
+    @Transactional
+    public Map<String, Object> realtimeAsrProviderView() {
+        String scopeId = platformScopeId();
+        ensurePlatformManagedRows(scopeId);
+        IntegrationAppEntity entity = repository.findByCompanyIdAndAppCode(scopeId, APP_CODE_IFLYTEK_ASR)
+                .orElseThrow(() -> new IllegalArgumentException("实时语音转写厂商配置不存在"));
+        return toRealtimeAsrProviderView(toView(entity));
+    }
+
+    @Transactional
+    public Map<String, Object> updateRealtimeAsrProvider(Boolean enabled, Map<String, Object> config) {
+        String scopeId = platformScopeId();
+        ensurePlatformManagedRows(scopeId);
+        IntegrationAppEntity current = repository.findByCompanyIdAndAppCode(scopeId, APP_CODE_IFLYTEK_ASR)
+                .orElseThrow(() -> new IllegalArgumentException("实时语音转写厂商配置不存在"));
+        BuiltinAppDef def = BUILTIN_APPS.get(APP_CODE_IFLYTEK_ASR);
+        Map<String, Object> updated = updateInternal(
+                scopeId,
+                APP_CODE_IFLYTEK_ASR,
+                enabled == null ? current.isEnabled() : enabled,
+                def.description(),
+                config);
+        return toRealtimeAsrProviderView(updated);
+    }
+
+    @Transactional
+    public Map<String, Object> checkRealtimeAsrProvider(Boolean enabledOverride, Map<String, Object> draftConfig) {
+        String scopeId = platformScopeId();
+        ensurePlatformManagedRows(scopeId);
+        IntegrationAppEntity entity = repository.findByCompanyIdAndAppCode(scopeId, APP_CODE_IFLYTEK_ASR)
+                .orElseThrow(() -> new IllegalArgumentException("实时语音转写厂商配置不存在"));
+        Map<String, Object> stored = readJsonToMap(entity.getConfigJson());
+        Map<String, Object> draft = draftConfig == null ? Map.of() : draftConfig;
+        boolean enabled = enabledOverride == null ? entity.isEnabled() : enabledOverride;
+        if (!enabled) {
+            throw new IllegalArgumentException("当前厂商已停用，请先启用后再检测。");
+        }
+
+        String appId = draftOrStored(draft, stored, "appId");
+        String accessKeyId = draftOrStored(draft, stored, "accessKeyId");
+        String accessKeySecret = stringValue(draft.get("accessKeySecret"));
+        if (accessKeySecret.isBlank() || IFLYTEK_SECRET_MASK.equals(accessKeySecret)) {
+            accessKeySecret = decryptIflytekAccessKeySecret(stored).orElse("");
+        }
+        if (appId.isBlank() || accessKeyId.isBlank() || accessKeySecret.isBlank()) {
+            throw new IllegalArgumentException("App ID、Access Key ID 和 Access Key Secret 均不能为空。");
+        }
+
+        String realtimeUrl = draftOrStored(draft, stored, "realtimeUrl");
+        if (realtimeUrl.isBlank()) {
+            realtimeUrl = DEFAULT_IFLYTEK_REALTIME_URL;
+        }
+        try {
+            URI uri = URI.create(realtimeUrl);
+            if (!"wss".equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null || uri.getHost().isBlank()) {
+                throw new IllegalArgumentException("Realtime URL 必须是有效的 wss 地址。");
+            }
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Realtime URL 必须是有效的 wss 地址。");
+        }
+
+        return Map.of(
+                "providerCode", APP_CODE_IFLYTEK_ASR,
+                "ok", true,
+                "checkMode", "configuration",
+                "validatedCapability", PROVIDER_KIND_REALTIME_ASR,
+                "runtimeProbeRequired", true,
+                "message", "配置完整性校验通过；真实可用性需发起一次实时语音识别。"
+        );
     }
 
     @Transactional
@@ -282,7 +356,7 @@ public class IntegrationAppService {
         if (APP_CODE_TAVILY.equals(e.getAppCode())) {
             maskSecrets(config, "apiKey", API_KEY_MASK);
         } else if (APP_CODE_IFLYTEK_ASR.equals(e.getAppCode())) {
-            config.clear();
+            maskSecrets(config, "accessKeySecret", IFLYTEK_SECRET_MASK);
         } else if (APP_CODE_CODE_INTERPRETER.equals(e.getAppCode())) {
             config.remove("apiKey");
             config.remove("apiBaseUrl");
@@ -308,6 +382,55 @@ public class IntegrationAppService {
                 "updatedAt", e.getUpdatedAt().toString(),
                 "builtin", true
         );
+    }
+
+    private Map<String, Object> toRealtimeAsrProviderView(Map<String, Object> appView) {
+        Map<String, Object> config = new LinkedHashMap<>();
+        Object rawConfig = appView.get("config");
+        if (rawConfig instanceof Map<?, ?> values) {
+            values.forEach((key, value) -> config.put(String.valueOf(key), value));
+        }
+        config.putIfAbsent("appId", "");
+        config.putIfAbsent("accessKeyId", "");
+        config.putIfAbsent("accessKeySecret", "");
+        config.putIfAbsent("realtimeUrl", DEFAULT_IFLYTEK_REALTIME_URL);
+        config.putIfAbsent("lang", "autodialect");
+        config.putIfAbsent("domain", "com");
+
+        boolean secretSet = IFLYTEK_SECRET_MASK.equals(stringValue(config.get("accessKeySecret")));
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("id", appView.get("id"));
+        out.put("providerCode", APP_CODE_IFLYTEK_ASR);
+        out.put("providerName", "科大讯飞");
+        out.put("providerKind", PROVIDER_KIND_REALTIME_ASR);
+        out.put("capabilityLabel", "实时语音转写");
+        out.put("capabilities", List.of(PROVIDER_KIND_REALTIME_ASR));
+        out.put("enabled", Boolean.TRUE.equals(appView.get("enabled")));
+        out.put("description", appView.getOrDefault("description", ""));
+        out.put("apiBaseUrl", "");
+        out.put("apiKeyMasked", "");
+        out.put("apiKeySet", false);
+        out.put("apiKeyRequired", false);
+        out.put("defaultBaseUrl", "");
+        out.put("docUrl", "");
+        out.put("config", config);
+        out.put("configKeys", appView.getOrDefault("configKeys", List.of()));
+        out.put("accessKeySecretSet", secretSet);
+        out.put("credentialsSet", !stringValue(config.get("appId")).isBlank()
+                && !stringValue(config.get("accessKeyId")).isBlank()
+                && secretSet);
+        out.put("createdAt", appView.getOrDefault("createdAt", ""));
+        out.put("updatedAt", appView.getOrDefault("updatedAt", ""));
+        return out;
+    }
+
+    private String draftOrStored(Map<String, Object> draft, Map<String, Object> stored, String key) {
+        String draftValue = stringValue(draft.get(key));
+        return draftValue.isBlank() ? stringValue(stored.get(key)) : draftValue;
+    }
+
+    private String stringValue(Object value) {
+        return value == null ? "" : String.valueOf(value).trim();
     }
 
     /** Replace the named secret field with the mask string; if absent or already masked, leaves untouched. */
@@ -468,9 +591,9 @@ public class IntegrationAppService {
                 true));
         apps.put(APP_CODE_IFLYTEK_ASR, new BuiltinAppDef(
                 APP_CODE_IFLYTEK_ASR,
-                "实时转写（已迁移）",
-                "实时转写的厂商、模型和凭据统一在 voice-asr 场景模型路由中配置；此旧配置入口不再接受独立凭据。",
-                List.of(),
+                "科大讯飞实时语音转写",
+                "科大讯飞实时语音转写由模型厂商治理统一维护，并继续为既有实时听写运行链路提供平台托管凭据。",
+                List.of("appId", "accessKeyId", "accessKeySecret", "realtimeUrl", "lang", "domain"),
                 false));
         apps.put(APP_CODE_CODE_INTERPRETER, new BuiltinAppDef(
                 APP_CODE_CODE_INTERPRETER,

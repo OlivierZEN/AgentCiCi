@@ -15,6 +15,20 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-349 - 讯飞实时语音转写纳入模型厂商治理
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-062-platform-model-provider-governance.md`
+- task_status_path: `.claw/tasks/TASK-349.md`
+- blocked_by: `none`
+- related_issues: `none`
+- scope_files: `模型厂商 API 适配、讯飞平台托管配置单一事实源、平台模型治理专用表单、聚焦测试和桌面端验证`
+- completion_evidence: `后端投影、单一事实源、Secret 脱敏、配置失败关闭、前端专用表单及自动化已通过；待本地 main 制品与桌面端回读。`
+- next_action: `精确提交 TASK-349，从该本地 main commit 构建受影响服务并完成 cici.localhost 桌面端验证。`
+
 ### TASK-347 - Web 浮窗真实流式与首字延迟修复
 
 - status: `review`

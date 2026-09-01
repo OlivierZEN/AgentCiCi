@@ -146,6 +146,7 @@ class PlatformModelProviderIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[?(@.providerCode == 'aliyun-bailian')]").exists())
+                .andExpect(jsonPath("$.data[?(@.providerCode == 'iflytek_asr' && @.providerKind == 'realtime-asr')]").exists())
                 .andExpect(jsonPath("$.data[?(@.providerCode == 'onekeytoken' && @.defaultBaseUrl == 'https://my.onekeytoken.com/v1')]").exists());
 
         mockMvc.perform(put("/platform/models/providers/{providerCode}", "deepseek")

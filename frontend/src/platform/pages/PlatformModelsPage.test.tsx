@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildProviderCheckRequest,
+  buildRealtimeAsrProviderRequest,
   capabilityConfirmationError,
   catalogEmptyMessage,
   modelApiFailureMessage,
@@ -32,6 +33,29 @@ describe("provider catalog capability", () => {
   it("keeps the gateway-resolved model as diagnostic information", () => {
     expect(readResolvedModel({ resolvedModel: " qwen3.5-flash " })).toBe("qwen3.5-flash");
     expect(readResolvedModel({ resolvedModel: 42 })).toBe("");
+  });
+});
+
+describe("realtime ASR provider governance", () => {
+  it("keeps the existing secret mask while trimming editable provider fields", () => {
+    expect(buildRealtimeAsrProviderRequest(true, {
+      appId: " app-1 ",
+      accessKeyId: " key-1 ",
+      accessKeySecret: " iflytek-**** ",
+      realtimeUrl: " wss://speech.example.test/realtime ",
+      lang: " autodialect ",
+      domain: " com ",
+    })).toEqual({
+      enabled: true,
+      config: {
+        appId: "app-1",
+        accessKeyId: "key-1",
+        accessKeySecret: "iflytek-****",
+        realtimeUrl: "wss://speech.example.test/realtime",
+        lang: "autodialect",
+        domain: "com",
+      },
+    });
   });
 });
 

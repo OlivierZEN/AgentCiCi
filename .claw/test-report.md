@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-09-01T06:16:48Z
+updated_at: 2026-09-01T09:49:41Z
 updated_by: codex
 status: active
-last_run_at: 2026-09-01T06:16:48Z
-last_run_status: passed_task_347_widget_status_filter_local_pending_user_review
+last_run_at: 2026-09-01T09:49:41Z
+last_run_status: passed_task_349_automated_pending_local_visual
 ---
 
 # Test Report
+
+## 2026-09-01 TASK-349 讯飞实时语音转写模型厂商治理自动化
+
+- 状态：`passed_task_349_automated_pending_local_visual`。模型厂商 API 复用平台级 `integration_app(iflytek_asr)`，保存后 Secret 仅返回掩码；通用平台集成列表不再重复展示讯飞。
+- 后端：编译通过；`RealtimeAsrProviderSelectionTest` 为 `3/3`，空库 PostgreSQL 16.9 上 `PlatformIntegrationGovernanceIntegrationTest` 为 `1/1`，`PlatformModelProviderIntegrationTest#platformCanGovernModelProvidersWhileCompanyProviderWritesAreForbidden` 为 `1/1`。覆盖保存、掩码、运行时解密、配置完整性、非 `wss` 失败关闭和租户隔离。
+- 前端：模型厂商页聚焦 `7/7`、全量 `61 files / 338 tests`、production build 与 `git diff --check` 通过；build 仅保留既有大 chunk warning。
+- 验收边界：当前“校验配置”只验证启用状态、凭据完整性与 `wss` 地址，不发起真实音频识别；真实讯飞凭据、网络握手和语音结果仍需在授权环境完成一次实时业务探测，不能以配置检查替代。
+- 待办：从精确本地 `main` commit 构建 backend/frontend，回读 `https://cici.localhost/platform/models`、容器健康/重启次数、版本/制品指纹及桌面端布局。
 
 ## 2026-09-01 TASK-347 Web 浮窗内部状态过滤自动化
 

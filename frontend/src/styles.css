@@ -8240,6 +8240,19 @@ h1,
   display: block;
 }
 
+.model-provider-item__monogram {
+  color: currentColor;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.model-capability-confirmation {
+  color: var(--platform-success, #2f6d4f);
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .model-provider-item__name {
   flex: 1;
   text-align: left;

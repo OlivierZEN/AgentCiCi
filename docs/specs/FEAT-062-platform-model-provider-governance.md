@@ -4,11 +4,11 @@ feature_id: FEAT-062
 title: Platform Model Provider Governance
 status: implemented
 owner_role: project-manager
-task_ids: TASK-145, TASK-153
+task_ids: TASK-145, TASK-153, TASK-349
 related_decisions: FEAT-003, FEAT-022, FEAT-037
 related_issues: none
-updated_at: 2026-05-30T09:21:24Z
-updated_by: MANAGER-001
+updated_at: 2026-09-01T09:35:41Z
+updated_by: codex
 ---
 
 # FEAT-062 平台统一模型厂商治理
@@ -120,3 +120,29 @@ updated_by: MANAGER-001
 - 平台 token 可以配置 `chat` 等场景路由；运行时优先使用有效场景路由，而不是无条件取平台已选模型的第一个。
 - Agent Builder 和知识库 embedding 候选模型来自平台统一配置。
 - 后端 focused tests 和前端 build/unit checks 通过。
+
+## TASK-349 补充：讯飞实时语音转写纳入模型厂商治理列表
+
+### 背景与目标
+
+早期接入的科大讯飞实时语音转写已经由平台级 `iflytek_asr` 集成记录保存凭据，并由 `/ws/asr` 运行链路读取，但运营入口仍位于通用“集成配置”，与“模型厂商治理”中已经声明的 `realtime-asr` 能力割裂。平台运营无法在统一厂商列表中看到和维护这项模型能力。
+
+本次把科大讯飞作为“实时语音转写”能力厂商放入 `/platform/models` 的“模型厂商治理”列表。页面负责读取、保存和校验原有平台托管记录，不新建第二份模型厂商凭据，不迁移运行时事实源。
+
+### 设计与边界
+
+- 模型厂商列表新增“科大讯飞”，能力类型固定为 `realtime-asr`，配置字段沿用既有 App ID、Access Key ID、Access Key Secret、Realtime URL、语言和领域。
+- 保存动作继续写入平台治理作用域的 `integration_app(iflytek_asr)`；Access Key Secret 继续加密存储且只返回掩码。
+- `/platform/integrations` 不再重复列出讯飞实时转写，避免两个运营入口维护同一记录；Tavily、代码解释器、联网搜索和网页抓取保持不变。
+- `/ws/asr` 的协议、Provider 选择、自动发言人分离和回退逻辑保持不变。
+- 配置检测只验证启用状态、必填凭据与 `wss` 地址结构，不声称已完成真实讯飞网络调用。真实能力验收必须发起一次实时语音识别并收到转写结果。
+- 不把讯飞伪装成 OpenAI-compatible 模型目录，不提供“全部模型”、人工能力确认或通用场景模型路由操作。
+
+### 验收标准
+
+- 平台 token 调用 `GET /platform/models/providers` 能看到 `iflytek_asr`，并回读 `providerKind=realtime-asr`、启停状态、能力和脱敏配置。
+- 平台 token 可通过 `PUT /platform/models/providers/iflytek_asr` 保存配置，Secret 不回传明文，运行时仍能从原有平台托管记录读取。
+- 平台 token 可通过模型厂商入口执行配置校验，缺少凭据或非 `wss` 地址时失败关闭；通过时返回 `runtimeProbeRequired=true`。
+- `GET /platform/integrations` 不再返回 `iflytek_asr`，组织侧仍不可见、不可写。
+- `/platform/models` 显示“科大讯飞 / 实时语音转写”，提供专用凭据表单，不显示“全部模型”和通用模型目录操作。
+- 后端聚焦测试、前端聚焦测试、前端 production build 与 `git diff --check` 通过。
