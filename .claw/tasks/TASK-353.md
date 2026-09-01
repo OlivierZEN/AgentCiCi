@@ -4,11 +4,11 @@ task_id: TASK-353
 feature_id: FEAT-188
 assignee: codex
 owner_role: backend-agent
-status: in_progress
+status: review
 branch: main
 pr_url: n/a
 spec_path: docs/specs/FEAT-188-conversation-image-paste-attachments.md
-updated_at: 2026-09-01T15:23:11Z
+updated_at: 2026-09-01T15:37:39Z
 updated_by: codex
 ---
 
@@ -34,7 +34,7 @@ updated_by: codex
 - [x] 历史图片仍通过受信视觉能力门禁，跨租户、跨会话或错误消息关联均不采用。
 - [x] 聚焦测试与 `git diff --check` 通过。
 - [x] backend package 通过。
-- [ ] 修复提交、本地 `main` 制品与运行门禁通过。
+- [x] 修复提交、本地 `main` 制品与运行门禁通过。
 - [ ] 使用既有真实图片会话完成后续追问回归；HUMAN 确认回答内容与图片匹配。
 
 ## Handoff
@@ -42,3 +42,4 @@ updated_by: codex
 - 故障会话 `8f4dbc70-88d9-4aeb-b45b-23de41987ae4` 中，用户消息 99 关联 1 张图片，助手消息 100 已识别；用户消息 101 是零附件文本追问，助手消息 102 错误声称没有收到图片。
 - 根因是 `buildRecentHistoryMessages` 只回灌 `role + content` 字符串，未恢复历史消息的附件内容；本轮附件门禁也只检查当前轮附件。
 - 修复采用显式指代触发和最近一张历史图片上限，不恢复所有历史图片，不改变图片存储与额度契约。
+- 修复提交 `123619a7223e` 已进入本地 `main`；并行语音提交随后推进主线至 `80f720730cd3`，后者包含本修复。共享开发环境已从最新主线构建并运行 `2.8.68-dev.80f7207`，backend/frontend healthy/restart=0。

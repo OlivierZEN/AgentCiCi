@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 6
-updated_at: 2026-09-01T15:23:11Z
+updated_at: 2026-09-01T15:37:39Z
 updated_by: codex
-phase: implementation
+phase: review
 active_task: TASK-353
-next_action: "精确提交图片追问修复到本地 main，在独立干净 worktree 最小重建 backend，并使用既有真实图片会话验证回答匹配。"
+next_action: "用户在原会话追问上一张图片中的具体内容，确认回答与图片匹配；技术实现和本地运行门禁已完成。"
 read_next:
   goals: false
   decisions: false
@@ -22,11 +22,11 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-353 / FEAT-188` 正在修复图片首轮识别成功、下一轮明确追问却声称没收到图片的问题。真实会话回读确认首轮 user message 关联 1 张图、第二轮 user message 为零附件；根因是历史装配只还原纯文本。最小实现仅对明确历史图片指代恢复最近一个带图用户轮，并校验同租户/同会话/同消息/ATTACHED，历史图片继续经过 vision 门禁。聚焦附件与编排测试共 56 项、backend package 和 diff check 通过；待提交、backend 部署和真实追问回归。
+- `TASK-353 / FEAT-188` 技术实现和本地运行门禁完成，进入 review：真实会话证明历史装配丢失图片；`123619a7223e` 仅对明确历史图片指代恢复最近一个同租户/同会话/同消息/ATTACHED 的带图用户轮，并继续执行 vision 门禁。聚焦 56 项、package/diff 通过；最新本地 `main@80f720730cd3` 包含该修复，backend/frontend 运行 `2.8.68-dev.80f7207`、healthy/restart=0，OneKey auto=`[text,vision]`。待用户在原会话确认回答内容匹配，不以技术门禁替代 HUMAN。
 
-- `TASK-352 / FEAT-062` 正在修复用户截图中的两处实时听写失效：数据库保存的官方讯飞地址只有主机根路径，缺少 `/ast/communicate/v1`；前端又在上游 `started` 前显示听写中，解析器遗漏官方 `data.ls=true` 空最后帧，完成回调依赖浏览器 close。实现已在保存/读取/校验/运行时规范化官方根地址，等待上游 ready 后才申请麦克风，统一最终帧/异常关闭/1.5 秒兜底为一次完成。后端协议测试、package、前端 `62 files / 341 tests` 与 production build 已通过；待提交、部署和真实运行回读。
+- `TASK-352 / FEAT-062` 实现 `d32a710fe518 + 80f720730cd3` 已进入本地 main 并随最新双制品运行：对话 `voice-asr` 与 AI 听记 `meeting-realtime-asr` 已拆分，讯飞 URL/ready/last-frame/close 和 1.5 秒兜底已收敛；backend/frontend 为 `2.8.68-dev.80f7207`、healthy/restart=0，V130 success。部署后一次实时 ASR 上游启动出现 `CompletionException` WARN，真实上游技术探测仍待继续，不能宣称听写业务完成。
 
-- `TASK-351 / FEAT-188` 最小修复已进入本地 `main@653e5e1d7993`：OneKeyToken `onekeytoken/auto` 活性校验成功后改用同一有效配置读取 `/models`，按既有解析器持久化 `provider_catalog` 能力，不按下游模型名猜测。目标方法级集成回归 2/2、相邻单元测试 3 类、package/diff 通过；backend 运行 `2.8.68-dev.653e5e1`、healthy/restart=0，仅 backend 容器替换，首页 200。刷新前数据库仍为 `[text]`；Chrome 平台页已停在 OneKeyToken“检测”前，因该点击会把已存 API Key 发送给已配置服务，待用户即时确认后继续能力回读与真实图片验收。
+- `TASK-351 / FEAT-188` 已完成：OneKeyToken `onekeytoken/auto` 校验后读取 `/models` 并持久化受信目录能力；运行数据库回读 `[text,vision]`，用户截图证明真实首轮图片识别成功。后续跨轮追问上下文缺口由 TASK-353 独立修复。
 
 - `TASK-349 / FEAT-062` 已修复用户截图中的讯飞实时语音候选为 0：`4c057b6e2cc8` 让启用且凭据完整的 `integration_app(iflytek_asr)` 投影为专用 `iflytek-realtime-asr` 场景候选，并恢复 `/ws/asr` 到既有讯飞 WebSocket 客户端的音频、停止、关闭和完成态；不进入通用模型目录且不复制凭据。聚焦 `1 + 4 + 1`、package/diff 通过；本地 backend 为 `2.8.68-dev.4c057b6`、health UP、restart=0，仅 backend 容器替换。Chrome 授权态回读 `voice-asr` 候选 1、下拉含“实时语音转写 · 科大讯飞”、console 0；未代用户保存路由，真实麦克风转写仍待 HUMAN。
 

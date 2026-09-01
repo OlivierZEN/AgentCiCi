@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-09-01T15:23:11Z
+updated_at: 2026-09-01T15:37:39Z
 updated_by: codex
 board_status: active
 ---
@@ -17,7 +17,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-353 - 图片追问跨轮视觉上下文修复
 
-- status: `in_progress`
+- status: `review`
 - priority: `critical`
 - owner_role: `backend-agent`
 - claimed_by: `codex`
@@ -26,8 +26,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - related_issues: `ISSUE-2026-09-01-image-followup-context-loss`
 - scope_files: `历史消息附件回取、显式图片指代、视觉能力门禁、blocking/streaming 消息装配、聚焦测试、本地 backend 验证`
-- completion_evidence: `真实数据库会话已证明历史图片在第二轮丢失；聚焦附件/编排测试 56 项、backend package 与 diff check 通过，待提交、部署和真实追问回归。`
-- next_action: `精确提交 TASK-353 到本地 main，在独立干净 worktree 最小重建 backend，并使用既有图片会话验证后续回答。`
+- completion_evidence: `修复 123619a7 进入本地 main；聚焦 56 项、package/diff 通过。最新 main@80f72073 包含修复，backend/frontend 运行 2.8.68-dev.80f7207、healthy/restart=0；OneKey auto=[text,vision]。`
+- next_action: `用户在原会话继续询问上一张图片内容，确认回答与图片匹配；技术实现和本地运行门禁已完成。`
 
 ### TASK-352 - 讯飞实时听写与结束状态收敛
 
@@ -40,12 +40,12 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - related_issues: `ISSUE-2026-09-01-iflytek-realtime-asr-stuck`
 - scope_files: `讯飞官方 URL 规范化、上游 ready/last-frame/close 协议、共享语音输入完成态、AI 听记与对话框回归、本地全栈验证`
-- completion_evidence: `后端协议单测、backend package、前端 62 files / 341 tests 与 production build 已通过；待提交、本地双制品部署和真实上游探测。`
-- next_action: `提交本地 main，重建 backend/frontend，验证旧根 URL 自动规范化并完成讯飞上游握手、合成音频转写和结束态回读。`
+- completion_evidence: `实现 d32a710f + 80f72073 进入本地 main；自动化/build 通过；backend/frontend 运行 2.8.68-dev.80f7207、healthy/restart=0，V130 success。部署后一次实时 ASR 上游启动出现 CompletionException WARN。`
+- next_action: `继续诊断真实上游启动 WARN，完成合成音频转写和结束态回读；真实麦克风仍待 HUMAN。`
 
 ### TASK-351 - OneKeyToken 自动路由视觉能力同步
 
-- status: `review`
+- status: `done`
 - priority: `critical`
 - owner_role: `backend-agent`
 - claimed_by: `codex`
@@ -54,8 +54,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - related_issues: `ISSUE-2026-09-01-onekeytoken-auto-vision-capability`
 - scope_files: `OneKeyToken 平台校验、远端模型能力目录、可信 vision 能力持久化、聚焦测试、本地 backend 验证`
-- completion_evidence: `实现 653e5e1d 进入本地 main；目标回归 2/2、相邻单元测试 3 类、package/diff 通过；backend 2.8.68-dev.653e5e1 healthy/restart=0，仅 backend 替换。`
-- next_action: `用户即时确认后点击 OneKeyToken 检测，回读 text+vision，再完成真实图片回归。`
+- completion_evidence: `实现 653e5e1d 进入本地 main；目标回归 2/2、相邻单元测试 3 类、package/diff 通过。运行数据库 oneKey auto=[text,vision]；用户截图证明真实图片首轮已识别。`
+- next_action: `已完成；后续跨轮图片追问缺口由 TASK-353 独立治理。`
 
 ### TASK-349 - 讯飞实时语音转写纳入模型厂商治理
 

@@ -1,12 +1,20 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-09-01T14:46:51Z
+updated_at: 2026-09-01T15:37:39Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-09-01 TASK-353 本地图片追问上下文修复
+
+- 图片修复提交 `123619a7223e` 已进入本地 main；构建期间并行语音任务把主线推进到包含该修复的 `80f720730cd3`。按共享开发环境必须来自最新本地 main 的规则，最终从独立干净 worktree 对 `80f72073` 重新运行图片聚焦 56 项、backend package 和 frontend production build，并构建双制品 `2.8.68-dev.80f7207`。
+- backend/frontend 镜像为 `sha256:5f43f954a624` / `sha256:8cafdbac7a84`；仅通过现有 Compose `--no-deps --force-recreate backend cici-frontend` 替换两项无状态服务。两者 healthy/restart=0，环境、OCI label、version API 和页面 JS/CSS 均回读 `80f720730cd3 / 2.8.68-dev.80f7207`。
+- backend health=`UP`，Flyway V130 success，`https://cici.localhost/` 为 200；OneKeyToken 运行能力目录回读 `onekeytoken/auto=[text,vision]`。PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak、Nginx、Semattice、DevAutopilot 容器 ID 未变化。
+- 稳定窗口 backend `ERROR/FATAL=0`、frontend 结构化 5xx=0。TASK-352 在部署后有一次实时 ASR 上游启动 `CompletionException` WARN，已明确留给其真实上游探测，不归入图片修复成功证据。
+- 本次未执行受既有 Semattice `config=1.0.7 / repository=1.0.8` 漂移影响的完整 `./stack verify`；未修改远程、ACR、Git tag、UAT 或生产。真实后续图片追问仍待用户在原会话完成 HUMAN 回答匹配确认。
 
 ## 2026-09-01 TASK-351 本地 OneKeyToken 自动视觉能力修复
 

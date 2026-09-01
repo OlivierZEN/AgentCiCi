@@ -7,7 +7,7 @@ primary_project: agentcici
 owner_role: fullstack-agent
 task_ids: TASK-309,TASK-336,TASK-338,TASK-342,TASK-351,TASK-353
 related_issues: ISSUE-2026-08-28-vision-capability-scope,ISSUE-2026-09-01-onekeytoken-auto-vision-capability,ISSUE-2026-09-01-image-followup-context-loss
-updated_at: 2026-09-01T15:23:11Z
+updated_at: 2026-09-01T15:37:39Z
 updated_by: codex
 ---
 
@@ -115,3 +115,4 @@ DevAutopilot 需求 `REQ-6F34ECF3` 的端到端任务 `019ffeb0-88a0-739f-afcb-6
 - 修复不把图片永久绑定到整个会话，也不在每轮重复发送。仅当本轮没有新图片且文本明确出现“图中、截图里、上一张图片”等历史指代时，在最近 20 条消息中回取最近一个带图片的用户轮。
 - 回取附件必须同时满足租户、会话、消息关联和 `ATTACHED` 状态一致；只恢复图片，不把历史文档隐式带入当前轮。
 - 历史图片与本轮图片共同执行可信 `vision` 能力门禁；不支持视觉的当前模型仍返回 `VISION_MODEL_REQUIRED`，不因为“历史图片”而绕过治理。
+- 实现 `123619a7223e` 已进入本地 main；最终共享开发环境从包含该修复的最新 `main@80f720730cd3` 构建为 `2.8.68-dev.80f7207`。自动化、package、双制品指纹、健康、V130、首页和 OneKeyToken `[text,vision]` 回读通过；真实后续追问的回答匹配仍待用户确认。

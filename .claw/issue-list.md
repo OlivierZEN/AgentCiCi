@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-09-01T15:23:11Z
+updated_at: 2026-09-01T15:37:39Z
 updated_by: codex
 status: active
 ---
@@ -16,7 +16,7 @@ status: active
 - Verified root cause: 故障会话的首轮用户消息关联 1 张图片，后续追问消息没有新附件；`ChatOrchestratorService.buildRecentHistoryMessages` 只把历史消息还原为纯文本，历史图片未进入第二轮模型上下文，视觉门禁也只检查本轮附件。
 - Resolution: TASK-353 仅在本轮没有新图片且文本明确指向历史图片时，回取最近一个同租户/同会话/同消息的已关联图片，把原历史用户消息恢复为多模态内容，并让历史图片继续经过可信视觉能力门禁。
 - Verification: `ChatAttachmentServiceTest` 9 项与 `ChatOrchestratorServiceModelIdentityTest` 47 项、backend package 和 diff check 通过；正向断言模型消息包含且只包含一个多模态历史用户轮，负向断言普通图片能力咨询不触发历史图片。
-- Status: resolved in code; package, local commit/runtime and HUMAN answer match verification in progress; remote/UAT/production unchanged.
+- Status: resolved in code and deployed locally; HUMAN answer match verification pending; remote/UAT/production unchanged.
 
 ## ISSUE-2026-09-01-iflytek-realtime-asr-stuck
 
@@ -32,7 +32,7 @@ status: active
 - Verified root cause: OneKeyToken `/models` 已声明 `onekeytoken/auto` 支持 `vision` 和 `image`，同图直调 `auto` 也实际路由到视觉模型成功；AgentCiCi 的平台校验路径却硬编码保存 `["text"]`，导致本地可信能力门禁错误拒绝。
 - Resolution: TASK-351 在 Chat Completions 活性校验成功后，用同一组有效配置读取 OneKeyToken `/models`，按既有解析器保存 `text + vision` 与 `provider_catalog` 证据；保留失败关闭和自动路由模型名。
 - Verification: 目标方法级集成回归 2/2、相邻附件/模型身份单元测试和 backend package 通过；本地 backend 已运行 `2.8.68-dev.653e5e1 / 653e5e1d7993`、healthy/restart=0，仅 backend 容器替换。
-- Status: resolved in code and deployed locally; provider capability refresh and real image dialogue await action-time confirmation; remote/UAT/production unchanged.
+- Status: resolved locally; runtime catalog is `text + vision` and the user's screenshot proves real first-turn image recognition; remote/UAT/production unchanged.
 
 ## ISSUE-2026-08-31-devautopilot-mcp-decoupling-regression
 

@@ -37,7 +37,7 @@ updated_by: codex
 - [x] 历史 `voice-asr=iflytek_asr` 路由迁移 SQL 在本地数据库事务中验证通过且已回滚测试事务。
 - [x] 实时 ASR 上游 WebSocket 显式使用 HTTP/1.1 Upgrade。
 - [x] 后端聚焦测试/package、前端聚焦/全量/build 通过。
-- [ ] 修复提交进入本地 `main`，backend/frontend 从该提交运行且健康。
+- [x] 修复提交进入本地 `main`，backend/frontend 从该提交运行且健康。
 - [ ] 使用合成音频完成真实讯飞上游转写与结束技术探测。
 - [ ] HUMAN 使用真实麦克风确认 AI 听记和对话框实时听写。
 
@@ -46,3 +46,4 @@ updated_by: codex
 - 当前数据库的 `iflytek_asr.realtimeUrl` 是官方主机根路径；不直接改数据库，运行时和治理读写层负责向后兼容。
 - 真实麦克风涉及浏览器权限和用户语音，仅在用户明确确认后执行；技术探测优先使用不含敏感内容的合成音频。
 - 对话听写的阿里云凭据继续由既有部署配置提供，本任务不复制到新的模型路由记录。
+- 实现提交 `d32a710fe518 + 80f720730cd3` 已进入本地 `main`，backend/frontend 运行 `2.8.68-dev.80f7207`、healthy/restart=0，V130 success。部署后一次真实实时 ASR 启动返回上游 `CompletionException` WARN，真实上游技术探测仍未通过，不把健康门禁写成听写业务完成。

@@ -4,11 +4,11 @@ task_id: TASK-351
 feature_id: FEAT-188
 assignee: codex
 owner_role: backend-agent
-status: review
+status: done
 branch: main
 pr_url: n/a
 spec_path: docs/specs/FEAT-188-conversation-image-paste-attachments.md
-updated_at: 2026-09-01T14:46:51Z
+updated_at: 2026-09-01T15:37:39Z
 updated_by: codex
 ---
 
@@ -32,7 +32,7 @@ updated_by: codex
 - [x] 聚焦集成测试、相邻附件/模型身份测试、backend package 和 diff check 通过。
 - [x] 实现提交进入本地 `main`，从该提交构建并最小更新本地 backend。
 - [x] `cici.localhost` 回读版本、健康、restart 和运行数据库刷新前证据。
-- [ ] 使用当前 `onekeytoken/auto` 完成真实图片会话回归，或明确记录仍待 HUMAN 的验收边界。
+- [x] 使用当前 `onekeytoken/auto` 完成真实图片会话回归。
 
 ## Handoff
 
@@ -41,3 +41,4 @@ updated_by: codex
 - 目标方法级集成回归 2/2、相邻单元测试 3 类及 backend package 已通过；完整集成类仍被既有 OACT 测试配置漂移中的无关组织登录用例阻断，不宣称整类通过。
 - 实现提交 `653e5e1d7993` 已进入本地 `main`；backend 运行 `2.8.68-dev.653e5e1`，镜像/JAR/版本 API 指纹一致、healthy/restart=0，只有 backend 容器被替换。
 - 运行数据库刷新前仍为 `onekeytoken/auto=[text]`，平台登录态已停在 OneKeyToken“检测”按钮前；点击会把已存 API Key 发送到已配置的 OneKeyToken 端点，按浏览器安全规则待用户即时确认后执行。远程、UAT、生产未修改。
+- 用户 2026-09-01 截图证明真实图片首轮已经被 `onekeytoken/auto` 识别；运行数据库随后回读 `onekeytoken/auto=[text,vision]`。能力同步任务完成，后续回答上下文不匹配由独立 TASK-353 修复。
