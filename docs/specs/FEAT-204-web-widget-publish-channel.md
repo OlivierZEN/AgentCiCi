@@ -7,7 +7,7 @@ owner_role: fullstack-agent
 task_ids: TASK-334,TASK-335,TASK-337,TASK-339,TASK-343,TASK-344,TASK-347
 related_decisions: FEAT-202
 related_issues: ISSUE-2026-08-28-web-widget-empty-stream,ISSUE-2026-08-31-web-widget-buffered-stream
-updated_at: 2026-08-31T07:31:00Z
+updated_at: 2026-09-01T06:12:03Z
 updated_by: codex
 ---
 
@@ -72,6 +72,7 @@ Agent Builder 已有独立“发布渠道”页签，但 Web 浮窗仍只有占�
 - 输入区话筒在默认、hover、listening 和 focus 状态都保持透明，不生成主题色背景块；该约束由公共 `cici-product-icon-button` 承担，并同步适用于公开页、前台、后台和平台页的裸图标按钮。
 - 后端默认入口键未配置或公开配置不可用时不渲染启动器，不阻断官网首屏、表单或导航。
 - 官网启动器、浮窗标题、欢迎态和智能体消息统一渲染系统内 Agent Definition 头像；为空或图片加载失败时回退为智能体名称首字，不回退为另一智能体图片。
+- Website 浮窗等待首段正文时只显示无文字的三点等待动效；不得把工具选择、检索、生成、安全校验或工具执行等内部 phase/busy label 渲染为访客可见消息。受信 `page` 嵌入保留既有阶段展示。
 - Token 过期时 SDK 重新调用同源 Token Provider；访客 ID 只保存在浏览器本地并使用随机 UUID。
 
 ## 服务端契约与安全
@@ -126,7 +127,7 @@ Base64 头像不得写入短时 JWT。website 会话以已验证 Token 中的 `c
 ## 真实流式与时延预算
 
 - 普通咨询没有外部事实需求或明确工具意图时必须进入 DIRECT，只允许一次最终模型调用；Agent 拥有工具不等于本轮必须先调用模型判断工具。
-- 工具规划、知识检索或确认流程确有必要时可以先于最终生成执行，但 phase 必须准确说明当前阶段，不能以空白气泡等待。
+- 工具规划、知识检索或确认流程确有必要时可以先于最终生成执行；phase 必须准确写入 SSE/Trace 供技术观测。受信 `page` 嵌入可展示准确阶段，公开 Website 浮窗不得暴露内部编排文案，只以无文字等待动效反馈仍在处理。
 - 最终模型的供应商增量必须在模型完成前进入 SSE；禁止先完整累积再用固定字数和 sleep 模拟 streaming。
 - 增量输出以完整行或安全句段为最小门禁单元，先完成思维段过滤、敏感信息遮蔽和内置内容安全检查，再下发并加入权威正文。
 - 租户启用任意自定义整段安全规则，或当前 Agent 具备受研发交付回执约束的写工具时，允许明确降级为 `buffered`：完成整段门禁后用单个 delta 返回，不得模拟打字。
@@ -144,6 +145,7 @@ Base64 头像不得写入短时 JWT。website 会话以已验证 Token 中的 `c
 - 2026-08-31：TASK-344 获得用户明确 UAT 发布授权；目标租户 `orgickjr6icm6l2zitpn` 已只读确认 ACTIVE 但当前无智能体。发布按 `2.8.68-beta.1` 不可变候选、完整备份、backend/frontend 最小切换执行；租户智能体与 Web 渠道必须走官方产品链路，首页只通过受管运行配置引用公开 widget key。
 - 2026-08-31：TASK-347 只读确认 UAT 普通咨询存在两次模型调用和完整缓存后的模拟分片；进入 DIRECT 单调用、流式安全门禁、首字时延和 Embed 阶段提示修复。
 - 2026-08-31：TASK-347 实现 `19080005` 已进入本地 main；自动化、双制品与真实 website Trace 证明普通咨询单模型/零工具、首 delta 早于完成，浏览器显示阶段提示并在完成前连续增长。自定义整段规则与研发写回执明确使用单 delta buffered；UAT 仍为 beta.3，修复尚未发布。
+- 2026-09-01：用户复核指出 Website 浮窗不应显示“正在选择所需工具”等内部阶段；TASK-347 恢复 `in_progress`，规格调整为公开访客仅见无文字等待动效，SSE/Trace 与受信 `page` 嵌入继续保留阶段信息。
 
 ## 交接说明
 

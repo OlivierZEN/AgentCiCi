@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 6
-updated_at: 2026-08-31T08:59:00Z
+updated_at: 2026-09-01T06:12:03Z
 updated_by: codex
-phase: review
-active_task: null
-next_action: "HUMAN 目视确认本地 Web 浮窗真实流式；如需发布 UAT，另行确认后冻结 2.8.68-beta.4 并执行备份、回滚和最小发布门禁。"
+phase: implementation
+active_task: TASK-347
+next_action: "按用户截图反馈隐藏 Website 浮窗内部 phase/busy label，完成测试、构建、本地 main 提交与 cici.localhost 浏览器复测；UAT 不变。"
 read_next:
   goals: false
   decisions: false
@@ -26,7 +26,7 @@ read_next:
 
 - 企业微信可信域名生产校验已完成技术闭环：`agentcici.com` 继续解析生产业务节点，在生产 frontend Nginx 仅新增 `WW_verify_k3ew8Iachbzg5pIw.txt` 的 HTTP/HTTPS 精确路径并热重载；公网两种协议均返回 `200 text/plain`、16 bytes，SHA-256 与用户提供文件一致。配置备份与已应用副本位于 `/opt/cici/backups/20260831T081349Z-before-wecom-domain-verification`；frontend/backend 仍为 `2.8.67 / 2970bea75208`、healthy/restart=0，全套生产只读 smoke 和近期 severe=0。企业微信管理后台的最终“保存/校验”仍需已登录管理员会话确认，不以服务端技术证据代替 HUMAN 平台操作。
 
-- `TASK-347 / FEAT-204` 已完成本地技术闭环，进入用户 review：`19080005f847` 将无外部事实/工具意图的普通咨询确定性直达最终模型，模型 delta 经安全句段门禁实时进入 SSE；自定义整段规则和研发交付写回执显式使用单 delta `buffered`，固定 `18 字 / 18ms` 模拟分片已删除。后端 7 个聚焦测试类与 package、前端 60 文件/333 项与 production build 通过。backend/frontend 运行 `2.8.68-dev.1908000 / 19080005f847`、healthy/restart=0；真实 website Trace 为单模型/零工具/streaming，供应商/客户端首 delta `8.246s / 8.320s`、总耗时 `10.385s`。浏览器在发送后约 285ms 显示阶段提示，首段 `14.749s`、完成 `18.616s`，中间持续多次增长且 console 0。UAT 仍为 `2.8.68-beta.3 / a5bbb114`，生产未修改。
+- `TASK-347 / FEAT-204` 因用户 2026-09-01 截图反馈恢复 `in_progress`：`19080005f847` 的真实流式链路和性能证据仍有效，但 Website 浮窗把“正在选择所需工具”等内部 phase 当作助手消息展示，并在窄宽度下逐字换行。当前修正为 SSE/Trace 与受信 `page` 嵌入继续保留阶段，公开 Website 浮窗只显示无文字等待点；待完成测试、构建、本地 main 提交与 `cici.localhost` 浏览器复测。UAT 仍为 `2.8.68-beta.3 / a5bbb114`，生产未修改。
 
 - `TASK-346 / FEAT-206` 实现、本地技术闭环和 UAT 技术发布已完成，进入 HUMAN review：功能提交 `3b34e3198938` 已进入并推送远程 `main`。冻结候选 `2.8.68-beta.3 / a5bbb1140864` 的 backend/frontend digest 为 `sha256:b81e8c5a...` / `sha256:2412ab89...`，完整回滚点为 `/data/apps/agentcici/backups/20260831T045841Z-before-2.8.68-beta.3`；UAT 仅替换 backend/frontend，V127/V128 与 repeatable migration success，六容器 healthy/restart=0，health UP、Nginx、首页/HTTP 跳转、匿名 OpenAPI JSON 401、OIDC/Semattice/DevAutopilot 和 30 秒稳定窗口通过，四个状态服务 ID 不变。UAT 有效 MCP 应用绑定数为 0，本候选没有启用跨项目契约。当前没有可读取的明文 OpenAPI Key，未擅自创建凭据，真实文件上传和视觉模型图片对话仍待 HUMAN 授权验收；生产未修改。
 

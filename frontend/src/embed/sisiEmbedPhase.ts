@@ -1,5 +1,11 @@
 type PhasePayload = Record<string, unknown>;
 
+export function sisiVisibleBusyLabel(mode: unknown, busyLabel?: string): string | undefined {
+  if (String(mode ?? "").trim().toLowerCase() === "float") return undefined;
+  const label = busyLabel?.trim();
+  return label || undefined;
+}
+
 export function sisiPhaseLabel(payload: PhasePayload): string {
   const phase = String(payload.phase ?? "").trim();
   const outputMode = String(payload.outputMode ?? "").trim();

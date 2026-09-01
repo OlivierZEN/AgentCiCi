@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { exactConfirmation } from "./sisiEmbedContract";
 import { streamDeltaText } from "./sisiEmbedStream";
-import { sisiPhaseLabel } from "./sisiEmbedPhase";
+import { sisiPhaseLabel, sisiVisibleBusyLabel } from "./sisiEmbedPhase";
 import { resolveSisiTheme } from "./sisiEmbedTheme";
 
 describe("Sisi embedded theme", () => {
@@ -47,9 +47,15 @@ describe("Sisi embedded stream delta contract", () => {
 });
 
 describe("Sisi embedded stream phase", () => {
-  it("shows the real generation mode while waiting for the first delta", () => {
+  it("keeps the real generation mode for trusted embedding", () => {
     expect(sisiPhaseLabel({ phase: "tool_routing", shouldPlan: false })).toBe("正在组织回复");
     expect(sisiPhaseLabel({ phase: "generating", outputMode: "streaming" })).toBe("正在生成回复");
     expect(sisiPhaseLabel({ phase: "generating", outputMode: "buffered" })).toBe("正在完成安全校验");
+  });
+
+  it("does not expose internal execution phases in the public website widget", () => {
+    expect(sisiVisibleBusyLabel("float", "正在选择所需工具")).toBeUndefined();
+    expect(sisiVisibleBusyLabel("float", "正在安全执行工具")).toBeUndefined();
+    expect(sisiVisibleBusyLabel("page", "正在生成回复")).toBe("正在生成回复");
   });
 });

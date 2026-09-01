@@ -23,7 +23,7 @@ import ChatMarkdown from "../components/ChatMarkdown";
 import { useAsrVoiceInput } from "../shared/useAsrVoiceInput";
 import { exactConfirmation } from "./sisiEmbedContract";
 import { streamDeltaText } from "./sisiEmbedStream";
-import { sisiPhaseLabel } from "./sisiEmbedPhase";
+import { sisiPhaseLabel, sisiVisibleBusyLabel } from "./sisiEmbedPhase";
 import { resolveSisiTheme } from "./sisiEmbedTheme";
 import "./sisi-embed.css";
 
@@ -475,7 +475,7 @@ export default function SisiEmbedPage() {
               <div className="sisi-message__body">
                 {message.role === "assistant" && <span className="sisi-message__name">{assistantDisplayName}</span>}
                 {message.attachments?.length ? <div className="sisi-message__attachments">{message.attachments.map((item) => <span key={item.id}>{item.contentType.startsWith("image/") ? <ImageIcon size={13} /> : <FileText size={13} />}{item.name}</span>)}</div> : null}
-                <div className="sisi-bubble"><ChatMarkdown content={message.content} busy={message.busy} busyLabel={message.busyLabel} /></div>
+                <div className="sisi-bubble"><ChatMarkdown content={message.content} busy={message.busy} busyLabel={sisiVisibleBusyLabel(mode, message.busyLabel)} /></div>
                 {message.confirmation && <button className="sisi-confirm" onClick={() => { postHost("embed:action-confirmed", { phrase: message.confirmation }); void send(message.confirmation); }}><ShieldCheck size={15} />确认并回复“{message.confirmation}”</button>}
               </div>
             </article>)}

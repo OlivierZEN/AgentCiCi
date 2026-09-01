@@ -1,14 +1,21 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-31T08:59:00Z
+updated_at: 2026-09-01T06:12:03Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-31T08:59:00Z
-last_run_status: passed_wecom_kf_callback_replay_pending_platform_save
+last_run_at: 2026-09-01T06:12:03Z
+last_run_status: passed_task_347_widget_status_filter_automated_pending_local_runtime
 ---
 
 # Test Report
+
+## 2026-09-01 TASK-347 Web 浮窗内部状态过滤自动化
+
+- 状态：`passed_task_347_widget_status_filter_automated_pending_local_runtime`。Website 浮窗渲染边界按 `mode=float` 统一过滤内部 busy label，保留无文字三点等待动效；完整 `page` 嵌入仍可展示既有阶段。
+- 自动化：`SisiEmbedPage.test.ts` 聚焦 `8/8`，覆盖“正在选择所需工具”和“正在安全执行工具”在 float 模式返回不可见，同时 page 模式保留“正在生成回复”；前端全量 `60 files / 334 tests` 通过。
+- 构建：frontend production build 与 `git diff --check` 通过；build 仅保留既有大 chunk warning。
+- 待验证：尚未从本地 `main` 提交构建 local-stack frontend，也尚未在 `https://cici.localhost/` 复测真实浮窗 DOM、截图、健康、restart 和版本指纹，因此暂不宣称本地开发环境已更新。
 
 ## 2026-08-31 生产微信客服回调签名复核
 
