@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 6
-updated_at: 2026-09-01T14:51:11Z
+updated_at: 2026-09-01T15:23:11Z
 updated_by: codex
 phase: implementation
-active_task: TASK-352
-next_action: "提交讯飞实时听写修复到本地 main，从该提交重建 backend/frontend，并完成旧配置规范化、合成音频转写和结束态运行回读。"
+active_task: TASK-353
+next_action: "精确提交图片追问修复到本地 main，在独立干净 worktree 最小重建 backend，并使用既有真实图片会话验证回答匹配。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- `TASK-353 / FEAT-188` 正在修复图片首轮识别成功、下一轮明确追问却声称没收到图片的问题。真实会话回读确认首轮 user message 关联 1 张图、第二轮 user message 为零附件；根因是历史装配只还原纯文本。最小实现仅对明确历史图片指代恢复最近一个带图用户轮，并校验同租户/同会话/同消息/ATTACHED，历史图片继续经过 vision 门禁。聚焦附件与编排测试共 56 项、backend package 和 diff check 通过；待提交、backend 部署和真实追问回归。
 
 - `TASK-352 / FEAT-062` 正在修复用户截图中的两处实时听写失效：数据库保存的官方讯飞地址只有主机根路径，缺少 `/ast/communicate/v1`；前端又在上游 `started` 前显示听写中，解析器遗漏官方 `data.ls=true` 空最后帧，完成回调依赖浏览器 close。实现已在保存/读取/校验/运行时规范化官方根地址，等待上游 ready 后才申请麦克风，统一最终帧/异常关闭/1.5 秒兜底为一次完成。后端协议测试、package、前端 `62 files / 341 tests` 与 production build 已通过；待提交、部署和真实运行回读。
 

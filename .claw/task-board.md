@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-09-01T14:51:11Z
+updated_at: 2026-09-01T15:23:11Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,20 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-353 - 图片追问跨轮视觉上下文修复
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `backend-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-188-conversation-image-paste-attachments.md`
+- task_status_path: `.claw/tasks/TASK-353.md`
+- blocked_by: `none`
+- related_issues: `ISSUE-2026-09-01-image-followup-context-loss`
+- scope_files: `历史消息附件回取、显式图片指代、视觉能力门禁、blocking/streaming 消息装配、聚焦测试、本地 backend 验证`
+- completion_evidence: `真实数据库会话已证明历史图片在第二轮丢失；聚焦附件/编排测试 56 项、backend package 与 diff check 通过，待提交、部署和真实追问回归。`
+- next_action: `精确提交 TASK-353 到本地 main，在独立干净 worktree 最小重建 backend，并使用既有图片会话验证后续回答。`
 
 ### TASK-352 - 讯飞实时听写与结束状态收敛
 

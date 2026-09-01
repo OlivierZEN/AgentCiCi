@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-09-01T14:46:51Z
+updated_at: 2026-09-01T15:23:11Z
 updated_by: codex
 status: active
-last_run_at: 2026-09-01T14:46:51Z
-last_run_status: passed_task_351_local_runtime_pending_provider_refresh
+last_run_at: 2026-09-01T15:23:11Z
+last_run_status: passed_task_353_technical_pending_local_runtime
 ---
 
 # Test Report
+
+## 2026-09-01 TASK-353 图片追问跨轮视觉上下文
+
+- 状态：`passed_task_353_technical_pending_local_runtime`。真实会话 `8f4dbc70-88d9-4aeb-b45b-23de41987ae4` 回读显示消息 99 关联 1 张图片且消息 100 已识别，消息 101 为零附件文本追问，消息 102 却声称没有图片；代码回读确认历史消息只装配纯文本。
+- 实现：本轮无新图片且文本明确指向历史图片时，只回取最近 20 条消息中的最近一个带图用户轮；附件必须满足同租户、同会话、同消息和 `ATTACHED`，只恢复图片。历史图片与当前附件合并后继续执行可信 `vision` 能力门禁。
+- 自动化：`ChatAttachmentServiceTest` 9 项与 `ChatOrchestratorServiceModelIdentityTest` 47 项通过。模型调用捕获为 4 条消息：system、含 1 份多模态内容的历史 user、历史 assistant、当前 user；视觉能力检查被调用。普通“介绍图片识别能力”和无图片指代文本不触发历史图片。
+- 构建：`mvn -q -DskipTests package` 与 `git diff --check` 通过。当前主工作树出现并行语音任务的未提交修改；本任务将精确暂存自身文件，并从提交后的独立干净 `main` worktree 构建，避免夹带并行修改。
+- 边界：尚未从本任务提交部署本地 backend，也未执行真实后续追问；自动化不替代用户对回答内容与图片匹配的 HUMAN 确认。远程、UAT、生产未修改。
 
 ## 2026-09-01 TASK-351 OneKeyToken 自动路由视觉能力同步
 

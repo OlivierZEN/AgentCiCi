@@ -21,6 +21,7 @@ import com.codehouse.ciciassistant.agent.service.AgentTaskReflectService;
 import com.codehouse.ciciassistant.agent.service.AgentPlanExecCanaryService;
 import com.codehouse.ciciassistant.agent.service.AgentWorkflowExecutionLogService;
 import com.codehouse.ciciassistant.agent.service.AgentWorkflowRuntimeService;
+import com.codehouse.ciciassistant.ai.domain.ChatAttachmentEntity;
 import com.codehouse.ciciassistant.ai.domain.ChatMessageEntity;
 import com.codehouse.ciciassistant.ai.domain.ChatMessageRepository;
 import com.codehouse.ciciassistant.ai.domain.ChatSessionEntity;
@@ -51,6 +52,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -865,6 +867,94 @@ class ChatOrchestratorServiceModelIdentityTest {
         verify(fixture.aliyunBailianClient).chatStreamWithCredentials(
                 anyString(), anyList(), any(), eq(false), any(), anyString(), anyString());
         verifyNoMoreInteractions(fixture.aliyunBailianClient);
+    }
+
+    @Test
+    void shouldRehydrateLatestHistoricalImageForExplicitImageFollowup() throws Exception {
+        CrmRouteFixture fixture = new CrmRouteFixture("{}");
+        CapturingEmitter emitter = new CapturingEmitter();
+        String sessionId = "00000000-0000-0000-0000-000000000099";
+        ChatMessageEntity priorUser = mock(ChatMessageEntity.class);
+        ChatMessageEntity priorAssistant = mock(ChatMessageEntity.class);
+        ChatMessageEntity currentUser = mock(ChatMessageEntity.class);
+        when(priorUser.getId()).thenReturn(99L);
+        when(priorUser.getRoleCode()).thenReturn("user");
+        when(priorUser.getContent()).thenReturn("如图");
+        when(priorAssistant.getId()).thenReturn(100L);
+        when(priorAssistant.getRoleCode()).thenReturn("assistant");
+        when(priorAssistant.getContent()).thenReturn("我看到截图了。");
+        when(currentUser.getId()).thenReturn(101L);
+        when(currentUser.getRoleCode()).thenReturn("user");
+        when(currentUser.getContent()).thenReturn("你能识别图片中的内容吗");
+        when(fixture.chatMessageRepository.findByCompanyIdAndSessionIdOrderByCreatedAtDesc(
+                eq("demo-org"), eq(sessionId), any()))
+                .thenReturn(List.of(priorAssistant, priorUser))
+                .thenReturn(List.of(currentUser, priorAssistant, priorUser));
+
+        ChatAttachmentEntity historicalImage = mock(ChatAttachmentEntity.class);
+        when(historicalImage.getStatus()).thenReturn(ChatAttachmentEntity.STATUS_ATTACHED);
+        when(historicalImage.getMessageId()).thenReturn(99L);
+        when(historicalImage.getCompanyId()).thenReturn("demo-org");
+        when(historicalImage.getSessionId()).thenReturn(sessionId);
+        when(historicalImage.getContentType()).thenReturn("image/png");
+        when(fixture.chatAttachmentService.attachmentsForMessage(99L)).thenReturn(List.of(historicalImage));
+        when(fixture.chatAttachmentService.requireReadyForMessage(
+                "demo-org", "sales-a", sessionId, List.of(), false)).thenReturn(List.of());
+        List<Map<String, Object>> historicalMultimodalContent = List.of(
+                Map.of("type", "text", "text", "如图"),
+                Map.of("type", "image_url", "image_url", Map.of("url", "data:image/png;base64,test")));
+        when(fixture.chatAttachmentService.buildModelContent("如图", List.of(historicalImage)))
+                .thenReturn(historicalMultimodalContent);
+        when(fixture.modelProviderService.supportsTrustedCapability(
+                "demo-org", "mock", "mock-model", "vision")).thenReturn(true);
+        SafetyGatewayService.PreparedOutputPolicy policy = new SafetyGatewayService.PreparedOutputPolicy(
+                "demo-org", "sales-a", "MODEL_STREAM_OUTPUT", List.of(), true);
+        when(fixture.safetyGatewayService.prepareOutputPolicy(
+                "demo-org", "sales-a", "MODEL_STREAM_OUTPUT")).thenReturn(policy);
+        when(fixture.safetyGatewayService.checkOutput(eq(policy), anyString()))
+                .thenAnswer(invocation -> new SafetyGatewayService.SafetyDecision(
+                        "ALLOW", invocation.getArgument(1), List.of(), false, "test"));
+        AtomicReference<List<Map<String, Object>>> capturedMessages = new AtomicReference<>();
+        when(fixture.aliyunBailianClient.chatStreamWithCredentials(
+                anyString(), anyList(), any(), eq(false), any(), anyString(), anyString()))
+                .thenAnswer(invocation -> {
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> messages = invocation.getArgument(1);
+                    capturedMessages.set(messages);
+                    Consumer<String> onDelta = invocation.getArgument(4);
+                    onDelta.accept("图片内容已识别。");
+                    return new ChatStreamResult(20, 8);
+                });
+
+        fixture.service.chatStreamBlocking(
+                "demo-org", "sales-a", sessionId, "你能识别图片中的内容吗",
+                List.of(), "agent-cici", "crm-business-analysis", emitter);
+
+        assertThat(capturedMessages.get()).hasSize(4);
+        assertThat(capturedMessages.get().get(1))
+                .containsEntry("role", "user")
+                .containsEntry("content", historicalMultimodalContent);
+        assertThat(capturedMessages.get().get(2))
+                .containsEntry("role", "assistant")
+                .containsEntry("content", "我看到截图了。");
+        assertThat(capturedMessages.get().get(3))
+                .containsEntry("role", "user")
+                .containsEntry("content", "你能识别图片中的内容吗");
+        assertThat(capturedMessages.get().stream()
+                .filter(message -> historicalMultimodalContent.equals(message.get("content")))
+                .count()).isEqualTo(1);
+        verify(fixture.chatAttachmentService).attachmentsForMessage(99L);
+        verify(fixture.modelProviderService).supportsTrustedCapability(
+                "demo-org", "mock", "mock-model", "vision");
+    }
+
+    @Test
+    void shouldOnlyTreatExplicitHistoricalImageReferencesAsImageFollowups() {
+        assertThat(ChatOrchestratorService.referencesHistoricalImage("你能识别图片中的内容吗")).isTrue();
+        assertThat(ChatOrchestratorService.referencesHistoricalImage("请复述上一张截图里的文字")).isTrue();
+        assertThat(ChatOrchestratorService.referencesHistoricalImage("what does the previous image say?")).isTrue();
+        assertThat(ChatOrchestratorService.referencesHistoricalImage("介绍一下图片识别能力")).isFalse();
+        assertThat(ChatOrchestratorService.referencesHistoricalImage("继续回答刚才的问题")).isFalse();
     }
 
     private static final class CrmRouteFixture {

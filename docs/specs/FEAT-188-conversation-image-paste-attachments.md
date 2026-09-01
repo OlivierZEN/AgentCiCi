@@ -5,9 +5,9 @@ title: 对话框连续粘贴图片附件
 status: verified
 primary_project: agentcici
 owner_role: fullstack-agent
-task_ids: TASK-309,TASK-336,TASK-338,TASK-342,TASK-351
-related_issues: ISSUE-2026-08-28-vision-capability-scope,ISSUE-2026-09-01-onekeytoken-auto-vision-capability
-updated_at: 2026-09-01T14:46:51Z
+task_ids: TASK-309,TASK-336,TASK-338,TASK-342,TASK-351,TASK-353
+related_issues: ISSUE-2026-08-28-vision-capability-scope,ISSUE-2026-09-01-onekeytoken-auto-vision-capability,ISSUE-2026-09-01-image-followup-context-loss
+updated_at: 2026-09-01T15:23:11Z
 updated_by: codex
 ---
 
@@ -72,7 +72,7 @@ DevAutopilot 需求 `REQ-6F34ECF3` 的端到端任务 `019ffeb0-88a0-739f-afcb-6
 
 ## 风险与回滚
 
-- 大图片会放大模型请求体：只注入本轮附件，不在后续轮次重复注入历史图片；服务端严格限制单图和会话总数。
+- 大图片会放大模型请求体：默认只注入本轮附件；仅当后续文本明确指向历史图片时，最多恢复最近一个带图用户轮，不在普通文本轮次重复注入；服务端严格限制单图和会话总数。
 - 文件写入与数据库事务不完全原子：失败路径删除新建文件；未引用过期清理作为后续受管运维任务，不在本轮直接删除业务数据。
 - 回滚时先关闭前端入口并回滚消费代码；保留 `chat_attachment` 表与已关联文件，避免历史消息引用损坏。
 
@@ -108,3 +108,10 @@ DevAutopilot 需求 `REQ-6F34ECF3` 的端到端任务 `019ffeb0-88a0-739f-afcb-6
 - 不根据自动路由实际选中的下游模型反推或固定能力；远端目录不可用、未声明视觉能力或校验失败时继续失败关闭，图片聊天仍返回 `VISION_MODEL_REQUIRED`。
 - 本轮仅修改 AgentCiCi 后端校验与能力同步，不改变 OneKeyToken 自动路由协议、附件数据、路由模型名或其他产品。
 - 实现 `653e5e1d7993` 已进入本地 main；backend 运行 `2.8.68-dev.653e5e1`、healthy/restart=0，仅 backend 被替换。运行数据库的能力刷新与真实图片对话仍待即时确认，不把代码/健康证据写成业务验收完成。
+
+## 2026-09-01 图片追问跨轮视觉上下文
+
+- 真实故障会话证明图片首轮已经进入模型并被识别；后续“图片中的内容”是零附件文本轮，历史装配只回灌消息字符串，导致模型无法再次查看图片并给出矛盾回答。
+- 修复不把图片永久绑定到整个会话，也不在每轮重复发送。仅当本轮没有新图片且文本明确出现“图中、截图里、上一张图片”等历史指代时，在最近 20 条消息中回取最近一个带图片的用户轮。
+- 回取附件必须同时满足租户、会话、消息关联和 `ATTACHED` 状态一致；只恢复图片，不把历史文档隐式带入当前轮。
+- 历史图片与本轮图片共同执行可信 `vision` 能力门禁；不支持视觉的当前模型仍返回 `VISION_MODEL_REQUIRED`，不因为“历史图片”而绕过治理。

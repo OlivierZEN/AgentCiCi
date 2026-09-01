@@ -57,6 +57,18 @@ class ChatAttachmentServiceTest {
     }
 
     @Test
+    void returnsAttachmentsForPersistedMessageInSlotOrder() {
+        ChatAttachmentRepository repository = org.mockito.Mockito.mock(ChatAttachmentRepository.class);
+        ChatAttachmentEntity first = org.mockito.Mockito.mock(ChatAttachmentEntity.class);
+        ChatAttachmentEntity second = org.mockito.Mockito.mock(ChatAttachmentEntity.class);
+        when(repository.findByMessageIdOrderBySlotNoAsc(99L)).thenReturn(List.of(first, second));
+        ChatAttachmentService service = new ChatAttachmentService(repository, tempDir.toString());
+
+        assertThat(service.attachmentsForMessage(99L)).containsExactly(first, second);
+        assertThat(service.attachmentsForMessage(null)).isEmpty();
+    }
+
+    @Test
     void rejectsContentWhoseSignatureDoesNotMatchDeclaredImageType() {
         ChatAttachmentRepository repository = org.mockito.Mockito.mock(ChatAttachmentRepository.class);
         when(repository.findByCompanyIdAndUserIdAndSessionIdAndClientAttachmentId(

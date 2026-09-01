@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-09-01T14:51:11Z
+updated_at: 2026-09-01T15:23:11Z
 updated_by: codex
 status: active
 ---
@@ -9,6 +9,14 @@ status: active
 # Issue List
 
 ## Resolved Issues
+
+## ISSUE-2026-09-01-image-followup-context-loss
+
+- Symptom: 图片首轮已被模型识别，下一轮用户明确询问“图片中的内容”时，模型却回答当前会话没有收到图片。
+- Verified root cause: 故障会话的首轮用户消息关联 1 张图片，后续追问消息没有新附件；`ChatOrchestratorService.buildRecentHistoryMessages` 只把历史消息还原为纯文本，历史图片未进入第二轮模型上下文，视觉门禁也只检查本轮附件。
+- Resolution: TASK-353 仅在本轮没有新图片且文本明确指向历史图片时，回取最近一个同租户/同会话/同消息的已关联图片，把原历史用户消息恢复为多模态内容，并让历史图片继续经过可信视觉能力门禁。
+- Verification: `ChatAttachmentServiceTest` 9 项与 `ChatOrchestratorServiceModelIdentityTest` 47 项、backend package 和 diff check 通过；正向断言模型消息包含且只包含一个多模态历史用户轮，负向断言普通图片能力咨询不触发历史图片。
+- Status: resolved in code; package, local commit/runtime and HUMAN answer match verification in progress; remote/UAT/production unchanged.
 
 ## ISSUE-2026-09-01-iflytek-realtime-asr-stuck
 

@@ -212,6 +212,14 @@ public class ChatAttachmentService {
         return repository.findByMessageIdOrderBySlotNoAsc(messageId).stream().map(this::view).toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<ChatAttachmentEntity> attachmentsForMessage(Long messageId) {
+        if (messageId == null) {
+            return List.of();
+        }
+        return List.copyOf(repository.findByMessageIdOrderBySlotNoAsc(messageId));
+    }
+
     private Map<String, Object> uploadNew(String companyId, String userId, String sessionId,
                                           String clientAttachmentId, MultipartFile file) {
         if (file == null || file.isEmpty()) {
