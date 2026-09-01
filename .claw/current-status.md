@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 6
-updated_at: 2026-08-31T07:31:00Z
+updated_at: 2026-08-31T08:59:00Z
 updated_by: codex
 phase: review
 active_task: null
@@ -21,6 +21,10 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- 生产租户 `org5nszpgj99jaysxv6y` 微信客服回调故障已定位并完成服务端技术复核：企业微信在 08:51 的两次真实 URL 校验完整到达 backend，但使用当时配置签名校验为403；租户在 08:52 重新保存配置后，服务端内部重放同一条企业微信真实签名请求返回 `200 text/plain`，证明当前 Token/AESKey 与企业微信请求匹配。16:57 通过登录态管理页执行官方连接测试，CorpID/API Secret 获取 access token 成功，缓存到期刷新至18:55。生产仍为 `2.8.67 / 2970bea75208`、healthy/restart=0，公开 smoke 通过；企业微信后台受站点安全策略保护，最终需 HUMAN 在现有标签页重新点击保存并让平台产生一条新的200验证请求，才能把平台配置标记为完成。
+
+- 企业微信可信域名生产校验已完成技术闭环：`agentcici.com` 继续解析生产业务节点，在生产 frontend Nginx 仅新增 `WW_verify_k3ew8Iachbzg5pIw.txt` 的 HTTP/HTTPS 精确路径并热重载；公网两种协议均返回 `200 text/plain`、16 bytes，SHA-256 与用户提供文件一致。配置备份与已应用副本位于 `/opt/cici/backups/20260831T081349Z-before-wecom-domain-verification`；frontend/backend 仍为 `2.8.67 / 2970bea75208`、healthy/restart=0，全套生产只读 smoke 和近期 severe=0。企业微信管理后台的最终“保存/校验”仍需已登录管理员会话确认，不以服务端技术证据代替 HUMAN 平台操作。
 
 - `TASK-347 / FEAT-204` 已完成本地技术闭环，进入用户 review：`19080005f847` 将无外部事实/工具意图的普通咨询确定性直达最终模型，模型 delta 经安全句段门禁实时进入 SSE；自定义整段规则和研发交付写回执显式使用单 delta `buffered`，固定 `18 字 / 18ms` 模拟分片已删除。后端 7 个聚焦测试类与 package、前端 60 文件/333 项与 production build 通过。backend/frontend 运行 `2.8.68-dev.1908000 / 19080005f847`、healthy/restart=0；真实 website Trace 为单模型/零工具/streaming，供应商/客户端首 delta `8.246s / 8.320s`、总耗时 `10.385s`。浏览器在发送后约 285ms 显示阶段提示，首段 `14.749s`、完成 `18.616s`，中间持续多次增长且 console 0。UAT 仍为 `2.8.68-beta.3 / a5bbb114`，生产未修改。
 

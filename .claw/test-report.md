@@ -1,14 +1,28 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-31T07:31:00Z
+updated_at: 2026-08-31T08:59:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-31T07:31:00Z
-last_run_status: passed_task_347_local_streaming_pending_user_review
+last_run_at: 2026-08-31T08:59:00Z
+last_run_status: passed_wecom_kf_callback_replay_pending_platform_save
 ---
 
 # Test Report
+
+## 2026-08-31 生产微信客服回调签名复核
+
+- 状态：`passed_wecom_kf_callback_replay_pending_platform_save`。企业微信两条真实验证请求的完整参数到达生产 backend，但在租户重新保存配置前返回403；配置保存后，在服务器内部重放同一企业微信签名请求返回 `200 text/plain`、18 bytes，未输出签名、密文或正文。
+- 官方连接：生产登录态“测试连接”回读通过，access-token缓存成功刷新，证明 CorpID、API管理应用Secret与企业微信官方端点可用；该租户账号保持启用，Agent与服务用户绑定存在。
+- 运行回归：AgentCiCi `2.8.67 / 2970bea75208`，frontend/backend healthy/restart=0、Nginx配置有效、backend health UP，AgentCiCi首页/匿名401、DevAutopilot、Semattice健康/匿名401和Keycloak discovery均通过。最近ERROR仅来自本次缺少必填签名参数的负向诊断请求。
+- 验收边界：当前配置已满足服务端回调验证；企业微信管理后台因站点安全策略不能由agent自动点击，需HUMAN重新保存并由一条新的外部200回调确认平台状态。尚无真实客户消息、sync_msg或send_msg业务验收，不将内部重放等同于完整客户对话。
+
+## 2026-08-31 企业微信可信域名生产校验
+
+- 状态：`passed_wecom_domain_verification_production_technical`。变更前确认 HTTP 404、HTTPS SPA HTML 假200；变更后 `http://agentcici.com/WW_verify_k3ew8Iachbzg5pIw.txt` 与 HTTPS 同路径均为 `200 text/plain`、16 bytes，响应 SHA-256 `29980dcc2e72150f56de749b3c6b1a27d46216ec1f261b3173898512d7976bdd` 与用户文件完全一致。
+- 配置与恢复：候选及运行中 Nginx 配置均通过 `nginx -t`，当前配置 SHA-256 为 `85f706c41e6567369420e5659f9409cc999e82d7c25fa7473d3614bf3f2c3112`；发布前配置 SHA-256 为 `7d95f4b2982473dce689a8bc895a9cd62ce64d9489140135e5c624d11c91d523`，备份目录 `/opt/cici/backups/20260831T081349Z-before-wecom-domain-verification` 的两个文件均非空、root-owned、0600。
+- 运行回归：frontend/backend 保持生产 `2.8.67 / 2970bea75208`、容器 ID 不变、healthy/restart=0，backend health=`UP`；AgentCiCi 首页、匿名401、DevAutopilot、Semattice健康/匿名401和Keycloak discovery 的生产只读 smoke 全部通过，frontend 近5分钟 severe=0。
+- HUMAN 边界：已完成服务端域名归属技术条件；Chrome 中虽有已登录的企业微信管理页，但站点安全策略禁止自动化接管，因此未执行或宣称后台最终“保存/校验”操作，需管理员手动点击。
 
 ## 2026-08-31 TASK-347 Web 浮窗真实流式
 

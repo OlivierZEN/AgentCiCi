@@ -1,12 +1,29 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-08-31T07:31:00Z
+updated_at: 2026-08-31T08:59:00Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-08-31 生产微信客服回调签名复核
+
+- 企业微信在 08:51:19 与 08:51:37 两次请求 `x.agentcici.com/wecom/kf/callback`；生产访问日志确认 `companyId/openKfId/msg_signature/timestamp/nonce/echostr` 六项参数完整、租户匹配、签名和密文长度正常，请求均到达 backend 后以403签名不匹配结束，不是 DNS、TLS、Nginx、URL截断或SPA fallback。
+- 该租户唯一启用账号在08:52:02重新保存，Token长度、Secret密文、EncodingAESKey密文/IV、Agent和服务身份均结构完整；无会话/消息记录，说明故障发生在URL校验阶段，尚未进入消息同步。
+- 不输出签名、密文或解密正文，在生产节点内部重放企业微信08:51的同一条真实签名请求；使用08:52后的当前配置返回 `200 text/plain`，证明当前 Token 与EncodingAESKey已和企业微信请求一致。未改代码、Nginx或业务数据。
+- 通过生产登录态管理页执行“测试连接”，页面回读“企业微信客服连接测试通过 · 2026-08-31 16:57”，access-token缓存到期刷新至18:55，证明 CorpID、微信客服API管理应用Secret和企业微信官方token端点正常。该测试仅刷新受管短期access-token缓存。
+- frontend/backend仍运行 `2.8.67 / 2970bea75208`、healthy/restart=0，Nginx有效，生产六项只读smoke通过。近10分钟唯一ERROR为本次故意省略 `msg_signature` 的负向诊断请求，不是业务流错误。
+- 企业微信管理后台页面被浏览器站点安全策略禁止自动化接管；管理员需在现有页面重新点击保存。必须在新的企业微信外部请求返回200后才把平台配置记为完成。
+
+## 2026-08-31 企业微信可信域名生产校验
+
+- 用户提供的校验文件为 `WW_verify_k3ew8Iachbzg5pIw.txt`，16 bytes，SHA-256 `29980dcc2e72150f56de749b3c6b1a27d46216ec1f261b3173898512d7976bdd`。变更前 `agentcici.com` 解析到 `47.97.119.160`，HTTP 目标路径为 404，HTTPS 被 SPA fallback 误返回 536 bytes HTML 200，不能作为域名校验证据。
+- 在生产 `/opt/cici/deploy/nginx.cici.ssl.conf` 的 HTTP/HTTPS `agentcici.com` server 中各增加一个精确路径，仅返回该16字节校验正文；候选配置先用当前 frontend 镜像、生产网络与证书挂载执行 `nginx -t`，再覆盖原只读挂载源并热重载。未构建镜像、未重建容器、未修改数据库或其他服务。
+- 配置 SHA-256 从 `7d95f4b2982473dce689a8bc895a9cd62ce64d9489140135e5c624d11c91d523` 变为 `85f706c41e6567369420e5659f9409cc999e82d7c25fa7473d3614bf3f2c3112`；回滚目录 `/opt/cici/backups/20260831T081349Z-before-wecom-domain-verification` 保存 root-only 的发布前配置与已应用副本。回滚只需恢复 `nginx.cici.ssl.conf.before`、执行容器内 `nginx -t` 并热重载。
+- 公网 HTTP/HTTPS 目标路径均为 `200 text/plain`、`Content-Length: 16`、`Cache-Control: no-store`，正文 SHA-256 与源文件一致；TLS SAN 覆盖 `agentcici.com`。frontend/backend 容器 ID 未变化、healthy/restart=0，运行版本仍为 `2.8.67 / 2970bea75208`，生产只读 smoke 全部通过，frontend 近5分钟 severe=0。
+- 本记录证明生产域名归属文件已可被公开读取；Chrome 中存在已登录的企业微信管理页，但该站点被浏览器安全策略禁止自动化接管，因此最终保存/平台判定需由管理员在现有标签页手动点击，未绕过限制或虚报完成。
 
 ## 2026-08-31 TASK-347 本地开发环境
 
