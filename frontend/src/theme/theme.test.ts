@@ -121,6 +121,15 @@ describe("product theme catalog", () => {
     expect(assistantCss).toContain(".cici-workbench__agent-chip.is-active .cici-workbench__agent-avatar {\n  transform: none;\n  box-shadow: none;");
   });
 
+  it("keeps the current-user rail avatar visible when themed buttons strip background images", () => {
+    const avatarRule = assistantCss.match(/\.cici-rail__avatar\s*\{([^}]*)\}/)?.[1] ?? "";
+
+    expect(themeCss).toContain(":root[data-theme] button,");
+    expect(themeCss).toContain("background-image: none;");
+    expect(avatarRule).toContain("background: var(--theme-accent-strong, #3a776f);");
+    expect(avatarRule).toContain("color: var(--theme-surface, #fffdf8);");
+  });
+
   it("routes dashboard series through theme-owned classes", () => {
     expect(dataInsightSource).not.toContain("background: item.color");
     expect(dataInsightSource).toContain("is-series-${(index % 4) + 1}");
