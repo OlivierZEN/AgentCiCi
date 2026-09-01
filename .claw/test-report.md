@@ -1,21 +1,24 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-09-01T06:12:03Z
+updated_at: 2026-09-01T06:16:48Z
 updated_by: codex
 status: active
-last_run_at: 2026-09-01T06:12:03Z
-last_run_status: passed_task_347_widget_status_filter_automated_pending_local_runtime
+last_run_at: 2026-09-01T06:16:48Z
+last_run_status: passed_task_347_widget_status_filter_local_pending_user_review
 ---
 
 # Test Report
 
 ## 2026-09-01 TASK-347 Web 浮窗内部状态过滤自动化
 
-- 状态：`passed_task_347_widget_status_filter_automated_pending_local_runtime`。Website 浮窗渲染边界按 `mode=float` 统一过滤内部 busy label，保留无文字三点等待动效；完整 `page` 嵌入仍可展示既有阶段。
+- 状态：`passed_task_347_widget_status_filter_local_pending_user_review`。Website 浮窗渲染边界按 `mode=float` 统一过滤内部 busy label，保留无文字三点等待动效；完整 `page` 嵌入仍可展示既有阶段。
 - 自动化：`SisiEmbedPage.test.ts` 聚焦 `8/8`，覆盖“正在选择所需工具”和“正在安全执行工具”在 float 模式返回不可见，同时 page 模式保留“正在生成回复”；前端全量 `60 files / 334 tests` 通过。
 - 构建：frontend production build 与 `git diff --check` 通过；build 仅保留既有大 chunk warning。
-- 待验证：尚未从本地 `main` 提交构建 local-stack frontend，也尚未在 `https://cici.localhost/` 复测真实浮窗 DOM、截图、健康、restart 和版本指纹，因此暂不宣称本地开发环境已更新。
+- 本地主线与运行：实现 `629e35db6b89` 已进入本地 `main`；frontend 从该提交构建为 `2.8.68-dev.629e35d`，镜像 `sha256:065bb91e5394`，容器 healthy/restart=0。backend 未修改，保持 `2.8.68-dev.1908000 / 19080005f847`、health UP；PostgreSQL、Redis、RabbitMQ、Qdrant 容器 ID 未变化且 restart=0。
+- 路由与制品：官网和 float Embed 均为 200，部署 JS `index-BIMVIX2F-2.8.68-dev.629e35d.js` 含版本指纹；Nginx 配置有效，近 10 分钟结构化 5xx=0。
+- 浏览器：float shell=1、可见 `.bubble-thinking__label`=0、“正在选择所需工具”=0、“正在安全执行工具”=0；桌面截图布局正常，console error/warning=0。
+- HUMAN 边界：本次浏览器未代用户发送新的模型消息；真实等待周期是否只出现三点动效仍待用户发送一条新消息目视接受。自动化已覆盖 float/page 分流，但不把该技术证明替代 HUMAN 感知验收。
 
 ## 2026-08-31 生产微信客服回调签名复核
 

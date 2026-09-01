@@ -2,12 +2,12 @@
 kind: task-status
 task_id: TASK-347
 feature_id: FEAT-204
-status: in_progress
+status: review
 priority: critical
 owner_role: fullstack-agent
 claimed_by: codex
 spec_path: docs/specs/FEAT-204-web-widget-publish-channel.md
-updated_at: 2026-09-01T06:12:03Z
+updated_at: 2026-09-01T06:16:48Z
 updated_by: codex
 ---
 
@@ -45,7 +45,9 @@ updated_by: codex
 
 - 2026-09-01：用户截图确认 Website 浮窗把“正在选择所需工具”等内部 phase 当作助手消息展示；窄浮窗内文案逐字换行，既暴露内部执行细节又破坏对话布局。
 - 过滤修复聚焦测试 `8/8`、前端全量 `60 files / 334 tests`、production build 与 `git diff --check` 通过；build 仅保留既有大 chunk warning。
+- 实现 `629e35db6b89` 已进入本地 `main`；local-stack frontend 从该提交构建并运行 `2.8.68-dev.629e35d`，healthy/restart=0。backend 未改，保持 `2.8.68-dev.1908000` 且 health UP；PostgreSQL、Redis、RabbitMQ、Qdrant 容器未重建。
+- `https://cici.localhost/` 与 float Embed 均为 200，运行 JS 为 `index-BIMVIX2F-2.8.68-dev.629e35d.js`；浏览器 DOM 回读 float shell=1、可见 busy label=0、工具选择/工具执行文案=0，桌面截图布局正常，console error/warning=0。Nginx 配置有效、结构化 5xx=0。
 
 ## 下一步
 
-- 提交本地 `main`，从该提交构建并最小替换 local-stack frontend；完成 `cici.localhost` 浮窗 DOM、截图、健康、restart 和版本指纹复测。UAT 不在本次授权范围。
+- HUMAN 在 `cici.localhost` 浮窗发送一条新消息，目视确认等待期间只显示三点动效且无工具选择、检索、生成或校验文案。UAT 不在本次授权范围。

@@ -7,7 +7,7 @@ owner_role: fullstack-agent
 task_ids: TASK-334,TASK-335,TASK-337,TASK-339,TASK-343,TASK-344,TASK-347
 related_decisions: FEAT-202
 related_issues: ISSUE-2026-08-28-web-widget-empty-stream,ISSUE-2026-08-31-web-widget-buffered-stream
-updated_at: 2026-09-01T06:12:03Z
+updated_at: 2026-09-01T06:16:48Z
 updated_by: codex
 ---
 
@@ -146,6 +146,7 @@ Base64 头像不得写入短时 JWT。website 会话以已验证 Token 中的 `c
 - 2026-08-31：TASK-347 只读确认 UAT 普通咨询存在两次模型调用和完整缓存后的模拟分片；进入 DIRECT 单调用、流式安全门禁、首字时延和 Embed 阶段提示修复。
 - 2026-08-31：TASK-347 实现 `19080005` 已进入本地 main；自动化、双制品与真实 website Trace 证明普通咨询单模型/零工具、首 delta 早于完成，浏览器显示阶段提示并在完成前连续增长。自定义整段规则与研发写回执明确使用单 delta buffered；UAT 仍为 beta.3，修复尚未发布。
 - 2026-09-01：用户复核指出 Website 浮窗不应显示“正在选择所需工具”等内部阶段；TASK-347 恢复 `in_progress`，规格调整为公开访客仅见无文字等待动效，SSE/Trace 与受信 `page` 嵌入继续保留阶段信息。
+- 2026-09-01：过滤实现 `629e35db` 进入本地 main，自动化/build、frontend 单服务制品、运行指纹、官网 float DOM 与桌面截图通过；进入用户 review，UAT/生产未修改。
 
 ## 交接说明
 

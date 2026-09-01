@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-09-01T06:12:03Z
+updated_at: 2026-09-01T06:16:48Z
 updated_by: codex
 board_status: active
 ---
@@ -17,7 +17,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-347 - Web 浮窗真实流式与首字延迟修复
 
-- status: `in_progress`
+- status: `review`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - claimed_by: `codex`
@@ -26,8 +26,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - related_issues: `ISSUE-2026-08-31-web-widget-buffered-stream`
 - scope_files: `工具意图直答路由、模型增量安全输出、SSE/Trace 首字时延、Website 浮窗内部状态过滤、本地正式环境回归`
-- completion_evidence: `19080005 进入本地 main；后端聚焦/package、前端 60/333/build 通过；本地双制品 2.8.68-dev.1908000 healthy/restart=0。真实 website Trace 单模型/零工具/streaming，8.320s 首客户端 delta、10.385s 完成。2026-09-01 用户复核发现内部 phase 在窄浮窗逐字换行；过滤修复聚焦 8/8、前端 60 文件/334 项和 production build 通过。`
-- next_action: `提交本地 main，从该提交构建并最小替换 local-stack frontend，再完成 cici.localhost 浮窗 DOM、截图、健康、restart 和版本指纹复测。UAT 不在本次授权范围。`
+- completion_evidence: `真实流式实现 19080005 仍有效。内部状态过滤提交 629e35db 进入本地 main；聚焦 8/8、前端 60/334、build 通过。local-stack frontend 2.8.68-dev.629e35d healthy/restart=0；backend 未改且 health UP；官网/float 200，运行 JS 指纹、DOM 内部状态计数 0、桌面截图、Nginx、5xx=0、console 0 通过。`
+- next_action: `HUMAN 在 cici.localhost 浮窗发送一条新消息，目视确认等待期间只有三点动效且无内部阶段文案。UAT 不在本次授权范围。`
 
 ### TASK-346 - OpenAPI 文件附件统一运行时
 

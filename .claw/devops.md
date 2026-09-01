@@ -1,12 +1,20 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-08-31T08:59:00Z
+updated_at: 2026-09-01T06:16:48Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-09-01 TASK-347 本地 Web 浮窗状态过滤
+
+- 前端修复提交 `629e35db6b89d3d249e122395cd75c072eda6918` 已进入本地 `main`；只从该提交构建 `cc-aixone/agentcici-frontend:local`，OCI version/revision 为 `2.8.68-dev.629e35d / 629e35db6b89`，镜像 ID `sha256:065bb91e53947f25c9645ccd4946d004a7fac1cc5bcfcb54be2842e5bc5c0d81`。
+- 仅使用现有 Compose 与 Git 忽略的 website widget override 执行 `--no-deps --force-recreate cici-frontend`。frontend healthy/restart=0；backend 未重建，保持 `2.8.68-dev.1908000 / 19080005f847`、health UP。PostgreSQL、Redis、RabbitMQ、Qdrant 容器 ID 未变化且 restart=0。
+- `https://cici.localhost/` 与 `/embed/sisi?mode=float` 均为 200；部署资源为 `index-BIMVIX2F-2.8.68-dev.629e35d.js` 且含版本指纹。frontend Nginx 配置有效，近 10 分钟结构化 5xx=0。
+- 浏览器展开 Mary 浮窗后回读 float shell=1、可见 busy label=0、工具选择/工具执行内部文案=0；桌面截图布局正常，console error/warning=0。未代 HUMAN 发送新消息，真实等待态目视接受待用户完成。
+- 受管 `./stack init/verify` 仍被既有 Semattice `config=1.0.7 / repository=1.0.8` 漂移失败关闭；本次用明确 AgentCiCi version/commit 变量只构建和替换 frontend，不修改 local-stack 或 Semattice 配置。远程、ACR、Git tag、UAT 和生产未修改。
 
 ## 2026-08-31 生产微信客服回调签名复核
 
