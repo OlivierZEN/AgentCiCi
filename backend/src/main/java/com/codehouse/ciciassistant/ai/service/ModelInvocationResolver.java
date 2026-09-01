@@ -17,10 +17,17 @@ public class ModelInvocationResolver {
         this.modelProviderService = modelProviderService;
     }
 
-    public ResolvedModelInvocation resolve(String companyId, String sceneCode) {
+    public ResolvedModelRoute resolveRoute(String companyId, String sceneCode) {
         Map<String, String> route = modelProviderService.resolveRuntimeModelRoute(companyId, sceneCode, null);
         String providerCode = required(route, "provider", sceneCode);
         String modelName = required(route, "modelName", sceneCode);
+        return new ResolvedModelRoute(sceneCode, providerCode, modelName);
+    }
+
+    public ResolvedModelInvocation resolve(String companyId, String sceneCode) {
+        ResolvedModelRoute route = resolveRoute(companyId, sceneCode);
+        String providerCode = route.providerCode();
+        String modelName = route.modelName();
         Map<String, String> credentials = modelProviderService.credentialsForProvider(companyId, providerCode);
         if (!Boolean.parseBoolean(credentials.getOrDefault("enabled", "false"))) {
             throw unavailable(sceneCode, "厂商未启用");
@@ -56,5 +63,8 @@ public class ModelInvocationResolver {
             String apiBaseUrl,
             String apiKey,
             boolean apiKeyRequired) {
+    }
+
+    public record ResolvedModelRoute(String sceneCode, String providerCode, String modelName) {
     }
 }

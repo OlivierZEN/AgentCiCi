@@ -127,24 +127,16 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
             String type = j.path("type").asText("");
             if ("start".equalsIgnoreCase(type)) {
                 int sampleRate = j.path("sampleRate").asInt(16000);
-                String requestedProvider = firstNonBlank(j.path("provider").asText(""), queryParam(session, "provider"));
                 boolean speakerDiarization = j.path("speakerDiarization").asBoolean(
                         "true".equalsIgnoreCase(queryParam(session, "speakerDiarization")));
-                if ("iflytek".equalsIgnoreCase(requestedProvider) || "xunfei".equalsIgnoreCase(requestedProvider)) {
-                    sendClientEvent(ctx.clientSession, Map.of("type", "error",
-                            "message", "实时 ASR 仅支持通过 voice-asr 场景模型路由配置的厂商"));
-                    return;
-                }
-                if (speakerDiarization) {
-                    sendClientEvent(ctx.clientSession, Map.of("type", "status",
-                            "message", "speaker-diarization-unavailable", "provider", "scene-route",
-                            "speakerDiarization", false));
-                }
-                startAliyunTask(ctx, sampleRate);
+                startRoutedTask(ctx, sampleRate, speakerDiarization);
             } else if ("stop".equalsIgnoreCase(type)) {
                 ctx.started = false;
                 if (ctx.aliyunClient != null) {
                     ctx.aliyunClient.finishTask();
+                }
+                if (ctx.iflytekClient != null) {
+                    ctx.iflytekClient.finishTask();
                 }
             } else if ("ping".equalsIgnoreCase(type)) {
                 sendClientEvent(session, Map.of("type", "pong"));
@@ -161,6 +153,9 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
         if (ctx.aliyunClient != null) {
             ctx.aliyunClient.sendAudio(message.getPayload().asReadOnlyBuffer());
         }
+        if (ctx.iflytekClient != null) {
+            ctx.iflytekClient.sendAudio(message.getPayload().asReadOnlyBuffer());
+        }
     }
 
     @Override
@@ -169,9 +164,32 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
         if (ctx != null && ctx.aliyunClient != null) {
             ctx.aliyunClient.close();
         }
+        if (ctx != null && ctx.iflytekClient != null) {
+            ctx.iflytekClient.close();
+        }
     }
 
-    private void startAliyunTask(SessionCtx ctx, int sampleRate) throws Exception {
+    private void startRoutedTask(SessionCtx ctx, int sampleRate, boolean speakerDiarization) throws Exception {
+        ModelInvocationResolver.ResolvedModelRoute route;
+        try {
+            route = modelInvocationResolver.resolveRoute(ctx.companyId, "voice-asr");
+        } catch (RuntimeException ex) {
+            sendClientEvent(ctx.clientSession, Map.of("type", "error", "message", ex.getMessage()));
+            return;
+        }
+        if (isIflytekRoute(route.providerCode())) {
+            startIflytekTask(ctx, sampleRate, speakerDiarization, resolveIflytekConfig(ctx.companyId));
+            return;
+        }
+        if (!"aliyun-bailian".equals(route.providerCode())) {
+            sendClientEvent(ctx.clientSession, Map.of("type", "error", "message", "实时 ASR 场景厂商不受支持"));
+            return;
+        }
+        if (speakerDiarization) {
+            sendClientEvent(ctx.clientSession, Map.of("type", "status",
+                    "message", "speaker-diarization-unavailable", "provider", route.providerCode(),
+                    "speakerDiarization", false));
+        }
         ModelInvocationResolver.ResolvedModelInvocation invocation;
         try {
             invocation = modelInvocationResolver.resolve(ctx.companyId, "voice-asr");
@@ -179,10 +197,12 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
             sendClientEvent(ctx.clientSession, Map.of("type", "error", "message", ex.getMessage()));
             return;
         }
-        if (!"aliyun-bailian".equals(invocation.providerCode())) {
-            sendClientEvent(ctx.clientSession, Map.of("type", "error", "message", "实时 ASR 场景当前仅支持 aliyun-bailian 路由"));
-            return;
-        }
+        startAliyunTask(ctx, sampleRate, invocation);
+    }
+
+    private void startAliyunTask(SessionCtx ctx,
+                                 int sampleRate,
+                                 ModelInvocationResolver.ResolvedModelInvocation invocation) throws Exception {
         if (ctx.aliyunClient != null) {
             ctx.aliyunClient.close();
         }
@@ -232,6 +252,10 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
             return "iflytek";
         }
         return "aliyun";
+    }
+
+    static boolean isIflytekRoute(String providerCode) {
+        return IntegrationAppService.APP_CODE_IFLYTEK_ASR.equals(providerCode);
     }
 
     private static boolean isIflytekAvailable(IflytekRuntimeConfig config) {
@@ -484,6 +508,7 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
                     sendClientEvent(ctx.clientSession, event);
                 }
                 if (payload.path("data").path("status").asInt(0) == 2) {
+                    ctx.started = false;
                     sendClientEvent(ctx.clientSession, Map.of("type", "finished"));
                 }
             } catch (Exception e) {

@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.codehouse.ciciassistant.auth.config.PlatformAccountProperties;
+import com.codehouse.ciciassistant.integration.service.IntegrationAppService;
 import com.codehouse.ciciassistant.model.domain.CompanyModelConfigRepository;
 import com.codehouse.ciciassistant.model.domain.ModelProviderConfigEntity;
 import com.codehouse.ciciassistant.model.domain.ModelProviderConfigRepository;
@@ -51,6 +52,7 @@ class ModelProviderServiceTest {
                     providerRepository,
                     mock(CompanyModelConfigRepository.class),
                     new PlatformAccountProperties(),
+                    mock(IntegrationAppService.class),
                     new ObjectMapper());
 
             Map<String, Object> result = service.fetchProviderModels(

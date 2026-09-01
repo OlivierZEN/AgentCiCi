@@ -27,4 +27,11 @@ class RealtimeAsrProviderSelectionTest {
         assertThat(AliyunRealtimeAsrWebSocketHandler.selectRealtimeProvider("", true, true))
                 .isEqualTo("aliyun");
     }
+
+    @Test
+    void recognizesGovernedIflytekSceneRoute() {
+        assertThat(AliyunRealtimeAsrWebSocketHandler.isIflytekRoute("iflytek_asr")).isTrue();
+        assertThat(AliyunRealtimeAsrWebSocketHandler.isIflytekRoute("aliyun-bailian")).isFalse();
+        assertThat(AliyunRealtimeAsrWebSocketHandler.isIflytekRoute("iflytek")).isFalse();
+    }
 }

@@ -1,6 +1,7 @@
 package com.codehouse.ciciassistant.model.service;
 
 import com.codehouse.ciciassistant.auth.config.PlatformAccountProperties;
+import com.codehouse.ciciassistant.integration.service.IntegrationAppService;
 import com.codehouse.ciciassistant.model.domain.ModelProviderConfigEntity;
 import com.codehouse.ciciassistant.model.domain.ModelProviderConfigRepository;
 import com.codehouse.ciciassistant.model.domain.CompanyModelConfigEntity;
@@ -36,6 +37,7 @@ public class ModelProviderService {
     public static final String PROVIDER_DEEPSEEK = "deepseek";
     public static final String PROVIDER_ONEKEYTOKEN = "onekeytoken";
     public static final String ONEKEYTOKEN_AUTO_MODEL = "onekeytoken/auto";
+    public static final String IFLYTEK_REALTIME_ASR_MODEL = "iflytek-realtime-asr";
 
     private static final String FETCH_OPENAI_STYLE = "openai-compatible";
     private static final String FETCH_OLLAMA = "ollama";
@@ -61,7 +63,7 @@ public class ModelProviderService {
             new SceneRouteDef("knowledge-embedding", "知识库向量化", "文档切片与检索查询的 embedding 模型。", List.of("embedding"), List.of(), "仅显示已确认 embedding 能力的模型；变更后需要重建已有向量索引。"),
             new SceneRouteDef("memory-embedding", "记忆向量化", "长期记忆索引和检索查询的 embedding 模型。", List.of("embedding"), List.of(), "仅显示已确认 embedding 能力的模型；优先选择与记忆向量维度兼容的模型。"),
             new SceneRouteDef("image-ocr", "图片 OCR", "客户互动截图及其他图片文字提取模型。", List.of("vision"), List.of(), "仅显示已确认视觉输入能力的模型；纯文本模型不会出现。"),
-            new SceneRouteDef("voice-asr", "实时语音转写", "短音频语音识别模型。", List.of("realtime-asr"), List.of(PROVIDER_ALIYUN), "仅显示已确认实时 ASR 且与当前协议兼容的模型。"),
+            new SceneRouteDef("voice-asr", "实时语音转写", "实时流式语音识别能力。", List.of("realtime-asr"), List.of(PROVIDER_ALIYUN, IntegrationAppService.APP_CODE_IFLYTEK_ASR), "仅显示已启用、凭据完整且与当前流式协议兼容的实时 ASR 能力。"),
             new SceneRouteDef("file-asr", "文件语音转写", "音视频文件转写模型。", List.of("file-asr"), List.of(PROVIDER_ALIYUN), "仅显示已确认文件 ASR 且与当前协议兼容的模型。"),
             new SceneRouteDef("code-interpreter", "代码解释器", "受管代码解释器执行模型。", List.of("code-interpreter"), List.of(PROVIDER_ALIYUN), "仅显示已确认代码解释器能力且与受管 Responses 协议兼容的模型。"),
             new SceneRouteDef("managed-web-search", "联网搜索", "受管联网搜索执行模型。", List.of("web-search"), List.of(PROVIDER_ALIYUN), "仅显示已确认联网搜索能力且与受管协议兼容的模型。"),
@@ -71,6 +73,7 @@ public class ModelProviderService {
     private final ModelProviderConfigRepository providerRepository;
     private final CompanyModelConfigRepository modelConfigRepository;
     private final PlatformAccountProperties platformAccountProperties;
+    private final IntegrationAppService integrationAppService;
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
 
@@ -150,10 +153,12 @@ public class ModelProviderService {
     public ModelProviderService(ModelProviderConfigRepository providerRepository,
                                 CompanyModelConfigRepository modelConfigRepository,
                                 PlatformAccountProperties platformAccountProperties,
+                                IntegrationAppService integrationAppService,
                                 ObjectMapper objectMapper) {
         this.providerRepository = providerRepository;
         this.modelConfigRepository = modelConfigRepository;
         this.platformAccountProperties = platformAccountProperties;
+        this.integrationAppService = integrationAppService;
         this.objectMapper = objectMapper;
         this.httpClient = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
@@ -361,10 +366,10 @@ public class ModelProviderService {
 
     @Transactional
     public Map<String, Object> platformModelRouteSettings() {
-        List<Map<String, Object>> candidates = agentBaseModels(platformScopeId());
+        List<Map<String, Object>> candidates = platformRouteCandidates();
         return Map.of(
                 "routes", SCENE_ROUTES.stream().map(scene -> routeView(scene, candidates)).toList(),
-                "modelCandidates", candidates
+                "modelCandidates", agentBaseModels(platformScopeId())
         );
     }
 
@@ -377,20 +382,20 @@ public class ModelProviderService {
                 .orElse(new CompanyModelConfigEntity(scopeId, scene.sceneCode(), choice.providerCode(), choice.modelName()));
         entity.update(choice.providerCode(), choice.modelName());
         modelConfigRepository.save(entity);
-        return routeView(scene, agentBaseModels(scopeId));
+        return routeView(scene, routeCandidatesForScene(scene));
     }
 
     @Transactional
     public Map<String, Object> deletePlatformModelRoute(String sceneCode) {
         SceneRouteDef scene = requireSceneRoute(sceneCode);
         modelConfigRepository.deleteByCompanyIdAndSceneCode(platformScopeId(), scene.sceneCode());
-        return routeView(scene, agentBaseModels(platformScopeId()));
+        return routeView(scene, routeCandidatesForScene(scene));
     }
 
     @Transactional
     public Map<String, String> resolveRuntimeModelRoute(String companyId, String sceneCode, String preferredModelName) {
         SceneRouteDef scene = requireSceneRoute(sceneCode);
-        List<ModelChoice> candidates = agentBaseModels(companyId).stream()
+        List<ModelChoice> candidates = routeCandidatesForScene(scene).stream()
                 .map(this::toModelChoice)
                 .filter(choice -> choice != null)
                 .toList();
@@ -1128,6 +1133,28 @@ public class ModelProviderService {
                 : configured.trim();
     }
 
+    private List<Map<String, Object>> platformRouteCandidates() {
+        List<Map<String, Object>> candidates = new ArrayList<>(agentBaseModels(platformScopeId()));
+        Map<String, Object> iflytek = integrationAppService.realtimeAsrProviderView();
+        if (Boolean.TRUE.equals(iflytek.get("enabled")) && Boolean.TRUE.equals(iflytek.get("credentialsSet"))) {
+            Map<String, Object> candidate = new LinkedHashMap<>();
+            candidate.put("providerCode", IntegrationAppService.APP_CODE_IFLYTEK_ASR);
+            candidate.put("providerName", String.valueOf(iflytek.getOrDefault("providerName", "科大讯飞")));
+            candidate.put("modelName", IFLYTEK_REALTIME_ASR_MODEL);
+            candidate.put("displayLabel", "实时语音转写 · 科大讯飞");
+            candidate.put("capabilities", List.of("realtime-asr"));
+            candidate.put("capabilitiesTrusted", true);
+            candidates.add(candidate);
+        }
+        return candidates;
+    }
+
+    private List<Map<String, Object>> routeCandidatesForScene(SceneRouteDef scene) {
+        return "voice-asr".equals(scene.sceneCode())
+                ? platformRouteCandidates()
+                : agentBaseModels(platformScopeId());
+    }
+
     private Map<String, Object> routeView(SceneRouteDef scene, List<Map<String, Object>> candidates) {
         List<ModelChoice> choices = candidates.stream().map(this::toModelChoice).filter(choice -> choice != null).toList();
         List<ModelChoice> compatibleChoices = choices.stream().filter(scene::supports).toList();
@@ -1172,7 +1199,7 @@ public class ModelProviderService {
 
     private ModelChoice requirePlatformModelChoice(SceneRouteDef scene, String providerCode, String modelName) {
         ModelChoice choice = findCandidate(
-                agentBaseModels(platformScopeId()).stream().map(this::toModelChoice).filter(item -> item != null).toList(),
+                routeCandidatesForScene(scene).stream().map(this::toModelChoice).filter(item -> item != null).toList(),
                 providerCode,
                 modelName);
         if (choice == null) {
@@ -1223,10 +1250,13 @@ public class ModelProviderService {
         String providerCode = nullableToBlank(String.valueOf(row.getOrDefault("providerCode", ""))).trim();
         String providerName = nullableToBlank(String.valueOf(row.getOrDefault("providerName", ""))).trim();
         String modelName = nullableToBlank(String.valueOf(row.getOrDefault("modelName", ""))).trim();
+        String displayLabel = nullableToBlank(String.valueOf(row.getOrDefault("displayLabel", ""))).trim();
         List<String> capabilities = normalizeCapabilities(row.get("capabilities"));
         return providerCode.isBlank() || modelName.isBlank()
                 ? null
-                : new ModelChoice(providerCode, providerName, modelName, capabilities);
+                : new ModelChoice(providerCode, providerName, modelName,
+                        displayLabel.isBlank() ? modelName + " · " + providerName : displayLabel,
+                        capabilities);
     }
 
     private Map<String, Object> routeCandidateView(ModelChoice choice) {
@@ -1234,7 +1264,7 @@ public class ModelProviderService {
         out.put("providerCode", choice.providerCode());
         out.put("providerName", choice.providerName());
         out.put("modelName", choice.modelName());
-        out.put("displayLabel", choice.modelName() + " · " + choice.providerName());
+        out.put("displayLabel", choice.displayLabel());
         out.put("capabilities", choice.capabilities());
         return out;
     }
@@ -1387,7 +1417,11 @@ public class ModelProviderService {
         }
     }
 
-    private record ModelChoice(String providerCode, String providerName, String modelName, List<String> capabilities) {
+    private record ModelChoice(String providerCode,
+                               String providerName,
+                               String modelName,
+                               String displayLabel,
+                               List<String> capabilities) {
     }
 
     private record ModelCapabilityConfirmation(String source,

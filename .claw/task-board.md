@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-09-01T11:46:20Z
+updated_at: 2026-09-01T13:34:35Z
 updated_by: codex
 board_status: active
 ---
@@ -17,7 +17,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-349 - 讯飞实时语音转写纳入模型厂商治理
 
-- status: `review`
+- status: `in_progress`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - claimed_by: `codex`
@@ -25,9 +25,9 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-349.md`
 - blocked_by: `none`
 - related_issues: `none`
-- scope_files: `模型厂商 API 适配、讯飞平台托管配置单一事实源、平台模型治理专用表单、聚焦测试和桌面端验证`
-- completion_evidence: `实现 944898f8 进入本地 main；前端 61/338、后端讯飞选择 3/3、平台集成 1/1、模型厂商集成 1/1、build/diff 通过。backend/frontend 运行 2.8.68-dev.944898f，JAR 指纹一致、healthy/restart=0、正式路由/资源 200、30 秒稳定窗口无 severe/5xx。`
-- next_action: `HUMAN 重新登录平台后确认讯飞卡片与专用表单的桌面布局，并用真实讯飞凭据完成一次实时语音识别；配置检查不能替代该业务验收。`
+- scope_files: `模型厂商 API 适配、讯飞平台托管配置单一事实源、voice-asr 固定候选与 WebSocket 运行路由、聚焦测试和桌面端验证`
+- completion_evidence: `用户授权态截图确认原实现 voice-asr 候选为 0；已定位白名单、候选来源和运行时硬拒绝三处断点，聚焦路由与选择测试通过，待提交及更新本地环境。`
+- next_action: `完成差异复核、提交本地 main、从该提交重建 backend 并在 https://cici.localhost/ 回读候选与运行指纹；真实讯飞转写仍需 HUMAN 语音验收。`
 
 ### TASK-347 - Web 浮窗真实流式与首字延迟修复
 
