@@ -39,7 +39,8 @@ public class IntegrationAppService {
     public static final String PLATFORM_MANAGED_MESSAGE = "Tavily 搜索、讯飞实时转写、代码解释器、联网搜索和网页抓取由运营平台统一配置，组织后台不可修改。";
     public static final String PROVIDER_KIND_REALTIME_ASR = "realtime-asr";
 
-    private static final String DEFAULT_IFLYTEK_REALTIME_URL = "wss://office-api-ast-dx.iflyaisol.com/ast/communicate/v1";
+    public static final String DEFAULT_IFLYTEK_REALTIME_URL = "wss://office-api-ast-dx.iflyaisol.com/ast/communicate/v1";
+    private static final String IFLYTEK_REALTIME_HOST = "office-api-ast-dx.iflyaisol.com";
     private static final Map<String, BuiltinAppDef> BUILTIN_APPS = builtinApps();
     private static final List<String> PLATFORM_MANAGED_APP_CODES = List.of(
             APP_CODE_TAVILY,
@@ -134,10 +135,7 @@ public class IntegrationAppService {
             throw new IllegalArgumentException("App ID、Access Key ID 和 Access Key Secret 均不能为空。");
         }
 
-        String realtimeUrl = draftOrStored(draft, stored, "realtimeUrl");
-        if (realtimeUrl.isBlank()) {
-            realtimeUrl = DEFAULT_IFLYTEK_REALTIME_URL;
-        }
+        String realtimeUrl = normalizeIflytekRealtimeUrl(draftOrStored(draft, stored, "realtimeUrl"));
         try {
             URI uri = URI.create(realtimeUrl);
             if (!"wss".equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null || uri.getHost().isBlank()) {
@@ -393,7 +391,7 @@ public class IntegrationAppService {
         config.putIfAbsent("appId", "");
         config.putIfAbsent("accessKeyId", "");
         config.putIfAbsent("accessKeySecret", "");
-        config.putIfAbsent("realtimeUrl", DEFAULT_IFLYTEK_REALTIME_URL);
+        config.put("realtimeUrl", normalizeIflytekRealtimeUrl(stringValue(config.get("realtimeUrl"))));
         config.putIfAbsent("lang", "autodialect");
         config.putIfAbsent("domain", "com");
 
@@ -480,6 +478,9 @@ public class IntegrationAppService {
                 if ((v == null || String.valueOf(v).isBlank()) && "realtimeUrl".equals(key)) {
                     v = DEFAULT_IFLYTEK_REALTIME_URL;
                 }
+                if ("realtimeUrl".equals(key)) {
+                    v = normalizeIflytekRealtimeUrl(String.valueOf(v));
+                }
                 if ((v == null || String.valueOf(v).isBlank()) && "lang".equals(key)) {
                     v = "autodialect";
                 }
@@ -522,6 +523,24 @@ public class IntegrationAppService {
             out.put(key, v == null ? "" : String.valueOf(v).trim());
         }
         return out;
+    }
+
+    public static String normalizeIflytekRealtimeUrl(String rawUrl) {
+        String value = rawUrl == null ? "" : rawUrl.trim();
+        if (value.isBlank()) {
+            return DEFAULT_IFLYTEK_REALTIME_URL;
+        }
+        try {
+            URI uri = URI.create(value);
+            String path = uri.getPath();
+            if (IFLYTEK_REALTIME_HOST.equalsIgnoreCase(uri.getHost())
+                    && (path == null || path.isBlank() || "/".equals(path))) {
+                return DEFAULT_IFLYTEK_REALTIME_URL;
+            }
+        } catch (IllegalArgumentException ignored) {
+            // Validation keeps the user-facing error contract for malformed values.
+        }
+        return value;
     }
 
     private Map<String, Object> readJsonToMap(String json) {

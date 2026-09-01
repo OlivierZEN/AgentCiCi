@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { downsampleTo16k } from "./asrPcm";
 
 const ASR_STOP_CLOSE_GRACE_MS = 1500;
+const ASR_START_TIMEOUT_MS = 8000;
 
 export function mergePrefixAsr(prefix: string, asr: string): string {
   const a = asr.trim();
@@ -79,6 +80,50 @@ export function asrStatusNotice(message: AsrWsMessage): string {
     return "实时听写中...（当前组织未配置讯飞实时转写，本次无法自动区分发言人）";
   }
   return "";
+}
+
+type AsrLifecycleSocket = Pick<WebSocket, "addEventListener" | "removeEventListener">;
+
+export function waitForAsrStarted(
+  websocket: AsrLifecycleSocket,
+  timeoutMs = ASR_START_TIMEOUT_MS,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const cleanup = () => {
+      globalThis.clearTimeout(timeout);
+      websocket.removeEventListener("message", onMessage as EventListener);
+      websocket.removeEventListener("error", onError as EventListener);
+      websocket.removeEventListener("close", onClose as EventListener);
+    };
+    const settle = (callback: () => void) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      callback();
+    };
+    const onMessage = (event: MessageEvent) => {
+      try {
+        const message = JSON.parse(String(event.data)) as AsrWsMessage;
+        if (isAsrStartedMessage(message)) {
+          settle(resolve);
+        } else if (message.type === "error") {
+          settle(() => reject(new Error(message.message || "实时语音服务启动失败")));
+        }
+      } catch {
+        // Ignore unrelated or malformed messages while waiting for the upstream ready signal.
+      }
+    };
+    const onError = () => settle(() => reject(new Error("实时语音服务连接失败")));
+    const onClose = () => settle(() => reject(new Error("实时语音服务已关闭")));
+    const timeout = globalThis.setTimeout(() => {
+      settle(() => reject(new Error("实时语音服务启动超时")));
+    }, timeoutMs);
+
+    websocket.addEventListener("message", onMessage as EventListener);
+    websocket.addEventListener("error", onError as EventListener, { once: true });
+    websocket.addEventListener("close", onClose as EventListener, { once: true });
+  });
 }
 
 export type AsrTranscriptEvent = {
@@ -178,6 +223,24 @@ export function useAsrVoiceInput() {
     }
   };
 
+  const finishSession = useCallback(async () => {
+    clearSilenceTimer();
+    asrReadyRef.current = false;
+    disconnectAudio();
+    setListening(false);
+    const shouldRunFinished = finishCallbackEnabledRef.current;
+    finishCallbackEnabledRef.current = false;
+    if (!shouldRunFinished) {
+      return;
+    }
+    const asrText = (finalAsrTextRef.current + partialAsrTextRef.current).trim();
+    const fullText = mergePrefixAsr(prefixSnapshotRef.current, asrText);
+    if (fullText) {
+      liveHandlerRef.current(fullText);
+    }
+    await finishHandlerRef.current({ asrText, fullText });
+  }, [clearSilenceTimer, disconnectAudio]);
+
   const stop = useCallback(() => {
     clearSilenceTimer();
     setListening(false);
@@ -192,9 +255,12 @@ export function useAsrVoiceInput() {
         if (websocket.readyState === 0 || websocket.readyState === 1) {
           websocket.close();
         }
+        void finishSession();
       }, ASR_STOP_CLOSE_GRACE_MS);
+    } else {
+      void finishSession();
     }
-  }, [clearSilenceTimer, disconnectAudio]);
+  }, [clearSilenceTimer, disconnectAudio, finishSession]);
 
   const abort = useCallback(() => {
     clearSilenceTimer();
@@ -299,7 +365,13 @@ export function useAsrVoiceInput() {
                 noticeHandlerRef.current(statusNotice);
               }
             } else if (message.type === "finished") {
-              stop();
+              asrReadyRef.current = false;
+              disconnectAudio();
+              setListening(false);
+              if (websocket.readyState === 0 || websocket.readyState === 1) {
+                websocket.close(1000, "asr finished");
+              }
+              void finishSession();
             }
           } catch {
             /* ignore malformed */
@@ -309,21 +381,8 @@ export function useAsrVoiceInput() {
           noticeHandlerRef.current("实时语音连接异常，请重试。");
         };
         websocket.onclose = async () => {
-          clearSilenceTimer();
-          disconnectAudio();
           asrWsRef.current = null;
-          setListening(false);
-          const shouldRunFinished = finishCallbackEnabledRef.current;
-          finishCallbackEnabledRef.current = false;
-          if (!shouldRunFinished) {
-            return;
-          }
-          const asrText = (finalAsrTextRef.current + partialAsrTextRef.current).trim();
-          const fullText = mergePrefixAsr(prefixSnapshotRef.current, asrText);
-          if (fullText) {
-            liveHandlerRef.current(fullText);
-          }
-          await finishHandlerRef.current({ asrText, fullText });
+          await finishSession();
         };
 
         await new Promise<void>((resolve, reject) => {
@@ -354,8 +413,12 @@ export function useAsrVoiceInput() {
           provider: options.provider ?? "aliyun",
           speakerDiarization: Boolean(options.speakerDiarization),
         }));
+        await waitForAsrStarted(websocket);
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         mediaStreamRef.current = stream;
+        if (websocket.readyState !== 1 || !asrReadyRef.current) {
+          throw new Error("实时语音服务已关闭");
+        }
 
         const AudioContextCtor = (window.AudioContext ||
           (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext) as
@@ -400,7 +463,7 @@ export function useAsrVoiceInput() {
         abort();
       }
     },
-    [speechSupported, abort, armSilenceTimer, stop],
+    [speechSupported, abort, armSilenceTimer, disconnectAudio, finishSession],
   );
 
   return { listening, speechSupported, start, stop, abort };

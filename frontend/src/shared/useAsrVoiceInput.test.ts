@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { asrStatusNotice, extractAsrMessageText, isAsrStartedMessage, mergePrefixAsr } from "./useAsrVoiceInput";
+import { asrStatusNotice, extractAsrMessageText, isAsrStartedMessage, mergePrefixAsr, waitForAsrStarted } from "./useAsrVoiceInput";
 
 describe("useAsrVoiceInput helpers", () => {
   it("merges existing prefix and recognized speech text", () => {
@@ -32,5 +32,24 @@ describe("useAsrVoiceInput helpers", () => {
       "无法自动区分发言人",
     );
     expect(asrStatusNotice({ type: "status", message: "connected" })).toBe("");
+  });
+
+  it("waits for the upstream started signal instead of treating the browser socket as ready", async () => {
+    const socket = new EventTarget();
+    const ready = waitForAsrStarted(socket as unknown as WebSocket, 1000);
+
+    socket.dispatchEvent(new MessageEvent("message", { data: JSON.stringify({ type: "status", message: "connected" }) }));
+    socket.dispatchEvent(new MessageEvent("message", { data: JSON.stringify({ type: "status", message: "started" }) }));
+
+    await expect(ready).resolves.toBeUndefined();
+  });
+
+  it("surfaces an upstream startup error before microphone capture begins", async () => {
+    const socket = new EventTarget();
+    const ready = waitForAsrStarted(socket as unknown as WebSocket, 1000);
+
+    socket.dispatchEvent(new MessageEvent("message", { data: JSON.stringify({ type: "error", message: "invalid endpoint" }) }));
+
+    await expect(ready).rejects.toThrow("invalid endpoint");
   });
 });

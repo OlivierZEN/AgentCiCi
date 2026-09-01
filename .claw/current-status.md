@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 6
-updated_at: 2026-09-01T14:46:51Z
+updated_at: 2026-09-01T14:51:11Z
 updated_by: codex
-phase: review
-active_task: null
-next_action: "用户即时确认后，在已打开的平台页点击 OneKeyToken 检测，回读 auto 的 text+vision，再完成真实图片回归。"
+phase: implementation
+active_task: TASK-352
+next_action: "提交讯飞实时听写修复到本地 main，从该提交重建 backend/frontend，并完成旧配置规范化、合成音频转写和结束态运行回读。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- `TASK-352 / FEAT-062` 正在修复用户截图中的两处实时听写失效：数据库保存的官方讯飞地址只有主机根路径，缺少 `/ast/communicate/v1`；前端又在上游 `started` 前显示听写中，解析器遗漏官方 `data.ls=true` 空最后帧，完成回调依赖浏览器 close。实现已在保存/读取/校验/运行时规范化官方根地址，等待上游 ready 后才申请麦克风，统一最终帧/异常关闭/1.5 秒兜底为一次完成。后端协议测试、package、前端 `62 files / 341 tests` 与 production build 已通过；待提交、部署和真实运行回读。
 
 - `TASK-351 / FEAT-188` 最小修复已进入本地 `main@653e5e1d7993`：OneKeyToken `onekeytoken/auto` 活性校验成功后改用同一有效配置读取 `/models`，按既有解析器持久化 `provider_catalog` 能力，不按下游模型名猜测。目标方法级集成回归 2/2、相邻单元测试 3 类、package/diff 通过；backend 运行 `2.8.68-dev.653e5e1`、healthy/restart=0，仅 backend 容器替换，首页 200。刷新前数据库仍为 `[text]`；Chrome 平台页已停在 OneKeyToken“检测”前，因该点击会把已存 API Key 发送给已配置服务，待用户即时确认后继续能力回读与真实图片验收。
 

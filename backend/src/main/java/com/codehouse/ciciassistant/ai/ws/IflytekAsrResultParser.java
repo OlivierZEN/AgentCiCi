@@ -35,15 +35,28 @@ final class IflytekAsrResultParser {
     }
 
     static boolean isFinal(JsonNode payload) {
-        JsonNode status = payload.path("data").path("status");
-        if (status.isInt() && status.asInt() == 2) {
+        if (isTerminal(payload)) {
             return true;
         }
-        if (payload.path("data").path("result").path("ls").asBoolean(false)) {
+        if (payload.path("result").path("ls").asBoolean(false)) {
             return true;
         }
         String type = payload.path("cn").path("st").path("type").asText("");
         return "0".equals(type);
+    }
+
+    static boolean isTerminal(JsonNode payload) {
+        if (payload.path("ls").asBoolean(false) || payload.path("data").path("ls").asBoolean(false)) {
+            return true;
+        }
+        JsonNode status = payload.path("data").path("status");
+        if (status.isInt() && status.asInt() == 2) {
+            return true;
+        }
+        if (payload.path("status").asInt(0) == 2) {
+            return true;
+        }
+        return payload.path("data").path("result").path("ls").asBoolean(false);
     }
 
     static String speakerDisplayName(String speakerId) {

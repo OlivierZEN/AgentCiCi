@@ -131,4 +131,25 @@ class IflytekAsrResultParserTest {
         assertThat(pieces.get(0).speakerId()).isEqualTo("2");
         assertThat(pieces.get(0).text()).isEqualTo("好");
     }
+
+    @Test
+    void recognizesOfficialTopLevelLastFrameWithoutRequiringTranscriptPieces() throws Exception {
+        var root = objectMapper.readTree("""
+                {
+                  "msg_type": "result",
+                  "res_type": "asr",
+                  "data": {
+                    "seg_id": 3,
+                    "cn": {"st": {"type": "0", "rt": []}},
+                    "ls": true
+                  }
+                }
+                """);
+
+        var payload = IflytekAsrResultParser.parsePayload(objectMapper, root);
+
+        assertThat(IflytekAsrResultParser.extractPieces(payload, "").pieces()).isEmpty();
+        assertThat(IflytekAsrResultParser.isFinal(payload)).isTrue();
+        assertThat(IflytekAsrResultParser.isTerminal(payload)).isTrue();
+    }
 }

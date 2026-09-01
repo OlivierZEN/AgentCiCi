@@ -142,7 +142,9 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
                 sendClientEvent(session, Map.of("type", "pong"));
             }
         } catch (Exception e) {
-            sendClientEvent(session, Map.of("type", "error", "message", "invalid ws text message"));
+            ctx.started = false;
+            log.warn("Realtime ASR command failed at upstream startup: {}", e.getClass().getSimpleName());
+            sendClientEvent(session, Map.of("type", "error", "message", "实时语音服务启动失败，请检查厂商地址和凭据"));
         }
     }
 
@@ -322,7 +324,8 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
         String accessKeySecret = firstNonBlank(
                 integrationAppService.decryptIflytekAccessKeySecret(rawConfig).orElse(""),
                 iflytekAccessKeySecret);
-        String realtimeUrl = firstNonBlank(configString(rawConfig, "realtimeUrl"), iflytekUrl);
+        String realtimeUrl = IntegrationAppService.normalizeIflytekRealtimeUrl(
+                firstNonBlank(configString(rawConfig, "realtimeUrl"), iflytekUrl));
         String lang = firstNonBlank(configString(rawConfig, "lang"), iflytekLang);
         String domain = firstNonBlank(configString(rawConfig, "domain"), iflytekDomain);
         return new IflytekRuntimeConfig(enabled, appId, accessKeyId, accessKeySecret, realtimeUrl, lang, domain);
@@ -383,6 +386,8 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
         private final StringBuilder textBuffer = new StringBuilder();
         private CompletableFuture<WebSocket> sendChain = CompletableFuture.completedFuture(null);
         private String activeSpeakerId = "";
+        private volatile boolean finishing;
+        private volatile boolean finishedSignalled;
         private WebSocket ws;
 
         private IflytekWsClient(SessionCtx ctx,
@@ -405,7 +410,7 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
         }
 
         void sendAudio(ByteBuffer audioPcm16le) {
-            if (ws == null) return;
+            if (ws == null || finishing) return;
             ByteBuffer copy = ByteBuffer.allocate(audioPcm16le.remaining());
             copy.put(audioPcm16le);
             copy.flip();
@@ -417,7 +422,8 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
         }
 
         void finishTask() {
-            if (ws == null) return;
+            if (ws == null || finishing) return;
+            finishing = true;
             try {
                 String endPayload = objectMapper.writeValueAsString(Map.of("end", true, "sessionId", sessionId));
                 synchronized (this) {
@@ -445,7 +451,8 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
         public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
             if (!last) {
                 textBuffer.append(data);
-                return WebSocket.Listener.super.onText(webSocket, data, false);
+                webSocket.request(1);
+                return null;
             }
             if (textBuffer.length() > 0) {
                 textBuffer.append(data);
@@ -463,7 +470,20 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
                     "type", "error",
                     "message", error.getMessage() == null ? "Iflytek ASR websocket error" : error.getMessage()
             ));
+            completeClientSession();
             WebSocket.Listener.super.onError(webSocket, error);
+        }
+
+        @Override
+        public CompletionStage<?> onClose(WebSocket webSocket, int statusCode, String reason) {
+            if (!finishing && !finishedSignalled) {
+                sendClientEvent(ctx.clientSession, Map.of(
+                        "type", "error",
+                        "message", "讯飞实时语音连接已提前关闭"
+                ));
+            }
+            completeClientSession();
+            return WebSocket.Listener.super.onClose(webSocket, statusCode, reason);
         }
 
         private void handleIflytekEvent(String raw) {
@@ -477,10 +497,14 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
                     return;
                 }
                 if ("error".equalsIgnoreCase(action) || code != 0) {
+                    ctx.started = false;
+                    log.warn("Iflytek realtime ASR rejected the session: code={}, sid={}", code,
+                            root.path("sid").asText("unknown"));
                     sendClientEvent(ctx.clientSession, Map.of(
                             "type", "error",
                             "message", firstNonBlank(root.path("desc").asText(""), root.path("message").asText("Iflytek ASR error"))
                     ));
+                    completeClientSession();
                     return;
                 }
                 if (!"result".equalsIgnoreCase(action) && root.has("action")) {
@@ -490,12 +514,18 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
                     return;
                 }
                 JsonNode payload = IflytekAsrResultParser.parsePayload(objectMapper, root);
+                if ("frc".equalsIgnoreCase(root.path("res_type").asText(""))
+                        && !payload.path("normal").asBoolean(true)) {
+                    sendClientEvent(ctx.clientSession, Map.of(
+                            "type", "error",
+                            "message", payload.path("desc").asText("讯飞实时语音服务返回异常")
+                    ));
+                    completeClientSession();
+                    return;
+                }
                 IflytekAsrResultParser.ExtractionResult extraction = IflytekAsrResultParser.extractPieces(payload, activeSpeakerId);
                 activeSpeakerId = extraction.activeSpeakerId();
                 List<IflytekAsrResultParser.TranscriptPiece> pieces = extraction.pieces();
-                if (pieces.isEmpty()) {
-                    return;
-                }
                 String eventType = IflytekAsrResultParser.isFinal(payload) ? "final" : "partial";
                 for (IflytekAsrResultParser.TranscriptPiece piece : pieces) {
                     Map<String, Object> event = new HashMap<>();
@@ -507,13 +537,22 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
                     }
                     sendClientEvent(ctx.clientSession, event);
                 }
-                if (payload.path("data").path("status").asInt(0) == 2) {
-                    ctx.started = false;
-                    sendClientEvent(ctx.clientSession, Map.of("type", "finished"));
+                if (IflytekAsrResultParser.isTerminal(payload)) {
+                    completeClientSession();
                 }
             } catch (Exception e) {
                 sendClientEvent(ctx.clientSession, Map.of("type", "error", "message", "Iflytek ASR event parse failed"));
+                completeClientSession();
             }
+        }
+
+        private void completeClientSession() {
+            if (finishedSignalled) {
+                return;
+            }
+            finishedSignalled = true;
+            ctx.started = false;
+            sendClientEvent(ctx.clientSession, Map.of("type", "finished"));
         }
 
     }

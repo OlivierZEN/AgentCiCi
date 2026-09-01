@@ -4,10 +4,10 @@ feature_id: FEAT-062
 title: Platform Model Provider Governance
 status: implemented
 owner_role: project-manager
-task_ids: TASK-145, TASK-153, TASK-349
+task_ids: TASK-145, TASK-153, TASK-349, TASK-352
 related_decisions: FEAT-003, FEAT-022, FEAT-037
 related_issues: none
-updated_at: 2026-09-01T09:35:41Z
+updated_at: 2026-09-01T14:51:11Z
 updated_by: codex
 ---
 
@@ -148,3 +148,22 @@ updated_by: codex
 - `/platform/models` 显示“科大讯飞 / 实时语音转写”，提供专用凭据表单，不显示“全部模型”和通用模型目录操作。
 - 启用且凭据完整时，`voice-asr` 场景显示“实时语音转写 · 科大讯飞”，平台管理员可选中并保存；运行时路由必须实际进入讯飞 WebSocket 适配器。
 - 后端聚焦测试、前端聚焦测试、前端 production build 与 `git diff --check` 通过。
+
+## TASK-352 补充：实时听写运行协议与结束状态收敛
+
+### 用户问题与根因
+
+- AI 听记无法产生实时文字，停止后持续显示“正在结束”；对话框话筒也只显示“实时听写中”但不出字。
+- 当前平台记录把官方讯飞主机保存为 `wss://office-api-ast-dx.iflyaisol.com/`，缺少实时转写大模型协议路径 `/ast/communicate/v1`。既有配置检查只验证 `wss` 结构，无法发现该错误。
+- 浏览器在业务 WebSocket 打开后立即申请麦克风并显示听写中，没有等待讯飞上游 `started`；上游启动失败或一直未就绪时形成假录音态。
+- 讯飞官方最后一帧以 `data.ls=true` 标识。既有解析器在把 `data` 解包为 payload 后仍只检查嵌套 `payload.data.*`，且空最后帧会提前返回，导致 `finished` 丢失。
+- 前端完成回调只依赖浏览器 WebSocket `close`；上游最终帧、异常关闭或关闭事件延迟时，AI 听记和对话框状态不能确定收敛。
+
+### 设计与验收
+
+- 对官方主机的空路径或根路径在保存、读取、校验和运行时统一规范为官方实时转写大模型地址；自定义 `wss` 兼容地址保持原值。
+- 浏览器必须收到后端转发的上游 `started` 后才申请麦克风、发送音频和显示听写中；错误、关闭或 8 秒无 `started` 时退出启动流程并展示明确失败信息。
+- 识别 `payload.ls=true`、兼容嵌套 `data.ls` / `status=2`，最后帧无文字也必须发送一次 `finished`。
+- 停止时先停止音频、按序发送 end；收到 `finished` 立即收敛，未收到时 1.5 秒关闭兜底也必须且只执行一次完成回调。
+- AI 听记与对话框共用同一 `useAsrVoiceInput` 修复；错误、最终帧和异常关闭均不得永久停在 recording/stopping。
+- 技术验收覆盖 URL 规范化、官方最后帧、上游 ready/error、全量前端测试、production build、backend package 和本地正式环境指纹；真实麦克风转写仍由 HUMAN 最终接受。

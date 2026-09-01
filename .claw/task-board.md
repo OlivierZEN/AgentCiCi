@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-09-01T14:46:51Z
+updated_at: 2026-09-01T14:51:11Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,20 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-352 - 讯飞实时听写与结束状态收敛
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-062-platform-model-provider-governance.md`
+- task_status_path: `.claw/tasks/TASK-352.md`
+- blocked_by: `none`
+- related_issues: `ISSUE-2026-09-01-iflytek-realtime-asr-stuck`
+- scope_files: `讯飞官方 URL 规范化、上游 ready/last-frame/close 协议、共享语音输入完成态、AI 听记与对话框回归、本地全栈验证`
+- completion_evidence: `后端协议单测、backend package、前端 62 files / 341 tests 与 production build 已通过；待提交、本地双制品部署和真实上游探测。`
+- next_action: `提交本地 main，重建 backend/frontend，验证旧根 URL 自动规范化并完成讯飞上游握手、合成音频转写和结束态回读。`
 
 ### TASK-351 - OneKeyToken 自动路由视觉能力同步
 
