@@ -22,7 +22,7 @@ status: active
 
 - Symptom: AI 听记和对话框实时听写均不出文字；AI 听记停止后持续显示“正在结束”。
 - Verified root cause: 平台保存的官方讯飞 URL 缺少 `/ast/communicate/v1`；浏览器未等待上游 `started` 即进入听写态；解析器遗漏解包后的 `ls=true` 空最后帧，完成回调又只依赖浏览器 WebSocket close。
-- Resolution: TASK-352 统一规范官方主机根路径，以上游 ready 作为麦克风启动门禁，兼容官方最后帧并将最终帧、异常关闭和 1.5 秒兜底收敛为一次完成回调。
+- Resolution: TASK-352 拆分对话阿里云与 AI 听记讯飞路由，规范讯飞官方主机根路径，以上游 ready 作为麦克风启动门禁，兼容官方最后帧并将最终帧、异常关闭和 1.5 秒兜底收敛为一次完成回调；两条真实上游合成音频探测已通过。
 - Verification: 后端讯飞协议/URL 聚焦测试、backend package、前端聚焦与全量 `62 files / 341 tests`、production build 通过；待本地 main 提交、双制品部署和真实上游/麦克风验收。
 - Status: resolved in code; local runtime verification in progress; remote/UAT/production unchanged.
 

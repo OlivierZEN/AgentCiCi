@@ -7,7 +7,7 @@ status: in_progress
 branch: main
 pr_url: n/a
 spec_path: docs/specs/FEAT-062-platform-model-provider-governance.md
-updated_at: 2026-09-01T14:51:11Z
+updated_at: 2026-09-01T15:50:00Z
 updated_by: codex
 ---
 
@@ -40,12 +40,13 @@ updated_by: codex
 - [x] 对话听写使用治理中的阿里云凭据与固定 `paraformer-realtime-v2` 协议，不读早期静态 Key。
 - [x] 后端聚焦测试/package、前端聚焦/全量/build 通过。
 - [x] 修复提交进入本地 `main`，backend/frontend 从该提交运行且健康。
-- [ ] 使用合成音频完成真实讯飞上游转写与结束技术探测。
+- [x] 使用合成音频完成阿里云与讯飞真实上游转写、发言人标签与结束技术探测。
 - [ ] HUMAN 使用真实麦克风确认 AI 听记和对话框实时听写。
 
 ## Handoff
 
 - 当前数据库的 `iflytek_asr.realtimeUrl` 是官方主机根路径；不直接改数据库，运行时和治理读写层负责向后兼容。
 - 真实麦克风涉及浏览器权限和用户语音，仅在用户明确确认后执行；技术探测优先使用不含敏感内容的合成音频。
-- 对话听写的阿里云凭据继续由既有部署配置提供，本任务不复制到新的模型路由记录。
-- 实现提交 `d32a710fe518 + 80f720730cd3 + 7ced552aa661` 已进入本地 `main`；backend 运行 `2.8.68-dev.7ced552`、frontend 运行 `2.8.68-dev.118ff72`，均 healthy/restart=0，V130 success。HTTP/1.1 修复后的真实上游技术探测仍未完成，不把健康门禁写成听写业务完成。
+- 对话听写的阿里云凭据从模型厂商治理的 `aliyun-bailian` 记录读取，固定适配器路由不复制 Secret。
+- 实现提交 `d32a710fe518 + 80f720730cd3 + 7ced552aa661 + 6f3f5def7ca3` 已进入本地 `main`；backend/frontend 均运行 `2.8.68-dev.6f3f5de / 6f3f5def7ca3`、healthy/restart=0，V130/V131 success。
+- 无敏感合成音频技术探测证明：阿里云链路收到 `started + text + finished` 且无发言人标签；讯飞链路收到 `started + text(speakerId) + finished`。真实麦克风和用户语音仍待 HUMAN 验收。

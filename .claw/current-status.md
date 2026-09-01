@@ -24,7 +24,7 @@ read_next:
 
 - `TASK-353 / FEAT-188` 技术实现和本地运行门禁完成，进入 review：真实会话证明历史装配丢失图片；`123619a7223e` 仅对明确历史图片指代恢复最近一个同租户/同会话/同消息/ATTACHED 的带图用户轮，并继续执行 vision 门禁。聚焦 56 项、package/diff 通过；最终 backend 运行包含本修复的代码提交 `7ced552aa661 / 2.8.68-dev.7ced552`，frontend 运行主线治理提交 `118ff72da8c5 / 2.8.68-dev.118ff72`，两者 healthy/restart=0，OneKey auto=`[text,vision]`。待用户在原会话确认回答内容匹配，不以技术门禁替代 HUMAN。
 
-- `TASK-352 / FEAT-062` 实现 `d32a710fe518 + 80f720730cd3 + 7ced552aa661` 已进入本地 main 并由当前 backend 运行：对话 `voice-asr` 与 AI 听记 `meeting-realtime-asr` 已拆分，讯飞 URL/ready/last-frame/close 和 1.5 秒兜底已收敛，WebSocket 客户端固定 HTTP/1.1；backend `2.8.68-dev.7ced552`、frontend `2.8.68-dev.118ff72` 均 healthy/restart=0，V130 success。真实上游技术探测仍待继续，不能宣称听写业务完成。
+- `TASK-352 / FEAT-062` 实现 `d32a710fe518 + 80f720730cd3 + 7ced552aa661 + 6f3f5def7ca3` 已进入本地 main：对话 `voice-asr=aliyun-bailian/paraformer-realtime-v2` 从厂商治理读凭据，AI 听记 `meeting-realtime-asr=iflytek_asr/iflytek-realtime-asr` 启用 `role_type=2`；讯飞 URL/ready/last-frame/close 和 1.5 秒兜底已收敛。backend/frontend 运行 `2.8.68-dev.6f3f5de / 6f3f5def7ca3`、healthy/restart=0，V130/V131 success。合成音频真实上游探测分别收到阿里云 `started/text/finished` 和讯飞 `started/text(speakerId)/finished`；真实麦克风仍待 HUMAN 验收。
 
 - `TASK-351 / FEAT-188` 已完成：OneKeyToken `onekeytoken/auto` 校验后读取 `/models` 并持久化受信目录能力；运行数据库回读 `[text,vision]`，用户截图证明真实首轮图片识别成功。后续跨轮追问上下文缺口由 TASK-353 独立修复。
 

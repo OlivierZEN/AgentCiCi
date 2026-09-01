@@ -5,10 +5,18 @@ updated_at: 2026-09-01T15:42:41Z
 updated_by: codex
 status: active
 last_run_at: 2026-09-01T15:42:41Z
-last_run_status: passed_task_353_local_technical_pending_human_answer_match
+last_run_status: passed_task_352_upstream_technical_pending_human_microphone
 ---
 
 # Test Report
+
+## 2026-09-01 TASK-352 实时听写厂商路由与结束收敛
+
+- 状态：`passed_task_352_upstream_technical_pending_human_microphone`。对话框固定阿里云，AI 听记固定讯飞并启用发言人区分；录音启动和结束状态已确定收敛。
+- 自动化：后端 `IflytekAsrResultParserTest,RealtimeAsrProviderSelectionTest,ModelProviderServiceTest` 通过，backend package 通过；前端全量 `62 files / 341 tests`、production build 与 `git diff --check` 通过。V130/V131 分别在本地 PostgreSQL 事务预演后回滚，实际启动回读均为 success。
+- 真实上游：无敏感合成 PCM 通过正式 `/ws/asr` 链路探测。阿里云收到 `started`、多段文本与 `finished`，无 speaker 标签；讯飞收到 `started`、多段文本、至少一段 `speakerId` 与 `finished`。
+- 本地运行：实现提交至 `6f3f5def7ca3`均已进入本地 main；backend/frontend 回读 `2.8.68-dev.6f3f5de / 6f3f5def7ca3`、healthy/restart=0，首页 200，页面 JS 资源带同版本指纹。数据库路由为 `voice-asr=aliyun-bailian/paraformer-realtime-v2` 与 `meeting-realtime-asr=iflytek_asr/iflytek-realtime-asr`。
+- 边界：合成音频证明真实厂商网络、协议、解析和结束链路，不代替用户浏览器的真实麦克风权限、录音质量和 HUMAN 体感验收。
 
 ## 2026-09-01 TASK-353 图片追问跨轮视觉上下文
 

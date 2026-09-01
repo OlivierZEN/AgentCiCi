@@ -40,7 +40,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - related_issues: `ISSUE-2026-09-01-iflytek-realtime-asr-stuck`
 - scope_files: `讯飞官方 URL 规范化、上游 ready/last-frame/close 协议、共享语音输入完成态、AI 听记与对话框回归、本地全栈验证`
-- completion_evidence: `实现 d32a710f + 80f72073 + 7ced552a 进入本地 main；自动化/build 通过；backend 2.8.68-dev.7ced552、frontend 2.8.68-dev.118ff72 healthy/restart=0，V130 success。`
+- completion_evidence: `实现 d32a710f + 80f72073 + 7ced552a + 6f3f5def 进入本地 main；341 项前端全量、后端聚焦/package/build 通过；backend/frontend 2.8.68-dev.6f3f5de healthy/restart=0，V130/V131 success；阿里云与讯飞合成音频真实上游探测通过，真实麦克风待 HUMAN。`
 - next_action: `继续诊断真实上游启动 WARN，完成合成音频转写和结束态回读；真实麦克风仍待 HUMAN。`
 
 ### TASK-351 - OneKeyToken 自动路由视觉能力同步

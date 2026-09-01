@@ -8,6 +8,14 @@ status: active
 
 # DevOps
 
+## 2026-09-01 TASK-352 本地实时听写双厂商修复
+
+- 语音修复提交 `d32a710fe518 + 80f720730cd3 + 7ced552aa661 + 6f3f5def7ca3` 均已进入本地 main。backend/frontend 从当前 main 构建为 `2.8.68-dev.6f3f5de / 6f3f5def7ca3`，运行镜像分别为 `sha256:ca792facfee3` / `sha256:eff97aa33d41`，OCI label、容器环境、版本 API 与页面资源指纹一致。
+- 仅最小替换 backend/frontend；两容器 healthy/restart=0，backend health=`UP`，首页 200，Nginx 配置有效。PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak 容器 ID 未变。
+- Flyway V130 将历史讯飞选择迁入 `meeting-realtime-asr`，V131 以模型厂商治理中的阿里云凭据恢复 `voice-asr/paraformer-realtime-v2`；两迁移 success，不复制 Secret。
+- 无敏感合成 PCM 通过本地正式 HTTPS/WebSocket 入口完成两次真实上游探测：阿里云 `started/text/finished`，讯飞 `started/text(speakerId)/finished`。真实麦克风待 HUMAN。
+- 本轮未修改 cc-local-stack 配置、远程 main、ACR、tag、UAT 或生产；不新增跨项目契约。
+
 ## 2026-09-01 TASK-353 本地图片追问上下文修复
 
 - 图片修复提交 `123619a7223e` 已进入本地 main；构建期间并行语音任务依次把代码主线推进到 `80f720730cd3` 和 `7ced552aa661`，两者都包含图片修复。最终在干净 `7ced552a` worktree 重新运行图片聚焦 56 项、相邻实时 ASR 4 项和 backend package；frontend 源码自 `80f72073` 后未变化，production build 已通过。
