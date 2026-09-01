@@ -37,6 +37,7 @@ import org.springframework.stereotype.Service;
 public class KeycloakOidcLoginService {
 
     public static final String STATE_COOKIE = "CICI_OIDC_STATE";
+    public static final String SESSION_COOKIE = "CICI_OIDC_SESSION";
     private static final Duration TRANSACTION_TTL = Duration.ofMinutes(5);
     private static final Duration COMPLETION_TTL = Duration.ofMinutes(1);
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -148,6 +149,11 @@ public class KeycloakOidcLoginService {
         return canonicalStartUri("/auth/oidc/password", requestedReturnTo);
     }
 
+    public URI canonicalLogoutUri() {
+        URI callback = URI.create(redirectUri);
+        return URI.create(callback.getScheme() + "://" + callback.getRawAuthority() + "/auth/oidc/logout");
+    }
+
     private URI canonicalStartUri(String path, String requestedReturnTo) {
         URI callback = URI.create(redirectUri);
         return URI.create(callback.getScheme() + "://" + callback.getRawAuthority()
@@ -162,7 +168,7 @@ public class KeycloakOidcLoginService {
         return enabled;
     }
 
-    public URI complete(String code, String state, String stateCookie) {
+    public LoginCompletionRedirect complete(String code, String state, String stateCookie) {
         requireEnabled();
         if (!hasText(code) || !hasText(state) || !MessageDigest.isEqual(state.getBytes(StandardCharsets.UTF_8), blank(stateCookie).getBytes(StandardCharsets.UTF_8))) {
             throw new UnauthorizedException("Invalid OIDC login state");
@@ -178,11 +184,26 @@ public class KeycloakOidcLoginService {
                 .orElseThrow(() -> new UnauthorizedException("统一身份尚未绑定 AgentCiCi 账号"));
         String sessionId = UUID.randomUUID().toString();
         long refreshSeconds = Math.max(60, tokens.refreshExpiresIn());
-        stateStore.saveRefreshSession(sessionId, tokens.refreshToken(), Duration.ofSeconds(refreshSeconds));
+        stateStore.saveLoginSession(sessionId, tokens.idToken(), tokens.refreshToken(), Duration.ofSeconds(refreshSeconds));
         Map<String, Object> login = authService.loginByExternalIdentityAccount(identity.getAccount().getId(), sessionId);
         String ticket = randomUrlValue();
         stateStore.saveCompletion(ticket, new OidcLoginStateStore.LoginCompletion(login), COMPLETION_TTL);
-        return URI.create(appendQuery(transaction.returnTo(), "oidc_ticket", ticket));
+        return new LoginCompletionRedirect(
+                URI.create(appendQuery(transaction.returnTo(), "oidc_ticket", ticket)),
+                sessionId,
+                refreshSeconds);
+    }
+
+    public URI logout(String sessionId) {
+        requireEnabled();
+        OidcLoginStateStore.LoginSession session = stateStore.consumeLoginSession(sessionId);
+        Map<String, String> query = new LinkedHashMap<>();
+        if (session != null && hasText(session.idToken())) {
+            query.put("id_token_hint", session.idToken());
+        }
+        query.put("client_id", clientId);
+        query.put("post_logout_redirect_uri", postLogoutRedirectUri().toString());
+        return URI.create(issuer + "/protocol/openid-connect/logout?" + queryString(query));
     }
 
     public Map<String, Object> consumeCompletion(String ticket) {
@@ -330,6 +351,11 @@ public class KeycloakOidcLoginService {
         }
     }
 
+    private URI postLogoutRedirectUri() {
+        URI callback = URI.create(redirectUri);
+        return URI.create(callback.getScheme() + "://" + callback.getRawAuthority() + "/app");
+    }
+
     private PublicKey resolveJwk(String kid) throws Exception {
         HttpRequest request = HttpRequest.newBuilder(URI.create(backchannelBaseUrl + "/protocol/openid-connect/certs"))
                 .timeout(Duration.ofSeconds(10)).GET().build();
@@ -425,6 +451,9 @@ public class KeycloakOidcLoginService {
             List<String> scopes,
             String sessionId,
             Instant expiresAt) {
+    }
+
+    public record LoginCompletionRedirect(URI location, String sessionId, long sessionMaxAgeSeconds) {
     }
 
     private record TokenResponse(String idToken, String refreshToken, int refreshExpiresIn) {

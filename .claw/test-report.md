@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-09-01T09:49:41Z
+updated_at: 2026-09-01T11:32:06Z
 updated_by: codex
 status: active
-last_run_at: 2026-09-01T09:49:41Z
-last_run_status: passed_task_349_automated_pending_local_visual
+last_run_at: 2026-09-01T11:32:06Z
+last_run_status: passed_task_350_automated_blocked_local_keycloak_logout_redirect
 ---
 
 # Test Report
+
+## 2026-09-01 TASK-350 门户统一身份完整注销自动化
+
+- 状态：`passed_task_350_automated_blocked_local_keycloak_logout_redirect`。根因是门户退出只清 AgentCiCi 本地 Token，未终止 Keycloak SSO；访客态自动 OIDC 随即使用仍有效的 SSO 会话静默重登。
+- 实现：OIDC callback 以加密服务端会话保留 ID/Refresh Token，浏览器只持有 HttpOnly/Secure/SameSite=Lax 随机会话 Cookie；同源 `/auth/oidc/logout` 一次性消费会话并生成含 `id_token_hint`、`client_id`、固定同源 `/app` 回跳的 RP-Initiated Logout，前端退出先清业务状态再硬跳转该入口。
+- 后端：`KeycloakOidcLoginServiceTest,OidcLoginStateStoreTest,AuthControllerTest` 共 12 项通过；`mvn -q -DskipTests package` 通过。默认全量 suite 在既有 `KnowledgeBaseLifecycleIntegrationTest` 初始化时连接 `localhost:5432` 被拒，17 项环境错误后中止，不记为全量通过。
+- 前端：聚焦 6 项、全量 `62 files / 339 tests`、production build 通过；build 仅保留既有大 chunk warning。`git diff --check` 与业务/前端源码真实环境域名扫描通过。
+- 部署门禁：只读回读当前本地 Keycloak 26.7.0 的 `agentcici-bff`，登录 Redirect URIs 已含 `https://cici.localhost/app`，但 `post.logout.redirect.uris=null`。按 Keycloak RP-Initiated Logout 规范，环境必须登记 Valid Post Logout Redirect URI 才能自动回跳；该配置归父仓 `cc-local-stack`，当前未获跨项目修改授权，因此尚未部署或宣称真实退出成功。
 
 ## 2026-09-01 TASK-349 讯飞实时语音转写模型厂商治理自动化
 
