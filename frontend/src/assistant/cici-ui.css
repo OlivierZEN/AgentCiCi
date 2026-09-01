@@ -2814,10 +2814,8 @@
   width: 38px; height: 38px;
   border-radius: 50%;
   padding: 0;
-  background:
-    radial-gradient(circle at 30% 28%, rgba(255, 247, 216, 0.34), transparent 32%),
-    linear-gradient(180deg, #57b3a7, #3a9488);
-  color: #fff;
+  background: var(--theme-accent-strong, #3a776f);
+  color: var(--theme-surface, #fffdf8);
   font-size: 12px;
   font-weight: 700;
   display: flex;
