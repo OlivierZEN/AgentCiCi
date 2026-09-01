@@ -46,4 +46,4 @@ updated_by: codex
 - 当前数据库的 `iflytek_asr.realtimeUrl` 是官方主机根路径；不直接改数据库，运行时和治理读写层负责向后兼容。
 - 真实麦克风涉及浏览器权限和用户语音，仅在用户明确确认后执行；技术探测优先使用不含敏感内容的合成音频。
 - 对话听写的阿里云凭据继续由既有部署配置提供，本任务不复制到新的模型路由记录。
-- 实现提交 `d32a710fe518 + 80f720730cd3` 已进入本地 `main`，backend/frontend 运行 `2.8.68-dev.80f7207`、healthy/restart=0，V130 success。部署后一次真实实时 ASR 启动返回上游 `CompletionException` WARN，真实上游技术探测仍未通过，不把健康门禁写成听写业务完成。
+- 实现提交 `d32a710fe518 + 80f720730cd3 + 7ced552aa661` 已进入本地 `main`；backend 运行 `2.8.68-dev.7ced552`、frontend 运行 `2.8.68-dev.118ff72`，均 healthy/restart=0，V130 success。HTTP/1.1 修复后的真实上游技术探测仍未完成，不把健康门禁写成听写业务完成。

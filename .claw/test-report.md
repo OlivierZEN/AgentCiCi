@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-09-01T15:37:39Z
+updated_at: 2026-09-01T15:42:41Z
 updated_by: codex
 status: active
-last_run_at: 2026-09-01T15:37:39Z
+last_run_at: 2026-09-01T15:42:41Z
 last_run_status: passed_task_353_local_technical_pending_human_answer_match
 ---
 
@@ -16,7 +16,7 @@ last_run_status: passed_task_353_local_technical_pending_human_answer_match
 - 实现：本轮无新图片且文本明确指向历史图片时，只回取最近 20 条消息中的最近一个带图用户轮；附件必须满足同租户、同会话、同消息和 `ATTACHED`，只恢复图片。历史图片与当前附件合并后继续执行可信 `vision` 能力门禁。
 - 自动化：`ChatAttachmentServiceTest` 9 项与 `ChatOrchestratorServiceModelIdentityTest` 47 项通过。模型调用捕获为 4 条消息：system、含 1 份多模态内容的历史 user、历史 assistant、当前 user；视觉能力检查被调用。普通“介绍图片识别能力”和无图片指代文本不触发历史图片。
 - 构建：`mvn -q -DskipTests package` 与 `git diff --check` 通过。当前主工作树出现并行语音任务的未提交修改；本任务将精确暂存自身文件，并从提交后的独立干净 `main` worktree 构建，避免夹带并行修改。
-- 本地主线与运行：修复 `123619a7223e` 已进入本地 main；主线随后推进到包含本修复的 `80f720730cd3`。从最新干净 main 重新运行目标 56 项、backend package 和 frontend production build通过；backend/frontend 运行 `2.8.68-dev.80f7207`、healthy/restart=0，版本 API/页面资源/OCI revision 一致，V130 success，首页 200，运行目录 `onekeytoken/auto=[text,vision]`。
+- 本地主线与运行：修复 `123619a7223e` 已进入本地 main；代码主线随后推进到包含本修复的 `7ced552aa661`。从干净 `7ced552a` 重新运行图片目标 56 项、相邻实时 ASR 4 项和 backend package，frontend production build通过。backend 运行 `2.8.68-dev.7ced552`，frontend 运行当前治理提交 `2.8.68-dev.118ff72`；两者 healthy/restart=0，version API/页面资源/OCI revision 可追溯，V130 success，首页 200，运行目录 `onekeytoken/auto=[text,vision]`。
 - 稳定与边界：状态服务和其他产品容器 ID 未变化；backend `ERROR/FATAL=0`、frontend 结构化 5xx=0。部署后另有一次 TASK-352 实时 ASR 上游启动 `CompletionException` WARN，与图片链路无关且未隐藏。尚未代用户发送真实后续追问；自动化不替代用户对回答内容与图片匹配的 HUMAN 确认。远程、UAT、生产未修改。
 
 ## 2026-09-01 TASK-351 OneKeyToken 自动路由视觉能力同步

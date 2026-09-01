@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-09-01T15:37:39Z
+updated_at: 2026-09-01T15:42:41Z
 updated_by: codex
 board_status: active
 ---
@@ -26,7 +26,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - related_issues: `ISSUE-2026-09-01-image-followup-context-loss`
 - scope_files: `历史消息附件回取、显式图片指代、视觉能力门禁、blocking/streaming 消息装配、聚焦测试、本地 backend 验证`
-- completion_evidence: `修复 123619a7 进入本地 main；聚焦 56 项、package/diff 通过。最新 main@80f72073 包含修复，backend/frontend 运行 2.8.68-dev.80f7207、healthy/restart=0；OneKey auto=[text,vision]。`
+- completion_evidence: `修复 123619a7 进入本地 main；聚焦 56 项、package/diff 通过。backend 运行含修复的 7ced552a，frontend 运行治理提交 118ff72d，healthy/restart=0；OneKey auto=[text,vision]。`
 - next_action: `用户在原会话继续询问上一张图片内容，确认回答与图片匹配；技术实现和本地运行门禁已完成。`
 
 ### TASK-352 - 讯飞实时听写与结束状态收敛
@@ -40,7 +40,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - related_issues: `ISSUE-2026-09-01-iflytek-realtime-asr-stuck`
 - scope_files: `讯飞官方 URL 规范化、上游 ready/last-frame/close 协议、共享语音输入完成态、AI 听记与对话框回归、本地全栈验证`
-- completion_evidence: `实现 d32a710f + 80f72073 进入本地 main；自动化/build 通过；backend/frontend 运行 2.8.68-dev.80f7207、healthy/restart=0，V130 success。部署后一次实时 ASR 上游启动出现 CompletionException WARN。`
+- completion_evidence: `实现 d32a710f + 80f72073 + 7ced552a 进入本地 main；自动化/build 通过；backend 2.8.68-dev.7ced552、frontend 2.8.68-dev.118ff72 healthy/restart=0，V130 success。`
 - next_action: `继续诊断真实上游启动 WARN，完成合成音频转写和结束态回读；真实麦克风仍待 HUMAN。`
 
 ### TASK-351 - OneKeyToken 自动路由视觉能力同步
