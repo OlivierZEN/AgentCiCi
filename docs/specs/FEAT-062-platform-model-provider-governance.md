@@ -135,7 +135,7 @@ updated_by: codex
 - 保存动作继续写入平台治理作用域的 `integration_app(iflytek_asr)`；Access Key Secret 继续加密存储且只返回掩码。
 - `/platform/integrations` 不再重复列出讯飞实时转写，避免两个运营入口维护同一记录；Tavily、代码解释器、联网搜索和网页抓取保持不变。
 - `meeting-realtime-asr` 场景路由可选择一个固定的 `iflytek-realtime-asr` 适配器候选；该候选只代表已实现的讯飞流式协议，不进入通用模型目录，也不复制凭据。
-- `/ws/asr` 保留两条明确的产品路径：对话框实时听写继续调用既有阿里云 `paraformer-realtime-v2` 协议；AI 听记显式请求 `iflytek` 并以 `meeting-realtime-asr` 路由为权威配置。
+- `/ws/asr` 保留两条明确的产品路径：对话框实时听写调用固定阿里云 `paraformer-realtime-v2` 协议，API Key 只从模型厂商治理中的阿里云记录读取；AI 听记显式请求 `iflytek` 并以 `meeting-realtime-asr` 路由为权威配置。
 - AI 听记选中讯飞时，从原有 `integration_app(iflytek_asr)` 读取凭据并携带 `role_type=2` 启用发言人区分；对话框的 `speakerDiarization` 参数不能将请求隐式切到讯飞。
 - 配置检测只验证启用状态、必填凭据与 `wss` 地址结构，不声称已完成真实讯飞网络调用。真实能力验收必须发起一次实时语音识别并收到转写结果。
 - 不把讯飞伪装成 OpenAI-compatible 模型目录，不提供“全部模型”、人工能力确认或其他通用模型场景操作；仅在专用 `meeting-realtime-asr` 场景暴露固定受管适配器候选。

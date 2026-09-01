@@ -26,8 +26,13 @@ public class ModelInvocationResolver {
 
     public ResolvedModelInvocation resolve(String companyId, String sceneCode) {
         ResolvedModelRoute route = resolveRoute(companyId, sceneCode);
-        String providerCode = route.providerCode();
-        String modelName = route.modelName();
+        return resolveProviderModel(companyId, sceneCode, route.providerCode(), route.modelName());
+    }
+
+    public ResolvedModelInvocation resolveProviderModel(String companyId,
+                                                        String sceneCode,
+                                                        String providerCode,
+                                                        String modelName) {
         Map<String, String> credentials = modelProviderService.credentialsForProvider(companyId, providerCode);
         if (!Boolean.parseBoolean(credentials.getOrDefault("enabled", "false"))) {
             throw unavailable(sceneCode, "厂商未启用");

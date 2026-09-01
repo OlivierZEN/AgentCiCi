@@ -24,6 +24,7 @@ updated_by: codex
 - 将两家实时 ASR 共用的上游 WebSocket 客户端锁定为 HTTP/1.1 Upgrade，避免协议升级前失败。
 - 修复共享前端 hook 的 ready 门禁与一次性完成回调。
 - 将平台场景拆分为对话 `voice-asr` 与 AI 听记 `meeting-realtime-asr`，历史讯飞选择自动迁移。
+- 对话 `voice-asr` 恢复固定 `paraformer-realtime-v2` 适配器，但 API Key 从模型厂商治理中的阿里云记录读取，不回退到早期部署文件里的 Key。
 - AI 听记和嵌入听记显式请求讯飞且开启发言人区分；普通对话及其他语音输入固定请求阿里云。
 - 完成自动化、构建、本地 `main` 制品和正式入口验证。
 
@@ -36,6 +37,7 @@ updated_by: codex
 - [x] 对话听写不再被讯飞场景路由覆盖，AI 听记以独立治理场景进入讯飞并携带 `role_type=2`。
 - [x] 历史 `voice-asr=iflytek_asr` 路由迁移 SQL 在本地数据库事务中验证通过且已回滚测试事务。
 - [x] 实时 ASR 上游 WebSocket 显式使用 HTTP/1.1 Upgrade。
+- [x] 对话听写使用治理中的阿里云凭据与固定 `paraformer-realtime-v2` 协议，不读早期静态 Key。
 - [x] 后端聚焦测试/package、前端聚焦/全量/build 通过。
 - [x] 修复提交进入本地 `main`，backend/frontend 从该提交运行且健康。
 - [ ] 使用合成音频完成真实讯飞上游转写与结束技术探测。

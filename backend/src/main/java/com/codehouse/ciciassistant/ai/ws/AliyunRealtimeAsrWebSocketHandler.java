@@ -3,6 +3,7 @@ package com.codehouse.ciciassistant.ai.ws;
 import com.codehouse.ciciassistant.auth.service.JwtService;
 import com.codehouse.ciciassistant.ai.service.ModelInvocationResolver;
 import com.codehouse.ciciassistant.integration.service.IntegrationAppService;
+import com.codehouse.ciciassistant.model.service.ModelProviderService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
@@ -46,7 +47,6 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
     private final ObjectMapper objectMapper;
     private final IntegrationAppService integrationAppService;
     private final ModelInvocationResolver modelInvocationResolver;
-    private final String aliyunApiKey;
     private final String aliyunModel;
     private final String aliyunUrl;
     private final boolean iflytekEnabled;
@@ -66,7 +66,6 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
                                              ObjectMapper objectMapper,
                                              IntegrationAppService integrationAppService,
                                              ModelInvocationResolver modelInvocationResolver,
-                                             @Value("${app.model.aliyun.api-key:}") String aliyunApiKey,
                                              @Value("${app.voice.aliyun.realtime-model:paraformer-realtime-v2}") String aliyunModel,
                                              @Value("${app.voice.aliyun.realtime-url:wss://dashscope.aliyuncs.com/api-ws/v1/inference}") String aliyunUrl,
                                              @Value("${app.voice.iflytek.enabled:false}") boolean iflytekEnabled,
@@ -80,7 +79,6 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
         this.objectMapper = objectMapper;
         this.integrationAppService = integrationAppService;
         this.modelInvocationResolver = modelInvocationResolver;
-        this.aliyunApiKey = aliyunApiKey;
         this.aliyunModel = aliyunModel;
         this.aliyunUrl = aliyunUrl;
         this.iflytekEnabled = iflytekEnabled;
@@ -202,8 +200,12 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
     }
 
     private void startAliyunTask(SessionCtx ctx, int sampleRate) throws Exception {
-        if (aliyunApiKey == null || aliyunApiKey.isBlank()) {
-            sendClientEvent(ctx.clientSession, Map.of("type", "error", "message", "Aliyun API key is missing"));
+        ModelInvocationResolver.ResolvedModelInvocation invocation;
+        try {
+            invocation = modelInvocationResolver.resolveProviderModel(
+                    ctx.companyId, "voice-asr", ModelProviderService.PROVIDER_ALIYUN, aliyunModel);
+        } catch (RuntimeException ex) {
+            sendClientEvent(ctx.clientSession, Map.of("type", "error", "message", ex.getMessage()));
             return;
         }
         if (ctx.aliyunClient != null) {
@@ -215,7 +217,7 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
         }
         String taskId = UUID.randomUUID().toString();
         AliyunWsClient client = new AliyunWsClient(ctx, taskId, Math.max(8000, sampleRate),
-                new AliyunWsRuntime(aliyunApiKey, aliyunModel, aliyunUrl));
+                new AliyunWsRuntime(invocation.apiKey(), invocation.modelName(), aliyunUrl));
         ctx.aliyunClient = client;
         client.connect();
     }
