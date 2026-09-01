@@ -512,7 +512,10 @@ public class ModelProviderService {
                 enabledOverride,
                 apiBaseUrlOverride,
                 apiKeyOverride);
-        persistTrustedCapabilities(entity, List.of(new ModelDetail(ONEKEYTOKEN_AUTO_MODEL, List.of("text"))), CAPABILITY_SOURCE_CONTROLLED_CHECK);
+        String apiBaseUrl = valueOrConfigured(apiBaseUrlOverride, entity.getApiBaseUrl());
+        String apiKey = valueOrConfigured(apiKeyOverride, entity.getApiKey());
+        List<ModelDetail> details = fetchOneKeyTokenModels(apiBaseUrl, apiKey);
+        persistTrustedCapabilities(entity, details, CAPABILITY_SOURCE_PROVIDER_CATALOG);
         return result;
     }
 

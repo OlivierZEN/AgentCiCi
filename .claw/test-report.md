@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-09-01T13:50:30Z
+updated_at: 2026-09-01T14:31:00Z
 updated_by: codex
 status: active
-last_run_at: 2026-09-01T13:50:30Z
-last_run_status: passed_task_349_iflytek_route_candidate_pending_live_asr
+last_run_at: 2026-09-01T14:31:00Z
+last_run_status: passed_task_351_code_pending_local_runtime
 ---
 
 # Test Report
+
+## 2026-09-01 TASK-351 OneKeyToken 自动路由视觉能力同步
+
+- 状态：`passed_task_351_code_pending_local_runtime`。OneKeyToken `onekeytoken/auto` 同图直调已成功，网关回读 `request_type=vision`、`model_used=qwen3.7-plus`；AgentCiCi 409 根因是平台校验把 auto 的可信能力硬编码为仅 `text`。
+- 实现：OneKeyToken Chat Completions 活性校验成功后，使用同一组有效草稿/已存配置读取 `/models`，复用既有 `capabilities` / `input_modalities` 解析器并以 `provider_catalog` 保存能力；不按下游实际模型名猜测能力，目录失败继续失败关闭。
+- 聚焦集成：隔离 PostgreSQL 16 上，`PlatformModelProviderIntegrationTest` 的 OneKey 草稿凭据能力同步与场景候选两个目标方法 `2/2` 通过；断言 `/chat/completions` 与 `/models` 均使用草稿 key、已存 key 未被覆盖、`onekeytoken/auto=[text,vision]` 且 vision 门禁为 true。
+- 相邻回归：`ModelProviderServiceTest,ChatAttachmentServiceTest,ChatOrchestratorServiceModelIdentityTest` 通过；`mvn -q -DskipTests package` 和 `git diff --check` 通过。
+- 测试边界：默认测试库不可达；完整 `PlatformModelProviderIntegrationTest` 在显式关闭既有 OACT 配置漂移后有 4 项通过，唯一失败是无关组织登录用例因 OACT 被关闭返回 403，因此仅声明本任务目标方法通过，不声明整类通过。
+- 待完成：提交本地 `main`，从该提交最小重建 backend，通过正式平台校验回读运行数据库 `text + vision`，再执行真实图片对话或记录 HUMAN 待验收边界。远程、UAT、生产未修改。
 
 ## 2026-09-01 TASK-348 对外售前智能体与 Mary 演示
 

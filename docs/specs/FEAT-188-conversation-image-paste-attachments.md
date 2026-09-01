@@ -5,9 +5,9 @@ title: 对话框连续粘贴图片附件
 status: verified
 primary_project: agentcici
 owner_role: fullstack-agent
-task_ids: TASK-309,TASK-336,TASK-338,TASK-342
-related_issues: ISSUE-2026-08-28-vision-capability-scope
-updated_at: 2026-08-28T13:12:49Z
+task_ids: TASK-309,TASK-336,TASK-338,TASK-342,TASK-351
+related_issues: ISSUE-2026-08-28-vision-capability-scope,ISSUE-2026-09-01-onekeytoken-auto-vision-capability
+updated_at: 2026-09-01T14:31:00Z
 updated_by: codex
 ---
 
@@ -100,3 +100,10 @@ DevAutopilot 需求 `REQ-6F34ECF3` 的端到端任务 `019ffeb0-88a0-739f-afcb-6
 - 用户明确确认 UAT HUMAN 验收通过；冻结 `2.8.67-beta.1 / 2970bea75208` 原样晋级为生产 `2.8.67`，正式与 UAT tag、运行 commit 一致，本地后续功能未混入候选。
 - backend/frontend 正式不可变 digest、完整备份与 `2.8.66` 回滚点、最小切换、四状态服务 ID 保持、六容器健康、V125、Nginx、公开/匿名门禁、数据计数守恒和累计 100 秒稳定窗口通过。
 - 技术发布未代替生产登录用户执行真实图片上传或模型识别；生产 HUMAN 业务接受仍需由已登录用户完成。
+
+## 2026-09-01 OneKeyToken 自动路由能力同步
+
+- 最短路径复现证明 OneKeyToken `onekeytoken/auto` 本身接受同一 PNG，并以 `request_type=vision` 自动路由到 `qwen3.7-plus`；AgentCiCi 的 409 来自本地可信能力目录把 `onekeytoken/auto` 固定为仅 `text`，不是聚合服务不支持多模态。
+- OneKeyToken 平台校验继续先用 `model=onekeytoken/auto` 执行 Chat Completions 活性探测；成功后必须用同一组有效配置读取 `/models`，以远端 `capabilities` 和 `input_modalities` 保存受信能力，来源为 `provider_catalog`。
+- 不根据自动路由实际选中的下游模型反推或固定能力；远端目录不可用、未声明视觉能力或校验失败时继续失败关闭，图片聊天仍返回 `VISION_MODEL_REQUIRED`。
+- 本轮仅修改 AgentCiCi 后端校验与能力同步，不改变 OneKeyToken 自动路由协议、附件数据、路由模型名或其他产品。

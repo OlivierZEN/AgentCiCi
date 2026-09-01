@@ -19,6 +19,7 @@ import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,11 +52,13 @@ class PlatformModelProviderIntegrationTest {
     @Test
     void onekeyTokenCheckUsesUnsavedDraftCredentialsForLiveChatCompletionsValidation() throws Exception {
         AtomicReference<String> authorization = new AtomicReference<>();
+        AtomicReference<String> modelsAuthorization = new AtomicReference<>();
         AtomicReference<String> requestId = new AtomicReference<>();
         AtomicReference<String> requestBody = new AtomicReference<>();
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/v1/chat/completions", exchange -> respondToOneKeyTokenValidation(
                 exchange, authorization, requestId, requestBody));
+        server.createContext("/v1/models", exchange -> respondToOneKeyTokenModels(exchange, modelsAuthorization));
         server.start();
         try {
             String platformToken = platformToken();
@@ -88,6 +91,7 @@ class PlatformModelProviderIntegrationTest {
                     .andExpect(jsonPath("$.data.sampleModels").isEmpty());
 
             assertThat(authorization.get()).isEqualTo("Bearer " + draftKey);
+            assertThat(modelsAuthorization.get()).isEqualTo("Bearer " + draftKey);
             assertThat(requestId.get()).startsWith("req_agentcici_onekeytoken_check_");
             JsonNode payload = objectMapper.readTree(requestBody.get());
             assertThat(payload.path("model").asText()).isEqualTo("onekeytoken/auto");
@@ -95,6 +99,16 @@ class PlatformModelProviderIntegrationTest {
             assertThat(payload.path("messages")).hasSize(1);
             assertThat(modelProviderService.credentialsForProvider("any-org", ModelProviderService.PROVIDER_ONEKEYTOKEN)
                     .get("apiKey")).isEqualTo(storedKey);
+            assertThat(modelProviderService.supportsTrustedCapability(
+                    "any-org",
+                    ModelProviderService.PROVIDER_ONEKEYTOKEN,
+                    "onekeytoken/auto",
+                    "vision")).isTrue();
+            Map<String, Object> providerView = modelProviderService.platformProviderModels(
+                    ModelProviderService.PROVIDER_ONEKEYTOKEN);
+            assertThat(providerView.get("modelCapabilities")).isInstanceOf(Map.class);
+            assertThat(((Map<?, ?>) providerView.get("modelCapabilities")).get("onekeytoken/auto"))
+                    .isEqualTo(List.of("text", "vision"));
 
             MvcResult rejected = mockMvc.perform(post("/platform/models/providers/{providerCode}/check", "onekeytoken")
                             .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
@@ -127,6 +141,23 @@ class PlatformModelProviderIntegrationTest {
         byte[] response = (accepted
                 ? """
                         {"id":"chatcmpl-test","object":"chat.completion","model":"qwen3.5-flash","choices":[{"index":0,"message":{"role":"assistant","content":"OK"},"finish_reason":"stop"}],"routing":{"model_used":"qwen3.5-flash"}}
+                        """
+                : """
+                        {"error":{"code":"unauthorized","message":"Invalid API key"}}
+                        """).getBytes(StandardCharsets.UTF_8);
+        exchange.getResponseHeaders().set(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+        exchange.sendResponseHeaders(accepted ? 200 : 401, response.length);
+        exchange.getResponseBody().write(response);
+        exchange.close();
+    }
+
+    private void respondToOneKeyTokenModels(HttpExchange exchange,
+                                            AtomicReference<String> authorization) throws java.io.IOException {
+        authorization.set(exchange.getRequestHeaders().getFirst(HttpHeaders.AUTHORIZATION));
+        boolean accepted = "Bearer draft-live-key".equals(authorization.get());
+        byte[] response = (accepted
+                ? """
+                        {"object":"list","data":[{"id":"onekeytoken/auto","capabilities":["chat","auto_routing","vision"],"input_modalities":["text","image"],"status":"active"}]}
                         """
                 : """
                         {"error":{"code":"unauthorized","message":"Invalid API key"}}
@@ -313,6 +344,7 @@ class PlatformModelProviderIntegrationTest {
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/v1/chat/completions", exchange -> respondToOneKeyTokenValidation(
                 exchange, authorization, requestId, requestBody));
+        server.createContext("/v1/models", exchange -> respondToOneKeyTokenModels(exchange, new AtomicReference<>()));
         server.start();
         try {
             String platformToken = platformToken();

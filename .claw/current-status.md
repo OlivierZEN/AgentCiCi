@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 6
-updated_at: 2026-09-01T13:50:30Z
+updated_at: 2026-09-01T14:31:00Z
 updated_by: codex
-phase: review
-active_task: null
-next_action: "TASK-349 已恢复讯飞 voice-asr 候选与运行路由；平台管理员选择保存后，用真实麦克风完成一次讯飞 WebSocket 转写 HUMAN 验收。"
+phase: implementation
+active_task: TASK-351
+next_action: "提交 OneKeyToken auto 视觉能力同步到本地 main，从该提交重建 backend，并完成 cici.localhost 能力与图片回归。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- `TASK-351 / FEAT-188` 正在实施最小修复：OneKeyToken `onekeytoken/auto` 同图直调已证明会以 vision 请求自动路由到 `qwen3.7-plus`；AgentCiCi 409 根因是平台校验把 auto 能力硬编码为仅 `text`。实现已改为活性校验成功后用同一有效配置读取 `/models`，按既有解析器持久化 `provider_catalog` 能力，不按下游模型名猜测。目标方法级集成回归 2/2、相邻单元测试 3 类、backend package 与 diff check 已通过；待本地主线提交、backend 更新和真实运行回读。
 
 - `TASK-349 / FEAT-062` 已修复用户截图中的讯飞实时语音候选为 0：`4c057b6e2cc8` 让启用且凭据完整的 `integration_app(iflytek_asr)` 投影为专用 `iflytek-realtime-asr` 场景候选，并恢复 `/ws/asr` 到既有讯飞 WebSocket 客户端的音频、停止、关闭和完成态；不进入通用模型目录且不复制凭据。聚焦 `1 + 4 + 1`、package/diff 通过；本地 backend 为 `2.8.68-dev.4c057b6`、health UP、restart=0，仅 backend 容器替换。Chrome 授权态回读 `voice-asr` 候选 1、下拉含“实时语音转写 · 科大讯飞”、console 0；未代用户保存路由，真实麦克风转写仍待 HUMAN。
 

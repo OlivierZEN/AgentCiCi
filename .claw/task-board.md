@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-09-01T13:50:30Z
+updated_at: 2026-09-01T14:31:00Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,20 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-351 - OneKeyToken 自动路由视觉能力同步
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `backend-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-188-conversation-image-paste-attachments.md`
+- task_status_path: `.claw/tasks/TASK-351.md`
+- blocked_by: `none`
+- related_issues: `ISSUE-2026-09-01-onekeytoken-auto-vision-capability`
+- scope_files: `OneKeyToken 平台校验、远端模型能力目录、可信 vision 能力持久化、聚焦测试、本地 backend 验证`
+- completion_evidence: `目标回归 2/2、相邻单元测试 3 类、backend package 与 diff check 已通过；待本地主线提交和运行时回读。`
+- next_action: `提交本地 main，从该提交重建 backend，正式校验 OneKeyToken 后回读 text+vision 并完成图片回归。`
 
 ### TASK-349 - 讯飞实时语音转写纳入模型厂商治理
 
