@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-208
 title: 门户统一身份完整注销
-status: approved
+status: implemented
 owner_role: fullstack-agent
 task_ids: TASK-350
 related_decisions: INT-031
 related_issues: none
-updated_at: 2026-09-01T12:09:14Z
+updated_at: 2026-09-01T12:22:39Z
 updated_by: codex
 ---
 
@@ -78,9 +78,9 @@ updated_by: codex
 
 ## 实现进展
 
-- 当前状态：代码实现与自动化完成，本地主线归并和环境联调待完成。
+- 当前状态：代码、本地主线归并、Keycloak 本地配置和运行部署已完成；真实 HUMAN 浏览器退出待确认。
 - 已完成：根因定位、前后端标准注销链、后端聚焦 12 项、前端全量 62 文件/339 项、backend package 和 frontend production build。
-- 未完成：本地 main 归并、Keycloak Valid Post Logout Redirect URI 配置、制品部署和真实登录态回归。默认后端全量测试因既有测试配置连接不到 `localhost:5432` 未通过，不将其记为成功。
+- 未完成：真实登录态点击退出并确认停留统一登录页。默认后端全量测试因既有测试配置连接不到 `localhost:5432` 未通过，不将其记为成功。
 
 ## 交接说明
 

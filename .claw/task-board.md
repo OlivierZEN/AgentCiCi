@@ -58,7 +58,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-344 - Web 浮窗 UAT 发布与站点首页嵌入
 
-- status: `blocked`
+- status: `review`
 - priority: `critical`
 - owner_role: `release-agent`
 - claimed_by: `codex`
@@ -1965,11 +1965,11 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - claimed_by: `codex`
 - spec_path: `docs/specs/FEAT-208-oidc-rp-initiated-logout.md`
 - task_status_path: `.claw/tasks/TASK-350.md`
-- blocked_by: `父仓 cc-local-stack 尚未获授权登记 Keycloak Valid Post Logout Redirect URI`
+- blocked_by: `none`
 - related_issues: `none`
 - scope_files: `OIDC 回调安全会话、RP-Initiated Logout、门户退出时序、自动化与本地真实回归`
-- completion_evidence: `07414618 + 9a36c33e；后端聚焦 12 项、package、前端 62/339、build/diff 通过；本地 Keycloak post.logout.redirect.uris 只读回读为空。`
-- next_action: `用户授权 workspace-governance 范围后，持久更新 cc-local-stack Keycloak client 配置，再从本地 main 构建 backend/frontend 并完成登录后退出回归。`
+- completion_evidence: `07414618 + 9a36c33e；父仓 e8f8705 登记精确注销回跳；本地 main@6d0f9523 双镜像 2.8.68-dev.6d0f952、healthy/restart=0；无登录态 logout 302 和 Cookie 清除通过。`
+- next_action: `用户在已打开的本地 Keycloak 页面登录后，动作前再次确认，再点击门户退出并观察统一登录页。`
 
 ## Completed Tasks
 

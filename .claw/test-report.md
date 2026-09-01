@@ -1,11 +1,11 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-09-01T11:46:20Z
+updated_at: 2026-09-01T12:22:39Z
 updated_by: codex
 status: active
-last_run_at: 2026-09-01T11:46:20Z
-last_run_status: passed_task_348_local_technical_and_browser
+last_run_at: 2026-09-01T12:22:39Z
+last_run_status: passed_task_350_local_technical_pending_human_logout
 ---
 
 # Test Report
@@ -26,11 +26,14 @@ last_run_status: passed_task_348_local_technical_and_browser
 
 ## 2026-09-01 TASK-350 门户统一身份完整注销自动化
 
-- 状态：`passed_task_350_automated_blocked_local_keycloak_logout_redirect`。根因是门户退出只清 AgentCiCi 本地 Token，未终止 Keycloak SSO；访客态自动 OIDC 随即使用仍有效的 SSO 会话静默重登。
+- 状态：`passed_task_350_local_technical_pending_human_logout`。根因是门户退出只清 AgentCiCi 本地 Token，未终止 Keycloak SSO；访客态自动 OIDC 随即使用仍有效的 SSO 会话静默重登。
 - 实现：OIDC callback 以加密服务端会话保留 ID/Refresh Token，浏览器只持有 HttpOnly/Secure/SameSite=Lax 随机会话 Cookie；同源 `/auth/oidc/logout` 一次性消费会话并生成含 `id_token_hint`、`client_id`、固定同源 `/app` 回跳的 RP-Initiated Logout，前端退出先清业务状态再硬跳转该入口。
 - 后端：`KeycloakOidcLoginServiceTest,OidcLoginStateStoreTest,AuthControllerTest` 共 12 项通过；`mvn -q -DskipTests package` 通过。默认全量 suite 在既有 `KnowledgeBaseLifecycleIntegrationTest` 初始化时连接 `localhost:5432` 被拒，17 项环境错误后中止，不记为全量通过。
 - 前端：聚焦 6 项、全量 `62 files / 339 tests`、production build 通过；build 仅保留既有大 chunk warning。`git diff --check` 与业务/前端源码真实环境域名扫描通过。
-- 部署门禁：只读回读当前本地 Keycloak 26.7.0 的 `agentcici-bff`，登录 Redirect URIs 已含 `https://cici.localhost/app`，但 `post.logout.redirect.uris=null`。按 Keycloak RP-Initiated Logout 规范，环境必须登记 Valid Post Logout Redirect URI 才能自动回跳；该配置归父仓 `cc-local-stack`，当前未获跨项目修改授权，因此尚未部署或宣称真实退出成功。
+- 本地配置：父仓 `e8f8705 / INT-031 / TASK-021` 令受管 Keycloak 配置脚本精确写入同源 `/app`；脚本重复执行后完整 Client JSON 回读 `post.logout.redirect.uris=https://cici.localhost/app`，其他 Client 未改。
+- 本地主线与制品：注销实现提交 `07414618` 已包含于本地 `main@6d0f9523da8c`；backend/frontend 均构建为 `2.8.68-dev.6d0f952`，镜像分别为 `sha256:b1c3ea0f2452` / `sha256:ea928d869e08`，运行 label/revision 一致、healthy/restart=0。PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak 容器 ID 未变化。
+- HTTP 与日志：`/system/version` 回读 commit/version 一致；无浏览器 Cookie 的 `/auth/oidc/logout` 返回 302 到 Keycloak end-session，包含 `client_id` 与固定 `/app`，并清除 HttpOnly/Secure/SameSite=Lax Cookie；近 10 分钟 backend error 与 frontend 结构化 5xx 均为 0。
+- HUMAN 边界：应用内浏览器当前停在本地 Keycloak 登录页；真实登录、点击门户退出并确认停留统一登录页尚未执行，不能用无登录态 302 代替。
 
 ## 2026-09-01 TASK-349 讯飞实时语音转写模型厂商治理
 
