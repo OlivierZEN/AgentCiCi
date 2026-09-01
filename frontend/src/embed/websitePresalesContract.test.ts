@@ -10,6 +10,7 @@ describe("website presales visitor contract", () => {
     expect(source).toContain("开始新咨询");
     expect(source).toContain("resumeChoiceRequired");
     expect(source).toContain("/website/visit-choice");
+    expect(source).toContain("请先选择继续上次需求或开始新咨询");
   });
 
   it("renders the server-owned closed and service redirect states", () => {

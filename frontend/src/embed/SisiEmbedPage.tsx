@@ -562,7 +562,7 @@ export default function SisiEmbedPage() {
           <div className="sisi-composer-wrap">
             {attachments.length > 0 && <div className="sisi-attachment-strip">{attachments.map((item) => <span key={item.id}>{item.contentType.startsWith("image/") ? <ImageIcon size={13} /> : <FileText size={13} />}{item.name}<button onClick={() => setAttachments((current) => current.filter((entry) => entry.id !== item.id))}><X size={12} /></button></span>)}</div>}
             <div className={`sisi-composer ${listening ? "sisi-composer--listening" : ""}`}>
-              <textarea className="sisi-composer__input" value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onKeyDown} placeholder={websiteLifecycle?.canSend === false ? "本次咨询已结束" : listening ? "正在聆听…" : session?.source === "website" ? `向${assistantDisplayName}咨询产品…` : `问${assistantDisplayName}，或交代一个任务…`} rows={1} disabled={!composerEnabled} />
+              <textarea className="sisi-composer__input" value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onKeyDown} placeholder={websiteLifecycle?.resumeChoiceRequired ? "请先选择继续上次需求或开始新咨询" : websiteLifecycle?.canSend === false ? "本次咨询已结束" : listening ? "正在聆听…" : session?.source === "website" ? `向${assistantDisplayName}咨询产品…` : `问${assistantDisplayName}，或交代一个任务…`} rows={1} disabled={!composerEnabled} />
               <div className="sisi-composer__tools">
                 {mode === "page" && session?.source !== "website" && <>
                   <input ref={fileRef} type="file" accept={ACCEPT} multiple hidden onChange={upload} />
