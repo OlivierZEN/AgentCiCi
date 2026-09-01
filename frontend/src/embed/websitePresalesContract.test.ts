@@ -17,6 +17,9 @@ describe("website presales visitor contract", () => {
     expect(source).toContain("本次咨询已结束");
     expect(source).toContain("/website/ticket-entry");
     expect(source).toContain("websiteLifecycle?.canSend === false");
+    expect(source).toContain('websiteLifecycle?.status === "COMPLETED"');
+    expect(source).toContain('websiteLifecycle?.status === "SERVICE_REDIRECTED"');
+    expect(source).toContain("websiteLifecycle && websiteVisitClosed");
   });
 
   it("uses public presales language instead of internal CRM suggestions", () => {

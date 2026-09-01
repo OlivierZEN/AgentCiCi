@@ -474,6 +474,8 @@ export default function SisiEmbedPage() {
     ? session.productName || "智能体"
     : "思思";
   const websiteLifecycle = session?.source === "website" ? session.websiteLifecycle : undefined;
+  const websiteVisitClosed = websiteLifecycle?.status === "COMPLETED"
+    || websiteLifecycle?.status === "SERVICE_REDIRECTED";
   const composerEnabled = Boolean(session) && !sending && websiteLifecycle?.canSend !== false;
   const suggestions = session?.source === "website" ? WEBSITE_SUGGESTIONS : SUGGESTIONS;
 
@@ -543,7 +545,7 @@ export default function SisiEmbedPage() {
                 {message.confirmation && <button className="sisi-confirm" onClick={() => { postHost("embed:action-confirmed", { phrase: message.confirmation }); void send(message.confirmation); }}><ShieldCheck size={15} />确认并回复“{message.confirmation}”</button>}
               </div>
             </article>)}
-            {!loading && websiteLifecycle && !websiteLifecycle.canSend && <section className="sisi-visit-closed" aria-label="本次咨询已结束">
+            {!loading && websiteLifecycle && websiteVisitClosed && <section className="sisi-visit-closed" aria-label="本次咨询已结束">
               <ShieldCheck size={18} />
               <div>
                 <strong>{websiteLifecycle.status === "SERVICE_REDIRECTED" ? "请转到 CloudCC 在线工单" : "本次售前咨询已结束"}</strong>
