@@ -1,22 +1,24 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-09-01T09:49:41Z
+updated_at: 2026-09-01T11:26:39Z
 updated_by: codex
 status: active
-last_run_at: 2026-09-01T09:49:41Z
-last_run_status: passed_task_349_automated_pending_local_visual
+last_run_at: 2026-09-01T11:26:39Z
+last_run_status: passed_task_349_local_technical_pending_platform_login_and_live_asr
 ---
 
 # Test Report
 
-## 2026-09-01 TASK-349 讯飞实时语音转写模型厂商治理自动化
+## 2026-09-01 TASK-349 讯飞实时语音转写模型厂商治理
 
-- 状态：`passed_task_349_automated_pending_local_visual`。模型厂商 API 复用平台级 `integration_app(iflytek_asr)`，保存后 Secret 仅返回掩码；通用平台集成列表不再重复展示讯飞。
+- 状态：`passed_task_349_local_technical_pending_platform_login_and_live_asr`。模型厂商 API 复用平台级 `integration_app(iflytek_asr)`，保存后 Secret 仅返回掩码；通用平台集成列表不再重复展示讯飞。
 - 后端：编译通过；`RealtimeAsrProviderSelectionTest` 为 `3/3`，空库 PostgreSQL 16.9 上 `PlatformIntegrationGovernanceIntegrationTest` 为 `1/1`，`PlatformModelProviderIntegrationTest#platformCanGovernModelProvidersWhileCompanyProviderWritesAreForbidden` 为 `1/1`。覆盖保存、掩码、运行时解密、配置完整性、非 `wss` 失败关闭和租户隔离。
 - 前端：模型厂商页聚焦 `7/7`、全量 `61 files / 338 tests`、production build 与 `git diff --check` 通过；build 仅保留既有大 chunk warning。
-- 验收边界：当前“校验配置”只验证启用状态、凭据完整性与 `wss` 地址，不发起真实音频识别；真实讯飞凭据、网络握手和语音结果仍需在授权环境完成一次实时业务探测，不能以配置检查替代。
-- 待办：从精确本地 `main` commit 构建 backend/frontend，回读 `https://cici.localhost/platform/models`、容器健康/重启次数、版本/制品指纹及桌面端布局。
+- 本地主线与制品：实现 `944898f8b956` 已进入本地 `main`；backend/frontend 运行 `2.8.68-dev.944898f / 944898f8b956`，镜像分别为 `sha256:08b15a8507c5` / `sha256:41bbf130ac65`，healthy/restart=0。backend 镜像 JAR 与干净构建产物 SHA-256 均为 `8c735f976f147b0215331424df45a3d64bffa6eb7e8ac7eb9292282bce2fba57`。
+- 路由与稳定性：`https://cici.localhost/`、`/platform/models/providers` 和带版本 JS 资源均为 200；Nginx 配置通过，bundle 含实时语音转写与真实识别边界文案。切换期出现 1 次预期 502，后续 30 秒窗口 backend severe=0、frontend 结构化 5xx=0。
+- 最小影响：只替换 backend/frontend；PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak、Nginx、Semattice、DevAutopilot 容器 ID 均未变化。未执行受既有 Semattice `config=1.0.7 / repository=1.0.8` 漂移影响的完整 stack verify。
+- 浏览器与验收边界：应用内浏览器和 Chrome 均进入正式平台登录边界，未读取存储或代填凭据，授权态桌面视觉待 HUMAN。当前“校验配置”只验证启用状态、凭据完整性与 `wss` 地址，不发起真实音频识别；真实讯飞凭据、网络握手和语音结果仍需一次实时业务探测。
 
 ## 2026-09-01 TASK-347 Web 浮窗内部状态过滤自动化
 

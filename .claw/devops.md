@@ -1,12 +1,21 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-09-01T06:16:48Z
+updated_at: 2026-09-01T11:26:39Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-09-01 TASK-349 本地讯飞模型厂商治理
+
+- 实现 `944898f8b956` 已进入本地 `main`，并包含其父提交 TASK-348 `1ffc9092`；backend/frontend 从干净 worktree 构建为 `2.8.68-dev.944898f / 944898f8b956`。
+- frontend 使用受管 release Dockerfile；backend release Docker 构建在 Maven 静默步骤超过 5 分钟无进展且未替换容器时中止，随后从同一干净提交用宿主机 Maven package，并通过最小 Dockerfile 明确覆入已验证 JRE 运行镜像。最终 backend 镜像 JAR 与干净产物 SHA-256 均为 `8c735f976f147b0215331424df45a3d64bffa6eb7e8ac7eb9292282bce2fba57`。
+- backend/frontend 镜像为 `sha256:08b15a8507c5` / `sha256:41bbf130ac65`；仅以现有 Compose `--no-deps --force-recreate backend cici-frontend` 替换无状态服务。两者 healthy/restart=0，版本 API、OCI label、容器环境与页面资源指纹一致。
+- `https://cici.localhost/` 与 `/platform/models/providers` 为 200，Nginx 配置有效，运行 bundle 含实时语音转写与真实识别边界文案。切换期有 1 次 502，后续独立 30 秒窗口 backend severe=0、frontend 结构化 5xx=0。
+- PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak、Nginx、Semattice、DevAutopilot 容器 ID 未变化。应用内浏览器和 Chrome 均因平台会话过期进入安全登录，未绕过认证；授权态视觉与真实讯飞音频仍待 HUMAN。
+- 本任务不新增或切换跨项目契约；标准完整 verify 继续受既有 Semattice `config=1.0.7 / repository=1.0.8` 漂移约束。远程、UAT、生产、ACR 和 Git tag 未修改。
 
 ## 2026-09-01 TASK-347 本地 Web 浮窗状态过滤
 

@@ -3,11 +3,11 @@ kind: task-status
 task_id: TASK-349
 assignee: codex
 owner_role: fullstack-agent
-status: in_progress
+status: review
 branch: main
 pr_url: n/a
 spec_path: docs/specs/FEAT-062-platform-model-provider-governance.md
-updated_at: 2026-09-01T09:49:41Z
+updated_at: 2026-09-01T11:26:39Z
 updated_by: codex
 ---
 
@@ -30,9 +30,12 @@ updated_by: codex
 - [x] 运行时继续读取既有 `integration_app(iflytek_asr)`。
 - [x] 通用平台集成列表不重复展示讯飞。
 - [x] 配置校验失败关闭并声明真实实时语音探测边界。
-- [ ] 聚焦测试、构建、差异检查和桌面端视觉检查完成。
+- [x] 聚焦测试、构建、差异检查、本地正式路由和制品指纹回读完成。
+- [ ] 平台管理员重新登录后完成授权态桌面视觉确认，并使用真实讯飞凭据完成一次实时语音识别。
 
 ## Handoff
 
-- 当前 `main` 存在 TASK-348 的未提交改动；本任务只修改模型治理、讯飞平台集成投影、FEAT-062 与 TASK-349 状态文件，不清理或夹带 TASK-348。
-- 自动化已通过：前端全量 `61 files / 338 tests`、production build、后端编译、讯飞选择单测 `3/3`、平台集成 `1/1`、模型厂商集成 `1/1`、`git diff --check`。桌面端 `cici.localhost` 回读待从本地 `main` 制品完成。
+- 实现提交 `944898f8` 已进入本地 `main`，其父提交 `1ffc9092` 为已独立提交的 TASK-348；本任务没有清理、回退或重复提交 TASK-348 文件。
+- 自动化已通过：前端全量 `61 files / 338 tests`、production build、后端编译、讯飞选择单测 `3/3`、平台集成 `1/1`、模型厂商集成 `1/1`、`git diff --check`。
+- backend/frontend 从 `main@944898f8` 运行 `2.8.68-dev.944898f / 944898f8b956`，healthy/restart=0；backend 镜像 JAR SHA-256 与干净构建产物一致，正式路由和带版本资源为 200，30 秒稳定窗口 severe/结构化 5xx 均为 0。
+- 应用内浏览器与 Chrome 的平台会话都已过期并回到安全登录；未读取存储或代填密码，因此授权态桌面视觉仍待 HUMAN。当前“校验配置”不替代真实实时语音识别。

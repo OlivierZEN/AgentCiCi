@@ -17,7 +17,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-349 - 讯飞实时语音转写纳入模型厂商治理
 
-- status: `in_progress`
+- status: `review`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - claimed_by: `codex`
@@ -26,8 +26,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - related_issues: `none`
 - scope_files: `模型厂商 API 适配、讯飞平台托管配置单一事实源、平台模型治理专用表单、聚焦测试和桌面端验证`
-- completion_evidence: `后端投影、单一事实源、Secret 脱敏、配置失败关闭、前端专用表单及自动化已通过；待本地 main 制品与桌面端回读。`
-- next_action: `精确提交 TASK-349，从该本地 main commit 构建受影响服务并完成 cici.localhost 桌面端验证。`
+- completion_evidence: `实现 944898f8 进入本地 main；前端 61/338、后端讯飞选择 3/3、平台集成 1/1、模型厂商集成 1/1、build/diff 通过。backend/frontend 运行 2.8.68-dev.944898f，JAR 指纹一致、healthy/restart=0、正式路由/资源 200、30 秒稳定窗口无 severe/5xx。`
+- next_action: `HUMAN 重新登录平台后确认讯飞卡片与专用表单的桌面布局，并用真实讯飞凭据完成一次实时语音识别；配置检查不能替代该业务验收。`
 
 ### TASK-347 - Web 浮窗真实流式与首字延迟修复
 
