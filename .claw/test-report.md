@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-09-01T15:42:41Z
+updated_at: 2026-09-01T23:35:16Z
 updated_by: codex
 status: active
-last_run_at: 2026-09-01T15:42:41Z
-last_run_status: passed_task_352_upstream_technical_pending_human_microphone
+last_run_at: 2026-09-01T23:35:16Z
+last_run_status: passed_task_354_local_technical_pending_human_visual
 ---
 
 # Test Report
+
+## 2026-09-02 TASK-354 登录后当前用户头像可见性
+
+- 状态：`passed_task_354_local_technical_pending_human_visual`。登录态真实页面在修复前回读按钮 `38x38`、圆形且内容为 `Ol`，但计算样式为透明背景、无背景图和白色文字，证明用户数据和控件存在，缺陷来自主题样式冲突。
+- 实现：`8131ca0deed` 将头像回退改为 `--theme-accent-strong` 实色背景和 `--theme-surface` 文字色；保留圆形几何、图片头像渲染、个人简档点击行为和无阴影规则。
+- 自动化与构建：`theme.test.ts` 聚焦 `13/13`，前端全量 `62 files / 342 tests`，production build 与 `git diff --check` 通过；build 只有既有大 chunk warning。
+- 本地运行：从隔离的 `main@8131ca0d` worktree 构建并只替换 frontend；运行镜像 `sha256:cce3812c8b4b`，版本 `2.8.68-dev.8131ca0 / 8131ca0d`，healthy/restart=0。PostgreSQL、Redis、RabbitMQ、Qdrant 容器 ID 和 restart=0 均不变；backend 未替换，保持 `2.8.68-dev.6f3f5de`。
+- 浏览器与端点：`https://cici.localhost/app` 为 200，JS/CSS 资源带 `2.8.68-dev.8131ca0`；修复后头像为 `rgb(135,98,35)` 背景、`rgb(255,253,248)` 文字、`38x38` 圆形，桌面截图正常，console error/warning=0；Nginx 配置有效，结构化 5xx=0。
+- 边界：本轮未修改 backend、共享基础设施、远程、UAT 或生产；登录态技术截图不替代用户最终目视接受。
 
 ## 2026-09-01 TASK-352 实时听写厂商路由与结束收敛
 

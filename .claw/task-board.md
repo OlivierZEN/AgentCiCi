@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-09-01T15:42:41Z
+updated_at: 2026-09-01T23:35:16Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,19 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-354 - 登录后当前用户头像可见性修复
+
+- status: `review`
+- priority: `high`
+- owner_role: `frontend-agent`
+- claimed_by: `codex`
+- task_status_path: `.claw/tasks/TASK-354.md`
+- blocked_by: `none`
+- related_issues: `none`
+- scope_files: `侧栏当前用户头像主题回退、主题契约测试、本地 frontend 与登录态桌面验证`
+- completion_evidence: `修复 8131ca0d 进入本地 main；聚焦 13/13、前端全量 62 files / 342 tests、production build、diff check 通过；frontend 2.8.68-dev.8131ca0 healthy/restart=0；登录态计算样式、桌面截图与 console 0 通过。`
+- next_action: `用户刷新或查看当前已登录页面，目视确认左侧顶部当前用户头像显示符合预期。`
 
 ### TASK-353 - 图片追问跨轮视觉上下文修复
 

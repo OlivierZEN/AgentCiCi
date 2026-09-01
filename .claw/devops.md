@@ -1,12 +1,19 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-09-01T15:42:41Z
+updated_at: 2026-09-01T23:35:16Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-09-02 TASK-354 本地当前用户头像修复
+
+- 修复提交 `8131ca0deed7781747eafaafc672525eb512d3f1` 已进入本地 main；从隔离 worktree 使用受管 release Dockerfile 构建 frontend `2.8.68-dev.8131ca0`，镜像 `sha256:cce3812c8b4b` 的 OCI version/revision 与提交一致。
+- 仅以现有 Compose `--no-deps --force-recreate cici-frontend` 替换 frontend；新容器 healthy/restart=0。backend 保持 `2.8.68-dev.6f3f5de / 6f3f5def7ca3`、healthy/restart=0；PostgreSQL、Redis、RabbitMQ、Qdrant 容器 ID 未变化。
+- `https://cici.localhost/app` 为 200，部署 JS/CSS 带 `2.8.68-dev.8131ca0`，Nginx 配置有效，frontend 结构化 5xx=0。Chrome 既有登录态回读头像主题色背景、表面色文字、`38x38` 圆形，桌面截图正常且 console error/warning=0。
+- 本轮没有新增或切换跨项目契约，未执行受既有 Semattice `config=1.0.7 / repository=1.0.8` 漂移影响的完整 `./stack verify`；未修改 local-stack 配置、远程、ACR、Git tag、UAT 或生产。
 
 ## 2026-09-01 TASK-352 本地实时听写双厂商修复
 
