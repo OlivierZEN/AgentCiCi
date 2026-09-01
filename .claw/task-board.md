@@ -1957,6 +1957,20 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
+### TASK-350 - 门户统一身份完整注销
+
+- status: `blocked`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-208-oidc-rp-initiated-logout.md`
+- task_status_path: `.claw/tasks/TASK-350.md`
+- blocked_by: `父仓 cc-local-stack 尚未获授权登记 Keycloak Valid Post Logout Redirect URI`
+- related_issues: `none`
+- scope_files: `OIDC 回调安全会话、RP-Initiated Logout、门户退出时序、自动化与本地真实回归`
+- completion_evidence: `07414618 + 9a36c33e；后端聚焦 12 项、package、前端 62/339、build/diff 通过；本地 Keycloak post.logout.redirect.uris 只读回读为空。`
+- next_action: `用户授权 workspace-governance 范围后，持久更新 cc-local-stack Keycloak client 配置，再从本地 main 构建 backend/frontend 并完成登录后退出回归。`
+
 ## Completed Tasks
 
 ### TASK-345 - DevAutopilot MCP-only 解耦回归修复
