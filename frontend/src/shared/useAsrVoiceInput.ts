@@ -75,6 +75,10 @@ export function isAsrStartedMessage(message: AsrWsMessage): boolean {
   return message.type === "status" && message.message === "started";
 }
 
+export function isAsrAuthenticatedMessage(message: AsrWsMessage): boolean {
+  return message.type === "status" && message.message === "authenticated";
+}
+
 export function asrStatusNotice(message: AsrWsMessage): string {
   if (message.type === "status" && message.message === "speaker-diarization-unavailable") {
     return "实时听写中...（当前组织未配置讯飞实时转写，本次无法自动区分发言人）";
@@ -86,6 +90,22 @@ type AsrLifecycleSocket = Pick<WebSocket, "addEventListener" | "removeEventListe
 
 export function waitForAsrStarted(
   websocket: AsrLifecycleSocket,
+  timeoutMs = ASR_START_TIMEOUT_MS,
+): Promise<void> {
+  return waitForAsrStatus(websocket, isAsrStartedMessage, "实时语音服务启动超时", timeoutMs);
+}
+
+export function waitForAsrAuthenticated(
+  websocket: AsrLifecycleSocket,
+  timeoutMs = ASR_START_TIMEOUT_MS,
+): Promise<void> {
+  return waitForAsrStatus(websocket, isAsrAuthenticatedMessage, "实时语音身份认证超时", timeoutMs);
+}
+
+function waitForAsrStatus(
+  websocket: AsrLifecycleSocket,
+  predicate: (message: AsrWsMessage) => boolean,
+  timeoutMessage: string,
   timeoutMs = ASR_START_TIMEOUT_MS,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -105,20 +125,18 @@ export function waitForAsrStarted(
     const onMessage = (event: MessageEvent) => {
       try {
         const message = JSON.parse(String(event.data)) as AsrWsMessage;
-        if (isAsrStartedMessage(message)) {
+        if (predicate(message)) {
           settle(resolve);
         } else if (message.type === "error") {
           settle(() => reject(new Error(message.message || "实时语音服务启动失败")));
         }
       } catch {
-        // Ignore unrelated or malformed messages while waiting for the upstream ready signal.
+        // Ignore unrelated or malformed messages while waiting for the status signal.
       }
     };
     const onError = () => settle(() => reject(new Error("实时语音服务连接失败")));
-    const onClose = () => settle(() => reject(new Error("实时语音服务已关闭")));
-    const timeout = globalThis.setTimeout(() => {
-      settle(() => reject(new Error("实时语音服务启动超时")));
-    }, timeoutMs);
+    const onClose = (event: CloseEvent) => settle(() => reject(new Error(event.reason || "实时语音服务已关闭")));
+    const timeout = globalThis.setTimeout(() => settle(() => reject(new Error(timeoutMessage))), timeoutMs);
 
     websocket.addEventListener("message", onMessage as EventListener);
     websocket.addEventListener("error", onError as EventListener, { once: true });
@@ -320,7 +338,7 @@ export function useAsrVoiceInput() {
 
       try {
         const websocket = new WebSocket(
-          `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/asr?token=${encodeURIComponent(options.token)}&provider=${encodeURIComponent(options.provider ?? "aliyun")}&speakerDiarization=${options.speakerDiarization ? "true" : "false"}`,
+          `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/asr?provider=${encodeURIComponent(options.provider ?? "aliyun")}&speakerDiarization=${options.speakerDiarization ? "true" : "false"}`,
         );
         websocket.binaryType = "arraybuffer";
         asrWsRef.current = websocket;
@@ -402,11 +420,13 @@ export function useAsrVoiceInput() {
           websocket.addEventListener("error", () => {
             finish(() => reject(new Error("实时语音服务连接失败")));
           }, { once: true });
-          websocket.addEventListener("close", () => {
-            finish(() => reject(new Error("实时语音服务已关闭")));
+          websocket.addEventListener("close", (event) => {
+            finish(() => reject(new Error(event.reason || "实时语音服务已关闭")));
           }, { once: true });
         });
 
+        websocket.send(JSON.stringify({ type: "authenticate", token: options.token }));
+        await waitForAsrAuthenticated(websocket);
         websocket.send(JSON.stringify({
           type: "start",
           sampleRate: 16000,

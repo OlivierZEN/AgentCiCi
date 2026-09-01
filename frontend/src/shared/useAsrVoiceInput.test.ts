@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { asrStatusNotice, extractAsrMessageText, isAsrStartedMessage, mergePrefixAsr, waitForAsrStarted } from "./useAsrVoiceInput";
+import {
+  asrStatusNotice,
+  extractAsrMessageText,
+  isAsrAuthenticatedMessage,
+  isAsrStartedMessage,
+  mergePrefixAsr,
+  waitForAsrAuthenticated,
+  waitForAsrStarted,
+} from "./useAsrVoiceInput";
 
 describe("useAsrVoiceInput helpers", () => {
   it("merges existing prefix and recognized speech text", () => {
@@ -27,6 +35,12 @@ describe("useAsrVoiceInput helpers", () => {
     expect(isAsrStartedMessage({ type: "status", message: "connected" })).toBe(false);
   });
 
+  it("distinguishes websocket authentication from upstream readiness", () => {
+    expect(isAsrAuthenticatedMessage({ type: "status", message: "authenticated" })).toBe(true);
+    expect(isAsrAuthenticatedMessage({ type: "status", message: "connected" })).toBe(false);
+    expect(isAsrAuthenticatedMessage({ type: "status", message: "started" })).toBe(false);
+  });
+
   it("explains when realtime speaker diarization is unavailable", () => {
     expect(asrStatusNotice({ type: "status", message: "speaker-diarization-unavailable" })).toContain(
       "无法自动区分发言人",
@@ -51,5 +65,15 @@ describe("useAsrVoiceInput helpers", () => {
     socket.dispatchEvent(new MessageEvent("message", { data: JSON.stringify({ type: "error", message: "invalid endpoint" }) }));
 
     await expect(ready).rejects.toThrow("invalid endpoint");
+  });
+
+  it("waits for websocket authentication before starting an upstream provider", async () => {
+    const socket = new EventTarget();
+    const ready = waitForAsrAuthenticated(socket as unknown as WebSocket, 1000);
+
+    socket.dispatchEvent(new MessageEvent("message", { data: JSON.stringify({ type: "status", message: "connected" }) }));
+    socket.dispatchEvent(new MessageEvent("message", { data: JSON.stringify({ type: "status", message: "authenticated" }) }));
+
+    await expect(ready).resolves.toBeUndefined();
   });
 });

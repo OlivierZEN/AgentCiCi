@@ -3,11 +3,11 @@ kind: task-status
 task_id: TASK-352
 assignee: codex
 owner_role: fullstack-agent
-status: review
+status: in_progress
 branch: main
 pr_url: n/a
 spec_path: docs/specs/FEAT-062-platform-model-provider-governance.md
-updated_at: 2026-09-01T15:50:00Z
+updated_at: 2026-09-01T23:32:53Z
 updated_by: codex
 ---
 
@@ -26,6 +26,7 @@ updated_by: codex
 - 将平台场景拆分为对话 `voice-asr` 与 AI 听记 `meeting-realtime-asr`，历史讯飞选择自动迁移。
 - 对话 `voice-asr` 恢复固定 `paraformer-realtime-v2` 适配器，但 API Key 从模型厂商治理中的阿里云记录读取，不回退到早期部署文件里的 Key。
 - AI 听记和嵌入听记显式请求讯飞且开启发言人区分；普通对话及其他语音输入固定请求阿里云。
+- 让实时语音 WebSocket 接受与普通受保护 API 相同的 OACT HUMAN 身份，并把 Bearer 从 URL 查询参数迁移到建连后的认证帧，避免访问日志记录完整用户令牌。
 - 完成自动化、构建、本地 `main` 制品和正式入口验证。
 
 ## Done When
@@ -41,6 +42,7 @@ updated_by: codex
 - [x] 后端聚焦测试/package、前端聚焦/全量/build 通过。
 - [x] 修复提交进入本地 `main`，backend/frontend 从该提交运行且健康。
 - [x] 使用合成音频完成阿里云与讯飞真实上游转写、发言人标签与结束技术探测。
+- [ ] 真实 OACT 登录会话完成 WebSocket 帧内认证，并分别收到阿里云与讯飞上游 `started`。
 - [ ] HUMAN 使用真实麦克风确认 AI 听记和对话框实时听写。
 
 ## Handoff
@@ -49,4 +51,4 @@ updated_by: codex
 - 真实麦克风涉及浏览器权限和用户语音，仅在用户明确确认后执行；技术探测优先使用不含敏感内容的合成音频。
 - 对话听写的阿里云凭据从模型厂商治理的 `aliyun-bailian` 记录读取，固定适配器路由不复制 Secret。
 - 实现提交 `d32a710fe518 + 80f720730cd3 + 7ced552aa661 + 6f3f5def7ca3` 已进入本地 `main`；backend/frontend 均运行 `2.8.68-dev.6f3f5de / 6f3f5def7ca3`、healthy/restart=0，V130/V131 success。
-- 无敏感合成音频技术探测证明：阿里云链路收到 `started + text + finished` 且无发言人标签；讯飞链路收到 `started + text(speakerId) + finished`。真实麦克风和用户语音仍待 HUMAN 验收。
+- 2026-09-02 HUMAN 真实登录截图驳回了此前合成探测：页面 OACT 为 RS256 `ecosystem_user`，而 `/ws/asr` 只调用旧 HS256 `JwtService.parse()`，在厂商路由前即以 `invalid token` 关闭，因此阿里云和讯飞同时失败。任务恢复 `in_progress`，合成探测不再作为浏览器身份链路证据。

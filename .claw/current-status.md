@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 6
-updated_at: 2026-09-01T15:42:41Z
+updated_at: 2026-09-01T23:32:53Z
 updated_by: codex
-phase: review
-active_task: TASK-353
-next_action: "用户在原会话追问上一张图片中的具体内容，确认回答与图片匹配；技术实现和本地运行门禁已完成。"
+phase: in_progress
+active_task: TASK-352
+next_action: "将 OACT WebSocket 鉴权修复提交并从本地 main 重建 backend/frontend，在 https://cici.localhost/ 分别验证阿里云对话听写和讯飞 AI 听记。"
 read_next:
   goals: false
   decisions: false
@@ -24,7 +24,7 @@ read_next:
 
 - `TASK-353 / FEAT-188` 技术实现和本地运行门禁完成，进入 review：真实会话证明历史装配丢失图片；`123619a7223e` 仅对明确历史图片指代恢复最近一个同租户/同会话/同消息/ATTACHED 的带图用户轮，并继续执行 vision 门禁。聚焦 56 项、package/diff 通过；最终 backend 运行包含本修复的代码提交 `7ced552aa661 / 2.8.68-dev.7ced552`，frontend 运行主线治理提交 `118ff72da8c5 / 2.8.68-dev.118ff72`，两者 healthy/restart=0，OneKey auto=`[text,vision]`。待用户在原会话确认回答内容匹配，不以技术门禁替代 HUMAN。
 
-- `TASK-352 / FEAT-062` 实现 `d32a710fe518 + 80f720730cd3 + 7ced552aa661 + 6f3f5def7ca3` 已进入本地 main：对话 `voice-asr=aliyun-bailian/paraformer-realtime-v2` 从厂商治理读凭据，AI 听记 `meeting-realtime-asr=iflytek_asr/iflytek-realtime-asr` 启用 `role_type=2`；讯飞 URL/ready/last-frame/close 和 1.5 秒兜底已收敛。backend/frontend 运行 `2.8.68-dev.6f3f5de / 6f3f5def7ca3`、healthy/restart=0，V130/V131 success。合成音频真实上游探测分别收到阿里云 `started/text/finished` 和讯飞 `started/text(speakerId)/finished`；真实麦克风仍待 HUMAN 验收。
+- `TASK-352 / FEAT-062` 因 2026-09-02 HUMAN 真实登录截图恢复 `in_progress`：两条厂商路由配置正确，但 `/ws/asr` 只接受旧 HS256 会话令牌，真实 RS256 `ecosystem_user` OACT 在厂商选择前被关闭，导致阿里云对话听写和讯飞 AI 听记同时显示“实时语音服务已关闭”；此前旧令牌合成探测不能证明浏览器身份链路。当前实现已改为建连后帧内 OACT 认证、认证成功后再启动独立厂商，并从 URL 移除 Bearer；聚焦后端 3 组、前端 8 项、前端全量 `62 files / 344 tests`、backend package 与 production build 已通过，待提交、部署和真实会话回读。
 
 - `TASK-351 / FEAT-188` 已完成：OneKeyToken `onekeytoken/auto` 校验后读取 `/models` 并持久化受信目录能力；运行数据库回读 `[text,vision]`，用户截图证明真实首轮图片识别成功。后续跨轮追问上下文缺口由 TASK-353 独立修复。
 

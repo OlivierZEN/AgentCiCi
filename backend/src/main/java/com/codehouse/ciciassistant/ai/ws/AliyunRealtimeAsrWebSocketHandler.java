@@ -1,12 +1,10 @@
 package com.codehouse.ciciassistant.ai.ws;
 
-import com.codehouse.ciciassistant.auth.service.JwtService;
 import com.codehouse.ciciassistant.ai.service.ModelInvocationResolver;
 import com.codehouse.ciciassistant.integration.service.IntegrationAppService;
 import com.codehouse.ciciassistant.model.service.ModelProviderService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.jsonwebtoken.Claims;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -43,7 +41,7 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
 
     private static final Logger log = LoggerFactory.getLogger(AliyunRealtimeAsrWebSocketHandler.class);
 
-    private final JwtService jwtService;
+    private final RealtimeAsrAuthenticator authenticator;
     private final ObjectMapper objectMapper;
     private final IntegrationAppService integrationAppService;
     private final ModelInvocationResolver modelInvocationResolver;
@@ -62,7 +60,7 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
             .build();
     private final ConcurrentHashMap<String, SessionCtx> sessions = new ConcurrentHashMap<>();
 
-    public AliyunRealtimeAsrWebSocketHandler(JwtService jwtService,
+    public AliyunRealtimeAsrWebSocketHandler(RealtimeAsrAuthenticator authenticator,
                                              ObjectMapper objectMapper,
                                              IntegrationAppService integrationAppService,
                                              ModelInvocationResolver modelInvocationResolver,
@@ -75,7 +73,7 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
                                              @Value("${app.voice.iflytek.realtime-url:wss://office-api-ast-dx.iflyaisol.com/ast/communicate/v1}") String iflytekUrl,
                                              @Value("${app.voice.iflytek.lang:autodialect}") String iflytekLang,
                                              @Value("${app.voice.iflytek.domain:com}") String iflytekDomain) {
-        this.jwtService = jwtService;
+        this.authenticator = authenticator;
         this.objectMapper = objectMapper;
         this.integrationAppService = integrationAppService;
         this.modelInvocationResolver = modelInvocationResolver;
@@ -93,37 +91,18 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         String token = queryParam(session, "token");
-        if (token == null || token.isBlank()) {
-            session.close(CloseStatus.NOT_ACCEPTABLE.withReason("missing token"));
-            return;
-        }
-        Claims claims;
-        try {
-            claims = jwtService.parse(token);
-        } catch (Exception e) {
-            session.close(CloseStatus.NOT_ACCEPTABLE.withReason("invalid token"));
-            return;
-        }
-        if ("embed_app".equals(claims.get("typ", String.class))) {
-            List<String> permissions = claimStrings(claims.get("permissions"));
-            if (!permissions.contains("voice:input") && !permissions.contains("meeting:start")) {
-                session.close(CloseStatus.POLICY_VIOLATION.withReason("voice permission denied"));
+        SessionCtx ctx = new SessionCtx(session);
+        sessions.put(session.getId(), ctx);
+        if (token != null && !token.isBlank()) {
+            try {
+                authenticate(ctx, token);
+            } catch (Exception e) {
+                sessions.remove(session.getId());
+                session.close(CloseStatus.NOT_ACCEPTABLE.withReason("invalid token"));
                 return;
             }
         }
-        String companyId = String.valueOf(claims.get("company_id"));
-        String memberId = claims.get("member_id", String.class);
-        String userId = memberId == null || memberId.isBlank() ? claims.getSubject() : memberId;
-        SessionCtx ctx = new SessionCtx(session, companyId, userId);
-        sessions.put(session.getId(), ctx);
         sendClientEvent(session, Map.of("type", "status", "message", "connected"));
-    }
-
-    private static List<String> claimStrings(Object raw) {
-        if (!(raw instanceof List<?> values)) {
-            return List.of();
-        }
-        return values.stream().filter(java.util.Objects::nonNull).map(String::valueOf).toList();
     }
 
     @Override
@@ -133,7 +112,18 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
         try {
             JsonNode j = objectMapper.readTree(message.getPayload());
             String type = j.path("type").asText("");
-            if ("start".equalsIgnoreCase(type)) {
+            if ("authenticate".equalsIgnoreCase(type)) {
+                try {
+                    authenticate(ctx, j.path("token").asText(""));
+                    sendClientEvent(session, Map.of("type", "status", "message", "authenticated"));
+                } catch (Exception ex) {
+                    sendClientEvent(session, Map.of("type", "error", "message", "实时语音身份认证失败，请重新登录后重试"));
+                    session.close(CloseStatus.NOT_ACCEPTABLE.withReason("invalid token"));
+                }
+            } else if (!ctx.authenticated) {
+                sendClientEvent(session, Map.of("type", "error", "message", "实时语音身份认证失败"));
+                session.close(CloseStatus.NOT_ACCEPTABLE.withReason("authentication required"));
+            } else if ("start".equalsIgnoreCase(type)) {
                 int sampleRate = j.path("sampleRate").asInt(16000);
                 String requestedProvider = firstNonBlank(j.path("provider").asText(""), queryParam(session, "provider"));
                 boolean speakerDiarization = j.path("speakerDiarization").asBoolean(
@@ -159,6 +149,13 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
             log.warn("Realtime ASR command failed at upstream startup: {}", e.getClass().getSimpleName());
             sendClientEvent(session, Map.of("type", "error", "message", "实时语音服务启动失败，请检查厂商地址和凭据"));
         }
+    }
+
+    private void authenticate(SessionCtx ctx, String token) {
+        RealtimeAsrAuthenticator.AuthenticatedUser user = authenticator.authenticate(token);
+        ctx.companyId = user.companyId();
+        ctx.userId = user.userId();
+        ctx.authenticated = true;
     }
 
     @Override
@@ -704,18 +701,15 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
 
     private static final class SessionCtx {
         private final WebSocketSession clientSession;
-        @SuppressWarnings("unused")
-        private final String companyId;
-        @SuppressWarnings("unused")
-        private final String userId;
+        private volatile String companyId;
+        private volatile String userId;
+        private volatile boolean authenticated;
         private volatile boolean started;
         private volatile AliyunWsClient aliyunClient;
         private volatile IflytekWsClient iflytekClient;
 
-        private SessionCtx(WebSocketSession clientSession, String companyId, String userId) {
+        private SessionCtx(WebSocketSession clientSession) {
             this.clientSession = clientSession;
-            this.companyId = companyId;
-            this.userId = userId;
         }
     }
 }
