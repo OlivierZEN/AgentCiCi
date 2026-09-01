@@ -36,6 +36,8 @@ class KeycloakOidcLoginServiceTest {
                 .isEqualTo("https://agentcici.example.test/auth/oidc/login?return_to=%2Fadmin%2Fops%3Ftab%3Daccess");
         assertThat(service.canonicalPasswordUpdateUri("/app").toString())
                 .isEqualTo("https://agentcici.example.test/auth/oidc/password?return_to=%2Fapp");
+        assertThat(service.canonicalLogoutUri().toString())
+                .isEqualTo("https://agentcici.example.test/auth/oidc/logout");
     }
 
     @Test
@@ -67,6 +69,23 @@ class KeycloakOidcLoginServiceTest {
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.complete("authorization-code", "expected-state", "other-state"))
                 .isInstanceOf(UnauthorizedException.class)
                 .hasMessage("Invalid OIDC login state");
+    }
+
+    @Test
+    void createsRpInitiatedLogoutAndConsumesTheServerSideIdToken() {
+        OidcLoginStateStore stateStore = org.mockito.Mockito.mock(OidcLoginStateStore.class);
+        org.mockito.Mockito.when(stateStore.consumeLoginSession("login-session"))
+                .thenReturn(new OidcLoginStateStore.LoginSession("signed-id-token", "refresh-token"));
+        KeycloakOidcLoginService service = service(true, stateStore);
+
+        String logout = service.logout("login-session").toString();
+
+        assertThat(logout)
+                .startsWith("https://sso.example.test/realms/agentcici/protocol/openid-connect/logout?")
+                .contains("id_token_hint=signed-id-token")
+                .contains("client_id=agentcici-bff")
+                .contains("post_logout_redirect_uri=https%3A%2F%2Fagentcici.example.test%2Fapp");
+        org.mockito.Mockito.verify(stateStore).consumeLoginSession("login-session");
     }
 
     @Test
@@ -143,10 +162,14 @@ class KeycloakOidcLoginServiceTest {
     }
 
     private KeycloakOidcLoginService service(boolean enabled) {
+        return service(enabled, org.mockito.Mockito.mock(OidcLoginStateStore.class));
+    }
+
+    private KeycloakOidcLoginService service(boolean enabled, OidcLoginStateStore stateStore) {
         return new KeycloakOidcLoginService(
                 org.mockito.Mockito.mock(AccountExternalIdentityRepository.class),
                 org.mockito.Mockito.mock(AuthService.class),
-                org.mockito.Mockito.mock(OidcLoginStateStore.class),
+                stateStore,
                 new ObjectMapper(),
                 enabled,
                 "https://sso.example.test/realms/agentcici",

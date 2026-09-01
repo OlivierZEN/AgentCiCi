@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-08-31T08:59:00Z
+updated_at: 2026-09-01T12:22:39Z
 updated_by: codex
 status: active
-last_run_at: 2026-08-31T08:59:00Z
-last_run_status: passed_wecom_kf_callback_replay_pending_platform_save
+last_run_at: 2026-09-01T12:22:39Z
+last_run_status: passed_task_350_local_technical_pending_human_logout
 ---
 
 # Test Report
+
+## 2026-09-01 TASK-350 门户统一身份完整注销自动化
+
+- 状态：`passed_task_350_local_technical_pending_human_logout`。根因是门户退出只清 AgentCiCi 本地 Token，未终止 Keycloak SSO；访客态自动 OIDC 随即使用仍有效的 SSO 会话静默重登。
+- 实现：OIDC callback 以加密服务端会话保留 ID/Refresh Token，浏览器只持有 HttpOnly/Secure/SameSite=Lax 随机会话 Cookie；同源 `/auth/oidc/logout` 一次性消费会话并生成含 `id_token_hint`、`client_id`、固定同源 `/app` 回跳的 RP-Initiated Logout，前端退出先清业务状态再硬跳转该入口。
+- 后端：`KeycloakOidcLoginServiceTest,OidcLoginStateStoreTest,AuthControllerTest` 共 12 项通过；`mvn -q -DskipTests package` 通过。默认全量 suite 在既有 `KnowledgeBaseLifecycleIntegrationTest` 初始化时连接 `localhost:5432` 被拒，17 项环境错误后中止，不记为全量通过。
+- 前端：聚焦 6 项、全量 `62 files / 339 tests`、production build 通过；build 仅保留既有大 chunk warning。`git diff --check` 与业务/前端源码真实环境域名扫描通过。
+- 本地配置与运行：父仓 `e8f8705 / INT-031` 已精确登记 `post.logout.redirect.uris=https://cici.localhost/app`；本地 backend/frontend 运行 `2.8.68-dev.6d0f952`，healthy/restart=0，无登录态 logout 302、Cookie 清除、版本和日志门禁通过。
+- HUMAN 边界：真实登录后点击退出并确认停留统一登录页尚未执行，不能用无登录态 302 替代。
 
 ## 2026-08-31 生产微信客服回调签名复核
 
