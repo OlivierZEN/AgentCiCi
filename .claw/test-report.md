@@ -1,14 +1,28 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-09-01T11:32:06Z
+updated_at: 2026-09-01T11:46:20Z
 updated_by: codex
 status: active
-last_run_at: 2026-09-01T11:32:06Z
-last_run_status: passed_task_350_automated_blocked_local_keycloak_logout_redirect
+last_run_at: 2026-09-01T11:46:20Z
+last_run_status: passed_task_348_local_technical_and_browser
 ---
 
 # Test Report
+
+## 2026-09-01 TASK-348 对外售前智能体与 Mary 演示
+
+- 状态：`passed_task_348_local_technical_and_browser`。服务端状态机、公开能力隔离、联系方式线索、访问摘要和再访选择完成；目标租户 Mary 通过正式 API 发布 v4，未直写数据库。UAT/生产未修改，当前证据不替代外部 HUMAN 业务接受。
+- 自动化与构建：后端 `WebsitePresalesLifecycleServiceTest,SisiEmbedRuntimeServiceTest,PublicWebWidgetServiceTest` 通过，`mvn -q -DskipTests package` 通过；前端全量基线 `61 files / 338 tests`、最终契约聚焦 `3/3`、production build、环境域名门禁和 `git diff --check` 通过。默认全量 Maven suite 因本机 `localhost:5432` 不可用而中止，不记为通过。
+- 配置：`org3gxskla32gln3bvop / 客服-Mary` 回读为 Website-only、STRICT/COPILOT、`public-presales-v1`、零工具、零知识库、零可选技能，发布版本 v4；Website 发布启用且配置固定售前欢迎语。本地只有 Owner/Admin 两个 ACTIVE 成员，故演示保留既有 Owner 运行映射；公开运行时仍强制零工具、零用户记忆、零附件，生产必须换成专用最小权限成员或 SERVICE Principal。
+- 真实售中售后链路：账号无法登录问题直接进入 `SERVICE_REDIRECTED` 并返回登录 CloudCC 后提交在线工单的固定引导；`agent_run_trace` 前后数量不变，证明模型与工具均未调用。
+- 真实联系方式链路：含手机号的售前请求进入 `COMPLETED`、`contactCaptured=true`、`canSend=false`；线索仅一条，密文非空且不含手机号明文，聊天消息也不含原始号码并包含脱敏值。
+- 真实再访链路：同一访客第二次访问创建不同聊天会话并进入 `AWAITING_CHOICE`；同一 visit 刷新复用当前会话；`START_NEW` 后为 `ACTIVE` 且继承摘要为空。此前摘要只以脱敏结构化文本供选择性继续，原始历史不自动注入。
+- 真实售前链路：产品咨询完成一次正常模型回答并提出一个资格澄清问题；Trace 为 `model_calls=1 / tool_calls=0 / rag=0`。
+- 本地主线与制品：实现 `1ffc9092`、选择态修复 `c5726b28`、输入提示修复 `6fa12d73` 均进入本地 `main@6fa12d731b84827bf2897b7df4023b28245daa5a`。backend/frontend 运行 `2.8.68-dev.6fa12d7`，镜像分别为 `sha256:e21e740ea5a0500de9155e79d3eee3d2aa82dbdd678891c11b2ffb17175213bc` / `sha256:6b17aca2350c292c5113d611bd8b8a19a7b00e93034150860f0b533e17b57fcc`，label/revision 一致、healthy/restart=0；Flyway V129 成功，`/system/version`、官网、Embed、公开 widget 和匿名 401 边界通过。
+- 浏览器：正式门户加载 Mary 启动器并展开；DOM 回读 `hasMary=true / hasResume=true / hasClosedCard=false / hasCorrectPlaceholder=true / hasSupportBoundary=true`，确认再访选择态不误显示完成卡片，输入框明确要求先选择，售中售后边界可见。
+- 构建边界：release Dockerfile 的容器内 Maven 构建因 Maven Central DNS/超时失败；随后从同一干净 commit 在宿主机完成 Maven package，并使用等价 release runtime stage 生成 backend 镜像，最终镜像 revision 与运行 commit 一致。完整 `./stack verify` 未通过既有 Semattice `config=1.0.7 / repository=1.0.8` 漂移门禁，不把定向产品验证写成完整全栈门禁通过。
+- 工单入口边界：本地部署未配置 HTTPS 工单 URL，因此当前只显示登录 CloudCC 后提交在线工单的文字引导，不渲染外链按钮；生产启用时由部署环境提供并由后端校验。
 
 ## 2026-09-01 TASK-350 门户统一身份完整注销自动化
 

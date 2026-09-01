@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-207
 title: 对外售前智能体访客生命周期与线索闭环
-status: approved
+status: implemented
 owner_role: fullstack-agent
 task_ids: TASK-348
 related_decisions: none
 related_issues: none
-updated_at: 2026-09-01T07:20:00Z
+updated_at: 2026-09-01T11:46:20Z
 updated_by: codex
 ---
 
@@ -110,9 +110,10 @@ updated_by: codex
 
 ## 实现进展
 
-- 当前状态：实现与本地验收中。
-- 已完成：需求边界、状态模型、再访策略、后端/前端实现，以及 Mary v4 演示配置发布（Website-only、零工具、零知识库、零可选技能）。
-- 未完成：本地 `main` 制品构建、运行迁移和真实门户链路回读。
+- 当前状态：本地实现与技术验收完成。
+- 已完成：需求边界、状态模型、再访策略、服务端强制门禁、前端交互、Mary v4 正式配置、聚焦测试与构建、Flyway V129、真实公开链路和门户浏览器回读。
+- 运行基线：`main@6fa12d731b84`，backend/frontend 为 `2.8.68-dev.6fa12d7`，镜像 revision 一致、healthy/restart=0。
+- 验收边界：本地演示沿用既有 ACTIVE Owner 映射且未配置可点击工单 URL；生产前必须改为专用最小权限身份、通过部署配置提供 HTTPS 工单地址，并单独完成 HUMAN 业务验收。
 
 ## 交接说明
 

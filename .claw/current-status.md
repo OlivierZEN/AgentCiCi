@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 6
-updated_at: 2026-09-01T06:16:48Z
+updated_at: 2026-09-01T11:46:20Z
 updated_by: codex
 phase: review
 active_task: null
-next_action: "HUMAN 在 https://cici.localhost/ Web 浮窗发送一条新消息，目视确认等待期间只显示三点动效且不出现工具选择、检索、生成或校验文案；UAT 不变。"
+next_action: "TASK-348 本地技术交付完成；如需推广到 UAT/生产，先建立专用最小权限运行身份、配置环境侧工单 URL，并单独授权发布和 HUMAN 业务验收。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- `TASK-348 / FEAT-207` 本地技术交付完成：公开 Website 智能体只处理售前；售中售后由服务端确定性拦截并引导登录 CloudCC 提交在线工单；第 6/8 轮、联系方式完成态和公开零工具/零用户记忆/零附件均为服务端强制策略。再次来访创建新聊天会话，先选择继续上次需求或开始新咨询，仅继续时注入脱敏结构化摘要。目标租户 `org3gxskla32gln3bvop` 的“客服-Mary”已通过正式 API 发布 v4，Website-only、零工具、零知识库、零可选技能；真实本地链路验证售后 Trace 模型/工具调用均为 0，联系方式加密且消息不含明文，再访会话隔离有效。实现 `1ffc9092 + c5726b28 + 6fa12d73` 已进入本地 `main@6fa12d731b84`；backend/frontend 运行 `2.8.68-dev.6fa12d7`，同 revision 镜像 healthy/restart=0，Flyway V129 成功，门户浏览器回读通过。演示仍使用既有 ACTIVE Owner 运行映射，生产需专用最小权限身份；本次未修改 UAT/生产。
 
 - 生产租户 `org5nszpgj99jaysxv6y` 微信客服回调故障已定位并完成服务端技术复核：企业微信在 08:51 的两次真实 URL 校验完整到达 backend，但使用当时配置签名校验为403；租户在 08:52 重新保存配置后，服务端内部重放同一条企业微信真实签名请求返回 `200 text/plain`，证明当前 Token/AESKey 与企业微信请求匹配。16:57 通过登录态管理页执行官方连接测试，CorpID/API Secret 获取 access token 成功，缓存到期刷新至18:55。生产仍为 `2.8.67 / 2970bea75208`、healthy/restart=0，公开 smoke 通过；企业微信后台受站点安全策略保护，最终需 HUMAN 在现有标签页重新点击保存并让平台产生一条新的200验证请求，才能把平台配置标记为完成。
 

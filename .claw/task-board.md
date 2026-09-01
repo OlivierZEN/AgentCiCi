@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-09-01T06:16:48Z
+updated_at: 2026-09-01T11:46:20Z
 updated_by: codex
 board_status: active
 ---
@@ -1972,6 +1972,20 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: `用户授权 workspace-governance 范围后，持久更新 cc-local-stack Keycloak client 配置，再从本地 main 构建 backend/frontend 并完成登录后退出回归。`
 
 ## Completed Tasks
+
+### TASK-348 - 对外售前智能体重构与 Mary 演示落地
+
+- status: `done`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- claimed_by: `codex`
+- spec_path: `docs/specs/FEAT-207-public-presales-visitor-lifecycle.md`
+- task_status_path: `.claw/tasks/TASK-348.md`
+- blocked_by: `none`
+- related_issues: `none`
+- scope_files: `Website 访客档案、独立访问会话、售前状态机、联系方式线索、售中售后工单引导、Embed 浮窗、本地 Mary 演示配置`
+- completion_evidence: `1ffc9092 + c5726b28 + 6fa12d73；后端聚焦/package、前端 61/338 与最终 3/3/build、V129、域名/diff、真实售后零模型/零工具、线索加密脱敏、再访隔离、浏览器 DOM 和本地双制品 2.8.68-dev.6fa12d7 healthy/restart=0 通过；Mary 正式 API 发布 v4。`
+- next_action: `本地技术交付完成；UAT/生产前建立专用最小权限运行身份、配置环境侧工单 URL，并单独执行 HUMAN 业务验收。`
 
 ### TASK-345 - DevAutopilot MCP-only 解耦回归修复
 
