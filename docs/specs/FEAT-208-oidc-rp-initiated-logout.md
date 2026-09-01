@@ -5,9 +5,9 @@ title: 门户统一身份完整注销
 status: approved
 owner_role: fullstack-agent
 task_ids: TASK-350
-related_decisions: none
+related_decisions: INT-031
 related_issues: none
-updated_at: 2026-09-01T11:32:06Z
+updated_at: 2026-09-01T12:09:14Z
 updated_by: codex
 ---
 
