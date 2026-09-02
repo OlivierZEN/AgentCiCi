@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-08-31T07:31:00Z
+updated_at: 2026-09-02T02:15:16Z
 updated_by: codex
 board_status: active
 ---
@@ -14,6 +14,19 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-354 - 登录后当前用户头像可见性修复
+
+- status: `review`
+- priority: `high`
+- owner_role: `frontend-agent`
+- claimed_by: `codex`
+- task_status_path: `.claw/tasks/TASK-354.md`
+- blocked_by: `none`
+- related_issues: `none`
+- scope_files: `当前用户侧栏头像回退背景、主题回归测试、登录态本地页面验证`
+- completion_evidence: `实现从 origin/main@5e697daf 独立移植为 a589167d；候选主题 13/13、全量 61/335、production build 通过，未夹带本地其他 ahead 提交；本地登录态计算样式通过。`
+- next_action: `用户目视确认当前页面头像显示符合预期。`
 
 ### TASK-350 - 门户统一身份完整注销
 

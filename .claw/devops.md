@@ -1,12 +1,19 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-08-31T08:59:00Z
+updated_at: 2026-09-02T02:15:16Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-09-02 TASK-354 本地开发环境
+
+- 代码制品提交为本地 `main@8131ca0deed7`，frontend 运行 `2.8.68-dev.8131ca0 / 8131ca0d`，healthy/restart=0；`https://cici.localhost/app` 为 200，正式页面资源带同版本指纹。
+- 登录态页面回读当前用户头像为 `38x38` 圆形，实体背景 `rgb(135,98,35)`、文字 `rgb(255,253,248)`，console error/warning=0，近期 Nginx 结构化状态列 5xx=0。
+- 远程候选从 `origin/main@5e697daf` 隔离建立，仅移植头像实现为 `a589167d` 并补充本任务治理证据；本地其他 ahead 提交不进入候选。
+- 本任务未修改 backend、状态服务、共享基础设施、跨项目契约、UAT、生产、ACR 或 Git tag。
 
 ## 2026-08-31 生产微信客服回调签名复核
 

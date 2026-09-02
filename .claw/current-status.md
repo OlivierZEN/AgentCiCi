@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 6
-updated_at: 2026-08-31T08:59:00Z
+updated_at: 2026-09-02T02:15:16Z
 updated_by: codex
 phase: review
 active_task: null
-next_action: "HUMAN 目视确认本地 Web 浮窗真实流式；如需发布 UAT，另行确认后冻结 2.8.68-beta.4 并执行备份、回滚和最小发布门禁。"
+next_action: "用户目视确认当前页面头像显示；UAT 与生产未修改。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- `TASK-354` 已完成登录后当前用户头像可见性修复并进入 review：全局主题按钮规则会移除 `background-image`，原头像渐变因而消失，白色首字母落在透明底上；现使用主题强调色实体背景与表面色文字，保留 `38px` 圆形和个人简档入口。原始实现 `8131ca0d` 已进入本地 `main`，并从 `origin/main@5e697daf` 独立移植为候选 `a589167d`，未包含其他本地 ahead 提交。候选主题 `13/13`、全量 `61/335`、production build，以及本地登录态计算样式与控制台均通过；当前账号无图片头像，用户目视确认待完成。UAT、生产未修改。
 
 - 生产租户 `org5nszpgj99jaysxv6y` 微信客服回调故障已定位并完成服务端技术复核：企业微信在 08:51 的两次真实 URL 校验完整到达 backend，但使用当时配置签名校验为403；租户在 08:52 重新保存配置后，服务端内部重放同一条企业微信真实签名请求返回 `200 text/plain`，证明当前 Token/AESKey 与企业微信请求匹配。16:57 通过登录态管理页执行官方连接测试，CorpID/API Secret 获取 access token 成功，缓存到期刷新至18:55。生产仍为 `2.8.67 / 2970bea75208`、healthy/restart=0，公开 smoke 通过；企业微信后台受站点安全策略保护，最终需 HUMAN 在现有标签页重新点击保存并让平台产生一条新的200验证请求，才能把平台配置标记为完成。
 

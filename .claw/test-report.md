@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-09-01T12:22:39Z
+updated_at: 2026-09-02T02:15:16Z
 updated_by: codex
 status: active
-last_run_at: 2026-09-01T12:22:39Z
-last_run_status: passed_task_350_local_technical_pending_human_logout
+last_run_at: 2026-09-02T02:15:16Z
+last_run_status: passed_task_354_local_technical_pending_user_visual
 ---
 
 # Test Report
+
+## 2026-09-02 TASK-354 登录后当前用户头像可见性
+
+- 状态：`passed_task_354_local_technical_pending_user_visual`。全局主题按钮规则会移除 `background-image`，原头像仅依赖渐变背景，导致登录用户首字母以白色显示在透明底上；现改用主题强调色的实体 `background` 与表面色文字。
+- 隔离候选：从 `origin/main@5e697daf` 仅移植本任务实现为 `a589167d`，候选不包含本地其他 ahead 任务提交。
+- 自动化：远程隔离候选主题聚焦 `13/13`、前端全量 `61 files / 335 tests`、production build 与 `git diff --check` 通过；本地较新 `main` 的既有验证为 `62 files / 342 tests`，不混写为候选结果。
+- 治理校验边界：`validate-state.py .claw` 仍因远程基线已有的历史 feature 状态/front matter、已完成任务留在 Active 和归档数量债务失败；输出未指向 TASK-354 新增文件，不在本次头像修复中扩大范围清理。
+- 运行回读：本地 frontend `2.8.68-dev.8131ca0 / 8131ca0d`、healthy/restart=0；登录态 `/app` 头像为 `38x38` 圆形，背景 `rgb(135,98,35)`、文字 `rgb(255,253,248)`，console error/warning=0。
+- HUMAN 边界：当前账号没有图片头像，页面使用首字母回退；用户目视确认仍待完成，不以自动化或计算样式替代。
 
 ## 2026-09-01 TASK-350 门户统一身份完整注销自动化
 
