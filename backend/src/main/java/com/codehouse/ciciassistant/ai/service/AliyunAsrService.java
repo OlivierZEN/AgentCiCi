@@ -93,6 +93,9 @@ public class AliyunAsrService {
         }
         FileType fileType = validateSupportedFile(originalFilename, contentType);
         String safeFilename = safeFilename(originalFilename, fileType.extension());
+        if (usesSynchronousFileAsrProtocol(invocation.modelName())) {
+            return transcribeMeetingFileSynchronously(invocation, fileBytes, safeFilename, fileType);
+        }
         String temporaryUrl = uploadToDashscopeTemporaryStorage(invocation, fileBytes, safeFilename, fileType.contentType());
         String taskId = submitFileTranscriptionTask(invocation, temporaryUrl);
         JsonNode taskOutput = waitForFileTranscription(invocation, taskId);
@@ -110,6 +113,96 @@ public class AliyunAsrService {
                 fileBytes.length,
                 segments
         );
+    }
+
+    static boolean usesSynchronousFileAsrProtocol(String modelName) {
+        String normalized = modelName == null ? "" : modelName.trim().toLowerCase();
+        return (normalized.startsWith("qwen-audio-3.0-asr-flash") && !normalized.contains("filetrans"))
+                || normalized.startsWith("fun-asr-flash");
+    }
+
+    private FileTranscriptionResult transcribeMeetingFileSynchronously(AsrInvocation invocation,
+                                                                        byte[] fileBytes,
+                                                                        String safeFilename,
+                                                                        FileType fileType) {
+        String dataUrl = "data:" + fileType.contentType() + ";base64,"
+                + Base64.getEncoder().encodeToString(fileBytes);
+        Map<String, Object> payload = Map.of(
+                "model", invocation.modelName(),
+                "input", Map.of("messages", List.of(Map.of(
+                        "role", "user",
+                        "content", List.of(Map.of(
+                                "type", "input_audio",
+                                "input_audio", Map.of("data", dataUrl)
+                        ))
+                ))),
+                "parameters", Map.of("format", fileType.extension())
+        );
+        Map<String, Object> response;
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> responseBody = invocation.dashscopeRestClient().post()
+                    .uri("/api/v1/services/aigc/multimodal-generation/generation")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + invocation.apiKey())
+                    .header("X-DashScope-SSE", "disable")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(payload)
+                    .retrieve()
+                    .body(Map.class);
+            response = responseBody;
+        } catch (RestClientException e) {
+            throw new IllegalArgumentException("百炼同步文件转写失败：" + providerFailureMessage(e), e);
+        }
+        JsonNode root = objectMapper.valueToTree(response);
+        List<MeetingFileTranscriptSegment> segments = parseSynchronousFileTranscript(root);
+        if (segments.isEmpty()) {
+            throw new IllegalArgumentException("百炼同步文件转写未返回可用内容");
+        }
+        String requestId = root.path("request_id").asText("");
+        return new FileTranscriptionResult(
+                invocation.modelName(),
+                requestId.isBlank() ? "sync" : requestId,
+                safeFilename,
+                fileType.extension(),
+                fileType.contentType(),
+                fileBytes.length,
+                segments
+        );
+    }
+
+    static List<MeetingFileTranscriptSegment> parseSynchronousFileTranscript(JsonNode root) {
+        String text = root.path("output").path("text").asText("").trim();
+        if (text.isBlank()) {
+            text = root.path("output").path("sentence").path("text").asText("").trim();
+        }
+        if (text.isBlank()) {
+            return List.of();
+        }
+        JsonNode sentence = root.path("output").path("sentence");
+        return List.of(new MeetingFileTranscriptSegment(
+                "1",
+                "发言人 1",
+                text,
+                longOrNull(sentence.path("begin_time")),
+                longOrNull(sentence.path("end_time"))
+        ));
+    }
+
+    private String providerFailureMessage(RestClientException exception) {
+        if (exception instanceof org.springframework.web.client.RestClientResponseException responseException) {
+            try {
+                JsonNode body = objectMapper.readTree(responseException.getResponseBodyAsString());
+                String message = body.path("message").asText("").trim();
+                if (!message.isBlank()) {
+                    return message;
+                }
+            } catch (Exception ignored) {
+                // Fall through to the status-aware client message.
+            }
+        }
+        return exception.getMessage() == null || exception.getMessage().isBlank()
+                ? "上游服务调用失败"
+                : exception.getMessage();
     }
 
     static FileType validateSupportedFile(String originalFilename, String contentType) {
@@ -266,16 +359,22 @@ public class AliyunAsrService {
                         "diarization_enabled", true
                 )
         );
-        @SuppressWarnings("unchecked")
-        Map<String, Object> response = invocation.dashscopeRestClient().post()
-                .uri("/api/v1/services/audio/asr/transcription")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + invocation.apiKey())
-                .header("X-DashScope-Async", "enable")
-                .header("X-DashScope-OssResourceResolve", "enable")
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(payload)
-                .retrieve()
-                .body(Map.class);
+        Map<String, Object> response;
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> responseBody = invocation.dashscopeRestClient().post()
+                    .uri("/api/v1/services/audio/asr/transcription")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + invocation.apiKey())
+                    .header("X-DashScope-Async", "enable")
+                    .header("X-DashScope-OssResourceResolve", "enable")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(payload)
+                    .retrieve()
+                    .body(Map.class);
+            response = responseBody;
+        } catch (RestClientException e) {
+            throw new IllegalArgumentException("百炼异步文件转写任务提交失败：" + providerFailureMessage(e), e);
+        }
         String taskId = objectMapper.valueToTree(response).path("output").path("task_id").asText("");
         if (taskId.isBlank()) {
             throw new IllegalArgumentException("百炼语音识别任务提交失败");

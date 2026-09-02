@@ -7,8 +7,8 @@ owner_role: fullstack-agent
 task_ids: TASK-134
 related_decisions: none
 related_issues: none
-updated_at: 2026-05-25T12:24:00Z
-updated_by: MANAGER-001
+updated_at: 2026-09-02T01:25:52Z
+updated_by: codex
 ---
 
 # FEAT-054 - AI Minutes Local Audio Upload And Speaker Diarization
@@ -74,3 +74,4 @@ updated_by: MANAGER-001
 
 - 2026-05-25: Opened for implementation from user request to add local audio upload and 百炼 multi-speaker recognition to AI 听记.
 - 2026-05-25: Real provider smoke proved the upload/ASR chain on 60-second chunks from the local recording, returning Fun-ASR speaker transcript segments. Whole-file 7.1MB upload and one chunk still showed intermittent `Connection reset` on this local network, so automatic chunking/retry remains a follow-up rather than part of this delivery.
+- 2026-09-02 TASK-355: 平台治理中的 `file-asr` 当前选择 `qwen-audio-3.0-asr-flash` 专属同步模型，而旧实现无条件走 Filetrans/Fun-ASR 异步任务，真实上传因此返回 `403 current user api does not support asynchronous calls`。实现按模型协议分流：同步 Flash 走 `/api/v1/services/aigc/multimodal-generation/generation` 并回填单发言人 transcript；`*-filetrans` / Fun-ASR 继续走异步任务和说话人分离。同步模型本身不提供说话人分离，若产品必须对上传文件区分发言人，平台须选择支持异步和 diarization 的 Filetrans/Fun-ASR 模型及相应 API 身份。
