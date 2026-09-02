@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-09-01T15:37:39Z
+updated_at: 2026-09-02T00:36:33Z
 updated_by: codex
 status: active
 ---
@@ -21,10 +21,10 @@ status: active
 ## ISSUE-2026-09-01-iflytek-realtime-asr-stuck
 
 - Symptom: AI 听记和对话框实时听写均不出文字；AI 听记停止后持续显示“正在结束”。
-- Verified root cause: 平台保存的官方讯飞 URL 缺少 `/ast/communicate/v1`；浏览器未等待上游 `started` 即进入听写态；解析器遗漏解包后的 `ls=true` 空最后帧，完成回调又只依赖浏览器 WebSocket close。
-- Resolution: TASK-352 拆分对话阿里云与 AI 听记讯飞路由，规范讯飞官方主机根路径，以上游 ready 作为麦克风启动门禁，兼容官方最后帧并将最终帧、异常关闭和 1.5 秒兜底收敛为一次完成回调；两条真实上游合成音频探测已通过。
-- Verification: 后端讯飞协议/URL 聚焦测试、backend package、前端聚焦与全量 `62 files / 341 tests`、production build 通过；待本地 main 提交、双制品部署和真实上游/麦克风验收。
-- Status: resolved in code; local runtime verification in progress; remote/UAT/production unchanged.
+- Verified root cause: 除早期讯飞 URL、ready/last-frame、OACT 与 AudioContext 缺陷外，首帧版 HUMAN 证明 PCM 已到后端；阿里云文本事件被分片时未继续拉取下一片，运行库又把 Paraformer 专用场景错存为通用 Qwen Audio 模型，浏览器还会在有效声音出现前固定 5 秒自动停止。
+- Resolution: TASK-352 修复阿里云分片 demand、严格隔离阿里云 Paraformer/讯飞专用候选并以 V132 纠正历史路由；浏览器启用单声道/自动增益和有效声音门禁，后端增加不含内容的 peak/rms 与事件计数。
+- Verification: 前端 `63 files / 349 tests`、production build，后端聚焦/package、V132 事务预演和本地正式迁移通过；backend/frontend `2.8.68-dev.cc27aff` healthy/restart=0，路由/版本/页面一致。
+- Status: latest fix deployed locally; HUMAN dual-entry recognition and finish verification pending; remote/UAT/production unchanged.
 
 ## ISSUE-2026-09-01-onekeytoken-auto-vision-capability
 

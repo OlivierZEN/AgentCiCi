@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-09-02T00:05:33Z
+updated_at: 2026-09-02T00:36:33Z
 updated_by: codex
 status: active
-last_run_at: 2026-09-02T00:05:33Z
-last_run_status: passed_task_352_audio_flow_technical_pending_human_retest
+last_run_at: 2026-09-02T00:36:33Z
+last_run_status: passed_task_352_fragmented_results_technical_pending_human_retest
 ---
 
 # Test Report
+
+## 2026-09-02 TASK-352 真人语音分片结果与专用路由修复
+
+- 状态：`passed_task_352_fragmented_results_technical_pending_human_retest`。HUMAN 首帧版两次阿里云测试各上传 `59` 帧/`161070` 字节但无文字，证明浏览器 PCM 已到后端；本版继续修复上游结果分片、协议专用路由和弱语音输入。
+- 自动化：前端聚焦 `13/13`、全量 `63 files / 349 tests`、production build 通过；后端 `Pcm16SignalMetricsTest,RealtimeAsrAuthenticatorTest,RealtimeAsrProviderSelectionTest` 与 package 通过；`git diff --check` 通过。Spring 目标集成测试因默认数据库不可达持续重试后中止，不声明通过。
+- 迁移：V132 在真实本地数据库事务中把 `voice-asr` 的 `qwen-audio-3.0-realtime-flash` 命中 1 条改为 `paraformer-realtime-v2` 后回滚预演；部署启动正式 success，最终阿里云/讯飞两条专用路由回读正确。
+- 本地运行：`cc27aff6683a` 已进入本地 main；backend/frontend 为 `2.8.68-dev.cc27aff`，OCI/version API/授权态页面一致，两容器 healthy/restart=0、首页 200、启动 severe=0。
+- 边界：尚未由 HUMAN 在本版发送真实语音；只有复测产生文字、正确结束，并回读合理 peak/rms/upstreamEvents/transcriptEvents 后才可接受。
 
 ## 2026-09-02 TASK-352 浏览器实时音频首帧门禁
 

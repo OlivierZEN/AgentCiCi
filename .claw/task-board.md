@@ -53,8 +53,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - related_issues: `ISSUE-2026-09-01-iflytek-realtime-asr-stuck`
 - scope_files: `双厂商实时 ASR、OACT WebSocket 鉴权、浏览器 AudioContext/首帧门禁、非内容型帧计数、AI 听记与对话框回归、本地全栈验证`
-- completion_evidence: `85e9ad51 已从本地 main 部署为 backend/frontend 2.8.68-dev.85e9ad5，聚焦 10、前端 62 files/346、后端聚焦/package、production build 通过，两容器 healthy/restart=0；HUMAN 前次复测证明 OACT/上游 ready 可进入录音态，但无文字，待新版双入口复测回读音频帧。`
-- next_action: `用户在新版本页面分别测试对话框麦克风和 AI 听记；回读 backend 首帧/总帧/字节与厂商文字事件，确认是已修复或继续定位厂商返回。`
+- completion_evidence: `cc27aff6 已从本地 main 部署为 backend/frontend 2.8.68-dev.cc27aff；前端 63 files/349、后端聚焦/package、build、V132 预演/正式迁移通过，两容器 healthy/restart=0。首帧版 HUMAN 对话复测已证明 59 帧/161070 字节到达后端，本版修复阿里云分片拉取、专用路由、弱语音增益和过早自动停止。`
+- next_action: `用户在新版分别测试对话框和 AI 听记；回读 peak/rms、upstreamEvents、transcriptEvents，确认真人语音转写与结束状态。`
 
 ### TASK-351 - OneKeyToken 自动路由视觉能力同步
 

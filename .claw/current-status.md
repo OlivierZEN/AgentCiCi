@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 6
-updated_at: 2026-09-02T00:05:33Z
+updated_at: 2026-09-02T00:36:33Z
 updated_by: codex
 phase: in_progress
 active_task: TASK-352
-next_action: "用户在 2.8.68-dev.85e9ad5 页面分别复测阿里云对话听写和讯飞 AI 听记；随后回读后端首帧/总帧/字节与文字事件。"
+next_action: "用户在 2.8.68-dev.cc27aff 页面分别复测阿里云对话听写和讯飞 AI 听记；随后回读峰值/RMS、上游事件与文字事件。"
 read_next:
   goals: false
   decisions: false
@@ -24,7 +24,7 @@ read_next:
 
 - `TASK-353 / FEAT-188` 技术实现和本地运行门禁完成，进入 review：真实会话证明历史装配丢失图片；`123619a7223e` 仅对明确历史图片指代恢复最近一个同租户/同会话/同消息/ATTACHED 的带图用户轮，并继续执行 vision 门禁。聚焦 56 项、package/diff 通过；最终 backend 运行包含本修复的代码提交 `7ced552aa661 / 2.8.68-dev.7ced552`，frontend 运行主线治理提交 `118ff72da8c5 / 2.8.68-dev.118ff72`，两者 healthy/restart=0，OneKey auto=`[text,vision]`。待用户在原会话确认回答内容匹配，不以技术门禁替代 HUMAN。
 
-- `TASK-352 / FEAT-062` 保持 `in_progress`：OACT 修复后，2026-09-02 HUMAN 复测两条入口都能进入录音态但没有文字；Nginx 回读阿里云/讯飞 WebSocket 均为 101，后端无厂商错误，断点后移到共享浏览器音频采集。`85e9ad51479e` 已进入本地 main 并部署为双制品 `2.8.68-dev.85e9ad5`：显式恢复 `AudioContext` 为 `running`，以 3 秒内第一帧 `onaudioprocess` 作为录音成功门禁；后端仅记录首帧、总帧数和字节数，不记录音频内容/身份/Token。聚焦前端 10 项、全量 `62 files / 346 tests`、production build、后端聚焦和 package 通过；两容器 healthy/restart=0，新 Chrome 授权态标签版本/console 0 通过，待 HUMAN 双入口复测回读音频帧和文字。
+- `TASK-352 / FEAT-062` 保持 `in_progress`：HUMAN 在首帧版两次对话复测均上传 `59` 帧/`161070` 字节但无文字，证明断点在浏览器到后端之后。`cc27aff6683a` 修复阿里云分片事件未继续拉取、专用 ASR 候选混入通用模型、弱语音输入与过早 5 秒自动停止；V132 把实际 `voice-asr` 从 `qwen-audio-3.0-realtime-flash` 纠正为 `paraformer-realtime-v2`。聚焦前端 13 项、全量 `63 files / 349 tests`、production build、后端聚焦/package 和 V132 事务预演通过；backend/frontend 运行 `2.8.68-dev.cc27aff`、healthy/restart=0，V132 success、两条路由正确、授权态页面版本/麦克风入口通过。待 HUMAN 双入口复测后回读非内容型峰值/RMS、上游与文字事件。
 
 - `TASK-354` 已完成本地技术修复，进入 review：根因是主题全局 `button` 规则移除头像唯一的渐变背景，使 `38px` 圆形按钮只剩白色首字母；`8131ca0d` 改用主题强调实色与表面文字色，不改几何或个人简档交互。聚焦 `13/13`、前端全量 `62 files / 342 tests`、production build 与 diff check 通过；frontend 运行 `2.8.68-dev.8131ca0`、healthy/restart=0，登录态计算样式、桌面截图、版本资源和 console 0 通过。待用户目视确认，不以技术截图替代 HUMAN 接受。
 

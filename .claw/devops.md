@@ -1,12 +1,19 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-09-02T00:05:33Z
+updated_at: 2026-09-02T00:36:33Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-09-02 TASK-352 本地真人语音结果分片修复
+
+- `cc27aff6683a926918cae8982ca9f74d3838f103` 已进入本地 main；backend/frontend 运行 `2.8.68-dev.cc27aff`，镜像 `sha256:981fc476a45f` / `sha256:dda7f587a757`，OCI、容器、version API 与页面角标一致。
+- frontend 使用受管 release Dockerfile；backend release 容器内 Maven 依赖阶段长时间无输出后安全中止，改用同一 main 已通过 package 的 JAR 覆入既有 JRE 基线，JAR SHA-256 `405bf1bfedc0ac1564227fa6ad9e76f80c7246dae27b7856df663cc563118fbc`。只替换 backend/cici-frontend，两者 healthy/restart=0。
+- Flyway V132 success；运行路由为 `voice-asr=aliyun-bailian/paraformer-realtime-v2`、`meeting-realtime-asr=iflytek_asr/iflytek-realtime-asr`。首页 200，启动 ERROR/FATAL=0，授权态 Chrome 标签加载 `dev.cc27aff` 且麦克风入口存在。
+- 本次未修改 local-stack 受管文件、共享基础设施、远程、ACR、tag、UAT 或生产；真实语音仍待 HUMAN，本版日志仅记录非内容型音量与事件计数。
 
 ## 2026-09-02 TASK-352 本地浏览器音频首帧修复
 

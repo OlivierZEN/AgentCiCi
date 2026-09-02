@@ -7,7 +7,7 @@ status: in_progress
 branch: main
 pr_url: n/a
 spec_path: docs/specs/FEAT-062-platform-model-provider-governance.md
-updated_at: 2026-09-02T00:27:26Z
+updated_at: 2026-09-02T00:36:33Z
 updated_by: codex
 ---
 
@@ -59,3 +59,4 @@ updated_by: codex
 - 2026-09-02 HUMAN 复测证明两条入口都能进入录音态但没有文字；Nginx 分别回读阿里云和讯飞 101，后端无厂商错误。共同断点转到浏览器音频采集：既有代码在异步 OACT/上游 ready 后创建 `AudioContext`，未执行 `resume()` 且未验证第一帧，Chrome 可保持 `suspended` 并形成假录音态。
 - 修复 `85e9ad51479e` 已进入本地 main 并部署为 `2.8.68-dev.85e9ad5`：AudioContext 必须为 running、3 秒首帧门禁、后端非内容型音频帧计数均已生效；backend/frontend healthy/restart=0，新 Chrome 标签加载同版本且 console 0。待 HUMAN 双入口复测后回读帧数与文字。
 - 2026-09-02 HUMAN 再次复测对话框仍为空；运行证据为两次阿里云会话各 `59` 帧、`161070` 字节、101/1000 正常关闭，证明浏览器 PCM 已到后端。进一步确认阿里云分片文本未继续 `request(1)`，且数据库 `voice-asr` 错存 `qwen-audio-3.0-realtime-flash`；本轮修复分片拉取、专用候选/V132、单声道自动增益、有效声音门禁及非内容型信号/上游事件计数，待提交部署后复测。
+- 修复 `cc27aff6683a` 已进入本地 main 并部署为 `2.8.68-dev.cc27aff`；V132 success，路由回读为阿里云 Paraformer/讯飞专用适配器，backend/frontend healthy/restart=0，授权态页面加载同版本。聚焦/全量/build/package 均通过；默认 Spring 集成因测试库不可达中止，不声明该方法通过。待 HUMAN 双入口复测。
