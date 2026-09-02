@@ -8,6 +8,39 @@ export function floatTo16BitPcm(float32: Float32Array): ArrayBuffer {
   return out.buffer;
 }
 
+export type AsrInputFrame = {
+  samples: Float32Array;
+  peak: number;
+  rms: number;
+  audible: boolean;
+  gain: number;
+};
+
+/**
+ * Keeps quiet browser microphones usable without amplifying an effectively
+ * silent track into noise. The returned metrics contain no audio content.
+ */
+export function normalizeAsrInput(buffer: Float32Array): AsrInputFrame {
+  let peak = 0;
+  let sumSquares = 0;
+  for (let index = 0; index < buffer.length; index += 1) {
+    const sample = Number.isFinite(buffer[index]) ? buffer[index] : 0;
+    peak = Math.max(peak, Math.abs(sample));
+    sumSquares += sample * sample;
+  }
+  const rms = buffer.length > 0 ? Math.sqrt(sumSquares / buffer.length) : 0;
+  const audible = peak >= 0.006 || rms >= 0.002;
+  const gain = audible && rms > 0 && rms < 0.05 ? Math.min(6, 0.06 / rms) : 1;
+  if (gain === 1) {
+    return { samples: buffer, peak, rms, audible, gain };
+  }
+  const samples = new Float32Array(buffer.length);
+  for (let index = 0; index < buffer.length; index += 1) {
+    samples[index] = Math.max(-1, Math.min(1, (buffer[index] ?? 0) * gain));
+  }
+  return { samples, peak, rms, audible, gain };
+}
+
 /** Downsample mono float buffer to 16 kHz Int16 PCM ArrayBuffer. */
 export function downsampleTo16k(buffer: Float32Array, inputSampleRate: number): ArrayBuffer {
   const targetRate = 16000;

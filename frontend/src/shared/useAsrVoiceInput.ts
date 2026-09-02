@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { downsampleTo16k } from "./asrPcm";
+import { downsampleTo16k, normalizeAsrInput } from "./asrPcm";
 
 const ASR_STOP_CLOSE_GRACE_MS = 1500;
 const ASR_START_TIMEOUT_MS = 8000;
@@ -195,6 +195,7 @@ export function useAsrVoiceInput() {
   const partialAsrTextRef = useRef("");
   const prefixSnapshotRef = useRef("");
   const silenceTimerRef = useRef<number | null>(null);
+  const audibleSignalTimerRef = useRef<number | null>(null);
   const silenceTimeoutMsRef = useRef<number | null>(null);
   const liveHandlerRef = useRef<(text: string) => void>(() => {});
   const noticeHandlerRef = useRef<(msg: string) => void>(() => {});
@@ -220,6 +221,10 @@ export function useAsrVoiceInput() {
   }, []);
 
   const disconnectAudio = useCallback(() => {
+    if (audibleSignalTimerRef.current != null) {
+      window.clearTimeout(audibleSignalTimerRef.current);
+      audibleSignalTimerRef.current = null;
+    }
     try {
       processorNodeRef.current?.disconnect();
       sourceNodeRef.current?.disconnect();
@@ -446,7 +451,14 @@ export function useAsrVoiceInput() {
           speakerDiarization: Boolean(options.speakerDiarization),
         }));
         await waitForAsrStarted(websocket);
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
         mediaStreamRef.current = stream;
         if (websocket.readyState !== 1 || !asrReadyRef.current) {
           throw new Error("实时语音服务已关闭");
@@ -467,6 +479,7 @@ export function useAsrVoiceInput() {
         const processor = context.createScriptProcessor(4096, 1, 1);
         processorNodeRef.current = processor;
         let firstAudioFrameSeen = false;
+        let audibleAudioFrameSeen = false;
         let resolveFirstAudioFrame: (() => void) | null = null;
         let firstAudioFrameTimer: number | null = null;
         const firstAudioFrame = new Promise<void>((resolve, reject) => {
@@ -492,13 +505,19 @@ export function useAsrVoiceInput() {
             resolveFirstAudioFrame = null;
           }
           const channelData = ev.inputBuffer.getChannelData(0);
-          for (let i = 0; i < channelData.length; i += 32) {
-            if (Math.abs(channelData[i] ?? 0) > 0.018) {
-              armSilenceTimer();
-              break;
+          const normalized = normalizeAsrInput(channelData);
+          if (normalized.audible) {
+            if (!audibleAudioFrameSeen) {
+              audibleAudioFrameSeen = true;
+              if (audibleSignalTimerRef.current != null) {
+                window.clearTimeout(audibleSignalTimerRef.current);
+                audibleSignalTimerRef.current = null;
+              }
+              noticeHandlerRef.current(sessionStatusNoticeRef.current || "已检测到声音，正在实时转写...");
             }
+            armSilenceTimer();
           }
-          const downsampled = downsampleTo16k(channelData, context.sampleRate);
+          const downsampled = downsampleTo16k(normalized.samples, context.sampleRate);
           if (downsampled.byteLength > 0) {
             currentSocket.send(downsampled);
           }
@@ -518,8 +537,16 @@ export function useAsrVoiceInput() {
 
         finishCallbackEnabledRef.current = true;
         setListening(true);
-        noticeHandlerRef.current(sessionStatusNoticeRef.current || "实时听写中...（边说边出字）");
-        armSilenceTimer();
+        if (audibleAudioFrameSeen) {
+          noticeHandlerRef.current(sessionStatusNoticeRef.current || "已检测到声音，正在实时转写...");
+        } else {
+          noticeHandlerRef.current(sessionStatusNoticeRef.current || "正在监听麦克风，请开始说话...");
+          audibleSignalTimerRef.current = window.setTimeout(() => {
+            if (!audibleAudioFrameSeen) {
+              noticeHandlerRef.current("尚未检测到有效声音，请确认浏览器使用了正确的麦克风后继续说话。");
+            }
+          }, ASR_AUDIO_FLOW_TIMEOUT_MS);
+        }
       } catch (error) {
         noticeHandlerRef.current(`实时语音启动失败：${error instanceof Error ? error.message : String(error)}`);
         abort();

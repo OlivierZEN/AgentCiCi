@@ -167,6 +167,7 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
         int frameBytes = message.getPayload().remaining();
         ctx.audioFrames += 1;
         ctx.audioBytes += frameBytes;
+        ctx.signalMetrics.observe(message.getPayload());
         if (ctx.audioFrames == 1) {
             log.info("Realtime ASR received first browser audio frame: provider={}, bytes={}", ctx.provider, frameBytes);
             sendClientEvent(session, Map.of("type", "status", "message", "audio-received"));
@@ -183,8 +184,11 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         SessionCtx ctx = sessions.remove(session.getId());
         if (ctx != null) {
-            log.info("Realtime ASR browser stream closed: provider={}, audioFrames={}, audioBytes={}, closeCode={}",
-                    ctx.provider, ctx.audioFrames, ctx.audioBytes, status.getCode());
+            log.info("Realtime ASR browser stream closed: provider={}, audioFrames={}, audioBytes={}, samples={}, peak={}, rms={}, upstreamEvents={}, transcriptEvents={}, closeCode={}",
+                    ctx.provider, ctx.audioFrames, ctx.audioBytes, ctx.signalMetrics.sampleCount(),
+                    String.format(java.util.Locale.ROOT, "%.5f", ctx.signalMetrics.peakRatio()),
+                    String.format(java.util.Locale.ROOT, "%.5f", ctx.signalMetrics.rmsRatio()),
+                    ctx.upstreamEvents, ctx.transcriptEvents, status.getCode());
         }
         if (ctx != null && ctx.aliyunClient != null) {
             ctx.aliyunClient.close();
@@ -479,6 +483,7 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
 
         private void handleIflytekEvent(String raw) {
             try {
+                ctx.upstreamEvents += 1;
                 JsonNode root = objectMapper.readTree(raw);
                 String action = firstNonBlank(root.path("action").asText(""), root.path("data").path("action").asText(""));
                 int code = root.path("code").asInt(0);
@@ -519,6 +524,9 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
                 List<IflytekAsrResultParser.TranscriptPiece> pieces = extraction.pieces();
                 String eventType = IflytekAsrResultParser.isFinal(payload) ? "final" : "partial";
                 for (IflytekAsrResultParser.TranscriptPiece piece : pieces) {
+                    if (!piece.text().isBlank()) {
+                        ctx.transcriptEvents += 1;
+                    }
                     Map<String, Object> event = new HashMap<>();
                     event.put("type", eventType);
                     event.put("text", piece.text());
@@ -647,7 +655,8 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
         public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
             if (!last) {
                 textBuffer.append(data);
-                return WebSocket.Listener.super.onText(webSocket, data, false);
+                webSocket.request(1);
+                return null;
             }
             if (textBuffer.length() > 0) {
                 textBuffer.append(data);
@@ -676,6 +685,7 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
 
         private void handleAliyunEvent(String raw) {
             try {
+                ctx.upstreamEvents += 1;
                 JsonNode root = objectMapper.readTree(raw);
                 JsonNode header = root.path("header");
                 String event = header.path("event").asText("");
@@ -689,6 +699,7 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
                     String text = sentence.path("text").asText("");
                     boolean sentenceEnd = sentence.path("sentence_end").asBoolean(false);
                     if (!text.isBlank()) {
+                        ctx.transcriptEvents += 1;
                         sendClientEvent(ctx.clientSession, Map.of(
                                 "type", sentenceEnd ? "final" : "partial",
                                 "text", text
@@ -721,6 +732,9 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
         private volatile boolean started;
         private volatile long audioFrames;
         private volatile long audioBytes;
+        private volatile long upstreamEvents;
+        private volatile long transcriptEvents;
+        private final Pcm16SignalMetrics signalMetrics = new Pcm16SignalMetrics();
         private volatile AliyunWsClient aliyunClient;
         private volatile IflytekWsClient iflytekClient;
 

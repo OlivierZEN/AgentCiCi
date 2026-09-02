@@ -368,9 +368,10 @@ public class ModelProviderService {
 
     @Transactional
     public Map<String, Object> platformModelRouteSettings() {
-        List<Map<String, Object>> candidates = platformRouteCandidates();
         return Map.of(
-                "routes", SCENE_ROUTES.stream().map(scene -> routeView(scene, candidates)).toList(),
+                "routes", SCENE_ROUTES.stream()
+                        .map(scene -> routeView(scene, routeCandidatesForScene(scene)))
+                        .toList(),
                 "modelCandidates", agentBaseModels(platformScopeId())
         );
     }
@@ -1168,9 +1169,20 @@ public class ModelProviderService {
     }
 
     private List<Map<String, Object>> routeCandidatesForScene(SceneRouteDef scene) {
-        return List.of("voice-asr", "meeting-realtime-asr").contains(scene.sceneCode())
-                ? platformRouteCandidates()
-                : agentBaseModels(platformScopeId());
+        if ("voice-asr".equals(scene.sceneCode())) {
+            return platformRouteCandidates().stream()
+                    .filter(candidate -> PROVIDER_ALIYUN.equals(String.valueOf(candidate.get("providerCode"))))
+                    .filter(candidate -> ALIYUN_REALTIME_ASR_MODEL.equals(String.valueOf(candidate.get("modelName"))))
+                    .toList();
+        }
+        if ("meeting-realtime-asr".equals(scene.sceneCode())) {
+            return platformRouteCandidates().stream()
+                    .filter(candidate -> IntegrationAppService.APP_CODE_IFLYTEK_ASR.equals(
+                            String.valueOf(candidate.get("providerCode"))))
+                    .filter(candidate -> IFLYTEK_REALTIME_ASR_MODEL.equals(String.valueOf(candidate.get("modelName"))))
+                    .toList();
+        }
+        return agentBaseModels(platformScopeId());
     }
 
     private Map<String, Object> routeView(SceneRouteDef scene, List<Map<String, Object>> candidates) {

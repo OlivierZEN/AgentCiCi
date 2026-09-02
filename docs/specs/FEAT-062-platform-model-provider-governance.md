@@ -7,7 +7,7 @@ owner_role: project-manager
 task_ids: TASK-145, TASK-153, TASK-349, TASK-352
 related_decisions: FEAT-003, FEAT-022, FEAT-037
 related_issues: none
-updated_at: 2026-09-01T14:51:11Z
+updated_at: 2026-09-02T00:27:26Z
 updated_by: codex
 ---
 
@@ -163,6 +163,8 @@ updated_by: codex
 - 真实浏览器使用统一登录签发的 RS256 `ecosystem_user` OACT；实时语音处理器却独立调用旧 HS256 会话解析器。握手升级后在厂商选择前即关闭，导致两家厂商表现为同一个“实时语音服务已关闭”。早期只使用旧 HS256 令牌的合成探测未覆盖真实身份链路。
 - 浏览器把完整 Bearer 放入 WebSocket URL 查询参数，反向代理访问日志会记录该参数；实时语音令牌不得继续通过 URL 传递。
 - OACT 和厂商 ready 修复后，HUMAN 复测两条入口都能显示录音但没有文字；两条 WebSocket 均为 101 且没有厂商错误。共享 hook 在异步鉴权和上游启动后才创建 `AudioContext`，未恢复 `suspended` 状态，也没有以首个 `onaudioprocess` 回调作为录音成功门禁，因此可能根本没有向后端发送二进制音频。
+- 首帧门禁上线后的 HUMAN 对话听写复测已证明浏览器连续上传 `59` 帧、`161070` 字节，故障不再位于权限、采集回调、OACT 或浏览器到后端的网络链路。阿里云 Java WebSocket 在文本事件被分片时只缓存第一片、没有调用 `request(1)` 拉取下一片，真人语音的 `result-generated` 可因此永久停在未完整 JSON；早期短合成音频的单片事件未覆盖该分支。
+- 运行数据库仍把 `voice-asr` 保存为通用 `qwen-audio-3.0-realtime-flash`，但运行处理器实现的是固定 Paraformer 协议。V131 只在路由缺失时插入正确适配器，没有纠正已存在的错误模型；候选生成又把所有声明 `realtime-asr` 的阿里云模型混入专用场景，造成治理显示与协议事实不一致。
 
 ### 设计与验收
 
@@ -175,5 +177,8 @@ updated_by: codex
 - 前端必须依次等待 `authenticated` 和厂商上游 `started`，任一步失败都在申请麦克风前退出；未认证会话不得解析厂商或读取模型凭据。
 - 创建录音节点后必须显式将 `AudioContext` 恢复到 `running`，并在 3 秒内收到第一帧音频回调；未运行或无首帧时退出并显示设备/权限错误，不得进入“录音中”。
 - 后端在会话内只计数首帧、总帧数和总字节数，不记录 PCM 内容、用户身份或 Token；该证据用于区分浏览器采集故障与厂商识别/结果解析故障。
+- 阿里云上游每个文本分片均继续申请下一片，只有完整消息才解析；会话结束记录非内容型峰值、RMS、上游事件数和文字事件数，以区分静音输入、分片停顿和厂商空结果。
+- 浏览器请求单声道、回声消除、降噪与自动增益；对可听但偏弱的输入做有限软件增益，静音不放大。只有检测到有效声音后才启动“无语音自动结束”计时，避免用户尚未开口就被固定 5 秒终止。
+- `voice-asr` 候选只能包含 `aliyun-bailian/paraformer-realtime-v2`，`meeting-realtime-asr` 候选只能包含 `iflytek_asr/iflytek-realtime-asr`；V132 纠正已存在的阿里云通用音频模型路由，不修改凭据。
 - 错误、最终帧和异常关闭均不得永久停在 recording/stopping。
 - 技术验收覆盖 URL 规范化、官方最后帧、上游 ready/error、全量前端测试、production build、backend package 和本地正式环境指纹；真实麦克风转写仍由 HUMAN 最终接受。
