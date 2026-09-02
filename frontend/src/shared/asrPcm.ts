@@ -41,6 +41,25 @@ export function normalizeAsrInput(buffer: Float32Array): AsrInputFrame {
   return { samples, peak, rms, audible, gain };
 }
 
+/**
+ * Selects the channel that actually carries the strongest signal. Some
+ * multi-channel browser capture devices expose an empty first channel, so
+ * always reading channel 0 can produce valid-looking but all-zero PCM frames.
+ */
+export function normalizeStrongestAsrChannel(channels: readonly Float32Array[]): AsrInputFrame {
+  if (channels.length === 0) {
+    return normalizeAsrInput(new Float32Array());
+  }
+  let strongest = normalizeAsrInput(channels[0]);
+  for (let index = 1; index < channels.length; index += 1) {
+    const candidate = normalizeAsrInput(channels[index]);
+    if (candidate.rms > strongest.rms || (candidate.rms === strongest.rms && candidate.peak > strongest.peak)) {
+      strongest = candidate;
+    }
+  }
+  return strongest;
+}
+
 /** Downsample mono float buffer to 16 kHz Int16 PCM ArrayBuffer. */
 export function downsampleTo16k(buffer: Float32Array, inputSampleRate: number): ArrayBuffer {
   const targetRate = 16000;

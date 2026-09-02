@@ -4192,6 +4192,11 @@ export default function AssistantApp() {
       },
       autoStopAfterNoSpeechMs: 5000,
     });
+    requestAnimationFrame(() => {
+      if (isCurrentCompanyScope(requestScope)) {
+        composerInputRef.current?.focus();
+      }
+    });
   };
 
   const stopSpeechInput = () => {

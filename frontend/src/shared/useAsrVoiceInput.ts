@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { downsampleTo16k, normalizeAsrInput } from "./asrPcm";
+import { downsampleTo16k, normalizeStrongestAsrChannel } from "./asrPcm";
 
 const ASR_STOP_CLOSE_GRACE_MS = 1500;
 const ASR_START_TIMEOUT_MS = 8000;
@@ -453,7 +453,7 @@ export function useAsrVoiceInput() {
         await waitForAsrStarted(websocket);
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: {
-            channelCount: 1,
+            channelCount: { ideal: 2 },
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
@@ -476,7 +476,9 @@ export function useAsrVoiceInput() {
         audioContextRef.current = context;
         const source = context.createMediaStreamSource(stream);
         sourceNodeRef.current = source;
-        const processor = context.createScriptProcessor(4096, 1, 1);
+        const trackChannelCount = stream.getAudioTracks()[0]?.getSettings().channelCount;
+        const processorInputChannels = Math.max(1, Math.min(2, trackChannelCount ?? source.channelCount ?? 1));
+        const processor = context.createScriptProcessor(4096, processorInputChannels, 1);
         processorNodeRef.current = processor;
         let firstAudioFrameSeen = false;
         let audibleAudioFrameSeen = false;
@@ -504,8 +506,11 @@ export function useAsrVoiceInput() {
             resolveFirstAudioFrame?.();
             resolveFirstAudioFrame = null;
           }
-          const channelData = ev.inputBuffer.getChannelData(0);
-          const normalized = normalizeAsrInput(channelData);
+          const channels = Array.from(
+            { length: ev.inputBuffer.numberOfChannels },
+            (_, channelIndex) => ev.inputBuffer.getChannelData(channelIndex),
+          );
+          const normalized = normalizeStrongestAsrChannel(channels);
           if (normalized.audible) {
             if (!audibleAudioFrameSeen) {
               audibleAudioFrameSeen = true;
