@@ -6,7 +6,7 @@ priority: critical
 owner_role: backend-agent
 claimed_by: codex
 spec_path: docs/specs/FEAT-054-ai-minutes-local-audio-upload.md
-updated_at: 2026-09-02T01:25:52Z
+updated_at: 2026-09-02T01:31:55Z
 updated_by: codex
 ---
 
@@ -25,7 +25,7 @@ updated_by: codex
 - [x] 模型名可以确定性选择同步或异步协议。
 - [x] 同步响应可转换为现有 transcript 数据结构。
 - [x] 聚焦测试、后端 package 与 `git diff --check` 通过。
-- [ ] 修复提交进入本地 `main` 并从该提交重建 backend。
+- [x] 修复提交进入本地 `main` 并从该提交重建 backend。
 - [ ] 使用无敏感合成音频通过正式上传入口得到转写结果。
 - [ ] 用户使用原录音完成 HUMAN 验收。
 
@@ -34,3 +34,4 @@ updated_by: codex
 - 失败请求已成功上传文件，但提交异步任务返回 `403 AccessDenied: current user api does not support asynchronous calls`。
 - 运行 `file-asr` 为 `aliyun-bailian/qwen-audio-3.0-asr-flash`，专属地址为 `*.cn-beijing.maas.aliyuncs.com/compatible-mode/v1`；密钥只确认已配置，不读取或记录明文。
 - 阿里云官方协议把 `qwen-audio-3.0-asr-flash` 定义为同步文件转写，把 `qwen-audio-3.0-asr-flash-filetrans` / Fun-ASR 定义为异步文件转写。
+- 修复 `f668a2f06c38` 已进入本地 main；backend 运行 `2.8.68-dev.f668a2f`、healthy/restart=0，health=`UP`，文件/实时两条路由保持预期。Chrome 控制接口不支持向文件选择器注入合成文件，未读取浏览器存储或绕过身份；正式入口真实上传待 HUMAN 复测。

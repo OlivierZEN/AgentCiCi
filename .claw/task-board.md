@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-09-02T01:25:52Z
+updated_at: 2026-09-02T01:31:55Z
 updated_by: codex
 board_status: active
 ---
@@ -26,8 +26,8 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - related_issues: `ISSUE-2026-09-02-ai-minutes-file-asr-protocol-mismatch`
 - scope_files: `AliyunAsrService 同步/异步协议选择、上游错误转换、聚焦测试、本地 backend 与合成音频验证`
-- completion_evidence: `真实上传到达后端且临时 OSS 成功，异步提交返回 403；运行 file-asr 实际选中同步 qwen-audio-3.0-asr-flash。聚焦 5 项、package/diff 已通过。`
-- next_action: `提交并部署本地 main，使用无敏感合成音频验证正式上传入口后由用户复测原录音。`
+- completion_evidence: `真实上传到达后端且临时 OSS 成功，异步提交返回 403；运行 file-asr 实际选中同步 qwen-audio-3.0-asr-flash。修复 f668a2f0 进入本地 main；聚焦 5 项、package/diff 通过；backend 2.8.68-dev.f668a2f healthy/restart=0、health UP。`
+- next_action: `用户在新版重新上传原录音；回读同步端点响应和 transcript。若需要上传文件区分发言人，另行配置支持异步 diarization 的 Filetrans/Fun-ASR 模型身份。`
 
 ### TASK-354 - 登录后当前用户头像可见性修复
 

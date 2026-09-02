@@ -1,12 +1,18 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-09-02T00:45:48Z
+updated_at: 2026-09-02T01:31:55Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-09-02 TASK-355 本地文件 ASR 协议路由修复
+
+- `f668a2f06c38fe1f347dd4b14a93a63db3a58856` 已进入本地 main；host Maven 已通过 package，使用产出 JAR 覆入既有 JRE release 基线构建 backend `2.8.68-dev.f668a2f`，镜像 `sha256:60d7644bd58364af96bbdc4614d498270cbf602e47ba17d0b6a41b54b6737ceb` 的 OCI version/revision 一致。
+- 只执行 `--no-deps --force-recreate backend`；backend healthy/restart=0、health=`UP`、启动 severe=0。frontend 未替换，继续运行 `2.8.68-dev.1c31cf3 / sha256:0dfc647ee005` 且 healthy/restart=0；其他产品和状态服务未替换。
+- 运行路由回读为同步文件 Flash、阿里云 Paraformer 对话听写、讯飞 AI 听记，符合三条独立协议边界。未修改模型凭据、远程 main、ACR、tag、UAT 或生产。
 
 ## 2026-09-02 TASK-352 本地浏览器有效声道修复
 
