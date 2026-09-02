@@ -3,6 +3,7 @@ import { downsampleTo16k } from "./asrPcm";
 
 const ASR_STOP_CLOSE_GRACE_MS = 1500;
 const ASR_START_TIMEOUT_MS = 8000;
+const ASR_AUDIO_FLOW_TIMEOUT_MS = 3000;
 
 export function mergePrefixAsr(prefix: string, asr: string): string {
   const a = asr.trim();
@@ -77,6 +78,17 @@ export function isAsrStartedMessage(message: AsrWsMessage): boolean {
 
 export function isAsrAuthenticatedMessage(message: AsrWsMessage): boolean {
   return message.type === "status" && message.message === "authenticated";
+}
+
+type ResumableAudioContext = Pick<AudioContext, "state" | "resume">;
+
+export async function ensureAudioContextRunning(context: ResumableAudioContext): Promise<void> {
+  if (context.state === "suspended") {
+    await context.resume();
+  }
+  if (context.state !== "running") {
+    throw new Error("麦克风音频流未启动，请检查浏览器录音权限后重试");
+  }
 }
 
 export function asrStatusNotice(message: AsrWsMessage): string {
@@ -454,10 +466,30 @@ export function useAsrVoiceInput() {
         sourceNodeRef.current = source;
         const processor = context.createScriptProcessor(4096, 1, 1);
         processorNodeRef.current = processor;
+        let firstAudioFrameSeen = false;
+        let resolveFirstAudioFrame: (() => void) | null = null;
+        let firstAudioFrameTimer: number | null = null;
+        const firstAudioFrame = new Promise<void>((resolve, reject) => {
+          resolveFirstAudioFrame = resolve;
+          firstAudioFrameTimer = window.setTimeout(() => {
+            if (!firstAudioFrameSeen) {
+              reject(new Error("麦克风没有产生音频数据，请检查系统输入设备和浏览器录音权限"));
+            }
+          }, ASR_AUDIO_FLOW_TIMEOUT_MS);
+        });
         processor.onaudioprocess = (ev) => {
           const currentSocket = asrWsRef.current;
           if (!currentSocket || currentSocket.readyState !== 1 || !asrReadyRef.current) {
             return;
+          }
+          if (!firstAudioFrameSeen) {
+            firstAudioFrameSeen = true;
+            if (firstAudioFrameTimer != null) {
+              window.clearTimeout(firstAudioFrameTimer);
+              firstAudioFrameTimer = null;
+            }
+            resolveFirstAudioFrame?.();
+            resolveFirstAudioFrame = null;
           }
           const channelData = ev.inputBuffer.getChannelData(0);
           for (let i = 0; i < channelData.length; i += 32) {
@@ -473,6 +505,16 @@ export function useAsrVoiceInput() {
         };
         source.connect(processor);
         processor.connect(context.destination);
+        try {
+          await ensureAudioContextRunning(context);
+        } catch (error) {
+          firstAudioFrameSeen = true;
+          if (firstAudioFrameTimer != null) {
+            window.clearTimeout(firstAudioFrameTimer);
+          }
+          throw error;
+        }
+        await firstAudioFrame;
 
         finishCallbackEnabledRef.current = true;
         setListening(true);

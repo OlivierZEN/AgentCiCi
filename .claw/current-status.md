@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 6
-updated_at: 2026-09-01T23:44:39Z
+updated_at: 2026-09-02T00:02:01Z
 updated_by: codex
 phase: in_progress
 active_task: TASK-352
-next_action: "取得用户对真实麦克风和厂商音频传输的即时确认，分别验证阿里云对话听写与讯飞 AI 听记；未确认前不代替 HUMAN 录音。"
+next_action: "提交并部署 AudioContext running/首帧门禁与后端帧计数，等待用户分别复测阿里云对话听写和讯飞 AI 听记后回读音频帧及文字事件。"
 read_next:
   goals: false
   decisions: false
@@ -24,7 +24,7 @@ read_next:
 
 - `TASK-353 / FEAT-188` 技术实现和本地运行门禁完成，进入 review：真实会话证明历史装配丢失图片；`123619a7223e` 仅对明确历史图片指代恢复最近一个同租户/同会话/同消息/ATTACHED 的带图用户轮，并继续执行 vision 门禁。聚焦 56 项、package/diff 通过；最终 backend 运行包含本修复的代码提交 `7ced552aa661 / 2.8.68-dev.7ced552`，frontend 运行主线治理提交 `118ff72da8c5 / 2.8.68-dev.118ff72`，两者 healthy/restart=0，OneKey auto=`[text,vision]`。待用户在原会话确认回答内容匹配，不以技术门禁替代 HUMAN。
 
-- `TASK-352 / FEAT-062` 因 2026-09-02 HUMAN 真实登录截图恢复 `in_progress`：两条厂商路由配置正确，但 `/ws/asr` 只接受旧 HS256 会话令牌，真实 RS256 `ecosystem_user` OACT 在厂商选择前被关闭，导致阿里云对话听写和讯飞 AI 听记同时显示“实时语音服务已关闭”；此前旧令牌合成探测不能证明浏览器身份链路。修复 `e9478ad633ec` 已进入本地 main：建连后帧内 OACT 认证、认证成功后再启动独立厂商，并从 URL 移除 Bearer；聚焦后端 3 组、前端 8 项、前端全量 `62 files / 344 tests`、backend package 与 production build 通过。backend/frontend 运行 `2.8.68-dev.e9478ad`、healthy/restart=0，授权态 Chrome 版本/AI 听记入口/console 0 与部署 bundle 回读通过，bundle 不含 `/ws/asr?token=`。真实麦克风会向厂商发送现场音频，待用户即时授权后完成两条 HUMAN 回归。
+- `TASK-352 / FEAT-062` 保持 `in_progress`：OACT 修复 `e9478ad633ec` 后，2026-09-02 HUMAN 复测两条入口都能进入录音态但没有文字；Nginx 回读阿里云/讯飞 WebSocket 均为 101，后端无厂商错误，断点后移到共享浏览器音频采集。代码现显式恢复 `AudioContext` 为 `running`，以 3 秒内第一帧 `onaudioprocess` 作为录音成功门禁；后端仅记录首帧、总帧数和字节数，不记录音频内容/身份/Token。聚焦前端 10 项、全量 `62 files / 346 tests`、production build、后端聚焦和 package 通过，待提交、部署及 HUMAN 双入口复测。
 
 - `TASK-354` 已完成本地技术修复，进入 review：根因是主题全局 `button` 规则移除头像唯一的渐变背景，使 `38px` 圆形按钮只剩白色首字母；`8131ca0d` 改用主题强调实色与表面文字色，不改几何或个人简档交互。聚焦 `13/13`、前端全量 `62 files / 342 tests`、production build 与 diff check 通过；frontend 运行 `2.8.68-dev.8131ca0`、healthy/restart=0，登录态计算样式、桌面截图、版本资源和 console 0 通过。待用户目视确认，不以技术截图替代 HUMAN 接受。
 

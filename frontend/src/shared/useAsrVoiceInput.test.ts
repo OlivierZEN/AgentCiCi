@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   asrStatusNotice,
+  ensureAudioContextRunning,
   extractAsrMessageText,
   isAsrAuthenticatedMessage,
   isAsrStartedMessage,
@@ -75,5 +76,26 @@ describe("useAsrVoiceInput helpers", () => {
     socket.dispatchEvent(new MessageEvent("message", { data: JSON.stringify({ type: "status", message: "authenticated" }) }));
 
     await expect(ready).resolves.toBeUndefined();
+  });
+
+  it("resumes a suspended audio context before declaring the microphone ready", async () => {
+    const context = {
+      state: "suspended" as AudioContextState,
+      resume: async () => {
+        context.state = "running";
+      },
+    };
+
+    await expect(ensureAudioContextRunning(context)).resolves.toBeUndefined();
+    expect(context.state).toBe("running");
+  });
+
+  it("fails explicitly when the browser refuses to run the audio context", async () => {
+    const context = {
+      state: "suspended" as AudioContextState,
+      resume: async () => undefined,
+    };
+
+    await expect(ensureAudioContextRunning(context)).rejects.toThrow("麦克风音频流未启动");
   });
 });

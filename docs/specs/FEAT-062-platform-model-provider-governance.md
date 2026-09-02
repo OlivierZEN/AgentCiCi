@@ -162,6 +162,7 @@ updated_by: codex
 - 前端完成回调只依赖浏览器 WebSocket `close`；上游最终帧、异常关闭或关闭事件延迟时，AI 听记和对话框状态不能确定收敛。
 - 真实浏览器使用统一登录签发的 RS256 `ecosystem_user` OACT；实时语音处理器却独立调用旧 HS256 会话解析器。握手升级后在厂商选择前即关闭，导致两家厂商表现为同一个“实时语音服务已关闭”。早期只使用旧 HS256 令牌的合成探测未覆盖真实身份链路。
 - 浏览器把完整 Bearer 放入 WebSocket URL 查询参数，反向代理访问日志会记录该参数；实时语音令牌不得继续通过 URL 传递。
+- OACT 和厂商 ready 修复后，HUMAN 复测两条入口都能显示录音但没有文字；两条 WebSocket 均为 101 且没有厂商错误。共享 hook 在异步鉴权和上游启动后才创建 `AudioContext`，未恢复 `suspended` 状态，也没有以首个 `onaudioprocess` 回调作为录音成功门禁，因此可能根本没有向后端发送二进制音频。
 
 ### 设计与验收
 
@@ -172,5 +173,7 @@ updated_by: codex
 - AI 听记与对话框共用同一 `useAsrVoiceInput` 录音生命周期，但不共用厂商路由：AI 听记显式走讯飞并启用发言人区分，普通对话听写显式或默认走阿里云。
 - WebSocket 建连后先通过首个认证帧提交 Bearer；服务端以普通受保护 API 相同的 OACT 校验器绑定公司和成员，只兼容具备 `voice:input` 或 `meeting:start` 的嵌入令牌。认证完成后才允许发送 `start`，URL、错误信息和服务日志均不得包含令牌。
 - 前端必须依次等待 `authenticated` 和厂商上游 `started`，任一步失败都在申请麦克风前退出；未认证会话不得解析厂商或读取模型凭据。
+- 创建录音节点后必须显式将 `AudioContext` 恢复到 `running`，并在 3 秒内收到第一帧音频回调；未运行或无首帧时退出并显示设备/权限错误，不得进入“录音中”。
+- 后端在会话内只计数首帧、总帧数和总字节数，不记录 PCM 内容、用户身份或 Token；该证据用于区分浏览器采集故障与厂商识别/结果解析故障。
 - 错误、最终帧和异常关闭均不得永久停在 recording/stopping。
 - 技术验收覆盖 URL 规范化、官方最后帧、上游 ready/error、全量前端测试、production build、backend package 和本地正式环境指纹；真实麦克风转写仍由 HUMAN 最终接受。

@@ -126,9 +126,11 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
             } else if ("start".equalsIgnoreCase(type)) {
                 int sampleRate = j.path("sampleRate").asInt(16000);
                 String requestedProvider = firstNonBlank(j.path("provider").asText(""), queryParam(session, "provider"));
+                String selectedProvider = selectRealtimeProvider(requestedProvider);
+                ctx.provider = selectedProvider;
                 boolean speakerDiarization = j.path("speakerDiarization").asBoolean(
                         "true".equalsIgnoreCase(queryParam(session, "speakerDiarization")));
-                if ("iflytek".equals(selectRealtimeProvider(requestedProvider))) {
+                if ("iflytek".equals(selectedProvider)) {
                     startIflytekRoutedTask(ctx, sampleRate, speakerDiarization);
                 } else {
                     startAliyunTask(ctx, sampleRate);
@@ -162,6 +164,13 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
     protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) {
         SessionCtx ctx = sessions.get(session.getId());
         if (ctx == null || !ctx.started) return;
+        int frameBytes = message.getPayload().remaining();
+        ctx.audioFrames += 1;
+        ctx.audioBytes += frameBytes;
+        if (ctx.audioFrames == 1) {
+            log.info("Realtime ASR received first browser audio frame: provider={}, bytes={}", ctx.provider, frameBytes);
+            sendClientEvent(session, Map.of("type", "status", "message", "audio-received"));
+        }
         if (ctx.aliyunClient != null) {
             ctx.aliyunClient.sendAudio(message.getPayload().asReadOnlyBuffer());
         }
@@ -173,6 +182,10 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         SessionCtx ctx = sessions.remove(session.getId());
+        if (ctx != null) {
+            log.info("Realtime ASR browser stream closed: provider={}, audioFrames={}, audioBytes={}, closeCode={}",
+                    ctx.provider, ctx.audioFrames, ctx.audioBytes, status.getCode());
+        }
         if (ctx != null && ctx.aliyunClient != null) {
             ctx.aliyunClient.close();
         }
@@ -703,8 +716,11 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
         private final WebSocketSession clientSession;
         private volatile String companyId;
         private volatile String userId;
+        private volatile String provider = "unknown";
         private volatile boolean authenticated;
         private volatile boolean started;
+        private volatile long audioFrames;
+        private volatile long audioBytes;
         private volatile AliyunWsClient aliyunClient;
         private volatile IflytekWsClient iflytekClient;
 
