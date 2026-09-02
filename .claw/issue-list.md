@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-09-02T02:08:00Z
+updated_at: 2026-09-02T02:13:24Z
 updated_by: codex
 status: active
 ---
@@ -74,13 +74,15 @@ status: active
 - Resolution: TASK-331 采用 pagecomponent 发送规范 `agentCompanyId`、后端以 `JsonAlias` 过渡接受 `agentOrgId`，并补充双实现请求体与后端反序列化契约测试。提交 `ebea2feb` 已进入远程 `main`；生产 CloudCC pagecomponent 同 ID 升至 V16，customPage V9 引用验证 `issues=[]`，登录态重载显示 CRM 已连接并加载真实工作台。
 - Status: resolved in production CloudCC component; AgentCiCi production stays on `2.8.66`, backend alias awaits the normal `2.8.67` release.
 
-## Open Issues
+## ISSUE-2026-09-02-ai-minutes-file-asr-protocol-mismatch
 
-- ISSUE-2026-09-02-ai-minutes-file-asr-protocol-mismatch:
-  - Symptom: AI 听记上传录音后显示 `录音解析失败：Unexpected server error`。
-  - Verified root cause: 文件和百炼临时 OSS 上传均成功；`file-asr` 运行路由选择同步 `qwen-audio-3.0-asr-flash`，旧服务却无条件带 `X-DashScope-Async: enable` 提交异步任务，专属 API 身份明确返回 `403 AccessDenied: current user api does not support asynchronous calls`。
-  - Resolution progress: 用户明确上传录音必须区分发言人；TASK-355 已移除单发言人同步兜底，治理候选、运行时门禁和 V133 统一切换为 `qwen-audio-3.0-asr-flash-filetrans`，继续提交 `diarization_enabled=true`，上游错误保留为可读 400。
-  - Status: fix `eed14231` deployed locally as backend `2.8.68-dev.eed1423`, healthy/restart=0; Flyway 133 and route readback passed, HUMAN multi-speaker file upload/provider verification pending.
+- Symptom: AI 听记上传录音后显示 `录音解析失败：Unexpected server error`。
+- Verified root cause: 文件和百炼临时 OSS 上传均成功；`file-asr` 运行路由选择同步 `qwen-audio-3.0-asr-flash`，旧服务却无条件向 Filetrans/Fun-ASR 异步端点提交，厂商返回 `403 AccessDenied`。
+- Resolution: TASK-355 移除单发言人同步兜底，治理候选、运行时门禁和 V133 统一切换为 `qwen-audio-3.0-asr-flash-filetrans`，继续使用 `diarization_enabled=true`；修复 `eed14231` 部署为本地 backend `2.8.68-dev.eed1423`。
+- Verification: Flyway 133、路由回读、单元 `4/4`、package/diff 和运行健康通过；用户真实 `.m4a` 上传解析为 `76` 段，页面展示多个发言人编号和时间区间，并明确确认 HUMAN 验收完成。
+- Status: resolved locally and accepted by HUMAN on 2026-09-02; remote/UAT/production unchanged.
+
+## Open Issues
 
 - ISSUE-2026-08-31-web-widget-buffered-stream:
   - Symptom: UAT 官网售前浮窗普通咨询约等待 45-59 秒后才出现正文，随后短时间内呈现打字效果。

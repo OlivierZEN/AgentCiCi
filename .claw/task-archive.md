@@ -1,7 +1,7 @@
 ---
 kind: task-archive
 version: 4
-updated_at: 2026-08-28T13:12:49Z
+updated_at: 2026-09-02T02:13:24Z
 updated_by: codex
 archive_status: active
 ---
@@ -12,6 +12,7 @@ Historical task cards have been removed from the hot board. Keep details in task
 
 ## Archived Tasks
 
+- TASK-355 — done — AI 听记上传录音已固定使用支持说话人分离的 `qwen-audio-3.0-asr-flash-filetrans`；`eed14231`、V133、单元/package/diff、本地运行回读通过，用户真实 `.m4a` 上传解析为 76 段并展示多个发言人及时间区间，HUMAN 验收完成。
 - TASK-338 — done — AgentCiCi UAT `2.8.67-beta.1 / 2970bea75208` 完成不可变制品、完整备份、仅应用容器切换、V125、健康与稳定窗口门禁；用户确认登录态图片识别 HUMAN 验收通过，冻结候选已由 TASK-342 晋级生产。
 - TASK-332 — done — 思思固定产品、CloudCC 组织/用户名/短时 Embed Token 身份映射、受治理 Agent 运行时、统一页面/浮窗 SDK、附件/语音/依据/确认已落地；`93572887` 进入本地 `main`，backend/frontend `2.8.67-dev.9357288`、V124、完整本地技术验证与正式页面浏览器门禁通过，真实 CloudCC HUMAN 集成验收及 UAT/生产另行授权。
 - TASK-331 — done — `agentOrgId`/`agentCompanyId` 契约漂移已修复；提交 `ebea2feb` 进入远程 `main`，CloudCC pagecomponent 同 ID 发布 V16，customPage V9 引用验证无问题，生产登录态重载显示 CRM 已连接并加载真实客户工作台。

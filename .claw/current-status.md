@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 6
-updated_at: 2026-09-02T02:08:00Z
+updated_at: 2026-09-02T02:13:24Z
 updated_by: codex
 phase: in_progress
-active_task: TASK-355
-next_action: "用户在当前本地环境重新上传包含多名发言人的原录音；随后回读 Filetrans 异步任务、speaker_id 分段和页面发言人显示。"
+active_task: TASK-352
+next_action: "继续 TASK-352：用户分别复测对话框阿里云实时听写和 AI 听记讯飞实时转写，并确认文字与正常结束状态。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Latest Snapshot
 
-- `TASK-355 / FEAT-054` 保持 `in_progress`：用户明确上传录音也必须区分发言人。`eed14231521c` 已进入本地 main：治理候选固定为 `qwen-audio-3.0-asr-flash-filetrans`，运行时拒绝不支持 diarization 的同步模型，V133 复用现有百炼凭据并迁移 `file-asr` 路由。单元 `4/4`、package/diff 和迁移预演通过；治理集成测试因既有默认测试库不可达中止，不声明通过。backend 运行 `2.8.68-dev.eed1423`、image `6610f0d5`、healthy/restart=0、health UP；Flyway 133 成功，三条路由回读分别为 Filetrans/讯飞/Paraformer。正式多发言人上传仍待 HUMAN 复测。
+- `TASK-355 / FEAT-054` 已完成并通过 HUMAN 真实验收：`eed14231521c` 将治理候选和 V133 路由固定为支持 diarization 的 `qwen-audio-3.0-asr-flash-filetrans`，运行时拒绝单发言人同步模型；单元 `4/4`、package/diff、迁移预演和本地部署回读通过，backend `2.8.68-dev.eed1423` healthy/restart=0。用户真实 `.m4a` 上传成功解析 `76` 段，页面展示多个发言人编号及时间区间，可继续编辑发言人或生成纪要。
 
 - `TASK-353 / FEAT-188` 技术实现和本地运行门禁完成，进入 review：真实会话证明历史装配丢失图片；`123619a7223e` 仅对明确历史图片指代恢复最近一个同租户/同会话/同消息/ATTACHED 的带图用户轮，并继续执行 vision 门禁。聚焦 56 项、package/diff 通过；最终 backend 运行包含本修复的代码提交 `7ced552aa661 / 2.8.68-dev.7ced552`，frontend 运行主线治理提交 `118ff72da8c5 / 2.8.68-dev.118ff72`，两者 healthy/restart=0，OneKey auto=`[text,vision]`。待用户在原会话确认回答内容匹配，不以技术门禁替代 HUMAN。
 

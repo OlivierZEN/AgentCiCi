@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-054
 title: AI minutes local audio upload and speaker diarization
-status: in_implementation
+status: verified
 owner_role: fullstack-agent
 task_ids: TASK-134, TASK-355
 related_decisions: none
-related_issues: none
-updated_at: 2026-09-02T02:08:00Z
+related_issues: ISSUE-2026-09-02-ai-minutes-file-asr-protocol-mismatch
+updated_at: 2026-09-02T02:13:24Z
 updated_by: codex
 ---
 
@@ -76,3 +76,4 @@ updated_by: codex
 - 2026-05-25: Opened for implementation from user request to add local audio upload and 百炼 multi-speaker recognition to AI 听记.
 - 2026-05-25: Real provider smoke proved the upload/ASR chain on 60-second chunks from the local recording, returning Fun-ASR speaker transcript segments. Whole-file 7.1MB upload and one chunk still showed intermittent `Connection reset` on this local network, so automatic chunking/retry remains a follow-up rather than part of this delivery.
 - 2026-09-02 TASK-355: 平台治理中的 `file-asr` 曾选择同步 `qwen-audio-3.0-asr-flash`，旧实现却提交 Filetrans/Fun-ASR 异步任务，真实上传因此返回 `403 current user api does not support asynchronous calls`。用户随后明确上传录音同样必须区分发言人，因此不采用单发言人同步兜底：治理候选、运行时门禁和数据迁移统一切换为 `qwen-audio-3.0-asr-flash-filetrans`，继续复用同一百炼凭据并提交 `diarization_enabled=true`。
+- 2026-09-02 HUMAN 验收：用户通过正式 AI 听记上传入口解析真实 `.m4a`，页面显示已解析 `76` 段，并展示多个发言人编号和对应时间区间；确认上传录音转写、说话人分离及页面 transcript 呈现均通过。

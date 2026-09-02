@@ -1,12 +1,12 @@
 ---
 kind: task-status
 task_id: TASK-355
-status: in_progress
+status: done
 priority: critical
 owner_role: backend-agent
 claimed_by: codex
 spec_path: docs/specs/FEAT-054-ai-minutes-local-audio-upload.md
-updated_at: 2026-09-02T02:08:00Z
+updated_at: 2026-09-02T02:13:24Z
 updated_by: codex
 ---
 
@@ -28,8 +28,8 @@ updated_by: codex
 - [x] 数据迁移把现有 `file-asr` 路由切换到 Filetrans。
 - [x] 聚焦测试、后端 package 与 `git diff --check` 通过。
 - [x] 修复提交进入本地 `main` 并从该提交重建 backend。
-- [ ] 使用无敏感合成音频通过正式上传入口得到转写结果。
-- [ ] 用户使用原录音完成 HUMAN 验收。
+- [x] 使用真实多发言人录音通过正式上传入口得到转写结果。
+- [x] 用户使用原录音完成 HUMAN 验收。
 
 ## 当前证据
 
@@ -39,4 +39,4 @@ updated_by: codex
 - `qwen-audio-3.0-asr-flash-filetrans` 与现有异步请求协议匹配并支持说话人分离，继续使用同一百炼工作空间和已治理 API Key；不复制或改写密钥。
 - `eed14231521c` 已进入本地 main；单元 `4/4`、package/diff 通过，治理集成测试因既有默认测试库不可达而中止。V133 事务预演和部署迁移均成功。
 - backend 运行 `2.8.68-dev.eed1423`，image `sha256:6610f0d5...`，healthy/restart=0，health=`UP`；运行 `file-asr` 已回读为 `aliyun-bailian/qwen-audio-3.0-asr-flash-filetrans`，实时听记仍为讯飞，对话听写仍为 Paraformer。
-- 正式入口多发言人录音上传与页面 speaker 分段待 HUMAN 复测；不以模型路由和健康检查替代真实业务验收。
+- 2026-09-02 用户提交真实验收截图并明确确认完成：`.m4a` 录音成功解析为 `76` 段，页面展示多个独立发言人编号及时间区间，可继续编辑发言人或生成纪要。该 HUMAN 证据完成正式入口、多发言人分离和页面呈现验收。

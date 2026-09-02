@@ -1,22 +1,21 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-09-02T01:31:55Z
+updated_at: 2026-09-02T02:13:24Z
 updated_by: codex
 status: active
-last_run_at: 2026-09-02T01:31:55Z
-last_run_status: passed_task_355_protocol_routing_technical_pending_human_upload
+last_run_at: 2026-09-02T02:13:24Z
+last_run_status: passed_task_355_human_multi_speaker_upload
 ---
 
 # Test Report
 
 ## 2026-09-02 TASK-355 AI 听记文件转写协议路由修复
 
-- 状态：`passed_task_355_protocol_routing_technical_pending_human_upload`。真实失败请求的文件与临时 OSS 上传成功，异步任务提交返回 `403 AccessDenied: current user api does not support asynchronous calls`；运行路由为同步 `aliyun-bailian/qwen-audio-3.0-asr-flash`，根因是模型与调用协议错配，不是文件格式。
-- 自动化：`AliyunAsrServiceTest` `5/5` 通过，覆盖同步/异步模型识别、同步响应 transcript/timestamp 和既有文件格式/说话人结果；`mvn -DskipTests package` 与 `git diff --check` 通过。完整 `mvn test` 在既有 `KnowledgeBaseLifecycleIntegrationTest` 默认数据库连接持续重试时中止，不声明全量通过。
-- 本地运行：`f668a2f06c38` 已进入本地 main；只替换 backend，运行镜像 `sha256:60d7644bd583`、版本 `2.8.68-dev.f668a2f / f668a2f0`、healthy/restart=0、health UP，启动 severe=0。frontend 未替换并保持 `2.8.68-dev.1c31cf3`。
-- 路由：`file-asr=aliyun-bailian/qwen-audio-3.0-asr-flash`、`voice-asr=aliyun-bailian/paraformer-realtime-v2`、`meeting-realtime-asr=iflytek_asr/iflytek-realtime-asr`，本修复没有改变两条实时听记厂商边界。
-- 边界：Chrome 控制接口不能向系统文件选择器注入本地合成文件，且未读取浏览器存储或绕过 HUMAN 身份；真实同步厂商响应和原录音解析仍待用户复测。
+- 状态：`passed_task_355_human_multi_speaker_upload`。用户提交真实验收截图并明确确认完成：AI 听记正式上传入口成功解析真实 `.m4a` 为 `76` 段，页面可见多个发言人编号及各自时间区间，可继续编辑发言人或生成纪要。
+- 自动化：最终 `AliyunAsrServiceTest` `4/4` 通过，覆盖支持格式、非法格式、说话人结果解析和 diarization 模型白名单；`mvn -DskipTests package` 与 `git diff --check` 通过。治理集成测试因既有默认测试数据库连接持续重试而中止，不声明通过。
+- 本地运行：代码 `eed14231521c` 已进入本地 main；只替换 backend，运行镜像 `sha256:6610f0d569e8`、版本 `2.8.68-dev.eed1423`、healthy/restart=0、health UP。Flyway 133 成功，`file-asr=aliyun-bailian/qwen-audio-3.0-asr-flash-filetrans`。
+- 厂商边界：`voice-asr=aliyun-bailian/paraformer-realtime-v2`、`meeting-realtime-asr=iflytek_asr/iflytek-realtime-asr` 未改变；本次 HUMAN 证据仅关闭上传录音 Filetrans 多发言人链路，不替代两条实时听写的独立验收。
 
 ## 2026-09-02 TASK-352 浏览器有效声道与输入框焦点修复
 
