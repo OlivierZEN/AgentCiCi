@@ -1,12 +1,21 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-09-02T01:31:55Z
+updated_at: 2026-09-02T02:55:14Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-09-02 UAT `2.8.68-beta.4`
+
+- 冻结时本地/远程 `main`、annotated tag `2.8.68-beta.4^{}` 与运行提交均为 `c9aa005d4f537774a4296b432103828739c51adf`；使用受管 `release-acr.sh --channel test --no-latest` 构建并推送 linux/amd64 backend/frontend，不更新 `latest`。不可变 index digest 为 `sha256:2592491fa7aae89d4221b24a022adce3867821b30de82335e680af6ff9f282f6` / `sha256:586487794d99d9ad49d8fb5508a6abe5e7d2c77c905c1b71b979ed398bc62937`。
+- 完整回滚点 `/data/apps/agentcici/backups/20260902T025010Z-before-2.8.68-beta.4` 共 10 项、317,224,778 bytes，包含受管 Compose/env、PostgreSQL custom dump、KB、Qdrant 存储、beta.3 旧应用镜像、容器基线、回滚说明和 SHA-256 清单；全部非空且 `0600`，dump catalog、tar、gzip 与清单通过。即时应用回滚目标为 `2.8.68-beta.3`，数据恢复需单独授权。
+- UAT override 与仓库 SHA-256 一致，`uat.secrets.env` 保持 `root:root 0600` 且不保存版本字段；HUMAN scopes 含 `metadata.read,runtime.record.read`，SERVICE scopes 独立。仅 `--no-deps --force-recreate backend frontend`；database、Redis、RabbitMQ、Qdrant ID 保持 `d14ef639f035`、`db0945fd318c`、`4166b9909101`、`26aec0ef3a29` 且 restart=0。
+- backend/frontend 均运行 `2.8.68-beta.4 / c9aa005d4f53`、healthy/restart=0，RepoDigest 与冻结 digest 一致；backend health=`UP`，Flyway V129-V133 success，frontend Nginx 配置有效，首页资源包含 beta.4 指纹。
+- HTTPS 首页 200、HTTP 301；匿名 `/auth/me` 与 `/openapi/v1/parameters` 为 JSON 401；Keycloak discovery、Semattice `1.0.8-beta.7` 和 DevAutopilot integrated health 通过。切换启动期 DevAutopilot 对 `/openapi/v1/official/service-token` 有 3 次 502；应用健康后的独立 30 秒窗口 backend severe、Nginx error 与结构化 5xx 均为 0。
+- 本候选没有新增、启用或切换跨项目契约。真实登录态语音、历史图片追问、当前用户头像和公开售前流程仍按各任务等待 HUMAN 验收；生产及其他产品未修改。
 
 ## 2026-09-02 TASK-355 本地文件 ASR 协议路由修复
 

@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 6
-updated_at: 2026-09-02T02:13:24Z
+updated_at: 2026-09-02T02:55:14Z
 updated_by: codex
 phase: in_progress
 active_task: TASK-352
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- AgentCiCi 最新合并主线已完成 UAT 技术发布：冻结源码、annotated tag 与运行提交均为 `2.8.68-beta.4 / c9aa005d4f53`，发布记录提交后的远程 `main` 包含该冻结提交；backend/frontend 不可变 digest 为 `sha256:2592491fa7aa...` / `sha256:586487794d99...`。完整回滚点 `/data/apps/agentcici/backups/20260902T025010Z-before-2.8.68-beta.4` 共 10 项、317,224,778 bytes，应用回滚目标 beta.3；仅重建 backend/frontend，四个状态服务 ID 不变。V129-V133 success，六容器 healthy/restart=0，health、Nginx、HTTPS/HTTP、匿名 JSON 401、Keycloak/Semattice/DevAutopilot 和独立 30 秒稳定窗口通过。启动切换期有 3 次 DevAutopilot service-token 502，应用健康后窗口为 0；本候选未新增或切换跨项目契约，真实登录态语音、图片追问、头像及公开售前流程仍待 HUMAN 分项验收，生产未修改。
 
 - `TASK-355 / FEAT-054` 已完成并通过 HUMAN 真实验收：`eed14231521c` 将治理候选和 V133 路由固定为支持 diarization 的 `qwen-audio-3.0-asr-flash-filetrans`，运行时拒绝单发言人同步模型；单元 `4/4`、package/diff、迁移预演和本地部署回读通过，backend `2.8.68-dev.eed1423` healthy/restart=0。用户真实 `.m4a` 上传成功解析 `76` 段，页面展示多个发言人编号及时间区间，可继续编辑发言人或生成纪要。
 

@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-09-02T02:13:24Z
+updated_at: 2026-09-02T02:55:14Z
 updated_by: codex
 status: active
-last_run_at: 2026-09-02T02:13:24Z
-last_run_status: passed_task_355_human_multi_speaker_upload
+last_run_at: 2026-09-02T02:55:14Z
+last_run_status: passed_uat_2_8_68_beta_4_technical
 ---
 
 # Test Report
+
+## 2026-09-02 UAT `2.8.68-beta.4` 技术发布
+
+- 状态：`passed_uat_2_8_68_beta_4_technical`。冻结 commit/tag/runtime 为 `c9aa005d4f53 / 2.8.68-beta.4`；backend/frontend digest 为 `sha256:2592491fa7aa...` / `sha256:586487794d99...`，运行 OCI revision、版本 API 和前端资源指纹一致。
+- 构建门禁：发布脚本执行 backend Maven `-DskipTests package`、frontend production build、两项 linux/amd64 build/push 与 imagetools inspect；候选差异 `git diff --check` 通过。各功能聚焦测试沿用本报告对应 TASK 的真实记录，本次不新增“后端全量测试通过”声明。
+- 数据与运行：新追加 Flyway V129-V133 均为 success；完整备份 10 项/317,224,778 bytes 的 SHA-256、PostgreSQL catalog、KB/Qdrant tar 和旧镜像 gzip 通过。仅 backend/frontend 被重建；四个状态服务 ID 不变，最终六容器 healthy/restart=0、backend health UP、Nginx 有效。
+- 公网与稳定性：HTTPS 首页 200、HTTP 301，匿名 `/auth/me` 与 `/openapi/v1/parameters` 返回合法 JSON 401；Keycloak、Semattice version/health、DevAutopilot integrated health 通过。切换期 3 次 service-token 502 后，独立 30 秒窗口 backend severe=0、Nginx error=0、结构化 5xx=0。
+- 验收边界：这是 UAT 技术发布，不替代真实登录态/HUMAN 验收；语音双入口、图片追问、头像和公开售前访客流程仍需按各任务逐项复测。未修改生产。
 
 ## 2026-09-02 TASK-355 AI 听记文件转写协议路由修复
 
