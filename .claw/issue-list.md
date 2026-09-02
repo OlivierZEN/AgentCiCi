@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-09-02T01:31:55Z
+updated_at: 2026-09-02T02:08:00Z
 updated_by: codex
 status: active
 ---
@@ -79,8 +79,8 @@ status: active
 - ISSUE-2026-09-02-ai-minutes-file-asr-protocol-mismatch:
   - Symptom: AI 听记上传录音后显示 `录音解析失败：Unexpected server error`。
   - Verified root cause: 文件和百炼临时 OSS 上传均成功；`file-asr` 运行路由选择同步 `qwen-audio-3.0-asr-flash`，旧服务却无条件带 `X-DashScope-Async: enable` 提交异步任务，专属 API 身份明确返回 `403 AccessDenied: current user api does not support asynchronous calls`。
-  - Resolution progress: TASK-355 已按治理模型选择同步/异步协议；同步 Flash 走官方多模态生成端点并转换为现有 transcript，Filetrans/Fun-ASR 保留异步说话人分离，上游错误改为可读 400。
-  - Status: fix `f668a2f0` deployed locally as backend `2.8.68-dev.f668a2f`, healthy/restart=0; HUMAN file upload/provider verification pending.
+  - Resolution progress: 用户明确上传录音必须区分发言人；TASK-355 已移除单发言人同步兜底，治理候选、运行时门禁和 V133 统一切换为 `qwen-audio-3.0-asr-flash-filetrans`，继续提交 `diarization_enabled=true`，上游错误保留为可读 400。
+  - Status: fix `eed14231` deployed locally as backend `2.8.68-dev.eed1423`, healthy/restart=0; Flyway 133 and route readback passed, HUMAN multi-speaker file upload/provider verification pending.
 
 - ISSUE-2026-08-31-web-widget-buffered-stream:
   - Symptom: UAT 官网售前浮窗普通咨询约等待 45-59 秒后才出现正文，随后短时间内呈现打字效果。

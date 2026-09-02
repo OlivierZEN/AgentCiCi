@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 5
-updated_at: 2026-09-02T01:31:55Z
+updated_at: 2026-09-02T02:08:00Z
 updated_by: codex
 board_status: active
 ---
@@ -25,9 +25,9 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-355.md`
 - blocked_by: `none`
 - related_issues: `ISSUE-2026-09-02-ai-minutes-file-asr-protocol-mismatch`
-- scope_files: `AliyunAsrService 同步/异步协议选择、上游错误转换、聚焦测试、本地 backend 与合成音频验证`
-- completion_evidence: `真实上传到达后端且临时 OSS 成功，异步提交返回 403；运行 file-asr 实际选中同步 qwen-audio-3.0-asr-flash。修复 f668a2f0 进入本地 main；聚焦 5 项、package/diff 通过；backend 2.8.68-dev.f668a2f healthy/restart=0、health UP。`
-- next_action: `用户在新版重新上传原录音；回读同步端点响应和 transcript。若需要上传文件区分发言人，另行配置支持异步 diarization 的 Filetrans/Fun-ASR 模型身份。`
+- scope_files: `Filetrans 治理候选、发言人分离运行时门禁、V133 路由迁移、聚焦测试、本地 backend 与真实录音验证`
+- completion_evidence: `eed14231 进入本地 main；单元 4/4、package/diff 通过，治理集成测试被既有默认测试库连接阻塞；V133 预演及实际迁移成功。backend 2.8.68-dev.eed1423、image 6610f0d5、healthy/restart=0、health UP；file-asr 已回读为 qwen-audio-3.0-asr-flash-filetrans。`
+- next_action: `用户重新上传包含两名及以上发言人的原录音；回读异步任务、speaker_id 分段和页面发言人显示，完成 HUMAN 验收。`
 
 ### TASK-354 - 登录后当前用户头像可见性修复
 

@@ -4,10 +4,10 @@ feature_id: FEAT-054
 title: AI minutes local audio upload and speaker diarization
 status: in_implementation
 owner_role: fullstack-agent
-task_ids: TASK-134
+task_ids: TASK-134, TASK-355
 related_decisions: none
 related_issues: none
-updated_at: 2026-09-02T01:25:52Z
+updated_at: 2026-09-02T02:08:00Z
 updated_by: codex
 ---
 
@@ -25,7 +25,7 @@ updated_by: codex
 
 - AI 听记前端增加本地文件上传入口，支持上传并展示解析状态、错误和解析后的多发言人 transcript。
 - 后端新增会议听记文件转写 API，接收 multipart 文件并返回 `speakerId`、`speakerName`、`text`、时间信息和文件元数据。
-- 后端服务封装百炼语音识别文件转写请求，优先启用说话人分离能力。
+- 后端服务封装百炼异步文件转写请求，并强制启用说话人分离能力；不支持 diarization 的同步模型不得进入该场景。
 - 支持格式白名单：`aac`, `amr`, `avi`, `flac`, `flv`, `m4a`, `mkv`, `mov`, `mp3`, `mp4`, `mpeg`, `ogg`, `opus`, `wav`, `webm`, `wma`, `wmv`。
 - 上传解析成功后，前端可继续编辑发言人名称，并调用现有 `/ai/meeting-minutes/summary` 生成结构化纪要。
 
@@ -45,7 +45,8 @@ updated_by: codex
   - response `data.model`: provider/model identifiers used for the transcription run.
 - Unsupported extension returns a validation error before any model call.
 - Empty model response or unparseable response returns a user-facing failure instead of silently producing an empty transcript.
-- Implementation uses 百炼 temporary OSS upload to obtain an `oss://` URL, then submits a Fun-ASR asynchronous transcription task with `diarization_enabled=true`.
+- Implementation uses 百炼 temporary OSS upload to obtain an `oss://` URL, then submits a Filetrans/Fun-ASR asynchronous transcription task with `diarization_enabled=true`.
+- `file-asr` 治理路由固定选择支持说话人分离的 `qwen-audio-3.0-asr-flash-filetrans` 适配器，并复用已启用阿里云厂商的同一工作空间域名和 API Key；同步 `qwen-audio-3.0-asr-flash` 不兼容本场景。
 - 百炼 result `transcription_url` is a pre-signed OSS URL and must be downloaded verbatim; do not route it through URI builders that may re-encode the query string and invalidate the signature.
 - The temporary URL path is suitable for local upload enablement and low-volume use. Production/high-concurrency storage should move to owned OSS because 百炼 temporary upload URLs expire and the upload policy endpoint is rate-limited.
 - Application multipart upload size is capped at 256MB for this delivery; this is an application safety cap, not the upstream 百炼 model maximum.
@@ -74,4 +75,4 @@ updated_by: codex
 
 - 2026-05-25: Opened for implementation from user request to add local audio upload and 百炼 multi-speaker recognition to AI 听记.
 - 2026-05-25: Real provider smoke proved the upload/ASR chain on 60-second chunks from the local recording, returning Fun-ASR speaker transcript segments. Whole-file 7.1MB upload and one chunk still showed intermittent `Connection reset` on this local network, so automatic chunking/retry remains a follow-up rather than part of this delivery.
-- 2026-09-02 TASK-355: 平台治理中的 `file-asr` 当前选择 `qwen-audio-3.0-asr-flash` 专属同步模型，而旧实现无条件走 Filetrans/Fun-ASR 异步任务，真实上传因此返回 `403 current user api does not support asynchronous calls`。实现按模型协议分流：同步 Flash 走 `/api/v1/services/aigc/multimodal-generation/generation` 并回填单发言人 transcript；`*-filetrans` / Fun-ASR 继续走异步任务和说话人分离。同步模型本身不提供说话人分离，若产品必须对上传文件区分发言人，平台须选择支持异步和 diarization 的 Filetrans/Fun-ASR 模型及相应 API 身份。
+- 2026-09-02 TASK-355: 平台治理中的 `file-asr` 曾选择同步 `qwen-audio-3.0-asr-flash`，旧实现却提交 Filetrans/Fun-ASR 异步任务，真实上传因此返回 `403 current user api does not support asynchronous calls`。用户随后明确上传录音同样必须区分发言人，因此不采用单发言人同步兜底：治理候选、运行时门禁和数据迁移统一切换为 `qwen-audio-3.0-asr-flash-filetrans`，继续复用同一百炼凭据并提交 `diarization_enabled=true`。
