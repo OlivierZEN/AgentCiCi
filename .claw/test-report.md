@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-09-01T23:35:16Z
+updated_at: 2026-09-02T00:05:33Z
 updated_by: codex
 status: active
-last_run_at: 2026-09-01T23:35:16Z
-last_run_status: passed_task_354_local_technical_pending_human_visual
+last_run_at: 2026-09-02T00:05:33Z
+last_run_status: passed_task_352_audio_flow_technical_pending_human_retest
 ---
 
 # Test Report
+
+## 2026-09-02 TASK-352 浏览器实时音频首帧门禁
+
+- 状态：`passed_task_352_audio_flow_technical_pending_human_retest`。对话框固定阿里云，AI 听记固定讯飞并启用发言人区分；HUMAN 前次复测证明双链路均可通过 OACT/上游 ready 进入录音态，但没有文字，不能再以早期合成探测声明浏览器麦克风成功。
+- 自动化：新增 `AudioContext` running 与失败关闭测试，前端聚焦 `10/10`、全量 `62 files / 346 tests`、production build 与 `git diff --check` 通过；后端 `RealtimeAsrAuthenticatorTest,RealtimeAsrProviderSelectionTest` 与 package 通过。
+- 真实上游：无敏感合成 PCM 通过正式 `/ws/asr` 链路探测。阿里云收到 `started`、多段文本与 `finished`，无 speaker 标签；讯飞收到 `started`、多段文本、至少一段 `speakerId` 与 `finished`。
+- 本地运行：`85e9ad51479e` 已进入本地 main；backend/frontend 回读 `2.8.68-dev.85e9ad5`、healthy/restart=0，首页 200，新 Chrome 授权态标签加载同版本且 console 0。浏览器需显式恢复 AudioContext 并收到 3 秒内首帧才能进入录音态；后端只记录非内容型帧数/字节数。
+- 边界：当前技术证据证明新版 AudioContext/首帧门禁与可观测性已部署，不证明用户现场音频已被厂商转成文字；必须等待 HUMAN 在新版分别复测两条入口后回读帧数、文字和结束状态。
 
 ## 2026-09-02 TASK-354 登录后当前用户头像可见性
 
@@ -18,14 +26,6 @@ last_run_status: passed_task_354_local_technical_pending_human_visual
 - 本地运行：从隔离的 `main@8131ca0d` worktree 构建并只替换 frontend；运行镜像 `sha256:cce3812c8b4b`，版本 `2.8.68-dev.8131ca0 / 8131ca0d`，healthy/restart=0。PostgreSQL、Redis、RabbitMQ、Qdrant 容器 ID 和 restart=0 均不变；backend 未替换，保持 `2.8.68-dev.6f3f5de`。
 - 浏览器与端点：`https://cici.localhost/app` 为 200，JS/CSS 资源带 `2.8.68-dev.8131ca0`；修复后头像为 `rgb(135,98,35)` 背景、`rgb(255,253,248)` 文字、`38x38` 圆形，桌面截图正常，console error/warning=0；Nginx 配置有效，结构化 5xx=0。
 - 边界：本轮未修改 backend、共享基础设施、远程、UAT 或生产；登录态技术截图不替代用户最终目视接受。
-
-## 2026-09-01 TASK-352 实时听写厂商路由与结束收敛
-
-- 状态：`passed_task_352_upstream_technical_pending_human_microphone`。对话框固定阿里云，AI 听记固定讯飞并启用发言人区分；录音启动和结束状态已确定收敛。
-- 自动化：后端 `IflytekAsrResultParserTest,RealtimeAsrProviderSelectionTest,ModelProviderServiceTest` 通过，backend package 通过；前端全量 `62 files / 341 tests`、production build 与 `git diff --check` 通过。V130/V131 分别在本地 PostgreSQL 事务预演后回滚，实际启动回读均为 success。
-- 真实上游：无敏感合成 PCM 通过正式 `/ws/asr` 链路探测。阿里云收到 `started`、多段文本与 `finished`，无 speaker 标签；讯飞收到 `started`、多段文本、至少一段 `speakerId` 与 `finished`。
-- 本地运行：实现提交至 `6f3f5def7ca3`均已进入本地 main；backend/frontend 回读 `2.8.68-dev.6f3f5de / 6f3f5def7ca3`、healthy/restart=0，首页 200，页面 JS 资源带同版本指纹。数据库路由为 `voice-asr=aliyun-bailian/paraformer-realtime-v2` 与 `meeting-realtime-asr=iflytek_asr/iflytek-realtime-asr`。
-- 边界：合成音频证明真实厂商网络、协议、解析和结束链路，不代替用户浏览器的真实麦克风权限、录音质量和 HUMAN 体感验收。
 
 ## 2026-09-01 TASK-353 图片追问跨轮视觉上下文
 

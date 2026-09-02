@@ -44,7 +44,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-352 - 讯飞实时听写与结束状态收敛
 
-- status: `review`
+- status: `in_progress`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - claimed_by: `codex`
@@ -52,9 +52,9 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-352.md`
 - blocked_by: `none`
 - related_issues: `ISSUE-2026-09-01-iflytek-realtime-asr-stuck`
-- scope_files: `讯飞官方 URL 规范化、上游 ready/last-frame/close 协议、共享语音输入完成态、AI 听记与对话框回归、本地全栈验证`
-- completion_evidence: `实现 d32a710f + 80f72073 + 7ced552a + 6f3f5def 进入本地 main；341 项前端全量、后端聚焦/package/build 通过；backend/frontend 2.8.68-dev.6f3f5de healthy/restart=0，V130/V131 success；阿里云与讯飞合成音频真实上游探测通过，真实麦克风待 HUMAN。`
-- next_action: `用户在正式页面分别用对话框麦克风和 AI 听记完成一次真实录音，确认文字、发言人和结束体感；技术实现和真实上游探测已完成。`
+- scope_files: `双厂商实时 ASR、OACT WebSocket 鉴权、浏览器 AudioContext/首帧门禁、非内容型帧计数、AI 听记与对话框回归、本地全栈验证`
+- completion_evidence: `85e9ad51 已从本地 main 部署为 backend/frontend 2.8.68-dev.85e9ad5，聚焦 10、前端 62 files/346、后端聚焦/package、production build 通过，两容器 healthy/restart=0；HUMAN 前次复测证明 OACT/上游 ready 可进入录音态，但无文字，待新版双入口复测回读音频帧。`
+- next_action: `用户在新版本页面分别测试对话框麦克风和 AI 听记；回读 backend 首帧/总帧/字节与厂商文字事件，确认是已修复或继续定位厂商返回。`
 
 ### TASK-351 - OneKeyToken 自动路由视觉能力同步
 

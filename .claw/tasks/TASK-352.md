@@ -7,7 +7,7 @@ status: in_progress
 branch: main
 pr_url: n/a
 spec_path: docs/specs/FEAT-062-platform-model-provider-governance.md
-updated_at: 2026-09-02T00:02:01Z
+updated_at: 2026-09-02T00:05:33Z
 updated_by: codex
 ---
 
@@ -57,3 +57,4 @@ updated_by: codex
 - 修复提交 `e9478ad633ec` 已进入本地 `main`：WebSocket 使用与普通 API 相同的 OACT 校验器，并把 Bearer 从 URL 移到建连后的认证帧；未认证会话不能启动厂商。backend/frontend 运行 `2.8.68-dev.e9478ad`、healthy/restart=0，授权态 Chrome 版本与入口回读正常且 console 0；部署 bundle 含认证帧且不再含 `/ws/asr?token=`。
 - 尚未代 HUMAN 点击麦克风：该动作可能立即把现场声音发送至所选厂商，需用户即时授权或自行完成。收到确认后分别验证阿里云对话听写与讯飞 AI 听记，随后回读不含 Token 的访问日志、上游 `started/text/finished` 与结束收敛。
 - 2026-09-02 HUMAN 复测证明两条入口都能进入录音态但没有文字；Nginx 分别回读阿里云和讯飞 101，后端无厂商错误。共同断点转到浏览器音频采集：既有代码在异步 OACT/上游 ready 后创建 `AudioContext`，未执行 `resume()` 且未验证第一帧，Chrome 可保持 `suspended` 并形成假录音态。
+- 修复 `85e9ad51479e` 已进入本地 main 并部署为 `2.8.68-dev.85e9ad5`：AudioContext 必须为 running、3 秒首帧门禁、后端非内容型音频帧计数均已生效；backend/frontend healthy/restart=0，新 Chrome 标签加载同版本且 console 0。待 HUMAN 双入口复测后回读帧数与文字。

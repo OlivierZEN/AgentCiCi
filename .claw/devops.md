@@ -1,12 +1,19 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-09-01T23:44:39Z
+updated_at: 2026-09-02T00:05:33Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-09-02 TASK-352 本地浏览器音频首帧修复
+
+- `85e9ad51479e9442d2a947e9a0d82232b4dc08d9` 已进入本地 main；backend/frontend 运行 `2.8.68-dev.85e9ad5`，镜像 ID `sha256:44dc6934d38c` / `sha256:59bd7c6637ae`，OCI/容器/version API/页面角标一致。
+- backend 使用同一 main 已通过 package 的 JAR 覆入既有 JRE 基线，JAR SHA-256 `08e8120fe99d02528dd2aedc3254dd848c847aec03736d492e6a13b020f19d5e`；frontend 使用受管 release Dockerfile。只 `--no-deps --force-recreate backend cici-frontend`，两容器 healthy/restart=0，首页 200。
+- 新 Chrome 授权态标签加载 `dev.85e9ad5` 且 console error/warning=0；旧标签存在录音文件解析状态，未强制刷新或中断。新版真实麦克风尚待 HUMAN 分别测试阿里云和讯飞，随后通过非内容型首帧/总帧/字节日志判断浏览器音频是否到达。
+- 本次未修改 local-stack 受管文件、共享基础设施、远程、ACR、tag、UAT 或生产；不记录 PCM、身份或 Token。
 
 ## 2026-09-02 TASK-352 本地 OACT 实时语音鉴权修复
 
