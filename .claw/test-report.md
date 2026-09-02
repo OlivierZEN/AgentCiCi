@@ -1,14 +1,24 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-09-02T02:55:14Z
+updated_at: 2026-09-02T03:39:10Z
 updated_by: codex
 status: active
-last_run_at: 2026-09-02T02:55:14Z
-last_run_status: passed_uat_2_8_68_beta_4_technical
+last_run_at: 2026-09-02T03:39:10Z
+last_run_status: passed_production_2_8_68_technical
 ---
 
 # Test Report
+
+## 2026-09-02 生产 `2.8.68` 技术发布
+
+- 状态：`passed_production_2_8_68_technical`。UAT 冻结提交、生产 annotated tag peeled commit、两项 OCI revision 和容器内版本回读均为 `c9aa005d4f53`；backend/frontend index digest 为 `sha256:a121415c4120...` / `sha256:1c8ff977cf79...`，前端资源为 `index-Z8US2KVn-2.8.68.js` 与 `index-LMM_1IZH-2.8.68.css`。
+- 发布门禁：隔离 clean worktree 的 backend Maven `-DskipTests package`、frontend production build、linux/amd64 build/push、imagetools digest/label 校验和 Git tag push 通过；生产拉取 digest 与冻结值一致。各功能聚焦测试沿用本报告对应 TASK 的真实记录，本次不新增“后端全量测试通过”声明。
+- Recovery/Data：完整回滚点 `/opt/cici/backups/20260902T033239Z-before-2.8.68` 共 14 项、355,675,038 bytes；SHA-256、PostgreSQL catalog、KB/Qdrant tar、Qdrant 原生 snapshot 和旧镜像 gzip 通过。发布前后知识库 `9/38/677`、Qdrant `1/565` 一致，数据恢复需单独授权。
+- Runtime：仅 backend/frontend 被重建；四个状态服务 ID 不变。V129-V133 success，六容器 healthy/restart=0，backend health UP、Nginx 有效，启动后 backend severe=0、frontend error/upstream=0、结构化 5xx=0。
+- Public/Stability：HTTPS 首页 200、HTTP 301，匿名 `/auth/me`、`/ai/sessions`、`/skills` 为合法 JSON 401；Keycloak、Semattice、DevAutopilot 只读 smoke 通过。两个独立 50 秒窗口内容器 ID/health/restart、版本与公网 200 保持稳定。
+- 治理校验：`git diff --check` 通过；`validate-state.py .claw` 仍因仓库既有历史时间格式、规格状态/front matter、终态任务未归档和完成区超限等存量债务返回 1，输出未指向本次三个发布状态文件，本次未跨范围改写历史事实。
+- 验收边界：本次没有新增、启用或切换跨项目契约；生产技术发布通过不替代真实登录态/HUMAN 验收，语音双入口、图片追问、头像和公开售前访客流程仍需分项复测。
 
 ## 2026-09-02 UAT `2.8.68-beta.4` 技术发布
 

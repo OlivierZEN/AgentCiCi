@@ -1,12 +1,21 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-09-02T02:55:14Z
+updated_at: 2026-09-02T03:39:10Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-09-02 生产 `2.8.68`
+
+- 从已通过 UAT 技术门禁的冻结提交 `c9aa005d4f537774a4296b432103828739c51adf` 的 clean detached worktree 执行受管 `release-acr.sh --production --no-latest`；annotated tag `2.8.68^{}` 与两项 OCI revision 均为 `c9aa005d4f53`。backend/frontend linux/amd64 不可变 index digest 分别为 `sha256:a121415c41207289f031f8a88ea171b70cc1a3bdad097f2e822c2ee7c6dfe87b` / `sha256:1c8ff977cf79aaa02f71450af6160071ba4e98e084c5c7673dc051e36ba5cbdd`，未更新 `latest`。
+- 完整回滚点 `/opt/cici/backups/20260902T033239Z-before-2.8.68` 共 14 项、355,675,038 bytes，包含 `root:root 0600` 受管 env/Compose、PostgreSQL custom dump、KB 归档、Qdrant 存储与 7,800,832-byte 原生 snapshot、`2.8.67` 应用镜像、容器基线、数据计数、回滚说明和 SHA-256 清单；非空、权限、dump catalog、tar、gzip 和清单均通过。即时应用回滚目标 `2.8.67`，数据恢复需另行授权。
+- 仅以生产 Compose `--no-deps --force-recreate backend frontend` 切换应用容器；backend/frontend 新 ID 为 `9ca3094ffded` / `393b94f1b3b9`。database、Redis、RabbitMQ、Qdrant ID 保持 `5b4708835b05`、`e70d00527987`、`8289db5848cc`、`be0f28441f6e`，六容器均 healthy/restart=0。
+- 生产容器内 `/system/version` 为 `2.8.68 / c9aa005d4f53`，backend health=`UP`，Flyway V129-V133 success，frontend Nginx 配置有效；公网首页 HTTPS 200、HTTP 301，匿名 `/auth/me`、`/ai/sessions`、`/skills` 均为 JSON 401，资源指纹包含 `2.8.68`。Keycloak discovery、Semattice edge/anonymous console 与 DevAutopilot integrated health 的只读 smoke 通过，未修改这些系统。
+- 发布前后知识库计数均为 `9/38/677`，Qdrant 均为 `1 collection/565 points`。启动后 severe、Nginx error/upstream 与结构化 5xx 均为 0；两个独立 50 秒窗口内六容器 ID/health/restart、版本和公网 200 均稳定。
+- 本候选未新增、启用或切换跨项目契约。以上为生产技术发布证据，不替代真实登录态/HUMAN 对语音、历史图片追问、头像和公开售前流程的业务验收。
 
 ## 2026-09-02 UAT `2.8.68-beta.4`
 

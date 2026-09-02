@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 6
-updated_at: 2026-09-02T02:55:14Z
+updated_at: 2026-09-02T03:39:10Z
 updated_by: codex
 phase: in_progress
 active_task: TASK-352
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Latest Snapshot
+
+- AgentCiCi `2.8.68` 已从 UAT 冻结候选晋级并完成生产技术发布：annotated tag `2.8.68^{}`、backend/frontend OCI revision 与生产容器内版本回读均指向 `c9aa005d4f53`；不可变 index digest 为 `sha256:a121415c4120...` / `sha256:1c8ff977cf79...`，未更新 `latest`。完整回滚点 `/opt/cici/backups/20260902T033239Z-before-2.8.68` 共 14 项、355,675,038 bytes，应用回滚目标 `2.8.67`；仅 backend/frontend 被重建，四个状态服务 ID 不变。V129-V133 success，六容器 healthy/restart=0，公网 HTTPS 200、HTTP 301、匿名 JSON 401、既有 Keycloak/Semattice/DevAutopilot 只读健康、数据守恒和两个独立 50 秒稳定窗口均通过。本候选未新增、启用或切换跨项目契约；生产真实登录态语音、历史图片追问、头像和公开售前流程仍待 HUMAN 分项验收。
 
 - AgentCiCi 最新合并主线已完成 UAT 技术发布：冻结源码、annotated tag 与运行提交均为 `2.8.68-beta.4 / c9aa005d4f53`，发布记录提交后的远程 `main` 包含该冻结提交；backend/frontend 不可变 digest 为 `sha256:2592491fa7aa...` / `sha256:586487794d99...`。完整回滚点 `/data/apps/agentcici/backups/20260902T025010Z-before-2.8.68-beta.4` 共 10 项、317,224,778 bytes，应用回滚目标 beta.3；仅重建 backend/frontend，四个状态服务 ID 不变。V129-V133 success，六容器 healthy/restart=0，health、Nginx、HTTPS/HTTP、匿名 JSON 401、Keycloak/Semattice/DevAutopilot 和独立 30 秒稳定窗口通过。启动切换期有 3 次 DevAutopilot service-token 502，应用健康后窗口为 0；本候选未新增或切换跨项目契约，真实登录态语音、图片追问、头像及公开售前流程仍待 HUMAN 分项验收，生产未修改。
 
