@@ -1,12 +1,19 @@
 ---
 kind: devops
 version: 4
-updated_at: 2026-09-02T00:36:33Z
+updated_at: 2026-09-02T00:45:48Z
 updated_by: codex
 status: active
 ---
 
 # DevOps
+
+## 2026-09-02 TASK-352 本地浏览器有效声道修复
+
+- `1c31cf3628d68efebd57c858ed38f2b62ffe773d` 已进入本地 main；frontend 使用受管 release Dockerfile 构建 `2.8.68-dev.1c31cf3`，资源指纹 `index-64Dr_FZ_-2.8.68-dev.1c31cf3.js`，运行镜像 `sha256:0dfc647ee0052164fa7b507724547026a598b97126a5fe501cb3a079dcccaf1e`。
+- 只执行 `--no-deps --force-recreate cici-frontend`；frontend healthy/restart=0，`https://cici.localhost/app` 为 200。backend 与 PostgreSQL、Redis、RabbitMQ、Qdrant、Keycloak、Nginx、Semattice、DevAutopilot 均未替换。
+- 修复前 HUMAN 会话的服务端非内容型证据为 `122` 帧、`333060` 字节、`166530` 采样、`peak=0/rms=0`；本次代码保留最多两个输入声道并选取最强信号，实际非零信号仍待 HUMAN 在新版复测后回读。
+- 本次未修改远程 main、ACR、tag、UAT 或生产；未记录 PCM 内容、身份或 Token。
 
 ## 2026-09-02 TASK-352 本地真人语音结果分片修复
 

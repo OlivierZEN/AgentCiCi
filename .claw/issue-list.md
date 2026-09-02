@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-09-02T00:36:33Z
+updated_at: 2026-09-02T00:45:48Z
 updated_by: codex
 status: active
 ---
@@ -21,10 +21,10 @@ status: active
 ## ISSUE-2026-09-01-iflytek-realtime-asr-stuck
 
 - Symptom: AI 听记和对话框实时听写均不出文字；AI 听记停止后持续显示“正在结束”。
-- Verified root cause: 除早期讯飞 URL、ready/last-frame、OACT 与 AudioContext 缺陷外，首帧版 HUMAN 证明 PCM 已到后端；阿里云文本事件被分片时未继续拉取下一片，运行库又把 Paraformer 专用场景错存为通用 Qwen Audio 模型，浏览器还会在有效声音出现前固定 5 秒自动停止。
-- Resolution: TASK-352 修复阿里云分片 demand、严格隔离阿里云 Paraformer/讯飞专用候选并以 V132 纠正历史路由；浏览器启用单声道/自动增益和有效声音门禁，后端增加不含内容的 peak/rms 与事件计数。
-- Verification: 前端 `63 files / 349 tests`、production build，后端聚焦/package、V132 事务预演和本地正式迁移通过；backend/frontend `2.8.68-dev.cc27aff` healthy/restart=0，路由/版本/页面一致。
-- Status: latest fix deployed locally; HUMAN dual-entry recognition and finish verification pending; remote/UAT/production unchanged.
+- Verified root cause: 除早期讯飞 URL、ready/last-frame、OACT、AudioContext、阿里云分片 demand 与错误场景路由外，HUMAN 最新会话进一步回读 `122` 帧/`166530` 采样但 `peak=0/rms=0`。浏览器此前强制单声道并固定读取 channel 0，多声道外接/虚拟设备的首声道静音会形成持续全零 PCM。
+- Resolution: TASK-352 修复阿里云分片 demand、严格隔离阿里云 Paraformer/讯飞专用候选并以 V132 纠正历史路由；浏览器现保留最多两个输入声道、逐帧选择 RMS/peak 最强声道，并恢复对话输入框焦点；后端保留不含内容的信号和事件计数。
+- Verification: 最新前端聚焦 `15/15`、全量 `63 files / 351 tests`、production build/diff 通过；frontend `2.8.68-dev.1c31cf3` healthy/restart=0、首页/资源指纹一致，backend 保持已验证的 `cc27aff` 路由与指标版本。
+- Status: active-channel fix deployed locally; HUMAN non-zero signal, dual-entry recognition and finish verification pending; remote/UAT/production unchanged.
 
 ## ISSUE-2026-09-01-onekeytoken-auto-vision-capability
 

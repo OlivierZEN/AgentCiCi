@@ -7,7 +7,7 @@ status: in_progress
 branch: main
 pr_url: n/a
 spec_path: docs/specs/FEAT-062-platform-model-provider-governance.md
-updated_at: 2026-09-02T00:36:33Z
+updated_at: 2026-09-02T00:45:48Z
 updated_by: codex
 ---
 
@@ -44,7 +44,7 @@ updated_by: codex
 - [x] 修复提交进入本地 `main`，backend/frontend 从该提交运行且健康。
 - [x] 使用合成音频完成阿里云与讯飞真实上游转写、发言人标签与结束技术探测。
 - [ ] 真实 OACT 登录会话完成 WebSocket 帧内认证，并分别收到阿里云与讯飞上游 `started`。
-- [ ] 真实浏览器音频流产生首帧，后端回读非零帧数/字节数且不记录音频内容。
+- [ ] 真实浏览器音频流产生非零信号，后端回读合理 peak/rms 且不记录音频内容。
 - [ ] HUMAN 使用真实麦克风确认 AI 听记和对话框实时听写。
 
 ## Handoff
@@ -60,3 +60,4 @@ updated_by: codex
 - 修复 `85e9ad51479e` 已进入本地 main 并部署为 `2.8.68-dev.85e9ad5`：AudioContext 必须为 running、3 秒首帧门禁、后端非内容型音频帧计数均已生效；backend/frontend healthy/restart=0，新 Chrome 标签加载同版本且 console 0。待 HUMAN 双入口复测后回读帧数与文字。
 - 2026-09-02 HUMAN 再次复测对话框仍为空；运行证据为两次阿里云会话各 `59` 帧、`161070` 字节、101/1000 正常关闭，证明浏览器 PCM 已到后端。进一步确认阿里云分片文本未继续 `request(1)`，且数据库 `voice-asr` 错存 `qwen-audio-3.0-realtime-flash`；本轮修复分片拉取、专用候选/V132、单声道自动增益、有效声音门禁及非内容型信号/上游事件计数，待提交部署后复测。
 - 修复 `cc27aff6683a` 已进入本地 main 并部署为 `2.8.68-dev.cc27aff`；V132 success，路由回读为阿里云 Paraformer/讯飞专用适配器，backend/frontend healthy/restart=0，授权态页面加载同版本。聚焦/全量/build/package 均通过；默认 Spring 集成因测试库不可达中止，不声明该方法通过。待 HUMAN 双入口复测。
+- 2026-09-02 HUMAN 在 `cc27aff` 对话入口复测后，后端回读 `122` 帧、`166530` 采样但 `peak=0/rms=0`，证明浏览器发送的是全零 PCM，故障位于多声道采集选择而非阿里云结果解析。`1c31cf3628d6` 不再强制预先压为单声道，保留最多两个声道并逐帧选取 RMS/peak 最强声道，同时在语音启动/失败返回后把焦点放回输入框。frontend 已部署为 `2.8.68-dev.1c31cf3`、healthy/restart=0；真实非零信号和两家转写仍待 HUMAN。

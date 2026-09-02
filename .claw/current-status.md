@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 6
-updated_at: 2026-09-02T00:36:33Z
+updated_at: 2026-09-02T00:45:48Z
 updated_by: codex
 phase: in_progress
 active_task: TASK-352
-next_action: "用户在 2.8.68-dev.cc27aff 页面分别复测阿里云对话听写和讯飞 AI 听记；随后回读峰值/RMS、上游事件与文字事件。"
+next_action: "用户刷新到 2.8.68-dev.1c31cf3 后先复测阿里云对话听写，再复测讯飞 AI 听记；随后回读 peak/rms、上游事件与文字事件。"
 read_next:
   goals: false
   decisions: false
@@ -24,7 +24,7 @@ read_next:
 
 - `TASK-353 / FEAT-188` 技术实现和本地运行门禁完成，进入 review：真实会话证明历史装配丢失图片；`123619a7223e` 仅对明确历史图片指代恢复最近一个同租户/同会话/同消息/ATTACHED 的带图用户轮，并继续执行 vision 门禁。聚焦 56 项、package/diff 通过；最终 backend 运行包含本修复的代码提交 `7ced552aa661 / 2.8.68-dev.7ced552`，frontend 运行主线治理提交 `118ff72da8c5 / 2.8.68-dev.118ff72`，两者 healthy/restart=0，OneKey auto=`[text,vision]`。待用户在原会话确认回答内容匹配，不以技术门禁替代 HUMAN。
 
-- `TASK-352 / FEAT-062` 保持 `in_progress`：HUMAN 在首帧版两次对话复测均上传 `59` 帧/`161070` 字节但无文字，证明断点在浏览器到后端之后。`cc27aff6683a` 修复阿里云分片事件未继续拉取、专用 ASR 候选混入通用模型、弱语音输入与过早 5 秒自动停止；V132 把实际 `voice-asr` 从 `qwen-audio-3.0-realtime-flash` 纠正为 `paraformer-realtime-v2`。聚焦前端 13 项、全量 `63 files / 349 tests`、production build、后端聚焦/package 和 V132 事务预演通过；backend/frontend 运行 `2.8.68-dev.cc27aff`、healthy/restart=0，V132 success、两条路由正确、授权态页面版本/麦克风入口通过。待 HUMAN 双入口复测后回读非内容型峰值/RMS、上游与文字事件。
+- `TASK-352 / FEAT-062` 保持 `in_progress`：HUMAN 在 `cc27aff` 对话复测产生 `122` 帧/`166530` 采样，但后端精确回读 `peak=0/rms=0`，确认浏览器持续发送全零 PCM，阿里云尚未收到可识别声音。`1c31cf3628d6` 改为保留最多两个浏览器输入声道并逐帧选取 RMS/peak 最强声道，避免外接/虚拟设备首声道静音；语音启动或失败返回后明确聚焦对话输入框。前端聚焦 `15/15`、全量 `63 files / 351 tests`、production build/diff 通过；frontend 运行 `2.8.68-dev.1c31cf3`、healthy/restart=0、首页 200，新资源指纹一致；backend 保持 `cc27aff` 未替换。待 HUMAN 双入口复测并回读非零 peak/rms、上游与文字事件。
 
 - `TASK-354` 已完成本地技术修复，进入 review：根因是主题全局 `button` 规则移除头像唯一的渐变背景，使 `38px` 圆形按钮只剩白色首字母；`8131ca0d` 改用主题强调实色与表面文字色，不改几何或个人简档交互。聚焦 `13/13`、前端全量 `62 files / 342 tests`、production build 与 diff check 通过；frontend 运行 `2.8.68-dev.8131ca0`、healthy/restart=0，登录态计算样式、桌面截图、版本资源和 console 0 通过。待用户目视确认，不以技术截图替代 HUMAN 接受。
 

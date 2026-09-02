@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 4
-updated_at: 2026-09-02T00:36:33Z
+updated_at: 2026-09-02T00:45:48Z
 updated_by: codex
 status: active
-last_run_at: 2026-09-02T00:36:33Z
-last_run_status: passed_task_352_fragmented_results_technical_pending_human_retest
+last_run_at: 2026-09-02T00:45:48Z
+last_run_status: passed_task_352_active_channel_technical_pending_human_retest
 ---
 
 # Test Report
+
+## 2026-09-02 TASK-352 浏览器有效声道与输入框焦点修复
+
+- 状态：`passed_task_352_active_channel_technical_pending_human_retest`。HUMAN 最新对话复测上传 `122` 帧、`333060` 字节、`166530` 采样，但后端信号统计为 `peak=0/rms=0`，证明收到的是全零 PCM；`upstreamEvents=2/transcriptEvents=0` 是该静音输入的结果，不再归因于麦克风权限或阿里云结果分片。
+- 实现：浏览器不再请求强制单声道，最多保留两个设备声道；每个音频回调按 RMS、peak 选择实际有信号的声道后再归一化、降采样和发送。语音启动流程返回后使用当前输入框 ref 恢复焦点，启动失败同样适用。
+- 自动化与构建：新增首声道静音/第二声道有信号和全声道静音回归；聚焦 `15/15`、前端全量 `63 files / 351 tests`、production build 与 `git diff --check` 通过；build 只有既有大 chunk warning。
+- 本地运行：`1c31cf3628d6` 已进入本地 main；只重建并替换 frontend，运行 `2.8.68-dev.1c31cf3`、镜像 `sha256:0dfc647ee005`、healthy/restart=0，`https://cici.localhost/app` 为 200 且 JS 指纹包含同版本。backend 未替换并继续承载已验证路由/指标修复。
+- 边界：未代 HUMAN 再次开启麦克风或发送现场音频；只有新版回读非零 peak/rms，并分别收到阿里云文字与讯飞带 speaker 文字且正常结束，才算真实验收通过。
 
 ## 2026-09-02 TASK-352 真人语音分片结果与专用路由修复
 
