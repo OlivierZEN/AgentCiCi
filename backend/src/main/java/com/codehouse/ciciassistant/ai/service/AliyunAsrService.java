@@ -93,8 +93,9 @@ public class AliyunAsrService {
         }
         FileType fileType = validateSupportedFile(originalFilename, contentType);
         String safeFilename = safeFilename(originalFilename, fileType.extension());
-        if (usesSynchronousFileAsrProtocol(invocation.modelName())) {
-            return transcribeMeetingFileSynchronously(invocation, fileBytes, safeFilename, fileType);
+        if (!supportsSpeakerDiarizationFileAsr(invocation.modelName())) {
+            throw new IllegalArgumentException(
+                    "AI 听记上传录音必须使用支持发言人区分的百炼 Filetrans/Fun-ASR 模型");
         }
         String temporaryUrl = uploadToDashscopeTemporaryStorage(invocation, fileBytes, safeFilename, fileType.contentType());
         String taskId = submitFileTranscriptionTask(invocation, temporaryUrl);
@@ -115,77 +116,11 @@ public class AliyunAsrService {
         );
     }
 
-    static boolean usesSynchronousFileAsrProtocol(String modelName) {
+    static boolean supportsSpeakerDiarizationFileAsr(String modelName) {
         String normalized = modelName == null ? "" : modelName.trim().toLowerCase();
-        return (normalized.startsWith("qwen-audio-3.0-asr-flash") && !normalized.contains("filetrans"))
-                || normalized.startsWith("fun-asr-flash");
-    }
-
-    private FileTranscriptionResult transcribeMeetingFileSynchronously(AsrInvocation invocation,
-                                                                        byte[] fileBytes,
-                                                                        String safeFilename,
-                                                                        FileType fileType) {
-        String dataUrl = "data:" + fileType.contentType() + ";base64,"
-                + Base64.getEncoder().encodeToString(fileBytes);
-        Map<String, Object> payload = Map.of(
-                "model", invocation.modelName(),
-                "input", Map.of("messages", List.of(Map.of(
-                        "role", "user",
-                        "content", List.of(Map.of(
-                                "type", "input_audio",
-                                "input_audio", Map.of("data", dataUrl)
-                        ))
-                ))),
-                "parameters", Map.of("format", fileType.extension())
-        );
-        Map<String, Object> response;
-        try {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> responseBody = invocation.dashscopeRestClient().post()
-                    .uri("/api/v1/services/aigc/multimodal-generation/generation")
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + invocation.apiKey())
-                    .header("X-DashScope-SSE", "disable")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(payload)
-                    .retrieve()
-                    .body(Map.class);
-            response = responseBody;
-        } catch (RestClientException e) {
-            throw new IllegalArgumentException("百炼同步文件转写失败：" + providerFailureMessage(e), e);
-        }
-        JsonNode root = objectMapper.valueToTree(response);
-        List<MeetingFileTranscriptSegment> segments = parseSynchronousFileTranscript(root);
-        if (segments.isEmpty()) {
-            throw new IllegalArgumentException("百炼同步文件转写未返回可用内容");
-        }
-        String requestId = root.path("request_id").asText("");
-        return new FileTranscriptionResult(
-                invocation.modelName(),
-                requestId.isBlank() ? "sync" : requestId,
-                safeFilename,
-                fileType.extension(),
-                fileType.contentType(),
-                fileBytes.length,
-                segments
-        );
-    }
-
-    static List<MeetingFileTranscriptSegment> parseSynchronousFileTranscript(JsonNode root) {
-        String text = root.path("output").path("text").asText("").trim();
-        if (text.isBlank()) {
-            text = root.path("output").path("sentence").path("text").asText("").trim();
-        }
-        if (text.isBlank()) {
-            return List.of();
-        }
-        JsonNode sentence = root.path("output").path("sentence");
-        return List.of(new MeetingFileTranscriptSegment(
-                "1",
-                "发言人 1",
-                text,
-                longOrNull(sentence.path("begin_time")),
-                longOrNull(sentence.path("end_time"))
-        ));
+        return normalized.startsWith("qwen-audio-3.0-asr-flash-filetrans")
+                || normalized.matches("fun-asr(-20\\d{2}-\\d{2}-\\d{2})?")
+                || normalized.matches("fun-asr-mtl(-20\\d{2}-\\d{2}-\\d{2})?");
     }
 
     private String providerFailureMessage(RestClientException exception) {

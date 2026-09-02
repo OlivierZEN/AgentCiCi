@@ -38,6 +38,7 @@ public class ModelProviderService {
     public static final String PROVIDER_ONEKEYTOKEN = "onekeytoken";
     public static final String ONEKEYTOKEN_AUTO_MODEL = "onekeytoken/auto";
     public static final String ALIYUN_REALTIME_ASR_MODEL = "paraformer-realtime-v2";
+    public static final String ALIYUN_DIARIZED_FILE_ASR_MODEL = "qwen-audio-3.0-asr-flash-filetrans";
     public static final String IFLYTEK_REALTIME_ASR_MODEL = "iflytek-realtime-asr";
 
     private static final String FETCH_OPENAI_STYLE = "openai-compatible";
@@ -1153,6 +1154,15 @@ public class ModelProviderService {
                     candidate.put("capabilities", List.of("realtime-asr"));
                     candidate.put("capabilitiesTrusted", true);
                     candidates.add(candidate);
+
+                    Map<String, Object> fileCandidate = new LinkedHashMap<>();
+                    fileCandidate.put("providerCode", PROVIDER_ALIYUN);
+                    fileCandidate.put("providerName", entity.getProviderName());
+                    fileCandidate.put("modelName", ALIYUN_DIARIZED_FILE_ASR_MODEL);
+                    fileCandidate.put("displayLabel", "录音文件转写（区分发言人） · 阿里云");
+                    fileCandidate.put("capabilities", List.of("file-asr"));
+                    fileCandidate.put("capabilitiesTrusted", true);
+                    candidates.add(fileCandidate);
                 });
         Map<String, Object> iflytek = integrationAppService.realtimeAsrProviderView();
         if (Boolean.TRUE.equals(iflytek.get("enabled")) && Boolean.TRUE.equals(iflytek.get("credentialsSet"))) {
@@ -1180,6 +1190,13 @@ public class ModelProviderService {
                     .filter(candidate -> IntegrationAppService.APP_CODE_IFLYTEK_ASR.equals(
                             String.valueOf(candidate.get("providerCode"))))
                     .filter(candidate -> IFLYTEK_REALTIME_ASR_MODEL.equals(String.valueOf(candidate.get("modelName"))))
+                    .toList();
+        }
+        if ("file-asr".equals(scene.sceneCode())) {
+            return platformRouteCandidates().stream()
+                    .filter(candidate -> PROVIDER_ALIYUN.equals(String.valueOf(candidate.get("providerCode"))))
+                    .filter(candidate -> ALIYUN_DIARIZED_FILE_ASR_MODEL.equals(
+                            String.valueOf(candidate.get("modelName"))))
                     .toList();
         }
         return agentBaseModels(platformScopeId());

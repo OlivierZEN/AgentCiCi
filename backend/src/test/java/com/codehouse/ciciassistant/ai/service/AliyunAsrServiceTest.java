@@ -83,36 +83,16 @@ class AliyunAsrServiceTest {
     }
 
     @Test
-    void shouldSelectProtocolFromGovernedFileAsrModel() {
-        assertThat(AliyunAsrService.usesSynchronousFileAsrProtocol("qwen-audio-3.0-asr-flash")).isTrue();
-        assertThat(AliyunAsrService.usesSynchronousFileAsrProtocol("qwen-audio-3.0-asr-flash-2026-08-01")).isTrue();
-        assertThat(AliyunAsrService.usesSynchronousFileAsrProtocol("qwen-audio-3.0-asr-flash-filetrans")).isFalse();
-        assertThat(AliyunAsrService.usesSynchronousFileAsrProtocol("fun-asr")).isFalse();
-    }
-
-    @Test
-    void shouldParseSynchronousFileTranscript() throws Exception {
-        String json = """
-                {
-                  "request_id": "req-1",
-                  "output": {
-                    "text": "这是同步文件转写结果。",
-                    "sentence": {
-                      "begin_time": 240,
-                      "end_time": 4280,
-                      "text": "这是同步文件转写结果。"
-                    }
-                  }
-                }
-                """;
-
-        List<AliyunAsrService.MeetingFileTranscriptSegment> segments =
-                AliyunAsrService.parseSynchronousFileTranscript(objectMapper.readTree(json));
-
-        assertThat(segments).hasSize(1);
-        assertThat(segments.get(0).speakerId()).isEqualTo("1");
-        assertThat(segments.get(0).text()).isEqualTo("这是同步文件转写结果。");
-        assertThat(segments.get(0).startMs()).isEqualTo(240L);
-        assertThat(segments.get(0).endMs()).isEqualTo(4280L);
+    void shouldOnlyAcceptFileAsrModelsWithSpeakerDiarization() {
+        assertThat(AliyunAsrService.supportsSpeakerDiarizationFileAsr(
+                "qwen-audio-3.0-asr-flash-filetrans")).isTrue();
+        assertThat(AliyunAsrService.supportsSpeakerDiarizationFileAsr(
+                "qwen-audio-3.0-asr-flash-filetrans-2026-08-01")).isTrue();
+        assertThat(AliyunAsrService.supportsSpeakerDiarizationFileAsr("fun-asr")).isTrue();
+        assertThat(AliyunAsrService.supportsSpeakerDiarizationFileAsr("fun-asr-2025-11-07")).isTrue();
+        assertThat(AliyunAsrService.supportsSpeakerDiarizationFileAsr("fun-asr-mtl")).isTrue();
+        assertThat(AliyunAsrService.supportsSpeakerDiarizationFileAsr("qwen-audio-3.0-asr-flash")).isFalse();
+        assertThat(AliyunAsrService.supportsSpeakerDiarizationFileAsr("fun-asr-flash")).isFalse();
+        assertThat(AliyunAsrService.supportsSpeakerDiarizationFileAsr("qwen3-asr-flash-filetrans")).isFalse();
     }
 }
